@@ -1,0 +1,141 @@
+# ============================================
+# Unity.gitignore (Full & Optimized Version)
+# https://github.com/github/gitignore/blob/main/Unity.gitignore
+# Custom version updated for large project handling
+# ============================================
+
+# Unity generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Mm]emoryCaptures/
+/[Uu]ser[Ss]ettings/
+/[Ss]amples/
+
+# Asset meta data should only be ignored when the corresponding asset is also ignored
+!/[Aa]ssets/**/*.meta
+
+# Crash Reports
+sysinfo.txt
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated files on crash reports
+*.pidb
+*.pdb
+*.mdb
+
+# Build results
+*.apk
+*.aab
+*.unitypackage
+*.ipa
+
+# Addressables
+[Aa]ssets/**/AddressableAssetsData/*/Build*/
+[Aa]ssets/**/AddressableAssetsData/*/aa/*
+
+# Visual Studio / Rider / JetBrains
+.vs/
+.idea/
+.consulo/
+ExportedObj/
+[Aa]ssets/Plugins/Editor/JetBrains*
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Gradle cache directory
+.gradle/
+
+# Plastic SCM
+.plastic/
+*.plastic
+
+# Logs
+*.log
+*.stacktrace
+
+# Cache & generated data
+/[Cc]ache/
+*.tmp
+*.bak
+*.old
+
+# Package Manager
+Packages/com.unity.package-manager.cache/
+Packages/com.unity.package-manager.cache.meta
+
+# Auto-generated
+*.booproj
+*.unitypackage
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# JetBrains Rider plugin
+[Aa]ssets/Plugins/Editor/JetBrains*
+
+# VS Code
+.vscode/
+
+# Ignore build artifacts
+[Bb]uild/
+[Bb]uilds/
+[Dd]ebug/
+[Rr]elease/
+
+# Ignore environment-specific or temp data
+Temp/
+obj/
+logs/
+Logs/
+UserSettings/
+MemoryCaptures/
+
+# Ignore system / editor lock files
+*.lock
+*.swp
+*.swo
+
+# Ignore crashlytics files
+crashlytics-build.properties
+
+# Ignore LFS large binaries (handled separately)
+*.mp4
+*.mov
+*.wav
+*.zip
+*.rar
+*.7z
+*.iso
+*.dll
+*.psd
+*.fbx
+*.exr
+*.tga
+
+# ============================================
+# End of Unity.gitignore
+# ============================================
