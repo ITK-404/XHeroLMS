@@ -288,23 +288,31 @@ public class CameraCullingManager : MonoBehaviour
         return ((1 << layer) & allowShadowsOnlyLayers.value) != 0;
     }
 
-    // ======== Helpers: Visible / ShadowOnly / Hidden ========
+    // ======== ShadowOnly / Hidden ========
     static void SetVisible(Renderer r, ShadowCastingMode original, LODGroup lod, int band)
     {
-        if (!r.enabled) r.enabled = true;
-        if (r.shadowCastingMode != original) r.shadowCastingMode = original;
+        if (r == null) return;
 
-        if (lod)
-        {
-            int l = band switch
+        if (!r.enabled)
+            r.enabled = true;
+            
+        if (r.shadowCastingMode != original)
+                r.shadowCastingMode = original;
+            
+        if (lod != null)
             {
-                0 => 0,   // near -> LOD0
-                1 => 1,   // mid  -> LOD1
-                2 => 2,   // far  -> LOD2
-                _ => 2
-            };
-            lod.ForceLOD(l);
-        }
+                int lodIndex = band switch
+                {
+                    0 => 0,   // near -> LOD0
+                    1 => 1,   // mid  -> LOD1
+                    2 => 2,   // far  -> LOD2
+                    _ => -1   // default: tự động chọn theo khoảng cách
+                };
+                lod.ForceLOD(lodIndex);
+            }
+        
+        if (r.shadowCastingMode == ShadowCastingMode.ShadowsOnly)
+                r.shadowCastingMode = original;
     }
 
     static void SetShadowsOnly(Renderer r, LODGroup lod)
@@ -354,12 +362,13 @@ public class CameraCullingManager : MonoBehaviour
         // 2) Camera AA & PostProcess
         if (targetCamera.TryGetComponent(out UniversalAdditionalCameraData urpCam))
         {
-            // Nếu đang bật MSAA -> tắt FXAA để tránh double-AA
             bool useFxaaNow = enableFXAA && !enableMSAA;
-            urpCam.antialiasing = useFxaaNow ? AntialiasingMode.FastApproximateAntialiasing : AntialiasingMode.None;
+            urpCam.antialiasing = useFxaaNow
+                ? AntialiasingMode.FastApproximateAntialiasing
+                : AntialiasingMode.None;
 
-            // Chỉ bật post-processing nếu thực sự có FXAA hoặc có MotionBlur
-            urpCam.renderPostProcessing = (useFxaaNow || enableMotionBlur);
+            // Luôn cho phép post; việc có hiệu ứng hay không do Volume quyết định
+            urpCam.renderPostProcessing = true;
         }
 
         // 3) Global Volume cho Motion Blur (tạo một lần)
