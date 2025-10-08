@@ -61,7 +61,7 @@ public class CameraCullingManager : MonoBehaviour
     [Range(0.1f, 1.0f)] public float midBandScale  = 0.7f;
     [Tooltip("Scale khi chỉ còn vật thể far band")]
     [Range(0.05f, 1.0f)] public float farBandScale  = 0.2f;
-
+    public LayerMask exemptLayers;
     // ==== internal ====
     struct Tracked
     {
@@ -99,6 +99,9 @@ public class CameraCullingManager : MonoBehaviour
             enabled = false;
             return;
         }
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (playerLayer >= 0)
+            exemptLayers |= (1 << playerLayer);
 
         targetCamera.useOcclusionCulling = true;
 
@@ -113,6 +116,7 @@ public class CameraCullingManager : MonoBehaviour
         foreach (var r in renders)
         {
             if (!r || r is ParticleSystemRenderer) continue; // bỏ qua particle (thường tự cull)
+            if (((1 << r.gameObject.layer) & exemptLayers.value) != 0) continue;
             var t = new Tracked
             {
                 rend = r,
@@ -226,6 +230,8 @@ public class CameraCullingManager : MonoBehaviour
         var t = tracked[i];
         var r = t.rend;
         if (!r) return;
+
+        if (((1 << t.layer) & exemptLayers.value) != 0) return;
 
         // band (0=near, 1=mid, 2=far, 3=max+)
         int band = ev.currentDistance;
@@ -469,6 +475,8 @@ public class CameraCullingManager : MonoBehaviour
 
             var r = tracked[idx].rend;
             if (!r || !r.enabled) continue;
+
+            if (((1 << tracked[idx].layer) & exemptLayers.value) != 0) continue;
 
             // Phân loại band dựa trên khoảng cách theo bounds (gần nhất đến camera)
             float d2 = r.bounds.SqrDistance(camPos);
