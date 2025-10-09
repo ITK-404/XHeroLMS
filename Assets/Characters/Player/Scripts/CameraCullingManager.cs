@@ -325,20 +325,20 @@ static void SetVisible(Renderer r, ShadowCastingMode original, LODGroup lod, int
 {
     if (r == null) return;
 
+    // Bật lại renderer nếu đang tắt
     if (!r.enabled) r.enabled = true;
 
-    // Nếu "Visible" mà original lại là ShadowsOnly, ta fallback thành On để chắc chắn có mesh.
-    var visibleShadowMode = (original == ShadowCastingMode.ShadowsOnly)
-                                ? ShadowCastingMode.On
-                                : original;
+    var desired = (original == ShadowCastingMode.TwoSided)
+                    ? ShadowCastingMode.TwoSided
+                    : ShadowCastingMode.On;
 
-    if (r.shadowCastingMode != visibleShadowMode)
-        r.shadowCastingMode = visibleShadowMode;
+    if (r.shadowCastingMode != desired)
+        r.shadowCastingMode = desired;
 
+    // LOD theo band, có clamp số LOD thực tế
     if (lod != null)
     {
         int lodIndex = band switch { 0 => 0, 1 => 1, 2 => 2, _ => -1 };
-        // CLAMP LOD (xem mục #2)
         lodIndex = ClampLodIndex(lod, lodIndex);
         lod.ForceLOD(lodIndex);
     }
