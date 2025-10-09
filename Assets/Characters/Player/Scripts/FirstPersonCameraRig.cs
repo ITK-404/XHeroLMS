@@ -36,6 +36,8 @@ public class FirstPersonCameraRig : MonoBehaviour
 
     void Update()
     {
+        if (Cursor.lockState != CursorLockMode.Locked)
+        return;
         float mx = Input.GetAxisRaw("Mouse X") * sensX * 0.01f;
         float my = Input.GetAxisRaw("Mouse Y") * sensY * 0.01f;
 
