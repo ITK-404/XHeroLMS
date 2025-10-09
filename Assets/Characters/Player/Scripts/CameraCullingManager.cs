@@ -183,9 +183,10 @@ public class CameraCullingManager : MonoBehaviour
         {
             var r = tracked[i].rend;
             if (!r) continue;
-            var b = r.bounds;
-            spheres[i].position = b.center;
-            spheres[i].radius = b.extents.magnitude;
+
+            LocalBoundsToWorldSphere(r, out var c, out var rad);
+            spheres[i].position = c;
+            spheres[i].radius = rad;
         }
 
         // --- Adaptive scale ---
@@ -203,12 +204,7 @@ public class CameraCullingManager : MonoBehaviour
 
     void OnDisable()
     {
-        if (cullingGroup != null)
-        {
-            cullingGroup.onStateChanged -= OnCullingStateChange;
-            cullingGroup.Dispose();
-            cullingGroup = null;
-        }
+        DisposeCullingGroupSafe();
 
         // trả renderer về mặc định
         for (int i = 0; i < tracked.Count; i++)
@@ -217,8 +213,39 @@ public class CameraCullingManager : MonoBehaviour
             if (!t.rend) continue;
             t.rend.shadowCastingMode = t.originalShadowMode;
             if (t.lod) t.lod.ForceLOD(-1);
-            // đảm bảo bật lại nếu trước đó bị tắt
             if (!t.rend.enabled) t.rend.enabled = true;
+        }
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+    }
+
+    void OnDestroy()
+    {
+        DisposeCullingGroupSafe();
+    }
+
+    void OnApplicationQuit()
+    {
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        DisposeCullingGroupSafe();
+    }
+
+    void DisposeCullingGroupSafe()
+    {
+        if (cullingGroup != null)
+        {
+            try
+            {
+                cullingGroup.onStateChanged -= OnCullingStateChange;
+            }
+            catch { /* ignore nếu đã null/đã gỡ */ }
+
+            try
+            {
+                cullingGroup.Dispose();
+            }
+            catch { /* phòng sự cố khi dispose 2 lần */ }
+
+            cullingGroup = null;
         }
     }
 
@@ -244,23 +271,26 @@ public class CameraCullingManager : MonoBehaviour
 
         // khoảng cách thực (sqr) để quyết định nhanh
         // float d2 = (r.transform.position - targetCamera.transform.position).sqrMagnitude;
-        float d2 = r.bounds.SqrDistance(targetCamera.transform.position);
+        // float d2 = r.bounds.SqrDistance(targetCamera.transform.position);
+        var s = spheres[i];
+        float d = Vector3.Distance(targetCamera.transform.position, s.position) - s.radius;
+        float d2 = (d <= 0f) ? 0f : d * d;
 
-        // 1) Nếu vượt max distance và không thuộc whitelist -> Hidden
+        // Nếu vượt max distance và không thuộc whitelist -> Hidden
         if (!neverHide && d2 > dMax2)
         {
             SetHidden(r, t.lod);
             return;
         }
 
-        // 2) Nếu đang nằm trong frustum (isVisible) -> Visible, LOD theo band
+        // Nếu đang nằm trong frustum (isVisible) -> Visible, LOD theo band
         if (inFrustum)
         {
             SetVisible(r, t.originalShadowMode, t.lod, band);
             return;
         }
 
-        // 3) Ngoài frustum nhưng còn trong khoảng farDistance:
+        // Ngoài frustum nhưng còn trong khoảng farDistance:
         if (d2 <= dFar2)
         {
             // Nếu layer cho phép và object vốn có bóng -> ShadowsOnly
@@ -276,11 +306,13 @@ public class CameraCullingManager : MonoBehaviour
             return;
         }
 
-        // 4) Còn lại (giữa far..max): nếu whitelist → ShadowsOnly, nếu không → Hidden
+        // nếu whitelist -> ShadowsOnly, nếu không -> Hidden
         if (neverHide)
-            SetShadowsOnly(r, t.lod);
-        else
-            SetHidden(r, t.lod);
+        {
+            SetVisible(r, t.originalShadowMode, t.lod, 0); // ép LOD0 hoặc -1 tuỳ bạn
+            return;
+        }
+        SetHidden(r, t.lod);
     }
 
     bool AllowShadowsOnly(int layer)
@@ -289,58 +321,72 @@ public class CameraCullingManager : MonoBehaviour
     }
 
     // ======== ShadowOnly / Hidden ========
-    static void SetVisible(Renderer r, ShadowCastingMode original, LODGroup lod, int band)
-    {
-        if (r == null) return;
+static void SetVisible(Renderer r, ShadowCastingMode original, LODGroup lod, int band)
+{
+    if (r == null) return;
 
-        if (!r.enabled)
-            r.enabled = true;
-            
-        if (r.shadowCastingMode != original)
-                r.shadowCastingMode = original;
-            
-        if (lod != null)
-            {
-                int lodIndex = band switch
-                {
-                    0 => 0,   // near -> LOD0
-                    1 => 1,   // mid  -> LOD1
-                    2 => 2,   // far  -> LOD2
-                    _ => -1   // default: tự động chọn theo khoảng cách
-                };
-                lod.ForceLOD(lodIndex);
-            }
-        
-        if (r.shadowCastingMode == ShadowCastingMode.ShadowsOnly)
-                r.shadowCastingMode = original;
-    }
+    if (!r.enabled) r.enabled = true;
 
-    static void SetShadowsOnly(Renderer r, LODGroup lod)
-    {
-        if (!r.enabled) r.enabled = true;
-        r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
-        if (lod) lod.ForceLOD(2); // xa nhất
-    }
+    // Nếu "Visible" mà original lại là ShadowsOnly, ta fallback thành On để chắc chắn có mesh.
+    var visibleShadowMode = (original == ShadowCastingMode.ShadowsOnly)
+                                ? ShadowCastingMode.On
+                                : original;
 
-    static void SetHidden(Renderer r, LODGroup lod)
+    if (r.shadowCastingMode != visibleShadowMode)
+        r.shadowCastingMode = visibleShadowMode;
+
+    if (lod != null)
     {
-        if (r.enabled) r.enabled = false; // tắt hẳn -> không vẽ bóng
-        if (lod) lod.ForceLOD(2);
+        int lodIndex = band switch { 0 => 0, 1 => 1, 2 => 2, _ => -1 };
+        // CLAMP LOD (xem mục #2)
+        lodIndex = ClampLodIndex(lod, lodIndex);
+        lod.ForceLOD(lodIndex);
     }
+}
+static int ClampLodIndex(LODGroup lod, int wanted)
+{
+    if (lod == null) return -1;
+    var lods = lod.GetLODs();
+    int max = lods != null ? lods.Length - 1 : -1;
+    if (wanted < 0) return -1;              // auto
+    if (max < 0)   return -1;              // không có LOD -> để auto
+    return Mathf.Clamp(wanted, 0, max);
+}
+static void SetShadowsOnly(Renderer r, LODGroup lod)
+{
+    if (!r.enabled) r.enabled = true;
+    r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+
+    if (lod)
+    {
+        int idx = ClampLodIndex(lod, 2); // “xa nhất”
+        lod.ForceLOD(idx);
+    }
+}
+static void SetHidden(Renderer r, LODGroup lod)
+{
+    if (r.enabled) r.enabled = false; // tắt hẳn -> không vẽ bóng
+
+    if (lod)
+    {
+        int idx = ClampLodIndex(lod, 2); // clamp theo số LOD thực
+        lod.ForceLOD(idx);
+    }
+}
 
     // ======== AA / Post / URP Dynamic Resolution ========
     [SerializeField] private Volume globalPostVolume;
 
     void ApplyAAAndPost()
     {
-        // 0) Lấy URP Asset hiện tại
+        // Lấy URP Asset hiện tại
         var urpAsset = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
     if (urpAsset != null) {
         var p = typeof(UniversalRenderPipelineAsset).GetProperty("supportsDynamicResolution");
         bool dr = p != null && (bool)p.GetValue(urpAsset, null);
         Debug.Log($"[URP] Dynamic Resolution: {(dr ? "ENABLED" : "DISABLED")} (URP Asset)");
     }
-        // 1) MSAA: nên set trên URP Asset (URP bỏ qua QualitySettings.antiAliasing)
+        // MSAA: nên set trên URP Asset (URP bỏ qua QualitySettings.antiAliasing)
         int s = Mathf.Clamp(msaaSamples, 2, 8);
         s = (s <= 2) ? 2 : (s <= 4) ? 4 : 8;
 
@@ -359,7 +405,7 @@ public class CameraCullingManager : MonoBehaviour
             QualitySettings.antiAliasing = enableMSAA ? s : 0;
         }
 
-        // 2) Camera AA & PostProcess
+        // Camera AA & PostProcess
         if (targetCamera.TryGetComponent(out UniversalAdditionalCameraData urpCam))
         {
             bool useFxaaNow = enableFXAA && !enableMSAA;
@@ -371,10 +417,10 @@ public class CameraCullingManager : MonoBehaviour
             urpCam.renderPostProcessing = true;
         }
 
-        // 3) Global Volume cho Motion Blur (tạo một lần)
+        // Global Volume cho Motion Blur (tạo một lần)
         EnsureGlobalVolume();
 
-        // 3a) Cấu hình Motion Blur trong Volume
+        // Cấu hình Motion Blur trong Volume
         if (globalPostVolume && globalPostVolume.profile)
         {
             if (!globalPostVolume.profile.TryGet(out MotionBlur mb))
@@ -392,7 +438,7 @@ public class CameraCullingManager : MonoBehaviour
             }
         }
 
-        // 4) Dynamic Resolution: cảnh báo nếu chưa bật trong URP Asset
+        // Dynamic Resolution: cảnh báo nếu chưa bật trong URP Asset
         if (urpAsset != null)
         {
             bool drEnabled = false;
@@ -421,30 +467,23 @@ public class CameraCullingManager : MonoBehaviour
     {
         if (globalPostVolume != null) return;
 
-        // Thử tìm Volume sẵn có trong scene
-        globalPostVolume = FindAnyObjectByType<Volume>();
-        if (globalPostVolume == null)
-        {
-            var go = new GameObject("[Global Post Volume]");
-            go.transform.SetParent(targetCamera ? targetCamera.transform : null, false);
-            globalPostVolume = go.AddComponent<Volume>();
-            globalPostVolume.isGlobal = true;
-            globalPostVolume.priority = 1f;
-            globalPostVolume.profile = ScriptableObject.CreateInstance<VolumeProfile>();
-        }
-        else
-        {
-            globalPostVolume.isGlobal = true;
-            if (!globalPostVolume.profile)
-                globalPostVolume.profile = ScriptableObject.CreateInstance<VolumeProfile>();
-        }
+        var go = new GameObject("[Global Post Volume - CullingMgr]");
+        go.hideFlags = HideFlags.DontSave;
+        go.transform.SetParent(targetCamera ? targetCamera.transform : null, false);
+
+        globalPostVolume = go.AddComponent<Volume>();
+        globalPostVolume.isGlobal = true;
+        globalPostVolume.priority = 10f;
+        globalPostVolume.profile = ScriptableObject.CreateInstance<VolumeProfile>();
     }
+
     // layer cull distances cơ bản (Unity sẽ cull sớm theo layer)
     void SetupOptionalLayerCullDistances()
     {
         float[] dists = new float[32];
         for (int l = 0; l < 32; l++) dists[l] = maxRenderDistance;
         targetCamera.layerCullDistances = dists;
+        targetCamera.layerCullSpherical = true;
     }
 
     // ======== Adaptive render scale (không gọi ResizeBuffers trực tiếp) ========
@@ -471,6 +510,12 @@ public class CameraCullingManager : MonoBehaviour
         if (cullingGroup == null) { SmoothFocusTo(baseQualityScale); return; }
 
         int count = cullingGroup.QueryIndices(true, _visibleIdxBuffer, 0);
+        if (count == _visibleIdxBuffer.Length)
+        {
+            // mở rộng và query lại
+            _visibleIdxBuffer = new int[_visibleIdxBuffer.Length * 2];
+            count = cullingGroup.QueryIndices(true, _visibleIdxBuffer, 0);
+        }
         if (count <= 0) { SmoothFocusTo(baseQualityScale); return; }
 
         // Tìm band nhỏ nhất (ưu tiên near -> mid -> far) trong các đối tượng visible
@@ -543,7 +588,17 @@ public class CameraCullingManager : MonoBehaviour
         // Chỉ meaningful nếu ban đầu có bóng
         return original != ShadowCastingMode.Off;
     }
-
+    static void LocalBoundsToWorldSphere(Renderer r, out Vector3 center, out float radius)
+    {
+        var lb = r.localBounds;                 // tồn tại ngay cả khi r.enabled == false
+        var t = r.transform;
+        center = t.TransformPoint(lb.center);
+        // scale extents theo lossyScale
+        var e = lb.extents;
+        var s = t.lossyScale;
+        var worldExtents = new Vector3(Mathf.Abs(e.x * s.x), Mathf.Abs(e.y * s.y), Mathf.Abs(e.z * s.z));
+        radius = Mathf.Max(0.01f, worldExtents.magnitude); // tránh radius = 0
+    }
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
