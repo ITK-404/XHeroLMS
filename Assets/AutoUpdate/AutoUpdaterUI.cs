@@ -7,7 +7,7 @@ using System.Net;                         // TLS
 using System.Text.RegularExpressions;     // Regex m_BundleVersion
 using UnityEngine;
 using UnityEngine.Networking;
-using System.Diagnostics;                 // Restart exe
+using System.Diagnostics;                 // Restart exe / helper
 using Debug = UnityEngine.Debug;
 
 [DisallowMultipleComponent]
@@ -78,6 +78,8 @@ public class AutoUpdaterUI : MonoBehaviour
             }
 
             string current = GetLocalVersion();
+            Debug.Log($"[Updater] Local version: {current} | Remote version: {remoteVer}");
+
             if (!IsNewer(remoteVer, current))
             {
                 state = State.UpToDate;
@@ -92,7 +94,7 @@ public class AutoUpdaterUI : MonoBehaviour
             string tag = $"{tagPrefix}{remoteVer}";
             string patchName = $"patch_{remoteVer}.zip";
             string urlPatch = BuildReleaseUrl(githubOwner, githubRepo, tag, patchName);
-            string urlBuild = BuildReleaseUrl(githubOwner, githubRepo, tag, "BUILD.zip"); // fallback (tuỳ chọn)
+            string urlBuild = BuildReleaseUrl(githubOwner, githubRepo, tag, "BUILD.zip"); // fallback
 
             // 3) Tải patch (.zip)
             state = State.Downloading;
@@ -102,6 +104,8 @@ public class AutoUpdaterUI : MonoBehaviour
 
             string patchPath = Path.Combine(Application.persistentDataPath, patchFolder, patchName);
             Directory.CreateDirectory(Path.GetDirectoryName(patchPath));
+            Debug.Log($"[Updater] persistentDataPath: {Application.persistentDataPath}");
+            Debug.Log($"[Updater] patchPath: {patchPath}");
 
             bool ok =
                 await DownloadFileWithRetry(urlPatch, patchPath, maxRetries) ||
@@ -113,7 +117,7 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 3.5) Verify file có vẻ là ZIP thật
+            // 3.5) Verify file là ZIP (header)
             if (!LooksLikeZip(patchPath))
             {
                 try { File.Delete(patchPath); } catch {}
@@ -126,29 +130,49 @@ public class AutoUpdaterUI : MonoBehaviour
             uiTitle = "Đang áp dụng bản cập nhật…";
             uiMessage = "Game sẽ khởi động lại để hoàn tất cập nhật.";
 
-#if UNITY_STANDALONE_WIN
             string gameDir = Path.GetDirectoryName(Application.dataPath);
-            StartHelperAndQuit(patchPath, gameDir, Path.Combine(gameDir, exeName), Process.GetCurrentProcess().Id, remoteVer);
+            Debug.Log($"[Updater] gameDir: {gameDir}");
+
+#if UNITY_STANDALONE_WIN
+            StartHelperAndQuit(
+                zipPath: patchPath,
+                gameDir: gameDir,
+                exePath: Path.Combine(gameDir, exeName),
+                pid: Process.GetCurrentProcess().Id,
+                newVersion: remoteVer
+            );
 #else
-            // Non-Windows: giải nén ngay (không cập nhật được .app đang chạy)
+            // Non-Windows: giải nén ra thư mục tạm rồi copy sang gameDir (an toàn hơn)
             try
             {
+                string tempBase = Path.Combine(Path.GetTempPath(), "lms_unpack_" + Guid.NewGuid().ToString("N"));
+                string tempDir  = Path.Combine(tempBase, "payload");
+                Directory.CreateDirectory(tempDir);
+
                 using (var zip = ZipFile.OpenRead(patchPath))
                 {
-                    foreach (var entry in zip.Entries)
-                    {
-                        if (string.IsNullOrEmpty(entry.Name)) continue;
-                        string dest = Path.Combine(Path.GetDirectoryName(Application.dataPath), entry.FullName);
-                        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                        entry.ExtractToFile(dest, overwrite: true);
-                    }
+                    zip.ExtractToDirectory(tempDir);
                 }
-                File.Delete(patchPath);
-                string gameDir2 = Path.GetDirectoryName(Application.dataPath);
-                File.WriteAllText(Path.Combine(gameDir2, "version.json"), "{\"version\":\"" + remoteVer + "\"}");
+
+                // Unwrap nếu root là 1 thư mục
+                string srcRoot = tempDir;
+                var entries = Directory.GetFileSystemEntries(tempDir);
+                if (entries.Length == 1 && Directory.Exists(entries[0]))
+                {
+                    srcRoot = entries[0];
+                }
+
+                CopyDirectoryRecursive(srcRoot, gameDir);
+                try { File.Delete(patchPath); } catch {}
+
+                // Ghi version.json
+                File.WriteAllText(Path.Combine(gameDir, "version.json"), "{ \"version\": \"" + remoteVer + "\" }");
+
                 state = State.ReadyToRestart; uiTitle = $"Đã cập nhật lên {remoteVer}";
                 uiMessage = "Nhấn Restart để áp dụng.";
                 showPopup = true;
+
+                try { Directory.Delete(tempBase, true); } catch {}
             }
             catch (Exception e)
             {
@@ -329,20 +353,17 @@ public class AutoUpdaterUI : MonoBehaviour
         LogFileInfo(dest);
     }
 
-    // ZIP sanity check (tránh file HTML 404)
+    // ZIP sanity check (đơn giản, tránh false-negative do comment ở EOCD)
     bool LooksLikeZip(string path)
     {
         try
         {
             using (var fs = File.OpenRead(path))
             {
-                if (fs.Length < 22) return false;
-                byte[] head = new byte[4]; fs.Read(head, 0, 4);
-                bool headOk = head[0]==0x50 && head[1]==0x4B && head[2]==0x03 && head[3]==0x04;
-                fs.Seek(-22, SeekOrigin.End);
-                byte[] tail = new byte[4]; fs.Read(tail, 0, 4);
-                bool tailOk = tail[0]==0x50 && tail[1]==0x4B && tail[2]==0x05 && tail[3]==0x06;
-                return headOk && tailOk;
+                if (fs.Length < 4) return false;
+                byte[] head = new byte[4];
+                fs.Read(head, 0, 4);
+                return head[0]==0x50 && head[1]==0x4B && head[2]==0x03 && head[3]==0x04;
             }
         }
         catch { return false; }
@@ -384,45 +405,122 @@ public class AutoUpdaterUI : MonoBehaviour
         catch (Exception e) { SetError("Không thể khởi động lại: " + e.Message); }
     }
 
-#if UNITY_STANDALONE_WIN
-    // Tạo helper PowerShell để cập nhật sau khi game thoát (cập nhật được .exe)
-    void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
+    // Copy thư mục đệ quy (non-Windows fallback)
+    void CopyDirectoryRecursive(string src, string dst)
     {
-        try
+        Directory.CreateDirectory(dst);
+        foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
         {
-            string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
-            string script = $@"
-param([int]$pid,[string]$zip,[string]$dest,[string]$exe,[string]$ver)
-# Wait current game exit
-while (Get-Process -Id $pid -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}
-try {{
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  [System.IO.Compression.ZipFile]::ExtractToDirectory($zip,$dest,$true)
-  Remove-Item $zip -ErrorAction SilentlyContinue
-  Set-Content -Path (Join-Path $dest 'version.json') -Value ('{{""version"":""' + $ver + '""}}') -Encoding UTF8
-}} catch {{
-  Write-Host $_
-}}
-Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
-";
-            File.WriteAllText(ps1, script);
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\"",
-                UseShellExecute = true,
-                CreateNoWindow = true,
-                WorkingDirectory = gameDir
-            };
-            Process.Start(psi);
-            // Thoát game → helper tiếp tục công việc rồi mở lại game
-            Application.Quit();
-        }
-        catch (Exception e)
-        {
-            SetError("Không tạo được helper update: " + e.Message);
+            var rel = file.Substring(src.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var target = Path.Combine(dst, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            File.Copy(file, target, true);
         }
     }
+#if UNITY_STANDALONE_WIN
+void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
+{
+    try
+    {
+        string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
+        string logPath = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.log");
+
+        string script = @"
+param([int]$gamePid,[string]$zip,[string]$dest,[string]$exe,[string]$ver,[string]$logPath)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+function Test-Admin {
+  $u=[Security.Principal.WindowsIdentity]::GetCurrent()
+  (New-Object Security.Principal.WindowsPrincipal($u)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+function Needs-Elevation($p) {
+  $pf=$env:ProgramFiles; $pf86=${env:ProgramFiles(x86)}
+  $p.StartsWith($pf,[System.StringComparison]::InvariantCultureIgnoreCase) -or
+  ($pf86 -and $p.StartsWith($pf86,[System.StringComparison]::InvariantCultureIgnoreCase))
+}
+
+# Logging
+$global:LOG = if ([string]::IsNullOrWhiteSpace($logPath)) { Join-Path $env:TEMP ('lms_update_' + [Guid]::NewGuid().ToString('N') + '.log') } else { $logPath }
+function Log($m){ ('[{0}] {1}' -f (Get-Date), $m) | Out-File -FilePath $global:LOG -Append -Encoding UTF8 }
+
+# Elevate when needed
+if (Needs-Elevation $dest -and -not (Test-Admin)) {
+  Log 'Re-launching elevated...'
+  Start-Process -FilePath 'powershell.exe' `
+    -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File', $PSCommandPath, $gamePid, $zip, $dest, $exe, $ver, $global:LOG) `
+    -Verb RunAs
+  exit
+}
+
+Log 'Helper started'
+Log ""zip=$zip""; Log ""dest=$dest""; Log ""exe=$exe""; Log ""ver=$ver""; Log ""log=$global:LOG""
+
+# Wait game exit
+while (Get-Process -Id $gamePid -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 300 }
+Log 'Game exited.'
+
+# Unpack to temp
+$tempBase = Join-Path $env:TEMP ('lms_unpack_' + [Guid]::NewGuid().ToString('N'))
+$tempDir  = Join-Path $tempBase 'payload'
+New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+try {
+  if (Get-Command Expand-Archive -ErrorAction SilentlyContinue) {
+    Log 'Using Expand-Archive'
+    Expand-Archive -Path $zip -DestinationPath $tempDir -Force
+  } else {
+    Log 'Using ZipFile API'
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $tempDir)
+  }
+
+  $entries = Get-ChildItem -Path $tempDir -Force
+  $src = if ($entries.Count -eq 1 -and $entries[0].PSIsContainer) { $entries[0].FullName } else { $tempDir }
+  Log ('Copy from: ' + $src)
+
+  $null = robocopy $src $dest /MIR /IS /IT /R:1 /W:1 /FFT /NFL /NDL /NP /NJH /NJS /MT:8
+  Log ('Robocopy exit=' + $LASTEXITCODE)
+
+  Set-Content -Path (Join-Path $dest 'version.json') -Value ('{ ""version"": ""' + $ver + '"" }') -Encoding UTF8
+  Remove-Item $zip -ErrorAction SilentlyContinue
+} catch { Log ('Update failed: ' + $_) } finally {
+  try { Remove-Item $tempBase -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+}
+
+Log 'Starting game...'
+Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
+Log 'Done.'
+";
+
+        File.WriteAllText(ps1, script);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = helperDebug
+                ? $"-NoProfile -ExecutionPolicy Bypass -NoExit -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\""
+                : $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\"",
+            UseShellExecute = true,
+            CreateNoWindow = !helperDebug,
+            WorkingDirectory = gameDir,
+            WindowStyle = helperDebug ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden
+        };
+
+        Debug.Log($"[Updater] Helper log: {logPath}");
+        var p = Process.Start(psi);
+        if (p == null) { SetError("Không khởi chạy được helper."); return; }
+
+        System.Threading.Thread.Sleep(300); // cho helper spawn xong
+        Application.Quit();
+    }
+    catch (Exception e)
+    {
+        SetError("Không tạo được helper update: " + e.Message);
+    }
+}
 #endif
+
+[SerializeField] bool helperDebug = true; // bật để xem console/log lần đầu
+
 }
