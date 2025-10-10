@@ -13,21 +13,17 @@ using Debug = UnityEngine.Debug;
 [DisallowMultipleComponent]
 public class AutoUpdaterUI : MonoBehaviour
 {
-    [Header("Remote (ProjectSettings.asset)")]
-    [Tooltip("URL đọc ProjectSettings.asset để lấy m_BundleVersion")]
+    [Header("Repo dùng cho GitHub Releases")]
+    public string githubOwner = "ITK-404";
+    public string githubRepo  = "XHeroLMS";
+    [Tooltip("Prefix của tag release, ví dụ 'v' -> v1.2.3")]
+    public string tagPrefix   = "v";
+
+    [Header("Đọc version remote từ ProjectSettings.asset (nhánh dev)")]
     public string projectSettingsUrl =
         "https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset";
-    [Tooltip("URL dự phòng (jsDelivr)")]
     public string projectSettingsUrlFallback =
         "https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset";
-
-    [Header("Base URL patch (kết thúc bằng /)")]
-    [Tooltip("Thư mục chứa patch_#.zip (raw hoặc CDN)")]
-    public string basePatchUrl =
-        "https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/BuilderStore/";
-    [Tooltip("Base URL dự phòng (jsDelivr), kết thúc bằng /")]
-    public string basePatchUrlFallback =
-        "https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/BuilderStore/";
 
     [Header("Local")]
     [Tooltip("Phiên bản fallback nếu không đọc được version.json & Application.version")]
@@ -50,7 +46,6 @@ public class AutoUpdaterUI : MonoBehaviour
     State state = State.Idle;
 
     enum State { Idle, Checking, UpToDate, Downloading, Applying, ReadyToRestart, Error }
-
     [Serializable] class VersionJson { public string version; }
 
     void Awake()
@@ -60,15 +55,6 @@ public class AutoUpdaterUI : MonoBehaviour
 
     void Start()
     {
-        if (string.IsNullOrWhiteSpace(projectSettingsUrl))
-            projectSettingsUrl = "https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset";
-        if (string.IsNullOrWhiteSpace(projectSettingsUrlFallback))
-            projectSettingsUrlFallback = "https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset";
-        if (string.IsNullOrWhiteSpace(basePatchUrl))
-            basePatchUrl = "https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/BuilderStore/";
-        if (string.IsNullOrWhiteSpace(basePatchUrlFallback))
-            basePatchUrlFallback = "https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/BuilderStore/";
-
         _ = FlowCheckAndUpdate();
     }
 
@@ -102,12 +88,11 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 2) Dựng URL patch theo quy ước patch_<version>.zip + fallback BUILD.zip
+            // 2) Dựng URL từ GitHub Releases
+            string tag = $"{tagPrefix}{remoteVer}";
             string patchName = $"patch_{remoteVer}.zip";
-            string packageUrlPrimary   = CombineUrl(basePatchUrl, patchName);
-            string packageUrlPrimaryCDN = CombineUrl(basePatchUrlFallback, patchName);
-            string packageUrlBuild     = CombineUrl(basePatchUrl, "BUILD.zip");
-            string packageUrlBuildCDN  = CombineUrl(basePatchUrlFallback, "BUILD.zip");
+            string urlPatch = BuildReleaseUrl(githubOwner, githubRepo, tag, patchName);
+            string urlBuild = BuildReleaseUrl(githubOwner, githubRepo, tag, "BUILD.zip"); // fallback (tuỳ chọn)
 
             // 3) Tải patch (.zip)
             state = State.Downloading;
@@ -119,10 +104,8 @@ public class AutoUpdaterUI : MonoBehaviour
             Directory.CreateDirectory(Path.GetDirectoryName(patchPath));
 
             bool ok =
-                await DownloadFileWithRetry(packageUrlPrimary, patchPath, maxRetries) ||
-                await DownloadFileWithRetry(packageUrlPrimaryCDN, patchPath, maxRetries) ||
-                await DownloadFileWithRetry(packageUrlBuild, patchPath, maxRetries) ||
-                await DownloadFileWithRetry(packageUrlBuildCDN, patchPath, maxRetries);
+                await DownloadFileWithRetry(urlPatch, patchPath, maxRetries) ||
+                await DownloadFileWithRetry(urlBuild, patchPath, maxRetries);
 
             if (!ok)
             {
@@ -134,7 +117,7 @@ public class AutoUpdaterUI : MonoBehaviour
             if (!LooksLikeZip(patchPath))
             {
                 try { File.Delete(patchPath); } catch {}
-                SetError("File tải về không phải .zip hợp lệ (có thể là 404/HTML hoặc tải chưa đủ).");
+                SetError("File tải về không phải .zip hợp lệ (có thể là HTML/404 hoặc tải chưa đủ).");
                 return;
             }
 
@@ -146,14 +129,8 @@ public class AutoUpdaterUI : MonoBehaviour
 #if UNITY_STANDALONE_WIN
             string gameDir = Path.GetDirectoryName(Application.dataPath);
             StartHelperAndQuit(patchPath, gameDir, Path.Combine(gameDir, exeName), Process.GetCurrentProcess().Id, remoteVer);
-            // NOTE: helper sẽ:
-            //  - chờ game thoát
-            //  - giải nén đè
-            //  - ghi version.json
-            //  - xóa file zip
-            //  - khởi động lại game
 #else
-            // Non-Windows fallback: giải nén ngay (không cập nhật được .app đang chạy)
+            // Non-Windows: giải nén ngay (không cập nhật được .app đang chạy)
             try
             {
                 using (var zip = ZipFile.OpenRead(patchPath))
@@ -284,11 +261,10 @@ public class AutoUpdaterUI : MonoBehaviour
         return false;
     }
 
-    string CombineUrl(string baseUrl, string fileName)
+    string BuildReleaseUrl(string owner, string repo, string tag, string filename)
     {
-        if (string.IsNullOrEmpty(baseUrl)) return fileName;
-        if (!baseUrl.EndsWith("/")) baseUrl += "/";
-        return baseUrl + fileName;
+        // https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}
+        return $"https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}";
     }
 
     async Task<string> DownloadText(string url)
@@ -312,6 +288,7 @@ public class AutoUpdaterUI : MonoBehaviour
 
     async Task<bool> DownloadFileWithRetry(string url, string dest, int retries)
     {
+        if (string.IsNullOrWhiteSpace(url)) return false;
         for (int i = 0; i <= retries; i++)
         {
             try
@@ -331,14 +308,13 @@ public class AutoUpdaterUI : MonoBehaviour
 
     async Task DownloadFile(string url, string dest)
     {
-        if (string.IsNullOrWhiteSpace(url)) throw new Exception("URL rỗng");
         Directory.CreateDirectory(Path.GetDirectoryName(dest));
         Debug.Log($"[Updater] Downloading from: {url} -> {dest}");
 
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("User-Agent", "XHeroLMS-Updater/1.0");
-            www.timeout = 600;
+            www.timeout = 3600; // 1 giờ cho file to
             www.downloadHandler = new DownloadHandlerFile(dest) { removeFileOnAbort = true };
 
             var op = www.SendWebRequest();
@@ -417,7 +393,7 @@ public class AutoUpdaterUI : MonoBehaviour
             string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
             string script = $@"
 param([int]$pid,[string]$zip,[string]$dest,[string]$exe,[string]$ver)
-# đợi process thoát
+# Wait current game exit
 while (Get-Process -Id $pid -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}
 try {{
   Add-Type -AssemblyName System.IO.Compression.FileSystem
