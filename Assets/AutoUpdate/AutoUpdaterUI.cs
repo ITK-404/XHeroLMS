@@ -1,3 +1,4 @@
+// Assets/Scripts/AutoUpdaterUI.cs
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -7,6 +8,7 @@ using System.Text.RegularExpressions;     // Regex m_BundleVersion
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Diagnostics;                 // Restart exe
+using Debug = UnityEngine.Debug;
 
 [DisallowMultipleComponent]
 public class AutoUpdaterUI : MonoBehaviour
@@ -36,34 +38,28 @@ public class AutoUpdaterUI : MonoBehaviour
     [Header("Download")]
     [Tooltip("Thư mục tạm trong Application.persistentDataPath")]
     public string patchFolder = "Updates";
-    // [Tooltip("Tên file patch tạm")]
-    // public string patchFileName = "patch.zip";
     [Tooltip("Số lần retry mạng")]
     public int maxRetries = 2;
 
     // ===== Runtime UI state =====
-    Rect windowRect = new Rect(20, 20, 480, 210);
+    Rect windowRect = new Rect(20, 20, 520, 220);
     bool showPopup = false;
     string uiTitle = "Auto Updater";
     string uiMessage = "";
-    string remoteNotes = ""; // (không dùng với cách này, để dành)
     float progress01 = 0f;
     State state = State.Idle;
 
     enum State { Idle, Checking, UpToDate, Downloading, Applying, ReadyToRestart, Error }
 
-    [Serializable]
-    class VersionJson { public string version; } // dùng cho local version.json
+    [Serializable] class VersionJson { public string version; }
 
     void Awake()
     {
-        // Ép TLS 1.2 cho máy Windows cũ
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
     }
 
     void Start()
     {
-        // Nếu Inspector để trống, tự điền default
         if (string.IsNullOrWhiteSpace(projectSettingsUrl))
             projectSettingsUrl = "https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset";
         if (string.IsNullOrWhiteSpace(projectSettingsUrlFallback))
@@ -106,9 +102,12 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 2) Suy ra URL patch theo quy ước patch_<version>.zip
-            string packageUrl = CombineUrl(basePatchUrl, $"patch_{remoteVer}.zip");
-            string packageUrlFallback = CombineUrl(basePatchUrlFallback, $"patch_{remoteVer}.zip");
+            // 2) Dựng URL patch theo quy ước patch_<version>.zip + fallback BUILD.zip
+            string patchName = $"patch_{remoteVer}.zip";
+            string packageUrlPrimary   = CombineUrl(basePatchUrl, patchName);
+            string packageUrlPrimaryCDN = CombineUrl(basePatchUrlFallback, patchName);
+            string packageUrlBuild     = CombineUrl(basePatchUrl, "BUILD.zip");
+            string packageUrlBuildCDN  = CombineUrl(basePatchUrlFallback, "BUILD.zip");
 
             // 3) Tải patch (.zip)
             state = State.Downloading;
@@ -116,14 +115,14 @@ public class AutoUpdaterUI : MonoBehaviour
             uiMessage = "Đang tải bản cập nhật…";
             progress01 = 0f;
 
-            // string patchPath = Path.Combine(Application.persistentDataPath, patchFolder, patchFileName);
-            string patchPath = Path.Combine(Application.persistentDataPath, patchFolder, $"patch_{remoteVer}.zip");
-
+            string patchPath = Path.Combine(Application.persistentDataPath, patchFolder, patchName);
             Directory.CreateDirectory(Path.GetDirectoryName(patchPath));
 
-            bool ok = await DownloadFileWithRetry(packageUrl, patchPath, maxRetries);
-            if (!ok && !string.IsNullOrEmpty(packageUrlFallback))
-                ok = await DownloadFileWithRetry(packageUrlFallback, patchPath, maxRetries);
+            bool ok =
+                await DownloadFileWithRetry(packageUrlPrimary, patchPath, maxRetries) ||
+                await DownloadFileWithRetry(packageUrlPrimaryCDN, patchPath, maxRetries) ||
+                await DownloadFileWithRetry(packageUrlBuild, patchPath, maxRetries) ||
+                await DownloadFileWithRetry(packageUrlBuildCDN, patchPath, maxRetries);
 
             if (!ok)
             {
@@ -131,48 +130,57 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 4) Áp dụng patch (giải nén đè)
+            // 3.5) Verify file có vẻ là ZIP thật
+            if (!LooksLikeZip(patchPath))
+            {
+                try { File.Delete(patchPath); } catch {}
+                SetError("File tải về không phải .zip hợp lệ (có thể là 404/HTML hoặc tải chưa đủ).");
+                return;
+            }
+
+            // 4) Áp dụng patch — dùng helper để cập nhật được cả EXE
             state = State.Applying;
             uiTitle = "Đang áp dụng bản cập nhật…";
-            uiMessage = "Vui lòng chờ (không tắt game).";
+            uiMessage = "Game sẽ khởi động lại để hoàn tất cập nhật.";
 
-            string gameDir = Path.GetDirectoryName(Application.dataPath); // thư mục chứa EXE
+#if UNITY_STANDALONE_WIN
+            string gameDir = Path.GetDirectoryName(Application.dataPath);
+            StartHelperAndQuit(patchPath, gameDir, Path.Combine(gameDir, exeName), Process.GetCurrentProcess().Id, remoteVer);
+            // NOTE: helper sẽ:
+            //  - chờ game thoát
+            //  - giải nén đè
+            //  - ghi version.json
+            //  - xóa file zip
+            //  - khởi động lại game
+#else
+            // Non-Windows fallback: giải nén ngay (không cập nhật được .app đang chạy)
             try
             {
                 using (var zip = ZipFile.OpenRead(patchPath))
                 {
-                    int i = 0;
-                    int total = Mathf.Max(zip.Entries.Count, 1);
                     foreach (var entry in zip.Entries)
                     {
-                        if (string.IsNullOrEmpty(entry.Name)) continue; // folder
-                        string dest = Path.Combine(gameDir, entry.FullName);
+                        if (string.IsNullOrEmpty(entry.Name)) continue;
+                        string dest = Path.Combine(Path.GetDirectoryName(Application.dataPath), entry.FullName);
                         Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                         entry.ExtractToFile(dest, overwrite: true);
-                        i++;
-                        progress01 = Mathf.Clamp01(i / (float)total);
                     }
                 }
                 File.Delete(patchPath);
-
-                // Ghi version local để lần sau khỏi tải lại
-                File.WriteAllText(Path.Combine(gameDir, "version.json"),
-                                  "{\"version\":\"" + remoteVer + "\"}");
-
-                state = State.ReadyToRestart;
-                uiTitle = $"Đã cập nhật lên {remoteVer}";
-                uiMessage = "Nhấn Restart để khởi động lại game áp dụng bản mới.";
-                progress01 = 1f;
+                string gameDir2 = Path.GetDirectoryName(Application.dataPath);
+                File.WriteAllText(Path.Combine(gameDir2, "version.json"), "{\"version\":\"" + remoteVer + "\"}");
+                state = State.ReadyToRestart; uiTitle = $"Đã cập nhật lên {remoteVer}";
+                uiMessage = "Nhấn Restart để áp dụng.";
                 showPopup = true;
             }
             catch (Exception e)
             {
                 state = State.ReadyToRestart;
                 uiTitle = "Cần khởi động lại để hoàn tất";
-                uiMessage = "Một số file đang được game sử dụng nên không thể ghi đè.\nNhấn Restart để áp dụng cập nhật.\n\nChi tiết: " + e.Message;
-                progress01 = 1f;
+                uiMessage = "Không thể giải nén toàn bộ khi app đang chạy.\nChi tiết: " + e.Message;
                 showPopup = true;
             }
+#endif
         }
         catch (Exception ex)
         {
@@ -180,7 +188,7 @@ public class AutoUpdaterUI : MonoBehaviour
         }
     }
 
-    // ===== UI IMGUI =====
+    // ===== UI =====
     void OnGUI()
     {
         if (!showPopup) return;
@@ -191,11 +199,11 @@ public class AutoUpdaterUI : MonoBehaviour
     {
         GUILayout.Label($"Trạng thái: {state}");
         if (!string.IsNullOrEmpty(uiMessage))
-            GUILayout.Label(uiMessage, GUILayout.Width(450));
+            GUILayout.Label(uiMessage, GUILayout.Width(500));
 
         if (state == State.Downloading || state == State.Applying || state == State.ReadyToRestart)
         {
-            var rect = GUILayoutUtility.GetRect(450, 18);
+            var rect = GUILayoutUtility.GetRect(500, 18);
             GUI.Box(rect, GUIContent.none);
             var fill = new Rect(rect.x + 2, rect.y + 2, (rect.width - 4) * Mathf.Clamp01(progress01), rect.height - 4);
             GUI.Box(fill, GUIContent.none);
@@ -233,23 +241,20 @@ public class AutoUpdaterUI : MonoBehaviour
                 var v = JsonUtility.FromJson<VersionJson>(txt);
                 if (v != null && !string.IsNullOrEmpty(v.version))
                 {
-                    UnityEngine.Debug.Log($"[Updater] Local version.json: {v.version}");
+                    Debug.Log($"[Updater] Local version.json: {v.version}");
                     return v.version;
                 }
-                UnityEngine.Debug.LogWarning($"[Updater] version.json không hợp lệ: {txt}");
+                Debug.LogWarning($"[Updater] version.json không hợp lệ: {txt}");
             }
             else
             {
-                UnityEngine.Debug.LogWarning($"[Updater] Không tìm thấy version.json tại: {jsonPath}");
+                Debug.LogWarning($"[Updater] Không tìm thấy version.json tại: {jsonPath}");
             }
         }
-        catch (Exception e)
-        {
-            UnityEngine.Debug.LogWarning("[Updater] Lỗi đọc version.json: " + e.Message);
-        }
+        catch (Exception e) { Debug.LogWarning("[Updater] Lỗi đọc version.json: " + e.Message); }
 
         if (!string.IsNullOrEmpty(Application.version))
-            return Application.version; // từ PlayerSettings.bundleVersion
+            return Application.version;
 
         return localVersionFallback;
     }
@@ -259,18 +264,15 @@ public class AutoUpdaterUI : MonoBehaviour
         string text = await DownloadText(url);
         if (string.IsNullOrEmpty(text)) return null;
 
-        // Tìm m_BundleVersion: 1.2.3 hoặc bundleVersion: 1.2.3
         var m = Regex.Match(text, @"m_BundleVersion\s*:\s*([0-9]+(\.[0-9]+){1,3})");
-        if (!m.Success)
-            m = Regex.Match(text, @"bundleVersion\s*:\s*([0-9]+(\.[0-9]+){1,3})");
+        if (!m.Success) m = Regex.Match(text, @"bundleVersion\s*:\s*([0-9]+(\.[0-9]+){1,3})");
         if (m.Success)
         {
             string ver = m.Groups[1].Value;
-            UnityEngine.Debug.Log($"[Updater] Remote version (ProjectSettings): {ver}");
+            Debug.Log($"[Updater] Remote version (ProjectSettings): {ver}");
             return ver;
         }
-
-        UnityEngine.Debug.LogError("[Updater] Không tìm thấy m_BundleVersion trong ProjectSettings.asset");
+        Debug.LogError("[Updater] Không tìm thấy m_BundleVersion trong ProjectSettings.asset");
         return null;
     }
 
@@ -301,7 +303,7 @@ public class AutoUpdaterUI : MonoBehaviour
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                UnityEngine.Debug.LogError($"[Updater] GET {url}\nHTTP: {www.responseCode}\nError: {www.error}");
+                Debug.LogError($"[Updater] GET {url}\nHTTP: {www.responseCode}\nError: {www.error}");
                 return null;
             }
             return www.downloadHandler.text;
@@ -319,7 +321,7 @@ public class AutoUpdaterUI : MonoBehaviour
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogWarning("[Updater] Download lỗi: " + e.Message);
+                Debug.LogWarning("[Updater] Download lỗi: " + e.Message);
                 if (i == retries) return false;
                 await Task.Delay(1000 * (i + 1));
             }
@@ -331,10 +333,12 @@ public class AutoUpdaterUI : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(url)) throw new Exception("URL rỗng");
         Directory.CreateDirectory(Path.GetDirectoryName(dest));
+        Debug.Log($"[Updater] Downloading from: {url} -> {dest}");
+
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("User-Agent", "XHeroLMS-Updater/1.0");
-            www.timeout = 600; // file lớn
+            www.timeout = 600;
             www.downloadHandler = new DownloadHandlerFile(dest) { removeFileOnAbort = true };
 
             var op = www.SendWebRequest();
@@ -346,6 +350,36 @@ public class AutoUpdaterUI : MonoBehaviour
             if (www.result != UnityWebRequest.Result.Success)
                 throw new Exception($"HTTP {www.responseCode} - {www.error}");
         }
+        LogFileInfo(dest);
+    }
+
+    // ZIP sanity check (tránh file HTML 404)
+    bool LooksLikeZip(string path)
+    {
+        try
+        {
+            using (var fs = File.OpenRead(path))
+            {
+                if (fs.Length < 22) return false;
+                byte[] head = new byte[4]; fs.Read(head, 0, 4);
+                bool headOk = head[0]==0x50 && head[1]==0x4B && head[2]==0x03 && head[3]==0x04;
+                fs.Seek(-22, SeekOrigin.End);
+                byte[] tail = new byte[4]; fs.Read(tail, 0, 4);
+                bool tailOk = tail[0]==0x50 && tail[1]==0x4B && tail[2]==0x05 && tail[3]==0x06;
+                return headOk && tailOk;
+            }
+        }
+        catch { return false; }
+    }
+
+    void LogFileInfo(string path)
+    {
+        try
+        {
+            var fi = new FileInfo(path);
+            Debug.Log($"[Updater] Saved file: {path} ({fi.Length} bytes)");
+        }
+        catch { }
     }
 
     void SetError(string msg)
@@ -371,9 +405,48 @@ public class AutoUpdaterUI : MonoBehaviour
 #endif
             Application.Quit();
         }
+        catch (Exception e) { SetError("Không thể khởi động lại: " + e.Message); }
+    }
+
+#if UNITY_STANDALONE_WIN
+    // Tạo helper PowerShell để cập nhật sau khi game thoát (cập nhật được .exe)
+    void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
+    {
+        try
+        {
+            string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
+            string script = $@"
+param([int]$pid,[string]$zip,[string]$dest,[string]$exe,[string]$ver)
+# đợi process thoát
+while (Get-Process -Id $pid -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}
+try {{
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($zip,$dest,$true)
+  Remove-Item $zip -ErrorAction SilentlyContinue
+  Set-Content -Path (Join-Path $dest 'version.json') -Value ('{{""version"":""' + $ver + '""}}') -Encoding UTF8
+}} catch {{
+  Write-Host $_
+}}
+Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
+";
+            File.WriteAllText(ps1, script);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\"",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WorkingDirectory = gameDir
+            };
+            Process.Start(psi);
+            // Thoát game → helper tiếp tục công việc rồi mở lại game
+            Application.Quit();
+        }
         catch (Exception e)
         {
-            SetError("Không thể khởi động lại: " + e.Message);
+            SetError("Không tạo được helper update: " + e.Message);
         }
     }
+#endif
 }
