@@ -37,6 +37,7 @@ public class AutoUpdaterUI : MonoBehaviour
     [Tooltip("Số lần retry mạng")]
     public int maxRetries = 2;
 
+    [SerializeField] bool helperDebug = false; // bật để xem console/log lần đầu
     // ===== Runtime UI state =====
     Rect windowRect = new Rect(20, 20, 520, 220);
     bool showPopup = false;
@@ -55,7 +56,12 @@ public class AutoUpdaterUI : MonoBehaviour
 
     void Start()
     {
+#if UNITY_EDITOR
+    Debug.Log("[Updater] Skipped in Editor (no version check)");
+        return;
+#else
         _ = FlowCheckAndUpdate();
+#endif
     }
 
     async Task FlowCheckAndUpdate()
@@ -66,7 +72,7 @@ public class AutoUpdaterUI : MonoBehaviour
             uiTitle = "Đang kiểm tra cập nhật…";
             uiMessage = "Vui lòng chờ trong giây lát.";
 
-            // 1) Lấy version remote từ ProjectSettings.asset (raw -> fallback)
+            // Lấy version remote từ ProjectSettings.asset (raw -> fallback)
             string remoteVer = await GetRemoteVersionFromProjectSettings(projectSettingsUrl);
             if (string.IsNullOrEmpty(remoteVer) && !string.IsNullOrEmpty(projectSettingsUrlFallback))
                 remoteVer = await GetRemoteVersionFromProjectSettings(projectSettingsUrlFallback);
@@ -90,13 +96,13 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 2) Dựng URL từ GitHub Releases
+            // Dựng URL từ GitHub Releases
             string tag = $"{tagPrefix}{remoteVer}";
             string patchName = $"patch_{remoteVer}.zip";
             string urlPatch = BuildReleaseUrl(githubOwner, githubRepo, tag, patchName);
             string urlBuild = BuildReleaseUrl(githubOwner, githubRepo, tag, "BUILD.zip"); // fallback
 
-            // 3) Tải patch (.zip)
+            // Tải patch (.zip)
             state = State.Downloading;
             uiTitle = $"Có bản mới {current} → {remoteVer}";
             uiMessage = "Đang tải bản cập nhật…";
@@ -117,7 +123,7 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 3.5) Verify file là ZIP (header)
+            // Verify file là ZIP (header)
             if (!LooksLikeZip(patchPath))
             {
                 try { File.Delete(patchPath); } catch {}
@@ -125,7 +131,7 @@ public class AutoUpdaterUI : MonoBehaviour
                 return;
             }
 
-            // 4) Áp dụng patch — dùng helper để cập nhật được cả EXE
+            // Áp dụng patch — dùng helper để cập nhật được cả EXE
             state = State.Applying;
             uiTitle = "Đang áp dụng bản cập nhật…";
             uiMessage = "Game sẽ khởi động lại để hoàn tất cập nhật.";
@@ -229,7 +235,6 @@ public class AutoUpdaterUI : MonoBehaviour
         GUI.DragWindow(new Rect(0, 0, 10000, 20));
     }
 
-    // ===== Helpers =====
     string GetLocalVersion()
     {
         try
@@ -405,27 +410,15 @@ public class AutoUpdaterUI : MonoBehaviour
         catch (Exception e) { SetError("Không thể khởi động lại: " + e.Message); }
     }
 
-    // Copy thư mục đệ quy (non-Windows fallback)
-    void CopyDirectoryRecursive(string src, string dst)
-    {
-        Directory.CreateDirectory(dst);
-        foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
-        {
-            var rel = file.Substring(src.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var target = Path.Combine(dst, rel);
-            Directory.CreateDirectory(Path.GetDirectoryName(target));
-            File.Copy(file, target, true);
-        }
-    }
 #if UNITY_STANDALONE_WIN
-void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
-{
-    try
+    void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
     {
-        string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
-        string logPath = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.log");
+        try
+        {
+            string ps1 = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.ps1");
+            string logPath = Path.Combine(Path.GetTempPath(), $"lms_update_{Guid.NewGuid():N}.log");
 
-        string script = @"
+            string script = @"
 param([int]$gamePid,[string]$zip,[string]$dest,[string]$exe,[string]$ver,[string]$logPath)
 
 Set-StrictMode -Version Latest
@@ -493,34 +486,31 @@ Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
 Log 'Done.'
 ";
 
-        File.WriteAllText(ps1, script);
+            File.WriteAllText(ps1, script);
 
-        var psi = new ProcessStartInfo
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = helperDebug
+                    ? $"-NoProfile -ExecutionPolicy Bypass -NoExit -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\""
+                    : $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\"",
+                UseShellExecute = true,
+                CreateNoWindow = !helperDebug,
+                WorkingDirectory = gameDir,
+                WindowStyle = helperDebug ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden
+            };
+
+            Debug.Log($"[Updater] Helper log: {logPath}");
+            var p = Process.Start(psi);
+            if (p == null) { SetError("Không khởi chạy được helper."); return; }
+
+            System.Threading.Thread.Sleep(300); // cho helper spawn xong
+            Application.Quit();
+        }
+        catch (Exception e)
         {
-            FileName = "powershell.exe",
-            Arguments = helperDebug
-                ? $"-NoProfile -ExecutionPolicy Bypass -NoExit -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\""
-                : $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{ps1}\" {pid} \"{zipPath}\" \"{gameDir}\" \"{exePath}\" \"{newVersion}\" \"{logPath}\"",
-            UseShellExecute = true,
-            CreateNoWindow = !helperDebug,
-            WorkingDirectory = gameDir,
-            WindowStyle = helperDebug ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden
-        };
-
-        Debug.Log($"[Updater] Helper log: {logPath}");
-        var p = Process.Start(psi);
-        if (p == null) { SetError("Không khởi chạy được helper."); return; }
-
-        System.Threading.Thread.Sleep(300); // cho helper spawn xong
-        Application.Quit();
+            SetError("Không tạo được helper update: " + e.Message);
+        }
     }
-    catch (Exception e)
-    {
-        SetError("Không tạo được helper update: " + e.Message);
-    }
-}
 #endif
-
-[SerializeField] bool helperDebug = true; // bật để xem console/log lần đầu
-
 }
