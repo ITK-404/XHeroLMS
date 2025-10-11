@@ -77563,13 +77563,17 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AutoUpdater
-  remoteVersionUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/BuilderStore/version.json
-  localVersion: 1.0.0
+  m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
+  githubOwner: ITK-404
+  githubRepo: XHeroLMS
+  tagPrefix: v
+  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
+  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
+  localVersionFallback: 1.0.0
   exeName: XHeroLMS.exe
   patchFolder: Updates
-  patchFileName: patch.zip
   maxRetries: 2
+  helperDebug: 0
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
