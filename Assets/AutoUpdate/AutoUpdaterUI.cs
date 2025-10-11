@@ -37,7 +37,7 @@ public class AutoUpdaterUI : MonoBehaviour
     [Tooltip("Số lần retry mạng")]
     public int maxRetries = 2;
 
-    [SerializeField] bool helperDebug = false; // bật để xem console/log lần đầu
+    [SerializeField] bool helperDebug = true; // bật để xem console/log lần đầu
     // ===== Runtime UI state =====
     Rect windowRect = new Rect(20, 20, 520, 220);
     bool showPopup = false;
