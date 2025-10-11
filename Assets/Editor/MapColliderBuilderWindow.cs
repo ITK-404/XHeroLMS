@@ -249,7 +249,9 @@ public class MapColliderBuilderWindow : EditorWindow
                 if (!mf || !mf.sharedMesh) { skipped++; continue; }
                 var mr = mf.GetComponent<Renderer>();
                 if (!mr) { skipped++; continue; }
-                if (ShouldSkipBySize(mr)) { skipped++; continue; }
+                if (ShouldSkipBySize(mr, skipIfBoundsDiagonalUnder)) { skipped++; continue; }
+
+                if (mf.TryGetComponent<Collider>(out _)) { skipped++; continue; }
 
                 Undo.RegisterCompleteObjectUndo(mf.gameObject, "Add MeshCollider");
                 var mc = Undo.AddComponent<MeshCollider>(mf.gameObject);
@@ -276,7 +278,13 @@ public class MapColliderBuilderWindow : EditorWindow
             foreach (var r in renderers)
             {
                 if (!r) { skipped++; continue; }
-                if (ShouldSkipBySize(r)) { skipped++; continue; }
+                // SKIP skinned ở vòng này để xử lý ở khối skinned phía dưới
+                if (r is SkinnedMeshRenderer) { continue; }
+
+                if (ShouldSkipBySize(r, skipIfBoundsDiagonalUnder)) { skipped++; continue; }
+
+                // Tránh duplicate: nếu đã có Collider thì bỏ qua
+                if (r.TryGetComponent<Collider>(out _)) { skipped++; continue; }
 
                 Undo.RegisterCompleteObjectUndo(r.gameObject, "Add BoxCollider");
                 var bc = Undo.AddComponent<BoxCollider>(r.gameObject);
@@ -292,9 +300,11 @@ public class MapColliderBuilderWindow : EditorWindow
         {
             if (!smr) { skipped++; continue; }
 
+            // Nếu đã có Collider sẵn thì bỏ qua để không duplicate
+            if (smr.TryGetComponent<Collider>(out _)) { skipped++; continue; }
+
             if (mode == BuildMode.BoxPerRenderer || skinnedUseBounds)
             {
-                // Box theo localBounds (nhanh)
                 var diag = smr.localBounds.size.magnitude;
                 if (diag < skipIfBoundsDiagonalUnder) { skipped++; continue; }
 
@@ -306,7 +316,6 @@ public class MapColliderBuilderWindow : EditorWindow
             }
             else
             {
-                // Bake ra MeshCollider (chính xác)
                 var baked = new Mesh();
                 smr.BakeMesh(baked, true);
                 if (baked.vertexCount < 3)
@@ -318,19 +327,18 @@ public class MapColliderBuilderWindow : EditorWindow
 
                 Undo.RegisterCompleteObjectUndo(smr.gameObject, "Add MeshCollider");
                 var mc = Undo.AddComponent<MeshCollider>(smr.gameObject);
-                mc.sharedMesh = baked; // giữ baked để MeshCollider dùng
+                mc.sharedMesh = baked;
                 mc.convex = convex;
-
-#if UNITY_2020_2_OR_NEWER
+        #if UNITY_2020_2_OR_NEWER
                 if (useTightCooking)
                 {
                     mc.cookingOptions =
-                          MeshColliderCookingOptions.EnableMeshCleaning
+                        MeshColliderCookingOptions.EnableMeshCleaning
                         | MeshColliderCookingOptions.WeldColocatedVertices
                         | MeshColliderCookingOptions.UseFastMidphase
                         | MeshColliderCookingOptions.CookForFasterSimulation;
                 }
-#endif
+        #endif
                 AddMarker(smr.gameObject);
                 created++;
             }
@@ -346,8 +354,7 @@ public class MapColliderBuilderWindow : EditorWindow
         {
             if (!t) continue;
 
-            // Chỉ xoá collider do tool tạo (có marker)
-            var marker = t.GetComponent(MARKER_COMPONENT_NAME);
+            var marker = t.GetComponent<GeneratedColliderMarker>();
             if (marker == null) continue;
 
             var colliders = t.GetComponents<Collider>();
@@ -376,7 +383,7 @@ public class MapColliderBuilderWindow : EditorWindow
         return results;
     }
 
-    static bool ShouldSkipBySize(Renderer r, float threshold = 0.02f)
+    static bool ShouldSkipBySize(Renderer r, float threshold)
     {
         var diag = r.localBounds.size.magnitude;
         return diag < threshold;
@@ -402,8 +409,6 @@ public class MapColliderBuilderWindow : EditorWindow
 
     static int MaskToLayerMask(int maskField)
     {
-        // Editor mask field uses custom bit order; convert via names if needed.
-        // Ở đây dùng trực tiếp vì đã lấy từ InternalEditorUtility.layers.
         return maskField;
     }
 
