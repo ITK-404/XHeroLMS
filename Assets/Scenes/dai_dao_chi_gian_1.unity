@@ -20,7 +20,7 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.7660377, g: 0.7660377, b: 0.7660377, a: 1}
+  m_AmbientSkyColor: {r: 1, g: 1, b: 1, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
@@ -17918,6 +17918,10 @@ PrefabInstance:
       propertyPath: m_BackGroundColor.r
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1269934947781356831, guid: b108cbc0c07df094a82bc9903772b86b, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3705668463435451302, guid: b108cbc0c07df094a82bc9903772b86b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 14.526422
@@ -19329,7 +19333,7 @@ MeshCollider:
   m_Mesh: {fileID: -8482404797936473652, guid: 58d5dddb88fcb764b97cea7bb86240aa, type: 3}
 --- !u!114 &2050820864
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
