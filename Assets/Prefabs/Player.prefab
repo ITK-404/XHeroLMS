@@ -331,7 +331,7 @@ GameObject:
   - component: {fileID: 3285897085027732061}
   m_Layer: 0
   m_Name: CameraPlayer
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -433,7 +433,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -771,17 +771,21 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8445400216575760097}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 529c91c1fe3b6e7459d9bdc8f608f59a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FPSLookController
   pitchPivot: {fileID: 3318112181113619225}
   cam: {fileID: 413529771682145962}
+  cc: {fileID: 0}
+  rb: {fileID: 0}
   sensX: 200
   sensY: 200
   pitchMin: -89
   pitchMax: 89
+  invertX: 0
+  invertY: 0
   smooth: 1
   yawLerp: 18
   pitchLerp: 18
@@ -789,12 +793,36 @@ MonoBehaviour:
   sprintFov: 82
   adsFov: 62
   fovLerp: 10
+  sprintFovKick: 2
+  fovKickLerp: 12
   eyeY: 1.62
   crouchEyeY: 1.1
   adsEyeYOffset: 0
   eyeLerp: 10
-  invertX: 0
-  invertY: 0
+  adsStabilize: 0.8
+  swayYawDeg: 1.2
+  swayPitchDeg: 0.6
+  swayLerp: 12
+  maxRollDeg: 4.5
+  rollFromVel: 0.05
+  rollFromAccel: 0.1
+  rollLerp: 10
+  posLagMax: 0.06
+  posStiffness: 22
+  posDamping: 10
+  velOffsetScale: 0.01
+  accelOffsetScale: 0.0035
+  bobFreqWalk: 1.8
+  bobFreqSprint: 2.6
+  bobAmpYWalk: 0.015
+  bobAmpYSprint: 0.025
+  bobAmpXWalk: 0.008
+  bobAmpXSprint: 0.012
+  bobFadeLerp: 10
+  landPitchKickDeg: 6
+  landRiseTime: 0.06
+  landFallTime: 0.12
+  landMinImpactSpeed: 2.5
   IsSprinting: 0
   IsCrouching: 0
   IsADS: 0
