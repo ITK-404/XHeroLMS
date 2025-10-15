@@ -33,7 +33,12 @@ public class TeleMapController : MonoBehaviour
 
     void Update()
     {
+        // Nhấn phím M để bật/tắt map
         if (Input.GetKeyDown(KeyCode.M)) ToggleMap();
+
+        // Cuộn chuột về sau (scroll down) để mở map
+        if (Input.mouseScrollDelta.y < -0.5f && !_mapActive)
+            ToggleMap(true);
 
         if (!_mapActive) return;
 
