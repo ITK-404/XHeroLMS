@@ -201,7 +201,17 @@ public class AutoUpdaterUI : MonoBehaviour
         if (!showPopup) return;
         windowRect = GUI.ModalWindow(1927, windowRect, DrawWindow, "Auto Updater");
     }
-
+    public void CheckNow(bool forceInEditor = true)
+    {
+#if UNITY_EDITOR
+        if (!forceInEditor)
+        {
+            Debug.Log("[Updater] Skipped in Editor (CheckNow).");
+            return;
+        }
+#endif
+        _ = FlowCheckAndUpdate(); // gọi flow có sẵn: sẽ hiện popup & báo “bản mới nhất + version” nếu up-to-date
+    }
     void DrawWindow(int id)
     {
         GUILayout.Label($"Trạng thái: {state}");
