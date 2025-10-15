@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000000, guid: ab9da61f2bb13be41951b73eaa93d6bb, type: 2}
+  m_LightingDataAsset: {fileID: 112000000, guid: bdc37fa29e69b6747ac4f58c83e9d76a, type: 2}
   m_LightingSettings: {fileID: 4890085278179872738, guid: ad4959f661b8c7244bee0d9e4886b7de, type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -262,8 +262,21 @@ MonoBehaviour:
   textProgress: {fileID: 74400379}
   textLoading: {fileID: 1520055091}
   dotSpeed: 0.5
-  baseText: Loading
-  imageSwitchInterval: 0.5
+  headroom: 0.06
+  milestonePercents:
+  - 0.3
+  - 0.5
+  - 0.6
+  - 0.7
+  - 0.8
+  - 0.9
+  milestoneDurations:
+  - 0.35
+  - 0.45
+  - 0.3
+  - 0.3
+  - 0.35
+  - 0.5
   fakeFillDuration: 2
 --- !u!1 &74400377
 GameObject:
