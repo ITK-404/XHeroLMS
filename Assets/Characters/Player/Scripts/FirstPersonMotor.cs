@@ -32,6 +32,8 @@ public class FirstPersonMotor : MonoBehaviour
 
     void Update()
     {
+        if (InputBlocker.IsBlocked())
+        return;
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
         bool sprinting = Input.GetKey(KeyCode.LeftShift);

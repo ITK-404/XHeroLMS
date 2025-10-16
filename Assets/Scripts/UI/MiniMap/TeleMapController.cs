@@ -33,6 +33,8 @@ public class TeleMapController : MonoBehaviour
 
     void Update()
     {
+        if (InputBlocker.IsBlocked())
+        return;
         // Nhấn phím M để bật/tắt map
         if (Input.GetKeyDown(KeyCode.M)) ToggleMap();
 
