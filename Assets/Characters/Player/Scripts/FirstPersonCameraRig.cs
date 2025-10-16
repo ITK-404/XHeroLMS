@@ -22,9 +22,11 @@ public class FirstPersonCameraRig : MonoBehaviour
     float targetFov;
     float targetEyeY;
     Vector2 recoil; // cộng dồn từ weapon
+    CursorGameManager cursorMgr;
 
     void Start()
     {
+        cursorMgr = FindAnyObjectByType<CursorGameManager>();
         Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
         if (!cam) cam = Camera.main;
         if (!orientation) orientation = yawPivot;
@@ -36,6 +38,8 @@ public class FirstPersonCameraRig : MonoBehaviour
 
     void Update()
     {
+        if (InputBlocker.IsBlocked())
+        return;
         if (Cursor.lockState != CursorLockMode.Locked)
         return;
         float mx = Input.GetAxisRaw("Mouse X") * sensX * 0.01f;
