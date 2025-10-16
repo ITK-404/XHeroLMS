@@ -8,7 +8,10 @@ public class LoadRoomTrigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            LoadScene();
+            if (other.CompareTag("Player") && !string.IsNullOrEmpty(sceneName))
+            {
+                LoadingTransition.Load(sceneName); 
+            }
         }
     }
 
