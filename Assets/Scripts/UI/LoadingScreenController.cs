@@ -9,17 +9,12 @@ public class LoadingScreenController : MonoBehaviour
 {
     [Header("UI References")]
     public Image imageScene1;
-    public Image imageScene2;
-    public Image imageScene3;
     public Image progressRing;
-
-    public TMP_Text textProgress;
     public TMP_Text textLoading;
 
     [Header("Loading Text Animation")]
     public float dotSpeed = 0.5f;
     string baseText = "Loading";
-
     float imageSwitchInterval = 1f;
 
     [Header("Visual Progress Settings")]
@@ -40,14 +35,13 @@ public class LoadingScreenController : MonoBehaviour
     private bool _isLoading;
     private float _dotTimer;
     private int _dotCount;
+    private float _currentProgress; // lưu giá trị hiện tại
     private List<Image> _images = new();
     private int _currentImageIndex = -1;
 
     void Awake()
     {
         if (imageScene1) _images.Add(imageScene1);
-        if (imageScene2) _images.Add(imageScene2);
-        if (imageScene3) _images.Add(imageScene3);
         foreach (var img in _images) if (img) img.gameObject.SetActive(false);
 
         if (progressRing) progressRing.fillAmount = 0f;
@@ -71,7 +65,6 @@ public class LoadingScreenController : MonoBehaviour
     {
         _isLoading = true;
         SetProgress(0f);
-        textLoading.text = baseText;
 
         var op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false;
@@ -140,9 +133,15 @@ public class LoadingScreenController : MonoBehaviour
 
     void SetProgress(float t)
     {
-        t = Mathf.Clamp01(t);
-        if (textProgress) textProgress.text = Mathf.RoundToInt(t * 100f) + "%";
-        if (progressRing) progressRing.fillAmount = t;
+        _currentProgress = Mathf.Clamp01(t);
+        int percent = Mathf.RoundToInt(_currentProgress * 100f);
+
+        // hiển thị Loading + phần trăm + dấu chấm
+        if (textLoading)
+            textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
+
+        if (progressRing)
+            progressRing.fillAmount = _currentProgress;
     }
 
     IEnumerator CycleRandomImages()
@@ -175,7 +174,9 @@ public class LoadingScreenController : MonoBehaviour
         {
             _dotTimer = 0f;
             _dotCount = (_dotCount + 1) % 4;
-            textLoading.text = baseText + new string('.', _dotCount);
+
+            // cập nhật lại text mỗi khi chấm đổi
+            SetProgress(_currentProgress);
         }
     }
 }
