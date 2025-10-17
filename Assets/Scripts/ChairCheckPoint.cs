@@ -7,7 +7,7 @@ public class ChairCheckPoint : MonoBehaviour
     public GameObject player;
     public void Show(bool isShow)
     {
-        spriteCheckPoint.gameObject.SetActive(spriteCheckPoint);
+        spriteCheckPoint.gameObject.SetActive(isShow);
     }
 
     private void LateUpdate()
@@ -25,7 +25,7 @@ public class ChairCheckPoint : MonoBehaviour
     {
         if (IsPlayer(other.gameObject))
         {
-            Debug.Log("Enter dính player", other.gameObject);
+            //Debug.Log("Enter dính player", other.gameObject);
             PlayerChairManager.Instance.TrySetChair(this);
         }
     }
@@ -34,7 +34,7 @@ public class ChairCheckPoint : MonoBehaviour
     {
         if (IsPlayer(other.gameObject))
         {
-            Debug.Log("Exit dính player",gameObject);
+            //Debug.Log("Exit dính player",gameObject);
             PlayerChairManager.Instance.TryRemoveChair(this);
         }
     }
