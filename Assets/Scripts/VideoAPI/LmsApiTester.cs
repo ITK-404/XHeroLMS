@@ -21,7 +21,6 @@ public class LmsApiMinimalExporter : MonoBehaviour
     public int skip = 0;
     public int limit = 20;
     public string keyword = "";
-    public string tag = "";
     public string category = "";
     public string sortBy = "";
     public string order = "";
