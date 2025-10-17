@@ -3,6 +3,7 @@ using UnityEngine;
 public class ChairCheckPoint : MonoBehaviour
 {
     public GameObject spriteCheckPoint;
+    public GameObject checkPoint;
     public GameObject player;
     public void Show(bool isShow)
     {
@@ -16,4 +17,30 @@ public class ChairCheckPoint : MonoBehaviour
         spriteCheckPoint.transform.forward = direction;
     }
 
+    private bool IsPlayer(GameObject other)
+    {
+        return other.CompareTag("Player");
+    }
+    private void OnTriggerEnter(Collider other)
+    {
+        if (IsPlayer(other.gameObject))
+        {
+            Debug.Log("Enter dính player", other.gameObject);
+            PlayerChairManager.Instance.TrySetChair(this);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (IsPlayer(other.gameObject))
+        {
+            Debug.Log("Exit dính player",gameObject);
+            PlayerChairManager.Instance.TryRemoveChair(this);
+        }
+    }
+
+    public void Sitdown()
+    {
+
+    }
 }
