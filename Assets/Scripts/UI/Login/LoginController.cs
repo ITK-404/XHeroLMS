@@ -5,6 +5,7 @@ using System.Collections;
 using System.Text.RegularExpressions;
 using UnityEngine.Networking;
 using UnityEngine.EventSystems;
+using System;
 
 public class LoginController : MonoBehaviour
 {
@@ -19,7 +20,7 @@ public class LoginController : MonoBehaviour
 
     bool _isLoggingIn = false;
     OpenClosePanel openClosePanel;
-
+    public static Action OnLoginComplete;
     private void Awake()
     {
         // Ẩn ký tự mật khẩu + chặn copy/cut
@@ -173,7 +174,7 @@ public class LoginController : MonoBehaviour
                 {
                     TokenStore.SetData(auth);
                     Debug.Log("Đăng nhập thành công, đóng panel login.");
-
+                    OnLoginComplete?.Invoke();
                     if (openClosePanel != null)
                         openClosePanel.CloseUI();  // Đóng UI login
                     else
