@@ -1,142 +1,79 @@
-// File: Assets/Editor/RemoveMissingScriptsWindow.cs
+﻿using UnityEditor;
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityEngine.SceneManagement;
 using System.Collections.Generic;
-using Object = UnityEngine.Object;
+using UnityEngine.SceneManagement;
 
-public class RemoveMissingScriptsWindow : EditorWindow
+public class RemoveInvalidScripts : EditorWindow
 {
-    bool scanEntireScene = false;
-    bool includeInactive = true;
-    int removedCount = 0;
-    Vector2 scroll;
-
-    [MenuItem("Tools/Remove Missing Scripts")]
-    public static void OpenWindow()
-    {
-        GetWindow<RemoveMissingScriptsWindow>("Remove Missing Scripts");
-    }
-
-    void OnGUI()
-    {
-        GUILayout.Label("Remove Missing Scripts Tool (editor)", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        scanEntireScene = EditorGUILayout.ToggleLeft("Scan entire active scene (otherwise uses Selection)", scanEntireScene);
-        includeInactive = EditorGUILayout.ToggleLeft("Include inactive GameObjects", includeInactive);
-
-        EditorGUILayout.Space();
-        if (GUILayout.Button("Scan and Remove"))
-        {
-            removedCount = 0;
-            if (scanEntireScene)
-            {
-                removedCount = ProcessScene();
-            }
-            else
-            {
-                removedCount = ProcessSelection();
-            }
-
-            // mark scene dirty so user can save after changes
-            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-            EditorUtility.DisplayDialog("Done", $"Removed {removedCount} missing script entries.", "OK");
-        }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Last run results:", EditorStyles.boldLabel);
-        scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.Height(100));
-        EditorGUILayout.LabelField($"Removed missing script entries: {removedCount}");
-        EditorGUILayout.EndScrollView();
-
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox("This removes missing script entries from GameObjects' serialized component lists. It does not try to infer or recover deleted code. Always keep a backup or commit before running if you care about your job security.", MessageType.Info);
-    }
-
-    int ProcessSelection()
-    {
-        GameObject[] objs = Selection.gameObjects;
-        if (objs == null || objs.Length == 0)
-        {
-            EditorUtility.DisplayDialog("Nothing selected", "Select one or more GameObjects or enable 'Scan entire scene'.", "OK");
-            return 0;
-        }
-
-        int total = 0;
-        foreach (var go in objs)
-        {
-            total += ProcessGameObjectRecursive(go);
-        }
-        return total;
-    }
-
-    int ProcessScene()
-    {
-        Scene scene = SceneManager.GetActiveScene();
-        if (!scene.isLoaded)
-        {
-            Debug.LogWarning("No active loaded scene.");
-            return 0;
-        }
-
-        GameObject[] roots = scene.GetRootGameObjects();
-        int total = 0;
-        foreach (var r in roots)
-        {
-            total += ProcessGameObjectRecursive(r);
-        }
-        return total;
-    }
-
-    int ProcessGameObjectRecursive(GameObject go)
+    [MenuItem("Tools/Cleanup/Remove All Missing/Zombie Scripts (Scene)")]
+    public static void RemoveAllMissingAndZombieScripts()
     {
         int removed = 0;
-        if (go == null) return 0;
+        int affectedObjects = 0;
 
-        if (includeInactive || go.activeInHierarchy)
+        var scene = SceneManager.GetActiveScene();
+        var roots = scene.GetRootGameObjects();
+        var allObjects = new List<GameObject>();
+
+        foreach (var root in roots)
         {
-            removed += RemoveMissingScriptsFromGameObject(go);
+            allObjects.Add(root);
+            allObjects.AddRange(GetAllChildren(root));
         }
 
-        for (int i = 0; i < go.transform.childCount; i++)
+        foreach (var go in allObjects)
         {
-            removed += ProcessGameObjectRecursive(go.transform.GetChild(i).gameObject);
-        }
+            var components = go.GetComponents<Component>();
+            bool changed = false;
 
-        return removed;
-    }
-
-    int RemoveMissingScriptsFromGameObject(GameObject go)
-    {
-        // register undo so user can revert
-        Undo.RegisterCompleteObjectUndo(go, "Remove Missing Scripts");
-
-        SerializedObject so = new SerializedObject(go);
-        SerializedProperty prop = so.FindProperty("m_Component");
-        if (prop == null || !prop.isArray) return 0;
-
-        int removed = 0;
-        // iterate backwards when removing array elements
-        for (int i = prop.arraySize - 1; i >= 0; i--)
-        {
-            SerializedProperty compRef = prop.GetArrayElementAtIndex(i).FindPropertyRelative("component");
-            Object target = compRef.objectReferenceValue;
-            if (target == null)
+            for (int i = components.Length - 1; i >= 0; i--)
             {
-                // delete the array element (removes the missing component slot)
-                prop.DeleteArrayElementAtIndex(i);
-                removed++;
+                var comp = components[i];
+
+                if (comp == null)
+                {
+                    // Missing script
+                    GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                    removed++;
+                    changed = true;
+                    continue;
+                }
+
+                if (comp is MonoBehaviour mb)
+                {
+                    var so = new SerializedObject(mb);
+                    var prop = so.FindProperty("m_Script");
+
+                    if (prop == null || prop.objectReferenceValue == null)
+                    {
+                        // “Zombie” component — script mất nhưng chưa null
+                        Undo.RegisterCompleteObjectUndo(go, "Remove zombie script");
+                        Object.DestroyImmediate(comp, true);
+                        removed++;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                EditorUtility.SetDirty(go);
+                affectedObjects++;
             }
         }
 
-        if (removed > 0)
-        {
-            so.ApplyModifiedProperties();
-            EditorUtility.SetDirty(go);
-        }
+        AssetDatabase.SaveAssets();
+        Debug.Log($"🧹 Đã xóa {removed} component lỗi/zombie trên {affectedObjects} object trong scene '{scene.name}'.");
+    }
 
-        return removed;
+    static List<GameObject> GetAllChildren(GameObject parent)
+    {
+        var list = new List<GameObject>();
+        foreach (Transform child in parent.transform)
+        {
+            list.Add(child.gameObject);
+            list.AddRange(GetAllChildren(child.gameObject));
+        }
+        return list;
     }
 }

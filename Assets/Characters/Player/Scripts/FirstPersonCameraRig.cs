@@ -1,3 +1,4 @@
+using Unity.Cinemachine;
 using UnityEngine;
 
 public class FirstPersonCameraRig : MonoBehaviour
@@ -6,7 +7,6 @@ public class FirstPersonCameraRig : MonoBehaviour
     public Transform pitchPivot;
     public Transform orientation; // thường = yawPivot
     public Camera cam;
-
     [Header("Mouse")]
     public float sensX = 200f, sensY = 200f;
     public float pitchMin = -89f, pitchMax = 89f;
