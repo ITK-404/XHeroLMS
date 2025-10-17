@@ -43,8 +43,23 @@ public class MapColliderBuilderWindow : EditorWindow
     int created, skipped, removed;
     Vector2 scroll;
 
+    // === index layer bị bỏ qua ===
+    int ignoreGenerateLayer = -1; // sẽ lấy theo tên "IgnoreGenerateCollider"
+
     [MenuItem("Tools/Map Collider Builder")]
     static void Open() => GetWindow<MapColliderBuilderWindow>("Map Collider Builder");
+
+    void OnEnable()
+    {
+        // Có thể người dùng chưa tạo layer này => NameToLayer trả về -1
+        ignoreGenerateLayer = LayerMask.NameToLayer("IgnoreGenerateCollider");
+    }
+
+    bool IsIgnored(GameObject go)
+    {
+        // Khi layer tồn tại (>=0) và go đang ở layer đó => bỏ qua khi BUILD
+        return go && ignoreGenerateLayer >= 0 && go.layer == ignoreGenerateLayer;
+    }
 
     void OnGUI()
     {
@@ -129,7 +144,8 @@ public class MapColliderBuilderWindow : EditorWindow
                 "• MeshColliderPerMesh: chính xác nhất (bật Convex nếu có Rigidbody).\n" +
                 "• BoxPerRenderer: nhẹ, dùng localBounds của renderer.\n" +
                 "• Dùng bộ lọc Layer/Tag/Static nếu muốn giới hạn khu vực build.\n" +
-                "• Bộ đánh dấu (marker) sẽ được thêm để tiện Clear về sau.",
+                "• Bộ đánh dấu (marker) sẽ được thêm để tiện Clear về sau.\n" +
+                "• Luôn bỏ qua layer 'IgnoreGenerateCollider' khi BUILD.",
                 MessageType.Info);
         }
     }
@@ -170,11 +186,19 @@ public class MapColliderBuilderWindow : EditorWindow
                     continue;
 
                 if (build)
+                {
+                    //      Nếu root là layer bị bỏ qua, không build cho root,
+                    //      nhưng vẫn cho phép build cho các con khác layer (vì trong BuildForRoot có check từng component)
+                    //      => Ta không skip root ở đây để không bỏ sót con khác layer.
                     BuildForRoot(go.transform);
+                }
                 else
+                {
+                    // Clear: vẫn xoá kể cả trên layer bị bỏ qua (nếu trước đây đã lỡ tạo)
                     ClearForRoot(go.transform);
+                }
 
-                if (build && addRigidbodyToRoots && go.transform.parent == null)
+                if (build && addRigidbodyToRoots && go.transform.parent == null && !IsIgnored(go))
                     EnsureRigidbody(go);
             }
         }
@@ -218,7 +242,7 @@ public class MapColliderBuilderWindow : EditorWindow
                 else
                     ClearForRoot(go.transform);
 
-                if (build && addRigidbodyToRoots && go.transform.parent == null)
+                if (build && addRigidbodyToRoots && go.transform.parent == null && !IsIgnored(go))
                     EnsureRigidbody(go);
             }
         }
@@ -246,7 +270,10 @@ public class MapColliderBuilderWindow : EditorWindow
         {
             foreach (var mf in meshFilters)
             {
-                if (!mf || !mf.sharedMesh) { skipped++; continue; }
+                if (!mf) { skipped++; continue; }
+                if (IsIgnored(mf.gameObject)) { skipped++; continue; } // bỏ qua layer
+
+                if (!mf.sharedMesh) { skipped++; continue; }
                 var mr = mf.GetComponent<Renderer>();
                 if (!mr) { skipped++; continue; }
                 if (ShouldSkipBySize(mr, skipIfBoundsDiagonalUnder)) { skipped++; continue; }
@@ -278,6 +305,8 @@ public class MapColliderBuilderWindow : EditorWindow
             foreach (var r in renderers)
             {
                 if (!r) { skipped++; continue; }
+                if (IsIgnored(r.gameObject)) { skipped++; continue; } // bỏ qua layer
+
                 // SKIP skinned ở vòng này để xử lý ở khối skinned phía dưới
                 if (r is SkinnedMeshRenderer) { continue; }
 
@@ -299,6 +328,7 @@ public class MapColliderBuilderWindow : EditorWindow
         foreach (var smr in smrs)
         {
             if (!smr) { skipped++; continue; }
+            if (IsIgnored(smr.gameObject)) { skipped++; continue; } // bỏ qua layer
 
             // Nếu đã có Collider sẵn thì bỏ qua để không duplicate
             if (smr.TryGetComponent<Collider>(out _)) { skipped++; continue; }
