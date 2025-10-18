@@ -21,12 +21,22 @@ public class PlayerChairManager : MonoBehaviour
     public CursorGameManager cursorMgr;
     public GameObject player;
     public PlayerState playerState;
+    [Header("UI")]
+    public LearnUI learnUI;
 
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
         Instance = this;
+
+        learnUI.OnClickReturnBtn += PlayerStandup;
     }
+
+    private void OnDestroy()
+    {
+        learnUI.OnClickReturnBtn -= PlayerStandup;
+    }
+
 
     public void TrySetChair(ChairCheckPoint currentChair)
     {
@@ -76,7 +86,7 @@ public class PlayerChairManager : MonoBehaviour
         {
             item.Show(true);
         }
-
+        learnUI.Hide();
         StopAllCoroutines();
         StartCoroutine(WaitForBlendDone(() =>
         {
@@ -134,6 +144,7 @@ public class PlayerChairManager : MonoBehaviour
             StartCoroutine(WaitForBlendDone(() =>
             {
                 if (cursorMgr) cursorMgr.SetUIOpen(true);
+                learnUI.Show();
             }));
         }
     }

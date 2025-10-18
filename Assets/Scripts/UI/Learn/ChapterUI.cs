@@ -34,6 +34,7 @@ public class ChapterUI : MonoBehaviour
 
     private void ToggleOn()
     {
+        Debug.Log("Toggle on");
         isOpen = true;
         lessonContainer.gameObject.SetActive(isOpen);
         toggleOpenBtn.gameObject.SetActive(false);
@@ -42,6 +43,7 @@ public class ChapterUI : MonoBehaviour
 
     private void ToggleOff()
     {
+        Debug.Log("Toggle off");
         isOpen = false;
         lessonContainer.gameObject.SetActive(isOpen);
         toggleOpenBtn.gameObject.SetActive(true);
