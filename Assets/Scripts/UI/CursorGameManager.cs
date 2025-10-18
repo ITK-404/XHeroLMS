@@ -17,7 +17,7 @@ public class CursorGameManager : MonoBehaviour
     [Tooltip("Cần khóa chuột ngay khi UI đóng lại")]
     public bool relockCursorWhenUICloses = true;
 
-    bool uiOpen = false;         // do UIPanelController gọi
+    public bool uiOpen = false;         // do UIPanelController gọi
     bool altHeldLastFrame = false;
 
     void Start()
