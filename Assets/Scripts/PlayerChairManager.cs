@@ -97,7 +97,7 @@ public class PlayerChairManager : MonoBehaviour
         learnUI.Hide();
         IsStantUp = true;
 
-        videoPlayerControllerPro.ExitFullscreen3D();
+        videoPlayerControllerPro.ExitFullscreenUI();
         StopAllCoroutines();
         StartCoroutine(WaitForBlendDone(() =>
         {
