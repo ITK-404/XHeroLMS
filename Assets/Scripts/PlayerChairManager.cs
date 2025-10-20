@@ -23,6 +23,9 @@ public class PlayerChairManager : MonoBehaviour
     public PlayerState playerState;
     [Header("UI")]
     public LearnUI learnUI;
+    public static bool IsStantUp = false;
+
+    VideoPlayerControllerPro videoPlayerControllerPro;
 
     private void Awake()
     {
@@ -30,6 +33,11 @@ public class PlayerChairManager : MonoBehaviour
         Instance = this;
 
         learnUI.OnClickReturnBtn += PlayerStandup;
+
+        // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
+        // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
+        videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
     }
 
     private void OnDestroy()
@@ -87,6 +95,9 @@ public class PlayerChairManager : MonoBehaviour
             item.Show(true);
         }
         learnUI.Hide();
+        IsStantUp = true;
+
+        videoPlayerControllerPro.ExitFullscreen3D();
         StopAllCoroutines();
         StartCoroutine(WaitForBlendDone(() =>
         {
@@ -140,11 +151,13 @@ public class PlayerChairManager : MonoBehaviour
 
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
+            IsStantUp = false;
 
             StartCoroutine(WaitForBlendDone(() =>
             {
                 if (cursorMgr) cursorMgr.SetUIOpen(true);
                 learnUI.Show();
+                
             }));
         }
     }
