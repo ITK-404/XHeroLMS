@@ -1,9 +1,9 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class LoadingScreenController : MonoBehaviour
 {
@@ -11,7 +11,8 @@ public class LoadingScreenController : MonoBehaviour
     public Image imageScene1;
     public Image progressRing;
     public TMP_Text textLoading;
-
+    public ParticleSystem loadingParticle;
+    public Slider sliderUI;
     [Header("Loading Text Animation")]
     public float dotSpeed = 0.5f;
     string baseText = "Loading";
@@ -61,6 +62,7 @@ public class LoadingScreenController : MonoBehaviour
             StartCoroutine(LoadByNameRoutine(LoadingTransition.TargetSceneName));
     }
 
+
     IEnumerator LoadByNameRoutine(string sceneName)
     {
         _isLoading = true;
@@ -78,7 +80,7 @@ public class LoadingScreenController : MonoBehaviour
         {
             float target = Mathf.Clamp01(milestonePercents[i]);
             float dur = Mathf.Max(0.05f, milestoneDurations[i]);
-            
+
             float t = 0f;
             float start = visual;
             while (t < dur)
@@ -91,6 +93,7 @@ public class LoadingScreenController : MonoBehaviour
                 float allowed = Mathf.Min(planned, realCap + headroom);
 
                 visual = Mathf.Clamp01(allowed);
+
                 SetProgress(visual);
                 yield return null;
             }
@@ -139,9 +142,11 @@ public class LoadingScreenController : MonoBehaviour
         // hiển thị Loading + phần trăm + dấu chấm
         if (textLoading)
             textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
-
+        float lerpValue = Mathf.Lerp(progressRing.fillAmount, _currentProgress, Time.deltaTime * 5);
         if (progressRing)
-            progressRing.fillAmount = _currentProgress;
+            progressRing.fillAmount = lerpValue;
+
+        sliderUI.value = lerpValue;
     }
 
     IEnumerator CycleRandomImages()
