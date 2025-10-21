@@ -1,52 +1,98 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.Video;
-using UnityEngine.UI; // chỉ cần nếu bạn muốn nối vào UI sau này
+using UnityEngine.EventSystems;
+using TMPro;
+using UnityEngine.Events;
 
 [DisallowMultipleComponent]
 public class VideoPlayerControllerPro : MonoBehaviour
 {
     [Header("Required")]
-    public VideoPlayer videoPlayer;          // Kéo VideoPlayer vào đây
-    public AudioSource audioSource;          // Optional (giúp chỉnh volume mượt hơn)
+    public VideoPlayer videoPlayer;
+    public AudioSource audioSource;
 
     [Header("Seek & Speed")]
-    public double seekStepSeconds = 5.0;     // tua ±5s
+    public double seekStepSeconds = 5.0;
     [Range(0.25f, 3f)] public float playbackSpeed = 1.0f;
-    public float speedStep = 0.1f;           // , . để tăng/giảm tốc
+    public float speedStep = 0.1f;
 
     [Header("Volume")]
     [Range(0f, 1f)] public float volume = 1.0f;
-    public float volumeStep = 0.05f;         // ↑/↓ ±5%
+    public float volumeStep = 0.05f;
     public bool startMuted = false;
 
     [Header("Quality (Like YouTube)")]
-    public QualityOption[] qualities;        // cấu hình nhiều chất lượng
-    public int defaultQualityIndex = 0;      // chất lượng khi start
-
-    [Header("HUD (optional)")]
-    public bool showHUD = true;
-    public Vector2 hudOffset = new Vector2(10, 10);
+    public QualityOption[] qualities;
+    public int defaultQualityIndex = 0;
 
     [Serializable]
     public class QualityOption
     {
         public string label = "1080p";
         public SourceType sourceType = SourceType.Url;
-        public string url;                   // dùng khi SourceType.Url
-        public VideoClip clip;               // dùng khi SourceType.Clip
+        public string url;
+        public VideoClip clip;
     }
-
     public enum SourceType { Url, Clip }
 
+    [Header("UI Bindings (Canvas)")]
+    public Button btnPlayPause;
+    public Button btnBackward;
+    public Button btnForward;
+    public Button btnVolume;
+    public Slider sliderVolume;
+    public Slider sliderDuration;
+    public TextMeshProUGUI textTime;
+    public Button btnSetting;
+    public GameObject settingsPanel;
+    public Button btnMaxMin;
+
+    [Tooltip("Quad/Transform hiển thị video ở chế độ thường (3D).")]
+    public Transform videoQuad;
+
+    [Header("Fullscreen (UI RawImage)")]
+    public Canvas fullscreenCanvas;          // có thể để trống, script sẽ tự tạo
+    public RawImage fullscreenRawImage;      // có thể để trống, script sẽ tự tạo
+    public bool useAspectFitter = true;
+
+    [Header("RenderTexture (optional fixed size)")]
+    public bool useFixedRT = true;                // BẬT: luôn dùng RT cố định
+    public int  fixedRTWidth  = 3840;             // 4K
+    public int  fixedRTHeight = 2160;
+    public RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
+    public int  rtDepth = 0;
+    public int  rtAntiAliasing = 1;
+
+    [Header("Events")]
+    public UnityEvent<bool> OnPlayStateChanged;
+    public UnityEvent<bool> OnFullscreenChanged;
+
+    [Header("Menu Auto Hide")]
+    public GameObject panelMenu;
+    public bool autoHideMenu = true;
+    public float autoHideSeconds = 5f;
+
+    // ==== INTERNAL ====
     int _currentQualityIndex = -1;
-    bool _preparedOnce = false;
-    bool _isSwitchingQuality = false;
-    bool _wasPlayingBeforeSwitch = false;
-    double _savedTimeOnSwitch = 0.0;
+    bool _isSwitchingQuality;
+    bool _wasPlayingBeforeSwitch;
+    double _savedTimeOnSwitch;
     bool _muted;
 
+    bool _isFullscreen;
+    bool _isScrubbingByUI;
+    float _lastInteractTime;
+    Vector3 _lastMousePos;
+
+    RenderTexture _rt;
+    Renderer _quadRenderer;
+
+    LearnUI learnUI;
+
+    // ---- Lifecycle ----
     void Reset()
     {
         videoPlayer = GetComponent<VideoPlayer>();
@@ -55,85 +101,129 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     void Awake()
     {
-        if (!videoPlayer)
-            videoPlayer = GetComponent<VideoPlayer>();
+        learnUI = FindAnyObjectByType<LearnUI>();
+        if (!videoPlayer) videoPlayer = GetComponent<VideoPlayer>();
+        if (videoQuad)    _quadRenderer = videoQuad.GetComponent<Renderer>();
 
         if (audioSource)
         {
             audioSource.playOnAwake = false;
             audioSource.volume = startMuted ? 0f : volume;
         }
-
         _muted = startMuted;
-        ApplyVolume();
-        ApplyPlaybackSpeed();
 
-        // Wire events
         if (videoPlayer)
         {
-            videoPlayer.playOnAwake = false;
-            videoPlayer.errorReceived += OnVideoError;
+            videoPlayer.playOnAwake       = false;
+            videoPlayer.renderMode        = VideoRenderMode.RenderTexture;
+            videoPlayer.waitForFirstFrame = true;
+            videoPlayer.skipOnDrop        = true;
+
+            videoPlayer.errorReceived    += OnVideoError;
             videoPlayer.prepareCompleted += OnVideoPrepared;
         }
+
+        EnsureFullscreenUI();
+
+        // Nếu chọn dùng RT cố định, tạo & bind ngay từ đầu
+        if (useFixedRT) EnsureFixedRT();
+
+        WireUpUI();
+
+        _lastMousePos = Input.mousePosition;
+        _lastInteractTime = Time.time;
+        if (panelMenu) panelMenu.SetActive(true);
+
+        ApplyVolume();
+        ApplyPlaybackSpeed();
     }
 
     void Start()
     {
-        // Chọn chất lượng mặc định nếu có cấu hình
+        var volumeUI = FindAnyObjectByType<VolumeIconController>();
+        if (volumeUI)
+        {
+            volumeUI.OnVolumeChanged.AddListener((v) => { volume = v; ApplyVolume(); });
+            volumeUI.OnMutedChanged.AddListener((m) => { _muted = m; ApplyVolume(); });
+            volumeUI.SetVolume(volume, updateSlider: true);
+            volumeUI.SetMuted(_muted);
+        }
+
         if (qualities != null && qualities.Length > 0)
         {
             int idx = Mathf.Clamp(defaultQualityIndex, 0, qualities.Length - 1);
-            StartCoroutine(SwitchQualityAndRestore(idx, 0.0, autoPlay:true));
+            StartCoroutine(SwitchQualityAndRestore(idx, 0.0, autoPlay: true));
         }
         else
         {
-            // Không set quality list thì chỉ play nguồn có sẵn trong VideoPlayer
-            PrepareIfNeeded(autoPlay:false);
+            PrepareIfNeeded(autoPlay: false);
         }
+
+        SyncUIFromState(initial: true);
     }
 
     void Update()
     {
         if (!videoPlayer) return;
 
-        // Keyboard control
-        if (Input.GetKeyDown(KeyCode.Space))
-            TogglePlayPause();
+        // Giữ binding luôn đúng
+        if (useFixedRT)
+        {
+            if (videoPlayer.targetTexture != _rt) EnsureFixedRT();
+        }
+        else
+        {
+            RebindIfNeeded();
+        }
 
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-            SeekRelative(-seekStepSeconds);
+        // Interaction detect
+        if (Input.anyKeyDown) RegisterInteraction();
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0)) RegisterInteraction();
+        if ((Input.mousePresent) && (Input.mousePosition != _lastMousePos))
+        { _lastMousePos = Input.mousePosition; RegisterInteraction(); }
+        if (Input.touchCount > 0) RegisterInteraction();
 
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-            SeekRelative(+seekStepSeconds);
+        // auto hide
+        if (autoHideMenu && panelMenu)
+            if (panelMenu.activeSelf && (Time.time - _lastInteractTime) > autoHideSeconds)
+                panelMenu.SetActive(false);
 
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-            ChangeVolume(+volumeStep);
+        // Hotkeys
+        if (Input.GetKeyDown(KeyCode.Space))      { RegisterInteraction(); TogglePlayPause(); }
+        if (Input.GetKeyDown(KeyCode.LeftArrow))  { RegisterInteraction(); SeekRelative(-seekStepSeconds); }
+        if (Input.GetKeyDown(KeyCode.RightArrow)) { RegisterInteraction(); SeekRelative(+seekStepSeconds); }
+        if (Input.GetKeyDown(KeyCode.UpArrow))    { RegisterInteraction(); ChangeVolume(+volumeStep); }
+        if (Input.GetKeyDown(KeyCode.DownArrow))  { RegisterInteraction(); ChangeVolume(-volumeStep); }
+        if (Input.GetKeyDown(KeyCode.Comma))      { RegisterInteraction(); ChangeSpeed(-speedStep); }
+        if (Input.GetKeyDown(KeyCode.Period))     { RegisterInteraction(); ChangeSpeed(+speedStep); }
+        if (Input.GetKeyDown(KeyCode.M))          { RegisterInteraction(); ToggleMute(); }
+        if (Input.GetKeyDown(KeyCode.Q))          { RegisterInteraction(); CycleQuality(+1); }
 
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-            ChangeVolume(-volumeStep);
-
-        if (Input.GetKeyDown(KeyCode.Comma))
-            ChangeSpeed(-speedStep);
-
-        if (Input.GetKeyDown(KeyCode.Period))
-            ChangeSpeed(+speedStep);
-
-        if (Input.GetKeyDown(KeyCode.M))
-            ToggleMute();
-
-        if (Input.GetKeyDown(KeyCode.Q))
-            CycleQuality(+1);
-
-        // number keys 1..9 choose quality
         for (int i = 0; i < 9; i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
             {
-                int pick = i; // 0-based for Alpha1
+                RegisterInteraction();
+                int pick = i;
                 if (qualities != null && pick < qualities.Length)
                     SwitchQualityKeepTime(pick);
                 break;
             }
+        }
+
+        // timeline / time text
+        if (!_isScrubbingByUI && sliderDuration && videoPlayer.isPrepared && videoPlayer.length > 0.0001f)
+        {
+            float v = Mathf.Clamp01((float)(videoPlayer.time / videoPlayer.length));
+            sliderDuration.SetValueWithoutNotify(v);
+        }
+
+        if (textTime)
+        {
+            if (videoPlayer.isPrepared && videoPlayer.length > 0.0001f)
+                textTime.text = $"{FormatTime(videoPlayer.time)} / {FormatTime(videoPlayer.length)}";
+            else
+                textTime.text = "00:00 / 00:00";
         }
     }
 
@@ -141,12 +231,61 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (videoPlayer)
         {
-            videoPlayer.errorReceived -= OnVideoError;
+            videoPlayer.errorReceived    -= OnVideoError;
             videoPlayer.prepareCompleted -= OnVideoPrepared;
+            if (_rt && videoPlayer.targetTexture == _rt) videoPlayer.targetTexture = null;
+        }
+        if (_rt) { _rt.Release(); Destroy(_rt); }
+    }
+
+    // ---- UI wiring ----
+    void WireUpUI()
+    {
+        if (btnPlayPause) btnPlayPause.onClick.AddListener(() => { RegisterInteraction(); TogglePlayPause(); });
+        if (btnBackward)  btnBackward .onClick.AddListener(() => { RegisterInteraction(); SeekRelative(-seekStepSeconds); });
+        if (btnForward)   btnForward  .onClick.AddListener(() => { RegisterInteraction(); SeekRelative(+seekStepSeconds); });
+        if (btnVolume)    btnVolume   .onClick.AddListener(() => { RegisterInteraction(); ToggleMute(); });
+        if (btnMaxMin)    btnMaxMin   .onClick.AddListener(() => { RegisterInteraction(); ToggleFullscreen(); });
+        if (btnSetting)   btnSetting  .onClick.AddListener(() => { RegisterInteraction(); ToggleSettingsPanel(); });
+
+        if (sliderVolume)
+        {
+            sliderVolume.minValue = 0f;
+            sliderVolume.maxValue = 1f;
+            sliderVolume.wholeNumbers = false;
+            sliderVolume.onValueChanged.AddListener(OnVolumeSliderChanged);
+        }
+
+        if (sliderDuration)
+        {
+            sliderDuration.minValue = 0f;
+            sliderDuration.maxValue = 1f;
+            sliderDuration.wholeNumbers = false;
+
+            sliderDuration.onValueChanged.AddListener(OnDurationSliderChangedContinuous);
+
+            var et = sliderDuration.GetComponent<EventTrigger>();
+            if (!et) et = sliderDuration.gameObject.AddComponent<EventTrigger>();
+            AddPointerEntry(et, EventTriggerType.PointerDown, OnDurationPointerDown);
+            AddPointerEntry(et, EventTriggerType.PointerUp,   OnDurationPointerUp);
+            AddPointerEntry(et, EventTriggerType.Drag,        OnDurationPointerDrag);
         }
     }
 
-    // ===== Controls =====
+    void AddPointerEntry(EventTrigger et, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> cb)
+    {
+        var entry = new EventTrigger.Entry { eventID = type };
+        entry.callback.AddListener(cb);
+        et.triggers.Add(entry);
+    }
+
+    void SyncUIFromState(bool initial=false)
+    {
+        if (sliderVolume) sliderVolume.SetValueWithoutNotify(volume);
+        if (settingsPanel && initial) settingsPanel.SetActive(false);
+    }
+
+    // ---- Controls ----
     public void TogglePlayPause()
     {
         if (!videoPlayer) return;
@@ -156,8 +295,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
             return;
         }
 
-        if (videoPlayer.isPlaying) videoPlayer.Pause();
-        else videoPlayer.Play();
+        if (videoPlayer.isPlaying)
+        { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
+        else
+        { videoPlayer.Play();  OnPlayStateChanged?.Invoke(true);  }
     }
 
     public void SeekRelative(double deltaSeconds)
@@ -169,15 +310,11 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     public void ChangeVolume(float delta)
     {
-        volume = Mathf.Clamp01(volume + delta);
-        ApplyVolume();
+        SetVolumeAbsolute(volume + delta, syncSlider:true);
+        FindAnyObjectByType<VolumeIconController>()?.SetVolume(volume, updateSlider:true);
     }
 
-    public void ToggleMute()
-    {
-        _muted = !_muted;
-        ApplyVolume();
-    }
+    public void ToggleMute() { _muted = !_muted; ApplyVolume(); }
 
     public void ChangeSpeed(float delta)
     {
@@ -185,16 +322,56 @@ public class VideoPlayerControllerPro : MonoBehaviour
         ApplyPlaybackSpeed();
     }
 
+    public void ToggleSettingsPanel()
+    {
+        if (settingsPanel) settingsPanel.SetActive(!settingsPanel.activeSelf);
+    }
+
+    // ---- Fullscreen UI ----
+    public void ToggleFullscreen()
+    {
+        if (_isFullscreen) ExitFullscreenUI();
+        else EnterFullscreenUI();
+    }
+
+    void EnterFullscreenUI()
+    {
+        if (videoQuad) videoQuad.gameObject.SetActive(false);
+        if (fullscreenCanvas) fullscreenCanvas.enabled = true;
+
+        if (useFixedRT) EnsureFixedRT(); else RebindIfNeeded(force:true);
+
+        _isFullscreen = true;
+        OnFullscreenChanged?.Invoke(true);
+        learnUI?.Hide();
+    }
+
+    public void ExitFullscreenUI()
+    {
+        if (videoQuad) videoQuad.gameObject.SetActive(true);
+        if (fullscreenCanvas) fullscreenCanvas.enabled = false;
+
+        _isFullscreen = false;
+        OnFullscreenChanged?.Invoke(false);
+        if (!PlayerChairManager.IsStantUp) learnUI?.Show();
+    }
+
+    // ---- Volume/Speed ----
+    void SetVolumeAbsolute(float v, bool syncSlider)
+    {
+        volume = Mathf.Clamp01(v);
+        ApplyVolume();
+        if (syncSlider && sliderVolume) sliderVolume.SetValueWithoutNotify(volume);
+    }
+
     void ApplyVolume()
     {
         float vol = _muted ? 0f : volume;
         if (audioSource) audioSource.volume = vol;
 
-        // VideoPlayer direct audio (nếu không dùng AudioSource)
         if (videoPlayer && videoPlayer.audioOutputMode == VideoAudioOutputMode.Direct)
         {
-            // kênh 0
-            try { videoPlayer.SetDirectAudioVolume(0, vol); } catch { /* ignore */ }
+            try { videoPlayer.SetDirectAudioVolume(0, vol); } catch {}
         }
     }
 
@@ -202,10 +379,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (!videoPlayer) return;
         videoPlayer.playbackSpeed = playbackSpeed;
-        if (audioSource) audioSource.pitch = playbackSpeed; // lưu ý: pitch ≠ time-stretch
+        if (audioSource) audioSource.pitch = playbackSpeed;
     }
 
-    // ===== Quality Handling =====
+    // ---- Quality ----
     public void CycleQuality(int direction)
     {
         if (qualities == null || qualities.Length == 0) return;
@@ -234,20 +411,14 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         videoPlayer.Stop();
         videoPlayer.source = (q.sourceType == SourceType.Url) ? VideoSource.Url : VideoSource.VideoClip;
-        if (q.sourceType == SourceType.Url) videoPlayer.url = q.url;
-        else videoPlayer.clip = q.clip;
+        if (q.sourceType == SourceType.Url) videoPlayer.url  = q.url;
+        else                                videoPlayer.clip = q.clip;
 
         _currentQualityIndex = index;
 
-        // Prepare then restore time
         videoPlayer.Prepare();
-        while (!videoPlayer.isPrepared)
-            yield return null;
-
-        _preparedOnce = true;
-
-        // Một số nguồn cần 1 frame mới set time chuẩn
-        yield return null;
+        while (!videoPlayer.isPrepared) yield return null;
+        yield return null; // chờ 1 frame
 
         SetTimeSafely(_savedTimeOnSwitch);
 
@@ -256,26 +427,21 @@ public class VideoPlayerControllerPro : MonoBehaviour
         _isSwitchingQuality = false;
     }
 
-    // ===== Prepare & Time Helpers =====
+    // ---- Prepare & time ----
     void PrepareIfNeeded(bool autoPlay)
     {
         if (!videoPlayer) return;
 
         if (!videoPlayer.isPrepared)
-        {
             StartCoroutine(PrepareAndMaybePlay(autoPlay));
-        }
-        else
-        {
-            if (autoPlay) videoPlayer.Play();
-        }
+        else if (autoPlay)
+            videoPlayer.Play();
     }
 
     IEnumerator PrepareAndMaybePlay(bool autoPlay)
     {
         videoPlayer.Prepare();
         while (!videoPlayer.isPrepared) yield return null;
-        _preparedOnce = true;
         if (autoPlay) videoPlayer.Play();
     }
 
@@ -283,18 +449,11 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (!videoPlayer) return;
 
-        // Nếu có frameRate hợp lệ thì set frame để chính xác hơn
-        if (videoPlayer.frameRate > 0.01f)
+        if (videoPlayer.frameRate > 0.01f && videoPlayer.frameCount > 0)
         {
             long frame = (long)Mathf.Clamp((float)(t * videoPlayer.frameRate), 0, (float)(videoPlayer.frameCount - 1));
-            try
-            {
-                videoPlayer.frame = frame;
-            }
-            catch
-            {
-                videoPlayer.time = t; // fallback
-            }
+            try { videoPlayer.frame = frame; }
+            catch { videoPlayer.time = t; }
         }
         else
         {
@@ -302,10 +461,41 @@ public class VideoPlayerControllerPro : MonoBehaviour
         }
     }
 
-    // ===== Events =====
+    // ---- Prepare callback ----
     void OnVideoPrepared(VideoPlayer vp)
     {
-        // giữ tốc độ/âm lượng đồng bộ
+        if (useFixedRT)
+        {
+            EnsureFixedRT();  // luôn giữ RT cố định
+        }
+        else
+        {
+            // tạo RT theo kích thước video nếu chưa có
+            if (vp.targetTexture == null)
+            {
+                int w = Mathf.Clamp((int)(vp.width  > 0 ? vp.width  : 1920), 16, 8192);
+                int h = Mathf.Clamp((int)(vp.height > 0 ? vp.height : 1080), 16, 8192);
+
+                if (_rt == null || _rt.width != w || _rt.height != h)
+                {
+                    if (_rt) { _rt.Release(); Destroy(_rt); }
+                    _rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
+                    {
+                        antiAliasing = 1,
+                        useDynamicScale = false
+                    };
+                    _rt.Create();
+                }
+                vp.targetTexture = _rt;
+            }
+            else
+            {
+                _rt = vp.targetTexture;
+            }
+
+            RebindIfNeeded(force:true);
+        }
+
         ApplyPlaybackSpeed();
         ApplyVolume();
     }
@@ -315,34 +505,203 @@ public class VideoPlayerControllerPro : MonoBehaviour
         Debug.LogError("[VideoPlayer] Error: " + msg);
     }
 
-    // ===== Simple HUD =====
-    void OnGUI()
-    {
-        if (!showHUD || !videoPlayer) return;
-
-        string qLabel = (_currentQualityIndex >= 0 && qualities != null && _currentQualityIndex < qualities.Length)
-            ? qualities[_currentQualityIndex].label : "—";
-
-        string playState = videoPlayer.isPlaying ? "PLAY" : (videoPlayer.isPrepared ? "PAUSE" : "PREPARE...");
-        string t = videoPlayer.isPrepared ? FormatTime(videoPlayer.time) + " / " + FormatTime(videoPlayer.length) : "--:-- / --:--";
-
-        var rect = new Rect(hudOffset.x, hudOffset.y, 420, 90);
-        GUI.Box(rect, "");
-        GUILayout.BeginArea(rect);
-        GUILayout.Label($"State: {playState}");
-        GUILayout.Label($"Time : {t}");
-        GUILayout.Label($"Speed: {playbackSpeed:0.00}x   Vol: {(_muted ? 0f : volume):0.00}   Quality: {qLabel}");
-        GUILayout.Label("Space=Play/Pause  ←/→=±5s  ↑/↓=Vol  ,/.=Speed  Q/1..9=Quality  M=Mute");
-        GUILayout.EndArea();
-    }
-
+    // ---- Utils ----
     string FormatTime(double seconds)
     {
-        if (double.IsNaN(seconds) || double.IsInfinity(seconds)) return "--:--";
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds)) return "00:00";
         int s = Mathf.Max(0, (int)Math.Round(seconds));
         int h = s / 3600; s %= 3600;
-        int m = s / 60; s %= 60;
+        int m = s / 60;   s %= 60;
         return h > 0 ? $"{h:00}:{m:00}:{s:00}" : $"{m:00}:{s:00}";
     }
+
+    void RegisterInteraction()
+    {
+        _lastInteractTime = Time.time;
+        if (panelMenu && !panelMenu.activeSelf) panelMenu.SetActive(true);
+    }
+
+    // ---- Slider handlers ----
+    void OnVolumeSliderChanged(float v)
+    {
+        RegisterInteraction();
+        if (_muted && v > 0f) _muted = false;
+        SetVolumeAbsolute(v, syncSlider:false);
+    }
+
+    void OnDurationSliderChangedContinuous(float vNorm)
+    {
+        RegisterInteraction();
+        if (!videoPlayer || !videoPlayer.isPrepared || videoPlayer.length <= 0) return;
+        double t = Mathf.Clamp01(vNorm) * videoPlayer.length;
+        SetTimeSafely(t);
+    }
+
+    public void OnDurationPointerDown(BaseEventData e)
+    {
+        RegisterInteraction();
+        _isScrubbingByUI = true;
+        var ped = e as PointerEventData;
+        if (sliderDuration && ped != null)
+            SetSliderValueFromPointer(sliderDuration, ped);
+    }
+
+    public void OnDurationPointerDrag(BaseEventData e)
+    {
+        RegisterInteraction();
+        var ped = e as PointerEventData;
+        if (sliderDuration && ped != null)
+            SetSliderValueFromPointer(sliderDuration, ped);
+    }
+
+    public void OnDurationPointerUp(BaseEventData _)
+    {
+        RegisterInteraction();
+        _isScrubbingByUI = false;
+        if (sliderDuration && videoPlayer && videoPlayer.isPrepared && videoPlayer.length > 0)
+        {
+            double t = sliderDuration.value * videoPlayer.length;
+            SetTimeSafely(t);
+        }
+    }
+
+    void SetSliderValueFromPointer(Slider s, PointerEventData ped)
+    {
+        if (s == null) return;
+
+        RectTransform rt = s.GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        Vector2 local;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, ped.position, ped.pressEventCamera, out local))
+            return;
+
+        float t;
+        if (s.direction == Slider.Direction.LeftToRight || s.direction == Slider.Direction.RightToLeft)
+        {
+            float xMin = rt.rect.xMin;
+            float xMax = rt.rect.xMax;
+            t = Mathf.InverseLerp(xMin, xMax, local.x);
+            if (s.direction == Slider.Direction.RightToLeft) t = 1f - t;
+        }
+        else
+        {
+            float yMin = rt.rect.yMin;
+            float yMax = rt.rect.yMax;
+            t = Mathf.InverseLerp(yMin, yMax, local.y);
+            if (s.direction == Slider.Direction.TopToBottom) t = 1f - t;
+        }
+
+        t = Mathf.Clamp01(t);
+        s.SetValueWithoutNotify(t);
+        OnDurationSliderChangedContinuous(t);
+    }
+
+    // ---- Helpers ----
+    void EnsureFullscreenUI()
+    {
+        if (!fullscreenCanvas)
+        {
+            var go = new GameObject("FullscreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            fullscreenCanvas = go.GetComponent<Canvas>();
+            fullscreenCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            fullscreenCanvas.sortingOrder = 5000;
+        }
+        if (!fullscreenRawImage)
+        {
+            var riGO = new GameObject("RawImage", typeof(RectTransform), typeof(RawImage));
+            fullscreenRawImage = riGO.GetComponent<RawImage>();
+            fullscreenRawImage.raycastTarget = true;
+            riGO.transform.SetParent(fullscreenCanvas.transform, false);
+
+            var rt = riGO.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        }
+        if (useAspectFitter && !fullscreenRawImage.GetComponent<AspectRatioFitter>())
+        {
+            var fitter = fullscreenRawImage.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 16f / 9f;
+        }
+
+        fullscreenCanvas.enabled = false;
+        fullscreenRawImage.enabled = true;
+    }
+
+    void EnsureFixedRT()
+    {
+        if (!videoPlayer) return;
+
+        int w = Mathf.Clamp(fixedRTWidth, 16, 8192);
+        int h = Mathf.Clamp(fixedRTHeight, 16, 8192);
+
+        if (_rt == null || _rt.width != w || _rt.height != h || _rt.format != rtFormat)
+        {
+            if (_rt) { _rt.Release(); Destroy(_rt); }
+            _rt = new RenderTexture(w, h, rtDepth, rtFormat)
+            {
+                antiAliasing = Mathf.Max(1, rtAntiAliasing),
+                useDynamicScale = false
+            };
+            _rt.Create();
+        }
+
+        videoPlayer.targetTexture = _rt;
+
+        if (fullscreenRawImage && fullscreenRawImage.texture != _rt)
+            fullscreenRawImage.texture = _rt;
+
+        if (_quadRenderer && _quadRenderer.material && _quadRenderer.material.mainTexture != _rt)
+            _quadRenderer.material.mainTexture = _rt;
+
+        // cập nhật AR nếu có
+        if (useAspectFitter && fullscreenRawImage)
+        {
+            var fitter = fullscreenRawImage.GetComponent<AspectRatioFitter>();
+            if (fitter) fitter.aspectRatio = Mathf.Max(0.01f, (float)w / Mathf.Max(1, (float)h));
+        }
+    }
+
+    void RebindIfNeeded(bool force=false)
+    {
+        if (!videoPlayer) return;
+
+        // Lấy RT hiện tại từ VP (hoặc tạo tạm nếu chưa có)
+        if (videoPlayer.targetTexture == null || force)
+        {
+            if (videoPlayer.targetTexture == null)
+            {
+                int w = Mathf.Clamp((int)(videoPlayer.width  > 0 ? videoPlayer.width  : 1920), 16, 8192);
+                int h = Mathf.Clamp((int)(videoPlayer.height > 0 ? videoPlayer.height : 1080), 16, 8192);
+
+                if (_rt == null || _rt.width != w || _rt.height != h)
+                {
+                    if (_rt) { _rt.Release(); Destroy(_rt); }
+                    _rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32);
+                    _rt.Create();
+                }
+                videoPlayer.targetTexture = _rt;
+            }
+            else
+            {
+                _rt = videoPlayer.targetTexture;
+            }
+        }
+
+        // Bind lên RawImage & Quad nếu đang lệch
+        if (fullscreenRawImage && fullscreenRawImage.texture != videoPlayer.targetTexture && videoPlayer.targetTexture != null)
+            fullscreenRawImage.texture = videoPlayer.targetTexture;
+
+        if (_quadRenderer && _quadRenderer.material && _quadRenderer.material.mainTexture != videoPlayer.targetTexture && videoPlayer.targetTexture != null)
+            _quadRenderer.material.mainTexture = videoPlayer.targetTexture;
+
+        // Cập nhật AspectRatio
+        if (useAspectFitter && fullscreenRawImage)
+        {
+            var fitter = fullscreenRawImage.GetComponent<AspectRatioFitter>();
+            if (fitter && videoPlayer.width > 0 && videoPlayer.height > 0)
+                fitter.aspectRatio = Mathf.Max(0.01f, (float)videoPlayer.width / Mathf.Max(1, (float)videoPlayer.height));
+        }
+    }
 }
- 
