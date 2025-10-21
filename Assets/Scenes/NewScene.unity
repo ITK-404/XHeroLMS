@@ -1171,6 +1171,72 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8995056199648153633, guid: e478d6bdf707f2e47978cfbf92b112c1, type: 3}
+--- !u!1 &53969495
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 53969497}
+  - component: {fileID: 53969496}
+  - component: {fileID: 53969498}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &53969496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53969495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f32d8407079d6c44bbc2e37d34682279, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LmsStore
+  baseUrl: https://apis-dev.xheroapp.com
+  autoLoadOnAwake: 1
+  autoSaveAfterFetch: 1
+  prettyPrintJson: 1
+  ttlMarketSeconds: 300
+  ttlMyCoursesSeconds: 120
+  ttlPrivateSeconds: 300
+--- !u!4 &53969497
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53969495}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 960, y: 540, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &53969498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53969495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ea1863eb47b1ce4c8bc5bc570fc2d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneCourseRouter
+  resourceJsonName: courses
+  autoFetchPrivateIfMissing: 1
 --- !u!1 &54775219 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2398226431988656189, guid: 6be834408b638d54e9c3c490d55ce819, type: 3}
@@ -55474,3 +55540,4 @@ SceneRoots:
   - {fileID: 1144559916}
   - {fileID: 1919055601}
   - {fileID: 3029032950782207023}
+  - {fileID: 53969497}

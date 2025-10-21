@@ -40,7 +40,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
         string token = GetToken();
         if (string.IsNullOrWhiteSpace(token))
         {
-            Debug.LogError("[LMS] No token. Set overrideAccessToken or TokenStore.AccessToken.");
+            // Debug.LogError("[LMS] No token. Set overrideAccessToken or TokenStore.AccessToken.");
             yield break;
         }
 
@@ -70,7 +70,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
         var allCourseIds = ExtractAllCourseIdsFromMyCourses(myCoursesJson);
         if (allCourseIds.Count == 0)
         {
-            Debug.LogWarning("[LMS] Không trích được course._id nào từ courses_my.json");
+            // Debug.LogWarning("[LMS] Không trích được course._id nào từ courses_my.json");
             yield break;
         }
 
@@ -94,7 +94,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
             yield return null;
         }
 
-        Debug.Log("[LMS] DONE. Đã xuất nhiều JSON cho /private (mỗi khóa một file).");
+        // Debug.Log("[LMS] DONE. Đã xuất nhiều JSON cho /private (mỗi khóa một file).");
     }
 
     // ---------- HTTP ----------
@@ -109,7 +109,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
             req.SetRequestHeader("Authorization", "Bearer " + token);
             req.SetRequestHeader("Accept", "application/json");
 
-            Debug.Log("[HTTP GET] " + url);
+            // Debug.Log("[HTTP GET] " + url);
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -122,7 +122,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
 
             if (error)
             {
-                Debug.LogError($"[HTTP] {req.responseCode} {req.error}\nBody: {body}");
+                // Debug.LogError($"[HTTP] {req.responseCode} {req.error}\nBody: {body}");
                 onErrorBody?.Invoke(body);
             }
             else
@@ -223,7 +223,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
 
             var full = SavedPath(fileName);
             File.WriteAllText(full, content, Encoding.UTF8);
-            Debug.Log($"[LMS] Saved: {full}");
+            // Debug.Log($"[LMS] Saved: {full}");
         }
         catch (Exception ex)
         {

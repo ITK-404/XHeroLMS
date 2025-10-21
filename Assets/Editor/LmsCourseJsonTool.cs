@@ -40,7 +40,7 @@ public class LmsCourseJsonTool : EditorWindow
 
         GUILayout.Space(8);
         EditorGUILayout.HelpBox(
-            "Tool này sẽ đọc file JSON gốc, chuyển `_id.$oid` → `_id` và `seo.url` → `seo`, " +
+            "Tool này sẽ đọc file JSON gốc, chuyển `_id.$oid` -> `_id` và `seo.url` -> `seo`, " +
             "rồi lưu bản sạch vào Assets/StreamingAssets/" + outputFileName,
             MessageType.Info);
     }

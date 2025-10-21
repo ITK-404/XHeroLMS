@@ -20502,6 +20502,64 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8651413640680068288, guid: 58d5dddb88fcb764b97cea7bb86240aa, type: 3}
+--- !u!1 &1075487794
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1075487796}
+  - component: {fileID: 1075487795}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1075487795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1075487794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce6bdd196b1286c47b8a1665d991224f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseScrollViewBuilder
+  chapterUiPrefab: {fileID: 1944938099}
+  contentRoot: {fileID: 1735403467}
+  jsonFileName: courses.json
+  _courseRoot:
+    status: 0
+    course:
+      _id: 
+      title: 
+      description: 
+      seo:
+        url: 
+      chapters: []
+  _courseRootList:
+    courses: []
+--- !u!4 &1075487796
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1075487794}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 221.58916, y: 695.0503, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1089866799
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -25618,6 +25676,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 818551226404554684, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1238032455100054868, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -25701,6 +25763,10 @@ PrefabInstance:
     - target: {fileID: 4115983108942710496, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5094508844437104077, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+      propertyPath: m_TagString
+      value: Title
       objectReference: {fileID: 0}
     - target: {fileID: 5322911679019255661, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -25838,6 +25904,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -0.000091552734
       objectReference: {fileID: 0}
+    - target: {fileID: 7382478306821783790, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+      propertyPath: m_TagString
+      value: Chapter
+      objectReference: {fileID: 0}
     - target: {fileID: 7733166155876618069, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -25882,11 +25952,20 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8949694904245954000, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+      propertyPath: m_TagString
+      value: QA
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+--- !u!224 &1735403467 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3618359823530872395, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+  m_PrefabInstance: {fileID: 1735403466}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1738177232
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -28328,6 +28407,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1943383758}
   m_Mesh: {fileID: 5546465261860472854, guid: 58d5dddb88fcb764b97cea7bb86240aa, type: 3}
+--- !u!1 &1944938099 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6587798982922755493, guid: 83a2d087207fc774a8eec65e48d12aaa, type: 3}
+  m_PrefabInstance: {fileID: 1735403466}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1947947053
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30122,3 +30206,4 @@ SceneRoots:
   - {fileID: 6006074316233282178}
   - {fileID: 1735403466}
   - {fileID: 1976621721}
+  - {fileID: 1075487796}

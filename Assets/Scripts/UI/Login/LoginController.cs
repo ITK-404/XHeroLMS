@@ -114,7 +114,7 @@ public class LoginController : MonoBehaviour
             return;
         }
 
-        // ======== Nếu là số điện thoại thì convert 0 → 84 ========
+        // ======== Nếu là số điện thoại thì convert 0 -> 84 ========
         string usernameForAPI = ConvertPhoneForAPI(usernameRaw);
         StartCoroutine(LoginRoutine(usernameForAPI, password));
     }
