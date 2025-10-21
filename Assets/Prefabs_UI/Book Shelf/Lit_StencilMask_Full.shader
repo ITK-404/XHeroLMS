@@ -1,60 +1,60 @@
-﻿Shader "URP/Lit_StencilMask_Full"
+﻿Shader "URP/BasicStencil"
 {
     Properties
     {
-        _BaseMap ("Base Map", 2D) = "white" {}
-        _BaseColor ("Base Color", Color) = (1,1,1,1)
-        _BumpMap ("Normal Map", 2D) = "bump" {}
-        _BumpScale ("Normal Scale", Float) = 1.0
-        _MetallicGlossMap ("Metallic Map", 2D) = "white" {}
-        _Metallic ("Metallic", Range(0,1)) = 0.0
-        _Smoothness ("Smoothness", Range(0,1)) = 0.5
-        _OcclusionMap ("Occlusion Map", 2D) = "white" {}
-        _OcclusionStrength ("Occlusion Strength", Range(0,1)) = 1.0
-        _EmissionMap ("Emission Map", 2D) = "white" {}
-        _EmissionColor ("Emission Color", Color) = (0,0,0,0)
+        _BaseColor ("Color", Color) = (1,1,1,1)
+        _MainTex ("Texture", 2D) = "white" {}
     }
-
+    
     SubShader
     {
-        Tags { "RenderType"="Opaque" "Queue"="Geometry" "RenderPipeline"="UniversalRenderPipeline" }
-
-        // Cốt lõi của phép cắt RectTransform
+        Tags { "RenderPipeline"="UniversalRenderPipeline" }
+        
         Stencil
         {
             Ref 1
             Comp Equal
             Pass Keep
         }
-
-        HLSLINCLUDE
-        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-        ENDHLSL
-
+        
         Pass
         {
-            Name "ForwardLit"
-            Tags { "LightMode"="UniversalForward" }
-
             HLSLPROGRAM
-            #pragma vertex LitPassVertex
-            #pragma fragment LitPassFragment
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
-            ENDHLSL
-        }
-
-        Pass
-        {
-            Name "ShadowCaster"
-            Tags { "LightMode"="ShadowCaster" }
-            ZWrite On
-            ColorMask 0
-
-            HLSLPROGRAM
-            #pragma vertex ShadowPassVertex
-            #pragma fragment ShadowPassFragment
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+            
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+            };
+            
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+            
+            float4 _BaseColor;
+            
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.uv = input.uv;
+                return output;
+            }
+            
+            half4 frag(Varyings input) : SV_Target
+            {
+                half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                return color * _BaseColor;
+            }
             ENDHLSL
         }
     }

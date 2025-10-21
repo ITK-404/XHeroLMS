@@ -13,7 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
-  - _EMISSION
+  - _METALLICMAP
   - _METALLICSPECGLOSSMAP
   - _NORMALMAP
   m_LightmapFlags: 1
@@ -104,7 +104,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _Metallic: 0
-    - _OcclusionStrength: 1
+    - _OcclusionStrength: 0
     - _Parallax: 0.005
     - _QueueControl: 0
     - _QueueOffset: 0
@@ -117,9 +117,12 @@ Material:
     - _Surface: 0
     - _UseAoMap: 0
     - _UseColorMap: 1
+    - _UseDetailMask: 0
+    - _UseEmission: 0
     - _UseEmissiveMap: 1
     - _UseMetallicMap: 1
     - _UseNormalMap: 1
+    - _UseOcclusionMap: 0
     - _UseRoughnessMap: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
