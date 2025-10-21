@@ -27,6 +27,35 @@ public class BookModel : MonoBehaviour
         _renderer.materials[1].SetTexture("_MainTex", texture);
     }
 
+    [ContextMenu("De Active Grayscale")]
+    public void ActiveGrayScale()
+    {
+        SetGrayScale(0);
+    }
+
+    [ContextMenu("Active Grayscale")]
+    public void DeActiveGrayScale()
+    {
+        SetGrayScale(1);
+    }
+
+    public void SetGrayScale(float grayScale)
+    {
+        if (grayScale > 0)
+        {
+            _renderer.materials[0].EnableKeyword("_GRAYSCALE_ON");
+            _renderer.materials[1].EnableKeyword("_GRAYSCALE_ON");
+        }
+        else
+        {
+            _renderer.materials[0].DisableKeyword("_GRAYSCALE_ON");
+            _renderer.materials[1].DisableKeyword("_GRAYSCALE_ON");
+        }
+
+        _renderer.materials[0].SetFloat("_Grayscale", grayScale);
+        _renderer.materials[1].SetFloat("_Grayscale", grayScale);
+    }
+
     private void OnMouseEnter()
     {
         if (container == null)
