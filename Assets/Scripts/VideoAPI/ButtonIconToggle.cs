@@ -33,11 +33,11 @@ public class ButtonIconToggle : MonoBehaviour
         if (fullscreenImage && fullscreenSprite1) fullscreenImage.sprite = fullscreenSprite1;
 
         playerCtrl = FindAnyObjectByType<VideoPlayerControllerPro>();
-if (playerCtrl)
-{
-    playerCtrl.OnPlayStateChanged.AddListener(UpdatePlayIcon);
-    playerCtrl.OnFullscreenChanged.AddListener(UpdateFullscreenIcon);
-}
+        if (playerCtrl)
+        {
+            playerCtrl.OnPlayStateChanged.AddListener(UpdatePlayIcon);
+            playerCtrl.OnFullscreenChanged.AddListener(UpdateFullscreenIcon);
+        }
     }
 
     void OnPlayClicked()
@@ -55,17 +55,17 @@ if (playerCtrl)
     }
 
     void UpdatePlayIcon(bool isPlaying)
-{
-    this.isPlaying = isPlaying;
-    if (playImage)
-        playImage.sprite = isPlaying ? playSprite2 : playSprite1;
-}
+    {
+        this.isPlaying = isPlaying;
+        if (playImage)
+            playImage.sprite = isPlaying ? playSprite2 : playSprite1;
+    }
 
-void UpdateFullscreenIcon(bool isFullscreen)
-{
-    this.isFullscreen = isFullscreen;
-    if (fullscreenImage)
-        fullscreenImage.sprite = isFullscreen ? fullscreenSprite2 : fullscreenSprite1;
-}
+    void UpdateFullscreenIcon(bool isFullscreen)
+    {
+        this.isFullscreen = isFullscreen;
+        if (fullscreenImage)
+            fullscreenImage.sprite = isFullscreen ? fullscreenSprite2 : fullscreenSprite1;
+    }
 
 }
