@@ -40,8 +40,8 @@ public class FPSLookController : MonoBehaviour
     [Range(0f, 1f)] public float adsStabilize = 0.8f; // ADS -> giảm rig
 
     [Header("Mouse Sway")]
-    public float swayYawDeg   = 1.2f;   // ảnh hưởng Mouse X (→ local yaw)
-    public float swayPitchDeg = 0.6f;   // ảnh hưởng Mouse Y (→ local pitch)
+    public float swayYawDeg   = 1.2f;   // ảnh hưởng Mouse X (local yaw)
+    public float swayPitchDeg = 0.6f;   // ảnh hưởng Mouse Y (local pitch)
     public float swayLerp     = 12f;
 
     [Header("Tilt from Movement (roll)")]
@@ -263,7 +263,7 @@ public class FPSLookController : MonoBehaviour
         // FOV (đơn giản hoá, không double-lerp)
         float wantFov = IsADS ? adsFov : (IsSprinting ? sprintFov : baseFov);
 
-        // phát hiện vừa bật sprint → bơm kickVel
+        // phát hiện vừa bật sprint bơm kickVel
         float targetSprint = IsSprinting ? 1f : 0f;
         float prevSprint = sprintState;
         sprintState = Mathf.MoveTowards(sprintState, targetSprint, dt * 10f);

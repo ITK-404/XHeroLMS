@@ -90,7 +90,7 @@ public class VideoPlayerQuadUI : MonoBehaviour
     public void FitUnderQuad(float yOffset = -0.05f, float zLift = -0.001f)
     {
         if (!controller || !controller.videoPlayer) return;
-        // Canvas là con của Quad → đặt thanh dưới mép quad
+        // Canvas là con của Quad -> đặt thanh dưới mép quad
         var t = transform;
         t.localPosition = new Vector3(0, yOffset, zLift);
         t.localRotation = Quaternion.identity;
