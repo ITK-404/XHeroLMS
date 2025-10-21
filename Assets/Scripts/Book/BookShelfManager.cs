@@ -3,9 +3,10 @@ using UnityEngine;
 
 public class BookShelfManager : MonoBehaviour
 {
+    public CourseLessonTabID CourseID;
     [SerializeField] private BookShelfUI bookShelfUIPrefab;
-
-    [SerializeField] private BookShelfUI[] bookShelfList;
+    [SerializeField] private RectTransform content;
+    private BookShelfUI[] bookShelfList;
 
     [ContextMenu("Load Data")]
 
@@ -14,10 +15,9 @@ public class BookShelfManager : MonoBehaviour
         bookShelfList = GetComponentsInChildren<BookShelfUI>();
         OnLoad();
     }
-
+    private List<BookHandler> books = new();
     private void OnLoad()
     {
-        var books = new List<BookHandler>();
         foreach (var item in bookShelfList)
         {
             books.AddRange(item.books);
@@ -28,15 +28,30 @@ public class BookShelfManager : MonoBehaviour
             BookHandler book = books[i];
             if (i < activeBook)
             {
-                book.bookHandle.ActiveGrayScale();
+                book.bookModel.ActiveGrayScale();
             }
             else
             {
-                book.bookHandle.DeActiveGrayScale();
+                book.bookModel.DeActiveGrayScale();
             }
             book.bookHandleUI.priceText.text = "1.000.000đ";
             book.bookHandleUI.RefreshColor();
+        }
+    }
 
+    public void ResetScrollContent()
+    {
+        content.anchoredPosition = new Vector2(0, 0);
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            foreach(var book in books)
+            {
+                book.bookHandleUI.RefreshColor();
+            }
         }
     }
 }

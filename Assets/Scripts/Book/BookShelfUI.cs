@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-
+﻿using UnityEngine;
 public class BookShelfUI : MonoBehaviour
 {
-    public List<BookHandler> books = new();
+    [HideInInspector] public BookHandler[] books ;
+    private void Awake()
+    {
+        books = GetComponentsInChildren<BookHandler>();
+    }
 }

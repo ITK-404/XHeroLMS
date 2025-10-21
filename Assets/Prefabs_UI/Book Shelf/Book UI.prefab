@@ -35,8 +35,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 13.71, y: 21}
-  m_SizeDelta: {x: 14.62, y: 28.59}
+  m_AnchoredPosition: {x: 1.800003, y: 26.5}
+  m_SizeDelta: {x: -1.3, y: 28.59}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &550989518331703908
 MonoBehaviour:
@@ -56,9 +56,9 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 7
-  m_Spacing: 15
+  m_Spacing: 5
   m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
@@ -161,7 +161,7 @@ MonoBehaviour:
   book_seo: 
   book_name: 
   bookHandleUI: {fileID: 3094227661505699572}
-  bookHandle: {fileID: 5418252300305741663}
+  bookModel: {fileID: 0}
 --- !u!114 &3094227661505699572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -311,6 +311,7 @@ GameObject:
   - component: {fileID: 1970063702312205249}
   - component: {fileID: 7390319683428596462}
   - component: {fileID: 1166856789680904293}
+  - component: {fileID: 7576994678554357510}
   m_Layer: 5
   m_Name: Full Price Text
   m_TagString: Untagged
@@ -392,7 +393,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 21.15
+  m_fontSize: 19.65
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -436,6 +437,26 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7576994678554357510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7614115732025864765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: 113.03155
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &9104631120229992729
 GameObject:
   m_ObjectHideFlags: 0
@@ -447,6 +468,7 @@ GameObject:
   - component: {fileID: 1248995283397252511}
   - component: {fileID: 7985801608847754946}
   - component: {fileID: 1542263505112167330}
+  - component: {fileID: 6513853804253150875}
   m_Layer: 5
   m_Name: Current Price
   m_TagString: Untagged
@@ -528,15 +550,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 21.15
+  m_fontSize: 19.05
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 10.3
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 1024
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -572,6 +594,26 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6513853804253150875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9104631120229992729}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: 141.7
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &9171260796744970707
 GameObject:
   m_ObjectHideFlags: 0
@@ -725,6 +767,10 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 3479699531452031583, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479699531452031583, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -766,7 +812,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3479699531452031583, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
       propertyPath: m_ConstrainProportionsScale
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4251874021814761701, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
       propertyPath: m_Layer
@@ -854,17 +900,6 @@ MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 2306208687247939888, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
   m_PrefabInstance: {fileID: 2462083030412979216}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5418252300305741663 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7573485270509738831, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
-  m_PrefabInstance: {fileID: 2462083030412979216}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 79246693e0a6b6642aaa83b5180984e4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BookHandle
 --- !u!224 &6518134869861844667 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8673372516313180843, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}

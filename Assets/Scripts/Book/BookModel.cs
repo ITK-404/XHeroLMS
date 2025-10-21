@@ -41,19 +41,7 @@ public class BookModel : MonoBehaviour
 
     public void SetGrayScale(float grayScale)
     {
-        if (grayScale > 0)
-        {
-            _renderer.materials[0].EnableKeyword("_GRAYSCALE_ON");
-            _renderer.materials[1].EnableKeyword("_GRAYSCALE_ON");
-        }
-        else
-        {
-            _renderer.materials[0].DisableKeyword("_GRAYSCALE_ON");
-            _renderer.materials[1].DisableKeyword("_GRAYSCALE_ON");
-        }
 
-        _renderer.materials[0].SetFloat("_Grayscale", grayScale);
-        _renderer.materials[1].SetFloat("_Grayscale", grayScale);
     }
 
     private void OnMouseEnter()
@@ -83,6 +71,7 @@ public class BookModel : MonoBehaviour
         }
         container.transform.DOKill();
         container.transform.DOScale(Vector3.one, 1).SetEase(Ease.OutSine);
+
         return;
         if (tween != null)
         {
@@ -118,7 +107,7 @@ public class BookModel : MonoBehaviour
 
     private IEnumerator StartRotate()
     {
-        float duration = 2;
+        float duration = 1;
         float elapsedTime = 0;
         while (true)
         {
@@ -127,7 +116,6 @@ public class BookModel : MonoBehaviour
             float smooth = smoothCurve.Evaluate(ratio);
 
             float currentValue = Mathf.Lerp(0, 360, smooth);
-            Debug.Log("ratio value: " + ratio);
             container.transform.localRotation = Quaternion.Euler(0, currentValue, 0);
 
             if (elapsedTime >= duration)

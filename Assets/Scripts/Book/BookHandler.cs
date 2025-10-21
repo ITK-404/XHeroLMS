@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
+using static Unity.Collections.AllocatorManager;
 
 public class BookHandler : MonoBehaviour
 {
@@ -9,10 +10,13 @@ public class BookHandler : MonoBehaviour
     public string book_name;
 
     public BookViewUI bookHandleUI;
-    public BookModel bookHandle;
+    public BookModel bookModel;
 
     private void Awake()
     {
+        bookModel = GetComponentInChildren<BookModel>();
+        bookHandleUI = GetComponentInChildren<BookViewUI>();
+
         bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
         bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
 
