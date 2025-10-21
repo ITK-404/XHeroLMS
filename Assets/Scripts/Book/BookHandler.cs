@@ -13,7 +13,9 @@ public class BookHandler : MonoBehaviour
     private void Awake()
     {
         bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
-        bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse); 
+        bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
+
+        bookHandleUI.Test();
     }
 
     private void OnDestroy()
