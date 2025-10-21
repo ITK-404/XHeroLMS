@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +14,19 @@ public class BookViewUI : MonoBehaviour
     public TextMeshProUGUI fullPriceText;
 
     [ContextMenu("Refresh Color")]
+
     public void RefreshColor()
+    {
+        StartCoroutine(DelayOneFrame());
+    }
+
+    private IEnumerator DelayOneFrame()
+    {
+        yield return null;
+        LocalRefreshColor();
+    }
+
+    public void LocalRefreshColor()
     {
         var tmp = priceText;
         tmp.ForceMeshUpdate();
@@ -45,4 +58,5 @@ public class BookViewUI : MonoBehaviour
         tmp.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
 
     }
+
 }
