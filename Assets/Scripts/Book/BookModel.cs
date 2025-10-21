@@ -1,14 +1,47 @@
 ﻿using DG.Tweening;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class BookHandle : MonoBehaviour
+public class BookModel : MonoBehaviour
 {
     [SerializeField] private Transform container;
+    [SerializeField] private Renderer _renderer;
+    private Tween tween;
+    private bool isTweenDone = false;
+    private float speed = 1;
 
     private void Awake()
     {
-        CreateInOutBackCurve();
+        smoothCurve = AnimationUltis.CreateInOutBackCurve();
+    }
+
+    public void SetColor(Color color)
+    {
+        // testing
+        _renderer.materials[1].SetColor("_BaseColor",color);
+    }
+
+    public void SetBaseMap(Texture texture)
+    {
+        _renderer.materials[1].SetTexture("_MainTex", texture);
+    }
+
+    [ContextMenu("De Active Grayscale")]
+    public void ActiveGrayScale()
+    {
+        SetGrayScale(0);
+    }
+
+    [ContextMenu("Active Grayscale")]
+    public void DeActiveGrayScale()
+    {
+        SetGrayScale(1);
+    }
+
+    public void SetGrayScale(float grayScale)
+    {
+
     }
 
     private void OnMouseEnter()
@@ -28,6 +61,7 @@ public class BookHandle : MonoBehaviour
         StopAllCoroutines();
         StartCoroutine(StartRotate());
     }
+
     private void OnMouseExit()
     {
         if (container == null)
@@ -37,6 +71,7 @@ public class BookHandle : MonoBehaviour
         }
         container.transform.DOKill();
         container.transform.DOScale(Vector3.one, 1).SetEase(Ease.OutSine);
+
         return;
         if (tween != null)
         {
@@ -53,7 +88,6 @@ public class BookHandle : MonoBehaviour
         
     }
 
-    private bool isTweenDone = false;
     private void Update()
     {
         if (isTweenDone)
@@ -62,7 +96,6 @@ public class BookHandle : MonoBehaviour
         }
     }
 
-    private Tween tween;
 
 
     public AnimationCurve smoothCurve = new AnimationCurve(
@@ -74,8 +107,7 @@ public class BookHandle : MonoBehaviour
 
     private IEnumerator StartRotate()
     {
-    
-        float duration = 2;
+        float duration = 1;
         float elapsedTime = 0;
         while (true)
         {
@@ -84,7 +116,6 @@ public class BookHandle : MonoBehaviour
             float smooth = smoothCurve.Evaluate(ratio);
 
             float currentValue = Mathf.Lerp(0, 360, smooth);
-            Debug.Log("ratio value: " + ratio);
             container.transform.localRotation = Quaternion.Euler(0, currentValue, 0);
 
             if (elapsedTime >= duration)
@@ -95,51 +126,5 @@ public class BookHandle : MonoBehaviour
         }
 
         yield return null;
-    }
-
-    private float speed = 1;
-
-    public void CreateInOutBackCurve()
-    {
-        smoothCurve = new AnimationCurve();
-
-        // Constants for back easing
-        float c1 = 1.70158f;
-        float c2 = c1 * 1.525f;
-
-        // Tạo nhiều keyframes để curve mượt mà hơn
-        int keyCount = 50;
-
-        for (int i = 0; i <= keyCount; i++)
-        {
-            float t = i / (float)keyCount;
-            float value;
-
-            // InOutBack easing formula
-            if (t < 0.5f)
-            {
-                value = (Mathf.Pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2;
-            }
-            else
-            {
-                value = (Mathf.Pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-            }
-
-            // Add keyframe
-            Keyframe key = new Keyframe(t, value);
-
-            // Set tangents to smooth (optional, có thể điều chỉnh)
-            key.inTangent = 0;
-            key.outTangent = 0;
-            key.weightedMode = WeightedMode.None;
-
-            smoothCurve.AddKey(key);
-        }
-
-        // Smooth all tangents
-        for (int i = 0; i < smoothCurve.keys.Length; i++)
-        {
-            smoothCurve.SmoothTangents(i, 0);
-        }
     }
 }
