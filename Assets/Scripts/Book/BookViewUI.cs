@@ -10,9 +10,10 @@ public class BookViewUI : MonoBehaviour
     public Color leftColor;
     public Color rightColor;
     public TextMeshProUGUI priceText;
+    public TextMeshProUGUI fullPriceText;
 
-
-    public void Test()
+    [ContextMenu("Refresh Color")]
+    public void RefreshColor()
     {
         var tmp = priceText;
         tmp.ForceMeshUpdate();
@@ -41,5 +42,7 @@ public class BookViewUI : MonoBehaviour
             tmp.textInfo.meshInfo[i].mesh.colors32 = tmp.textInfo.meshInfo[i].colors32;
             tmp.UpdateGeometry(tmp.textInfo.meshInfo[i].mesh, i);
         }
+        tmp.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
+
     }
 }

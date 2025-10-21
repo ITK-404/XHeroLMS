@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using NUnit.Framework;
+using UnityEngine;
 
 public class BookHandler : MonoBehaviour
 {
@@ -15,13 +16,17 @@ public class BookHandler : MonoBehaviour
         bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
         bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
 
-        bookHandleUI.Test();
     }
 
     private void OnDestroy()
     {
         bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
         bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
+    }
+    
+    public void UpdateData()
+    {
+
     }
 
     private void EnterCourse()
