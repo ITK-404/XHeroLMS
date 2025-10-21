@@ -83,7 +83,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     bool _muted;
 
     bool _isFullscreen;
-    bool _isScrubbingByUI;
+    public bool _isScrubbingByUI;
     float _lastInteractTime;
     Vector3 _lastMousePos;
 
@@ -272,7 +272,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
         }
     }
 
-    void AddPointerEntry(EventTrigger et, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> cb)
+    public void AddPointerEntry(EventTrigger et, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> cb)
     {
         var entry = new EventTrigger.Entry { eventID = type };
         entry.callback.AddListener(cb);
@@ -291,14 +291,23 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (!videoPlayer) return;
         if (!videoPlayer.isPrepared)
         {
-            PrepareIfNeeded(autoPlay:true);
+            PrepareIfNeeded(autoPlay: true);
             return;
         }
 
         if (videoPlayer.isPlaying)
         { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
         else
-        { videoPlayer.Play();  OnPlayStateChanged?.Invoke(true);  }
+        { videoPlayer.Play(); OnPlayStateChanged?.Invoke(true); }
+    }
+
+    public void SeekRelativeLeft()
+    {
+        SeekRelative(-seekStepSeconds);
+    }
+    public void SeekRelativeRight()
+    {
+        SeekRelative(+seekStepSeconds);
     }
 
     public void SeekRelative(double deltaSeconds)
@@ -336,7 +345,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     void EnterFullscreenUI()
     {
-        if (videoQuad) videoQuad.gameObject.SetActive(false);
+        // if (videoQuad) videoQuad.gameObject.SetActive(false);
+        if (videoQuad) fullscreenCanvas.gameObject.SetActive(true);
         if (fullscreenCanvas) fullscreenCanvas.enabled = true;
 
         if (useFixedRT) EnsureFixedRT(); else RebindIfNeeded(force:true);
@@ -348,6 +358,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     public void ExitFullscreenUI()
     {
+        if (videoQuad) fullscreenCanvas.gameObject.SetActive(false);
+        
         if (videoQuad) videoQuad.gameObject.SetActive(true);
         if (fullscreenCanvas) fullscreenCanvas.enabled = false;
 
@@ -515,21 +527,21 @@ public class VideoPlayerControllerPro : MonoBehaviour
         return h > 0 ? $"{h:00}:{m:00}:{s:00}" : $"{m:00}:{s:00}";
     }
 
-    void RegisterInteraction()
+    public void RegisterInteraction()
     {
         _lastInteractTime = Time.time;
         if (panelMenu && !panelMenu.activeSelf) panelMenu.SetActive(true);
     }
 
     // ---- Slider handlers ----
-    void OnVolumeSliderChanged(float v)
+    public void OnVolumeSliderChanged(float v)
     {
         RegisterInteraction();
         if (_muted && v > 0f) _muted = false;
         SetVolumeAbsolute(v, syncSlider:false);
     }
 
-    void OnDurationSliderChangedContinuous(float vNorm)
+    public void OnDurationSliderChangedContinuous(float vNorm)
     {
         RegisterInteraction();
         if (!videoPlayer || !videoPlayer.isPrepared || videoPlayer.length <= 0) return;
@@ -596,8 +608,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
         s.SetValueWithoutNotify(t);
         OnDurationSliderChangedContinuous(t);
     }
-
-    // ---- Helpers ----
+    
     void EnsureFullscreenUI()
     {
         if (!fullscreenCanvas)
