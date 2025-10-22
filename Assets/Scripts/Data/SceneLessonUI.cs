@@ -17,8 +17,8 @@ public class SceneLessonUI : MonoBehaviour
     [Header("UI")]
     public ScrollRect scrollRect;
     public Transform content;           // Content của ScrollView
-    public GameObject headerPrefab;     // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
-    public GameObject itemPrefab;       // Prefab item (Tag "Title" và/hoặc "QA")
+    public ChapterUI headerPrefab;     // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
+    public LessonUI itemPrefab;       // Prefab item (Tag "Title" và/hoặc "QA")
     public VideoPlayer videoPlayer;
 
     [Header("Options")]
@@ -38,11 +38,11 @@ public class SceneLessonUI : MonoBehaviour
 
     private IEnumerator Start()
     {
-        if (!content || !itemPrefab || !headerPrefab)
-        {
-            Debug.LogError("[SceneLessonUI] Thiếu tham chiếu content/itemPrefab/headerPrefab.");
-            yield break;
-        }
+        //if (!content || !itemPrefab || !headerPrefab)
+        //{
+        //    Debug.LogError("[SceneLessonUI] Thiếu tham chiếu content/itemPrefab/headerPrefab.");
+        //    yield break;
+        //}
 
         EnsureListLayout((RectTransform)content);
 
@@ -99,10 +99,10 @@ public class SceneLessonUI : MonoBehaviour
             Destroy(content.GetChild(i).gameObject);
 
         // ===== Header khóa học (1 lần) =====
-        var headerCourse = Instantiate(headerPrefab);
-        headerCourse.transform.SetParent(content, false);
-        EnsureItemLayout((RectTransform)headerCourse.transform);
-        SetLabel(headerCourse, "Chapter", _courseTitle);
+        //var headerCourse = Instantiate(headerPrefab);
+        //headerCourse.transform.SetParent(content, false);
+        //EnsureItemLayout((RectTransform)headerCourse.transform);
+        //SetLabel(headerCourse, "Chapter", _courseTitle);
 
         // ===== Với mỗi CHAPTER: tạo header chương + các item bài =====
         if (p.chapters != null)
@@ -113,13 +113,16 @@ public class SceneLessonUI : MonoBehaviour
 
                 // Header CHAPTER (nếu có tên)
                 string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
+                ChapterUI headerChapter = null;
                 if (!string.IsNullOrEmpty(chapTitle))
                 {
-                    var headerChapter = Instantiate(headerPrefab);
-                    headerChapter.transform.SetParent(content, false);
-                    EnsureItemLayout((RectTransform)headerChapter.transform);
-                    SetLabel(headerChapter, "Chapter", chapTitle);
+                    headerChapter = Instantiate(headerPrefab, content);
+                    //headerChapter.transform.SetParent(content, false);
+                    //EnsureItemLayout((RectTransform)headerChapter.transform);
+                    //SetLabel(headerChapter, "Chapter", chapTitle);
+                    headerChapter.titleName.text = $"{chapTitle}";
                 }
+                ChapterUIManager.Instance.AddToList(headerChapter);
 
                 // Các bài học trong chapter
                 if (ch.lessons == null) continue;
@@ -133,21 +136,21 @@ public class SceneLessonUI : MonoBehaviour
                     string link2 = !string.IsNullOrEmpty(lesson.videoLink2) ? lesson.videoLink2 :
                                    (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
 
-                    var go = Instantiate(itemPrefab);
-                    go.transform.SetParent(content, false);
-                    EnsureItemLayout((RectTransform)go.transform);
+                    var lessonUI = Instantiate(itemPrefab, headerChapter.lessonContainer.transform);
+                    //lessonUI.transform.SetParent(headerChapter.lessonContainer.transform, false);
+                    //EnsureItemLayout((RectTransform)lessonUI.transform);
 
                     // Luôn hiển thị vào Title (kể cả “Câu hỏi …”), QA ẩn
-                    SetLabel(go, "Title", lessonTitle);
-                    SetLabel(go, "QA", ""); // rỗng -> bị ẩn
-
+                    //SetLabel(lessonUI, "Title", lessonTitle);
+                    //SetLabel(lessonUI, "QA", ""); // rỗng -> bị ẩn
+                    lessonUI.titleTMP.text = $"{lessonTitle}";
                     // Click phát video
-                    var btn = go.GetComponent<Button>() ?? go.GetComponentInChildren<Button>(true);
-                    if (btn != null)
-                    {
-                        string captured = link2;
-                        btn.onClick.AddListener(() => PlayVideo(captured));
-                    }
+
+                    lessonUI.linkVideo2 = link2;
+                    lessonUI.OnClickPlayVideo = PlayVideo;
+                    lessonUI.chapterUI = headerChapter;
+
+                    headerChapter.AddToList(lessonUI);
                 }
             }
         }
