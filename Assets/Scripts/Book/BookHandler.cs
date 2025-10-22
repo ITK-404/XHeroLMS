@@ -1,6 +1,5 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
-using static Unity.Collections.AllocatorManager;
 
 public class BookHandler : MonoBehaviour
 {
@@ -20,6 +19,8 @@ public class BookHandler : MonoBehaviour
         bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
         bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
 
+
+        SetBuyCourse(true);
     }
 
     private void OnDestroy()
@@ -41,5 +42,16 @@ public class BookHandler : MonoBehaviour
     private void BuyCourse()
     {
 
+    }
+
+    public void SetBuyCourse(bool state)
+    {
+        bookHandleUI.enterCourseBtn.gameObject.SetActive(state);
+        bookHandleUI.buyCourseBtn.gameObject.SetActive(!state);
+    }
+
+    private bool AreUserBuyCourse()
+    {
+        return true;
     }
 }
