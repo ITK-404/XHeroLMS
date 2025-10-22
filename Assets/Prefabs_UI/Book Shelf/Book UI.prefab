@@ -161,7 +161,7 @@ MonoBehaviour:
   book_seo: 
   book_name: 
   bookHandleUI: {fileID: 3094227661505699572}
-  bookModel: {fileID: 0}
+  bookModel: {fileID: 5418252300305741663}
 --- !u!114 &3094227661505699572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -179,7 +179,7 @@ MonoBehaviour:
   leftColor: {r: 0.8235294, g: 0.38039216, b: 0.21960784, a: 1}
   rightColor: {r: 0.62352943, g: 0.21176471, b: 0.03529412, a: 1}
   priceText: {fileID: 1542263505112167330}
-  fullPriceText: {fileID: 0}
+  fullPriceText: {fileID: 1166856789680904293}
 --- !u!1 &4509562278419047113
 GameObject:
   m_ObjectHideFlags: 0
@@ -193,7 +193,7 @@ GameObject:
   - component: {fileID: 4041827583806680123}
   - component: {fileID: 443754292143226145}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: Buy Course
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -215,8 +215,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 47.57, y: -178.5}
-  m_SizeDelta: {x: 312.58, y: 64.73}
+  m_AnchoredPosition: {x: -8.6, y: -190}
+  m_SizeDelta: {x: 262.78, y: 64.73}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4824642494869364020
 CanvasRenderer:
@@ -246,7 +246,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: feb4c7b48c6d8724598f82392c4c3d4e, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 290fa4fead3778b499d75e70f2432744, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -627,7 +627,7 @@ GameObject:
   - component: {fileID: 7584130439515850963}
   - component: {fileID: 2145810537027002439}
   m_Layer: 5
-  m_Name: Button
+  m_Name: Enter Course
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -900,6 +900,17 @@ MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 2306208687247939888, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
   m_PrefabInstance: {fileID: 2462083030412979216}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5418252300305741663 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7573485270509738831, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
+  m_PrefabInstance: {fileID: 2462083030412979216}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79246693e0a6b6642aaa83b5180984e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BookHandle
 --- !u!224 &6518134869861844667 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8673372516313180843, guid: 801f299ceb32cc64ba846d8dc5367345, type: 3}
