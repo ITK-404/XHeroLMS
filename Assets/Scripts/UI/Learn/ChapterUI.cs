@@ -1,3 +1,6 @@
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,27 +12,35 @@ public class ChapterUI : MonoBehaviour
     public GameObject lessonContainer;
     public Button toggleOpenBtn;
     public Button toggleOffBtn;
+    public Button bannerBtn;
+    public GameObject activeGroup; 
+    public GameObject deActiveGroup; 
     [Header("Setting")]
     [SerializeField] private bool isOpen = false;
+
+    public List<LessonUI> lessonList = new();
+
 
     private void Awake()
     {
         toggleOpenBtn.onClick.AddListener(ToggleOn);
         toggleOffBtn.onClick.AddListener(ToggleOff);
-        if (isOpen)
-        {
-            ToggleOn();
-        }
-        else
-        {
-            ToggleOff();
-        }
+        bannerBtn.onClick.AddListener(SelectThisChapter);
+
+        UnHighlight();
     }
 
     private void OnDestroy()
     {
         toggleOpenBtn.onClick.RemoveListener(ToggleOn);
         toggleOffBtn.onClick.RemoveListener(ToggleOff);
+        bannerBtn.onClick.RemoveListener(SelectThisChapter);
+    }
+
+    private void SelectThisChapter()
+    {
+        Debug.Log("On Select This Chapter");
+        ChapterUIManager.Instance.Select(this);
     }
 
     private void ToggleOn()
@@ -50,12 +61,32 @@ public class ChapterUI : MonoBehaviour
         toggleOffBtn.gameObject.SetActive(false);
     }
 
+    public void SelectLesson(LessonUI lessonUI)
+    {
+        foreach (var item in lessonList)
+        {
+            item.SetActive(item == lessonUI);
+        }
+    }
 
-}
+    public void AddToList(LessonUI lessonUI)
+    {
+        lessonList.Add(lessonUI);
+    }
 
-public class LessonUI : MonoBehaviour
-{
+    public void Highlight()
+    {
+        ToggleOn();
+        activeGroup.gameObject.SetActive(true);
+        deActiveGroup.gameObject.SetActive(false);
+    }
 
+    public void UnHighlight()
+    {
+        ToggleOff();
+        activeGroup.gameObject.SetActive(false);
+        deActiveGroup.gameObject.SetActive(true);
+    }
 }
 
 public class QuestionUI : MonoBehaviour
