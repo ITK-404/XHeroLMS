@@ -16,7 +16,6 @@ public class PlayerChairManager : MonoBehaviour
     public static PlayerChairManager Instance;
     public CinemachineCamera sitdownCamera;
     public CinemachineBrain brain;
-    private List<ChairCheckPoint> chairList = new();
     private ChairCheckPoint[] allCheckPoints;
     public CursorGameManager cursorMgr;
     public GameObject player;
@@ -43,23 +42,6 @@ public class PlayerChairManager : MonoBehaviour
     private void OnDestroy()
     {
         learnUI.OnClickReturnBtn -= PlayerStandup;
-    }
-
-
-    public void TrySetChair(ChairCheckPoint currentChair)
-    {
-        if (!chairList.Contains(currentChair))
-        {
-            chairList.Add(currentChair);
-        }
-    }
-
-    public void TryRemoveChair(ChairCheckPoint removeChair)
-    {
-        if (chairList.Contains(removeChair))
-        {
-            chairList.Remove(removeChair);
-        }
     }
 
     private void Update()
@@ -115,27 +97,6 @@ public class PlayerChairManager : MonoBehaviour
         playerForward.Normalize();
 
         ChairCheckPoint temp = null;
-        float bestScore = float.MinValue; // score = dot - khoảng cách có thể được cân nhắc riêng
-
-        foreach (var item in chairList)
-        {
-            Vector3 dirToItem = item.transform.position - brain.transform.position;
-            dirToItem.y = 0;
-            dirToItem.Normalize();
-
-            float dot = Vector3.Dot(playerForward, dirToItem);
-            if (dot > 0.5f) // nằm trong tầm nhìn ~60 độ
-            {
-                float distance = Vector3.Distance(brain.transform.position, item.transform.position);
-                float score = dot / distance; // dot cao, distance nhỏ => ưu tiên cao
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    temp = item;
-                }
-            }
-        }
 
         if (temp != null)
         {
