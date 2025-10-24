@@ -359,13 +359,21 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public void ExitFullscreenUI()
     {
         if (videoQuad) fullscreenCanvas.gameObject.SetActive(false);
-        
+
         if (videoQuad) videoQuad.gameObject.SetActive(true);
         if (fullscreenCanvas) fullscreenCanvas.enabled = false;
 
         _isFullscreen = false;
         OnFullscreenChanged?.Invoke(false);
         if (!PlayerChairManager.IsStantUp) learnUI?.Show();
+    }
+    
+    public void DefEx()
+    {
+        if (videoQuad) fullscreenCanvas.gameObject.SetActive(false);
+        
+        if (videoQuad) videoQuad.gameObject.SetActive(true);
+        if (fullscreenCanvas) fullscreenCanvas.enabled = false;
     }
 
     // ---- Volume/Speed ----
