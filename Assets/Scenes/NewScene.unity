@@ -24814,7 +24814,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1717523684562689468, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4732175842461545917, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
       propertyPath: m_IsActive
@@ -24823,8 +24823,52 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 541335316846492649, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 866258013}
   m_SourcePrefab: {fileID: 100100000, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
+--- !u!1 &866258010 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 541335316846492649, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
+  m_PrefabInstance: {fileID: 866258009}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &866258011 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 436847208011615075, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
+  m_PrefabInstance: {fileID: 866258009}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &866258012 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 5753920842523059796, guid: dde584526c8d7ed48b48c4d7986a9f27, type: 3}
+  m_PrefabInstance: {fileID: 866258009}
+  m_PrefabAsset: {fileID: 0}
+--- !u!205 &866258013
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866258010}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0, z: 0}
+  m_Size: 1
+  m_FadeMode: 1
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.6
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 866258012}
+  - screenRelativeHeight: 0.3
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 866258011}
+  - screenRelativeHeight: 0.1
+    fadeTransitionWidth: 0
+    renderers: []
+  m_Enabled: 1
 --- !u!1001 &868505956
 PrefabInstance:
   m_ObjectHideFlags: 0
