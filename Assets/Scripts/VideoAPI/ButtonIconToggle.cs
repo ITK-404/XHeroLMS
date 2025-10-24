@@ -1,6 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+public enum WatchVideoState
+{
+    None,
+    Default,
+    HalfScreen,
+    FullScreen,
+}
 [DisallowMultipleComponent]
 public class ButtonIconToggle : MonoBehaviour
 {

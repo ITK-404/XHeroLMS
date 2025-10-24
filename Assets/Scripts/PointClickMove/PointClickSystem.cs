@@ -95,10 +95,10 @@ public class PointClickSystem : MonoBehaviour
                     if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
                     if (currentCheckPoint != null)
                     {
+                        currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                         waitMoveToChair = StartCoroutine(WaitForRechPos());
                     }
                     
-                    currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                     return;
                 }
             }
@@ -119,7 +119,8 @@ public class PointClickSystem : MonoBehaviour
             yield return null;
         }
         Debug.Log("Đã tới vị trí ngồi");
-        PlayerChairManager.Instance.PlayerSitdown(currentCheckPoint);
+        PlayerChairManager.Instance.ShowSitdownButton();
+        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
     }
 
     private void OnDrawGizmos()
