@@ -46,11 +46,7 @@ public class PlayerChairManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F) && playerState == PlayerState.Free)
-        {
-            PlayerSitdown();
-        }
-        else if (Input.GetKeyDown(KeyCode.Escape) && playerState == PlayerState.Sitdown)
+        if (Input.GetKeyDown(KeyCode.Escape) && playerState == PlayerState.Sitdown)
         {
             PlayerStandup();
         }
@@ -66,7 +62,7 @@ public class PlayerChairManager : MonoBehaviour
 
         yield return null;
     }
-    private void PlayerStandup()
+    public void PlayerStandup()
     {
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
@@ -89,14 +85,15 @@ public class PlayerChairManager : MonoBehaviour
         }));
     }
 
-    private void PlayerSitdown()
+    public void PlayerSitdown(ChairCheckPoint temp)
     {
         // sit down logic
-        var playerForward = brain.transform.forward;
-        playerForward.y = 0;
-        playerForward.Normalize();
+        if(temp == null)
+        {
+            Debug.Log("Chair Check point bị null");
+            return;
+        }
 
-        ChairCheckPoint temp = null;
 
         if (temp != null)
         {
