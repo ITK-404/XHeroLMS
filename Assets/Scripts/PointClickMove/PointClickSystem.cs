@@ -1,12 +1,15 @@
 ﻿using Pathfinding;
+using System;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
     IAstarAI ai;
     private Vector3 lastPickPosition;
     public float debugRadius = 1;
-    public LayerMask layerMask;
+    public LayerMask groundLayerMask;
+    public LayerMask chairLayerMask;
     private CharacterController characterController;
     public float moveSpeed = 5;
     public float rotationSpeed = 10f;
@@ -61,10 +64,23 @@ public class PointClickSystem : MonoBehaviour
             var mousePosition = Input.mousePosition;
             var ray = Camera.main.ScreenPointToRay(mousePosition);
 
-            if (Physics.Raycast(ray, out var hit, layerMask))
+
+            if (Physics.Raycast(ray, out var chairHit, chairLayerMask))
             {
-                Debug.Log("Position hit point: " + hit);
-                ai.destination = hit.point;
+                var position = chairHit.transform.position;
+                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+                Vector3 groundPos = (Vector3)node.position;
+                ai.destination = groundPos;
+                lastPickPosition = groundPos;
+                return;
+            }
+
+
+
+            if (Physics.Raycast(ray, out var groundHit, groundLayerMask))
+            {
+                Debug.Log("Position hit point: " + chairHit);
+                ai.destination = chairHit.point;
             }
             lastPickPosition = mousePosition;
         }
@@ -73,4 +89,5 @@ public class PointClickSystem : MonoBehaviour
     {
         Gizmos.DrawWireSphere(lastPickPosition, debugRadius);
     }
+
 }

@@ -21,23 +21,6 @@ public class ChairCheckPoint : MonoBehaviour
     {
         return other.CompareTag("Player");
     }
-    private void OnTriggerEnter(Collider other)
-    {
-        if (IsPlayer(other.gameObject))
-        {
-            //Debug.Log("Enter dính player", other.gameObject);
-            PlayerChairManager.Instance.TrySetChair(this);
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (IsPlayer(other.gameObject))
-        {
-            //Debug.Log("Exit dính player",gameObject);
-            PlayerChairManager.Instance.TryRemoveChair(this);
-        }
-    }
 
     public void Sitdown()
     {
