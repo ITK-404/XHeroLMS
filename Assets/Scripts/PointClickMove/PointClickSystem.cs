@@ -1,35 +1,76 @@
-using Pathfinding;
+﻿using Pathfinding;
 using UnityEngine;
 
 public class PointClickSystem : MonoBehaviour
 {
     IAstarAI ai;
+    private Vector3 lastPickPosition;
+    public float debugRadius = 1;
+    public LayerMask layerMask;
+    private CharacterController characterController;
+    public float moveSpeed = 5;
+    public float rotationSpeed = 10f;
+
+    private Vector3 move;
+
     void OnEnable()
     {
-        // Get a reference to our movement script.
-        // We use the IAstarAI interface to make the code work with all movement scripts
-        // You can alternatively use the concrete FollowerEntity class,
-        // but that would make the code less flexible
         ai = GetComponent<IAstarAI>();
+        characterController = GetComponent<CharacterController>();
     }
 
     void Update()
     {
+        if (InputBlocker.IsBlocked())
+            return;
+
+        float h = Input.GetAxisRaw("Horizontal"); // A/D
+        float v = Input.GetAxisRaw("Vertical");   // W/S
+
+        // Forward/backward movement
+        Vector3 forwardMove = transform.forward * v;
+        bool isMoving = Mathf.Abs(v) > 0.1f;
+
+        if (isMoving)
+        {
+            ai.isStopped = true;
+            ai.canMove = false;
+            ai.destination = ai.position;
+            characterController.Move(forwardMove * moveSpeed * Time.deltaTime);
+        }
+        else
+        {
+            ai.isStopped = false;
+            ai.canMove = true;
+        }
+
+        // Left/right rotation
+        if (Mathf.Abs(h) > 0.1f)
+        {
+            float rotationAmount = h * rotationSpeed * Time.deltaTime;
+            transform.Rotate(0, rotationAmount, 0);
+        }
+
+        MoveByClick();
+    }
+
+    private void MoveByClick()
+    {
         if (Input.GetMouseButtonDown(0))
         {
-            // Get the mouse position
             var mousePosition = Input.mousePosition;
-
-            // Create a ray from the camera to the mouse position
             var ray = Camera.main.ScreenPointToRay(mousePosition);
 
-            // Check if the ray hits something
-            if (Physics.Raycast(ray, out var hit))
+            if (Physics.Raycast(ray, out var hit, layerMask))
             {
-                // Set the destination for the AI to move towards
                 Debug.Log("Position hit point: " + hit);
                 ai.destination = hit.point;
             }
+            lastPickPosition = mousePosition;
         }
+    }
+    private void OnDrawGizmos()
+    {
+        Gizmos.DrawWireSphere(lastPickPosition, debugRadius);
     }
 }
