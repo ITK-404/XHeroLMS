@@ -69,12 +69,12 @@ public class CursorGameManager : MonoBehaviour
         }
         else
         {
-            // Khi UI tắt, nếu không giữ Alt thì khóa chuột lại (nếu tùy chọn bật)
-            if (relockCursorWhenUICloses && !(Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)))
-            {
-                LockCursor();
-                SetLookEnabled(true);
-            }
+            //// khi ui tắt, nếu không giữ alt thì khóa chuột lại (nếu tùy chọn bật)
+            //if (relockcursorwhenuicloses && !(input.getkey(keycode.leftalt) || input.getkey(keycode.rightalt)))
+            //{
+            //    lockcursor();
+            //    setlookenabled(true);
+            //}
         }
     }
 
