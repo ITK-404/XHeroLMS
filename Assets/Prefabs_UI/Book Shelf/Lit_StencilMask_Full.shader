@@ -10,7 +10,8 @@
     
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalRenderPipeline" }
+        // Tags { "RenderPipeline"="UniversalRenderPipeline" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
         
         Stencil
         {

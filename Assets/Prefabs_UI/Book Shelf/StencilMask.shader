@@ -1,10 +1,11 @@
 Shader "Custom/StencilMask"
 {
-     SubShader
+    SubShader
     {
-        Tags { "RenderType"="Opaque" "Queue"="Geometry-1" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry-1" }
         ColorMask 0
         ZWrite Off
+        ZTest Always
         Cull Off
 
         Stencil
