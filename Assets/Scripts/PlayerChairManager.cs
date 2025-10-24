@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerChairManager : MonoBehaviour
 {
@@ -17,11 +18,13 @@ public class PlayerChairManager : MonoBehaviour
     public CinemachineCamera sitdownCamera;
     public CinemachineBrain brain;
     private ChairCheckPoint[] allCheckPoints;
-    public CursorGameManager cursorMgr;
     public GameObject player;
     public PlayerState playerState;
     [Header("UI")]
     public LearnUI learnUI;
+    public Canvas watchVideoCanvas;
+    public Button sitdownBtn;
+    public Button standupBtn;
     public static bool IsStantUp = false;
 
     VideoPlayerControllerPro videoPlayerControllerPro;
@@ -36,7 +39,7 @@ public class PlayerChairManager : MonoBehaviour
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
-
+        watchVideoCanvas.gameObject.SetActive(false);
     }
 
     private void OnDestroy()
@@ -46,10 +49,12 @@ public class PlayerChairManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && playerState == PlayerState.Sitdown)
+        if(currentCheckPoint == null)
         {
-            PlayerStandup();
+            sitdownBtn.gameObject.SetActive(false);
+            standupBtn.gameObject.SetActive(false);
         }
+        
     }
 
     private IEnumerator WaitForBlendDone(Action action)
@@ -73,6 +78,7 @@ public class PlayerChairManager : MonoBehaviour
             item.Show(true);
         }
         learnUI.Hide();
+        watchVideoCanvas.gameObject.SetActive(false);
         IsStantUp = true;
 
         videoPlayerControllerPro.ExitFullscreenUI();
@@ -80,15 +86,18 @@ public class PlayerChairManager : MonoBehaviour
         StartCoroutine(WaitForBlendDone(() =>
         {
             Debug.Log("bật lại input");
-            if (cursorMgr) cursorMgr.SetUIOpen(false);
             InputBlocker.SetBlocked(false);
+            ShowSitdownButton();
         }));
     }
 
-    public void PlayerSitdown(ChairCheckPoint temp)
+    public ChairCheckPoint currentCheckPoint;
+
+    public void PlayerSitdown()
     {
         // sit down logic
-        if(temp == null)
+        var temp = currentCheckPoint;
+        if (temp == null)
         {
             Debug.Log("Chair Check point bị null");
             return;
@@ -113,10 +122,24 @@ public class PlayerChairManager : MonoBehaviour
 
             StartCoroutine(WaitForBlendDone(() =>
             {
-                if (cursorMgr) cursorMgr.SetUIOpen(true);
                 learnUI.Show();
-                
+                watchVideoCanvas.gameObject.SetActive(true);
+                ShowStandUpButton();
+
             }));
         }
+    }
+
+
+    public void ShowSitdownButton()
+    {
+        sitdownBtn.gameObject.SetActive(true);
+        standupBtn.gameObject.SetActive(false);
+    }
+
+    public void ShowStandUpButton()
+    {
+        sitdownBtn.gameObject.SetActive(false);
+        standupBtn.gameObject.SetActive(true);
     }
 }
