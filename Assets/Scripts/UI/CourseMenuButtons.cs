@@ -33,9 +33,7 @@ public class CourseMenuButtons : MonoBehaviour
         PlayerPrefs.SetString(COURSE_KEY_PREF, key);
         PlayerPrefs.Save();
 
-        // Nếu có transition loader của bạn:
         LoadingTransition.Load(courseSceneName);
-        // hoặc: SceneManager.LoadScene(courseSceneName);
     }
 
     // --- Hàm tiện lợi: để script ở scene đích gọi đọc key ---
