@@ -18162,6 +18162,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TreeBig (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 7555278400137257710, guid: 50680f56e029939498bc5ddaca415ed3, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3bea1ec663c6979418948007e6d008c7, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -22145,6 +22149,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7090780467119618886, guid: 50680f56e029939498bc5ddaca415ed3, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3bea1ec663c6979418948007e6d008c7, type: 2}
     - target: {fileID: 919132149155446097, guid: 50680f56e029939498bc5ddaca415ed3, type: 3}
       propertyPath: m_Name
       value: TreeBig (2)
@@ -24542,7 +24550,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &850556904
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -54573,7 +54581,10 @@ PrefabInstance:
     - {fileID: 1137674865972867504, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5691813381713268117, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8692491915194145232}
   m_SourcePrefab: {fileID: 100100000, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
 --- !u!1001 &2027288942859100666
 PrefabInstance:
@@ -55523,6 +55534,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TreeBig (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 7555278400137257710, guid: 50680f56e029939498bc5ddaca415ed3, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3bea1ec663c6979418948007e6d008c7, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -55782,6 +55797,18 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5691813381713268117, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
   m_PrefabInstance: {fileID: 887599357988543951}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8692491915194145232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8692491915194145231}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73f64bea16af14b4f834a9fd0e55419a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PointClickSystem
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
