@@ -61,25 +61,27 @@ public class PointClickSystem : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            var mousePosition = Input.mousePosition;
-            var ray = Camera.main.ScreenPointToRay(mousePosition);
+            Vector3 mousePosition = Input.mousePosition;
+            Ray ray = Camera.main.ScreenPointToRay(mousePosition);
 
-
-            if (Physics.Raycast(ray, out var chairHit, chairLayerMask))
+            if (Physics.Raycast(ray, out var chairHit))
             {
-                var position = chairHit.transform.position;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-                Vector3 groundPos = (Vector3)node.position;
-                ai.destination = groundPos;
-                lastPickPosition = groundPos;
-                return;
+                if (chairHit.collider.CompareTag("CheckPoint"))
+                {
+                    Debug.Log("Đánh dính check point");
+                    var position = chairHit.transform.position;
+                    var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+                    Vector3 groundPos = (Vector3)node.position;
+                    ai.destination = groundPos;
+                    lastPickPosition = groundPos;
+                    return;
+                }
             }
 
 
 
             if (Physics.Raycast(ray, out var groundHit, groundLayerMask))
             {
-                Debug.Log("Position hit point: " + chairHit);
                 ai.destination = chairHit.point;
             }
             lastPickPosition = mousePosition;
