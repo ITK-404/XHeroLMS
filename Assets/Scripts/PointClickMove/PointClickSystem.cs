@@ -30,8 +30,8 @@ public class PointClickSystem : MonoBehaviour
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
         bool isMoving = Mathf.Abs(v) > 0.1f;
-
-        if (isMoving)
+        bool isRotate = Mathf.Abs(h) > 0.1f;
+        if (isMoving || isRotate)
         {
             ai.isStopped = true;
             ai.canMove = false;
