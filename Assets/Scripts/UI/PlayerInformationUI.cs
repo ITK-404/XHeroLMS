@@ -17,6 +17,7 @@ public class PlayerInformationUI : MonoBehaviour
 
     public void FillData()
     {
-        playerName.text = TokenStore.FullName;
+        // playerName.text = TokenStore.FullName;
+        playerName.text = string.IsNullOrEmpty(TokenStore.FullName) ? "(no name)" : TokenStore.FullName;
     }
 }
