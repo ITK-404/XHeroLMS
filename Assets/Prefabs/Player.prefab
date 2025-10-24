@@ -778,6 +778,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73f64bea16af14b4f834a9fd0e55419a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PointClickSystem
+  debugRadius: 1
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  moveSpeed: 5
+  rotationSpeed: 150
 --- !u!114 &13269495743736937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -822,7 +828,7 @@ MonoBehaviour:
   radius: 0.5
   height: 2
   canMove: 1
-  maxSpeed: 1
+  maxSpeed: 5
   gravity: {x: NaN, y: NaN, z: NaN}
   groundMask:
     serializedVersion: 2
