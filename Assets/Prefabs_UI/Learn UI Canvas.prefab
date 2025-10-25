@@ -147,8 +147,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -683.44385, y: 0.00024414062}
-  m_SizeDelta: {x: -1366.9, y: -0.0005}
+  m_AnchoredPosition: {x: -683.44385, y: 78.72522}
+  m_SizeDelta: {x: -1366.9, y: -157.4504}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1918218151346797648
 GameObject:
@@ -272,6 +272,7 @@ GameObject:
   - component: {fileID: 8167678631953548768}
   - component: {fileID: 6613544806083188408}
   - component: {fileID: 3654399772274247240}
+  - component: {fileID: 1106555213096241736}
   m_Layer: 5
   m_Name: Learn UI Canvas
   m_TagString: Untagged
@@ -378,6 +379,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LearnUI
   container: {fileID: 1389785233179180515}
   returnBtn: {fileID: 439187684000921988}
+--- !u!114 &1106555213096241736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2023139846862013215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8bc1d43bb57a92468ac6015bc42f445, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterUIManager
 --- !u!1 &3814370445742551030
 GameObject:
   m_ObjectHideFlags: 0
@@ -678,7 +691,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.000091552734}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2640745551680349009
@@ -841,7 +854,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3795615023435720031}
   m_HandleRect: {fileID: 4660741961186985335}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -1364,13 +1377,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9045785835747655453}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.29411766}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

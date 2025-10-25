@@ -6,18 +6,18 @@ using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
-
     IAstarAI ai;
     private Vector3 lastPickPosition;
     public float debugRadius = 1;
     public LayerMask groundLayerMask;
-    public LayerMask chairLayerMask;
+    public LayerMask checkPointLayerMask;
     private CharacterController characterController;
     public float moveSpeed = 5;
     public float rotationSpeed = 10f;
 
     private Vector3 move;
     private ChairCheckPoint currentCheckPoint;
+
     void OnEnable()
     {
         ai = GetComponent<IAstarAI>();
@@ -30,7 +30,7 @@ public class PointClickSystem : MonoBehaviour
             return;
 
         float h = Input.GetAxisRaw("Horizontal"); // A/D
-        float v = Input.GetAxisRaw("Vertical");   // W/S
+        float v = Input.GetAxisRaw("Vertical"); // W/S
 
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
@@ -71,14 +71,14 @@ public class PointClickSystem : MonoBehaviour
     }
 
     private Coroutine waitMoveToChair;
+
     private void MoveByClick()
     {
         if (Input.GetMouseButtonDown(0))
         {
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = Camera.main.ScreenPointToRay(mousePosition);
-
-            if (Physics.Raycast(ray, out var chairHit))
+            if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
             {
                 if (chairHit.collider.CompareTag("CheckPoint"))
                 {
@@ -95,14 +95,13 @@ public class PointClickSystem : MonoBehaviour
                     if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
                     if (currentCheckPoint != null)
                     {
+                        currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                         waitMoveToChair = StartCoroutine(WaitForRechPos());
                     }
-                    
-                    currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
+
                     return;
                 }
             }
-
 
 
             if (Physics.Raycast(ray, out var groundHit, groundLayerMask))
@@ -112,19 +111,20 @@ public class PointClickSystem : MonoBehaviour
             }
         }
     }
+
     private IEnumerator WaitForRechPos()
     {
         while (!ai.reachedDestination)
         {
             yield return null;
         }
+
         Debug.Log("Đã tới vị trí ngồi");
-        PlayerChairManager.Instance.PlayerSitdown(currentCheckPoint);
+        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.DrawWireSphere(lastPickPosition, debugRadius);
     }
-
 }
