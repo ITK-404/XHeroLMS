@@ -2145,6 +2145,10 @@ PrefabInstance:
       propertyPath: moveSpeed
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 3835500229415600561, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: checkPointLayerMask.m_Bits
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4545511139101917060, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.x
       value: 14.406
@@ -6792,7 +6796,7 @@ GameObject:
   - component: {fileID: 310815855}
   - component: {fileID: 310815854}
   m_Layer: 0
-  m_Name: Button (1)
+  m_Name: StandUp Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6814,7 +6818,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -53.1, y: 47.8}
+  m_AnchoredPosition: {x: -53.100098, y: 47.80005}
   m_SizeDelta: {x: 59.7079, y: 66}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &310815854
@@ -8728,7 +8732,7 @@ GameObject:
   - component: {fileID: 411727184}
   - component: {fileID: 411727183}
   m_Layer: 0
-  m_Name: Button
+  m_Name: Sitdown Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8750,7 +8754,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -53.1, y: 47.8}
+  m_AnchoredPosition: {x: -53.100098, y: 47.80005}
   m_SizeDelta: {x: 59.7079, y: 66}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &411727183
@@ -13013,7 +13017,7 @@ GameObject:
   - component: {fileID: 644658988}
   - component: {fileID: 644658987}
   m_Layer: 0
-  m_Name: Default Canvas
+  m_Name: Watch Video Navigation Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -24594,7 +24598,7 @@ GameObject:
   - component: {fileID: 964135909}
   - component: {fileID: 964135908}
   m_Layer: 5
-  m_Name: Image
+  m_Name: Watch Video Navigation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -38124,6 +38128,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2062990919}
   - component: {fileID: 2062990920}
+  - component: {fileID: 2062990921}
   m_Layer: 0
   m_Name: Check Point Sitdown
   m_TagString: Untagged
@@ -38198,11 +38203,25 @@ MonoBehaviour:
   brain: {fileID: 1978079141}
   player: {fileID: 104197459}
   playerState: 0
-  learnUI: {fileID: 3303573514724582342}
-  watchVideoCanvas: {fileID: 644658989}
-  sitdownBtn: {fileID: 411727183}
-  standupBtn: {fileID: 310815854}
+  playerStandUI: {fileID: 2062990921}
   currentCheckPoint: {fileID: 0}
+--- !u!114 &2062990921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062990918}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2ac4e961eb940fab0c46b561b797ff8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStandUI
+  standupButton: {fileID: 310815854}
+  sitdownButton: {fileID: 411727183}
+  navigationBarUI: {fileID: 1923101097}
+  UILearnCanvas: {fileID: 3303573514724582342}
+  playerChairManager: {fileID: 2062990920}
 --- !u!1001 &2072154804
 PrefabInstance:
   m_ObjectHideFlags: 0

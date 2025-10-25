@@ -13,10 +13,13 @@ public class ChairCheckPoint : MonoBehaviour
     private void LateUpdate()
     {
         var direction = player.transform.position - transform.position;
-        direction.Normalize();
-        spriteCheckPoint.transform.forward = direction;
-    }
 
+        if (direction.y < 0f)
+            direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.0001f)
+            spriteCheckPoint.transform.forward = direction.normalized;
+    }
     private bool IsPlayer(GameObject other)
     {
         return other.CompareTag("Player");
