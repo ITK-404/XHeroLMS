@@ -1,18 +1,29 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using Unity.Cinemachine;
 
+public enum ViewState
+{
+    Player,
+    Default,
+    Sitdown,
+    External,
+    FullScreen
+}
+
 [DisallowMultipleComponent]
 public class QuadCinemachineController : MonoBehaviour
 {
-    private enum ViewState { Player, Def, Ex }
+    public static QuadCinemachineController Instance;
 
     [Header("Scene Refs")]
     public GameObject quad;
+
     public Camera mainRenderCamera;
-    public Camera targetCamera;
-    public CinemachineCamera playerVCam;
+
+    // VCam bám theo targetCamera.transform
     public Button btnDef;
     public Button btnEx;
     public Button btnFull;
@@ -21,48 +32,30 @@ public class QuadCinemachineController : MonoBehaviour
     public Canvas[] worldSpaceCanvases;
 
     [Header("Priority")]
-    public int playerPriority = 10;
-    public int targetPriority = 20;             // > playerPriority để thắng
-
     private Vector3 originalQuadPos;
-    private CinemachineCamera targetVCam;       // VCam bám theo targetCamera.transform
-    private int originalPlayerPriority;
+
     private bool targetWasEnabled;
     private float targetOriginalDepth;
     private ViewState state = ViewState.Player;
-    private CinemachineBrain brain;
 
     VideoPlayerControllerPro videoPlayerController;
     LearnUI learnUI;
 
+    private QuadCameraManager quadCamManager;
+    public PlayerStandUI playerStandUI;
+
     void Awake()
     {
+        Instance = this;
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerController = FindAnyObjectByType<VideoPlayerControllerPro>();
-
         if (!mainRenderCamera) mainRenderCamera = Camera.main;
         if (quad) originalQuadPos = quad.transform.position;
     }
 
     void Start()
     {
-        EnsureBrainOnMain();
-
-        // targetCamera chỉ làm anchor -> tắt render
-        if (targetCamera)
-        {
-            targetWasEnabled     = targetCamera.enabled;
-            targetOriginalDepth  = targetCamera.depth;
-            targetCamera.enabled = false;
-        }
-
-        if (playerVCam)
-        {
-            originalPlayerPriority = playerVCam.Priority;
-            playerVCam.Priority    = playerPriority;
-        }
-
-        CreateOrUpdateTargetVCam();
+        quadCamManager = QuadCameraManager.Instance;
 
         // World/ScreenSpace-Camera canvases raycast qua Main Camera
         if (worldSpaceCanvases != null && mainRenderCamera != null)
@@ -78,127 +71,72 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-        if (btnDef)  btnDef.onClick.AddListener(OnDefClicked);
-        if (btnEx)   btnEx.onClick.AddListener(OnExClicked);
-        if (btnFull) btnFull.onClick.AddListener(OnFullClicked);
+        if (btnDef) btnDef.onClick.AddListener(() => ChangeState(ViewState.Default));
+        if (btnEx) btnEx.onClick.AddListener(() => ChangeState(ViewState.External));
+        if (btnFull) btnFull.onClick.AddListener(() => ChangeState(ViewState.FullScreen));
 
         state = ViewState.Player;
     }
 
-    void EnsureBrainOnMain()
+    public void ChangeState(ViewState newState)
     {
-        if (!mainRenderCamera) return;
-        brain = mainRenderCamera.GetComponent<CinemachineBrain>();
-        if (!brain) brain = mainRenderCamera.gameObject.AddComponent<CinemachineBrain>();
-    }
-
-    void CreateOrUpdateTargetVCam()
-    {
-        if (!targetCamera) return;
-
-        if (!targetVCam)
+        if (newState == state)
         {
-            var go = new GameObject("~VCam_TargetAnchor");
-            targetVCam = go.AddComponent<CinemachineCamera>();
-            targetVCam.Priority = playerPriority - 1; // mặc định dưới player
+            // change to player camera
+            // turn off all
+            state = ViewState.Sitdown;
+        }
+        else
+        {
+            state = newState;
         }
 
-        // copy pose/lens từ targetCamera
-        var t = targetCamera.transform;
-        targetVCam.transform.SetPositionAndRotation(t.position, t.rotation);
 
-        var lens = targetVCam.Lens;
-        lens.FieldOfView = targetCamera.fieldOfView;
-        if (targetCamera.orthographic)
-            lens.OrthographicSize = targetCamera.orthographicSize;
-        targetVCam.Lens = lens;
-    }
-
-    // ===== Buttons =====
-    public void OnDefClicked()
-    {
         switch (state)
         {
             case ViewState.Player:
-                GoTargetDef();
+                quadCamManager.ChangeToPlayerCamera();
                 break;
-
-            case ViewState.Def:
-                SetQuadZ(-1.2f);
-                state = ViewState.Ex;
-                break;
-
-            case ViewState.Ex:
+            case ViewState.Default:
+                quadCamManager.ChangeToLocalRoomCamera();
                 SetQuadZ(originalQuadPos.z);
-                state = ViewState.Def;
                 break;
-        }
-        learnUI?.Show();
-        UpdateLearnUI();
-        videoPlayerController.DefEx();
-        // videoPlayerController.ExitFullscreenUI();
-        ClearUISelection();
-    }
+            case ViewState.Sitdown:
+                quadCamManager.ChangeToSitdownCameraState();
+                playerStandUI.ShowStandUpButton();
+                SetQuadZ(originalQuadPos.z);
 
-    public void OnExClicked()
-    {
-        switch (state)
+                break;
+            case ViewState.External:
+                quadCamManager.ChangeToLocalRoomCamera();
+                SetQuadZ(-1.2f);
+                break;
+            case ViewState.FullScreen:
+                videoPlayerController.EnterFullscreenUI();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        if (state == ViewState.Player)
         {
-            case ViewState.Player:
-                GoTargetEx();
-                break;
-
-            case ViewState.Def:
-                SetQuadZ(-1.2f);
-                state = ViewState.Ex;
-                break;
-
-            case ViewState.Ex:
-                SetQuadZ(-1.2f);
-                break;
+            playerStandUI.ShowSitdownButton();
         }
-        learnUI?.Hide();
-        UpdateLearnUI();
-        videoPlayerController.DefEx();
-        // videoPlayerController.ExitFullscreenUI();
+        else if (state == ViewState.Sitdown)
+        {
+            playerStandUI.ShowStandUpButton();
+        }
+        else
+        {
+            playerStandUI.HideButtons();
+        }
+
+        if (state != ViewState.FullScreen)
+        {
+            videoPlayerController.ExitFullscreenUI();
+        }
+
         ClearUISelection();
-    }
-
-    void OnFullClicked()
-    {
-        GoPlayer();
-        ClearUISelection();
-    }
-
-    // ===== Actions =====
-    void GoTargetDef()
-    {
-        CreateOrUpdateTargetVCam();
-        SetQuadZ(originalQuadPos.z);
-        MakeTargetLive();
-        state = ViewState.Def;
-    }
-
-    void GoTargetEx()
-    {
-        CreateOrUpdateTargetVCam();
-        SetQuadZ(-1.2f);
-        MakeTargetLive();
-        state = ViewState.Ex;
-    }
-
-    void GoPlayer()
-    {
-        if (playerVCam)  playerVCam.Priority  = Mathf.Max(playerPriority, targetPriority + 1);
-        if (targetVCam)  targetVCam.Priority  = playerPriority - 1;
-        state = ViewState.Player;
-    }
-
-    void MakeTargetLive()
-    {
-        if (!playerVCam || !targetVCam) return;
-        playerVCam.Priority = playerPriority;
-        targetVCam.Priority = targetPriority;   // Brain blend nhẹ (hoặc instant tuỳ Default Blend)
     }
 
     void SetQuadZ(float z)
@@ -214,11 +152,4 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current)
             EventSystem.current.SetSelectedGameObject(null);
     }
-void UpdateLearnUI()
-{
-    if (!learnUI) return;
-    if (state == ViewState.Ex) learnUI.Hide();
-    else                       learnUI.Show();  // Player & Def đều hiện
-}
-
 }
