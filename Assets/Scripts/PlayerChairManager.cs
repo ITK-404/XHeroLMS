@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerChairManager : MonoBehaviour
 {
@@ -14,56 +15,26 @@ public class PlayerChairManager : MonoBehaviour
         Sitdown
     }
     public static PlayerChairManager Instance;
-    public CinemachineCamera sitdownCamera;
     public CinemachineBrain brain;
-    private List<ChairCheckPoint> chairList = new();
     private ChairCheckPoint[] allCheckPoints;
-    public CursorGameManager cursorMgr;
+    private List<ChairCheckPoint> chairList = new();
     public GameObject player;
     public PlayerState playerState;
     [Header("UI")]
-    public LearnUI learnUI;
 
+    VideoPlayerControllerPro videoPlayerControllerPro;
+    public PlayerStandUI playerStandUI;
+    public ChairCheckPoint currentCheckPoint;
+    
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
         Instance = this;
 
-        learnUI.OnClickReturnBtn += PlayerStandup;
-    }
 
-    private void OnDestroy()
-    {
-        learnUI.OnClickReturnBtn -= PlayerStandup;
-    }
-
-
-    public void TrySetChair(ChairCheckPoint currentChair)
-    {
-        if (!chairList.Contains(currentChair))
-        {
-            chairList.Add(currentChair);
-        }
-    }
-
-    public void TryRemoveChair(ChairCheckPoint removeChair)
-    {
-        if (chairList.Contains(removeChair))
-        {
-            chairList.Remove(removeChair);
-        }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.F) && playerState == PlayerState.Free)
-        {
-            PlayerSitdown();
-        }
-        else if (Input.GetKeyDown(KeyCode.Escape) && playerState == PlayerState.Sitdown)
-        {
-            PlayerStandup();
-        }
+        // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
+        // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
+        videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
     }
 
     private IEnumerator WaitForBlendDone(Action action)
@@ -76,36 +47,36 @@ public class PlayerChairManager : MonoBehaviour
 
         yield return null;
     }
-    private void PlayerStandup()
+    public void PlayerStandup()
     {
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
-        sitdownCamera.Priority = 0;
-
+        QuadCinemachineController.Instance.ChangeState(ViewState.Player);
         foreach (var item in allCheckPoints)
         {
             item.Show(true);
         }
-        learnUI.Hide();
+        // ẩn UI ngay khi bắt đầu đứng dậy
+        playerStandUI.UILearnCanvas.Hide();
+        playerStandUI.HideWatchVideoUI();
+
+        videoPlayerControllerPro.ExitFullscreenUI();
         StopAllCoroutines();
         StartCoroutine(WaitForBlendDone(() =>
         {
             Debug.Log("bật lại input");
-            if (cursorMgr) cursorMgr.SetUIOpen(false);
             InputBlocker.SetBlocked(false);
+            
         }));
     }
 
-    private void PlayerSitdown()
+    private void Recalculator()
     {
-        // sit down logic
         var playerForward = brain.transform.forward;
         playerForward.y = 0;
         playerForward.Normalize();
-
-        ChairCheckPoint temp = null;
         float bestScore = float.MinValue; // score = dot - khoảng cách có thể được cân nhắc riêng
-
+        ChairCheckPoint temp = null;
         foreach (var item in chairList)
         {
             Vector3 dirToItem = item.transform.position - brain.transform.position;
@@ -125,27 +96,58 @@ public class PlayerChairManager : MonoBehaviour
                 }
             }
         }
+        currentCheckPoint = temp;
 
+    }
+    
+    public void PlayerSitdown()
+    {
+    
+        // sit down logic
+        
+        ChairCheckPoint temp = currentCheckPoint;
+     
         if (temp != null)
         {
             playerState = PlayerState.Sitdown;
             Debug.Log("Sit down");
-            sitdownCamera.transform.position = temp.checkPoint.transform.position;
-            sitdownCamera.Priority = 2;
-
+            QuadCameraManager.Instance.ChangeToSitdownCameraState(temp.checkPoint.transform.position);
+            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+            
+            // ẩn tất cả icon của item
             foreach (var item in allCheckPoints)
             {
                 item.Show(false);
             }
-
+            // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
-
+            
             StartCoroutine(WaitForBlendDone(() =>
             {
-                if (cursorMgr) cursorMgr.SetUIOpen(true);
-                learnUI.Show();
+                // Hiện UI ngay sau khi ngồi xuống hoàn tất
+                playerStandUI.ShowWatchVideoUI();
+                playerStandUI.UILearnCanvas.Show();
             }));
         }
     }
+
+    public void TrySetChair(ChairCheckPoint currentChair)
+    {
+        if (!chairList.Contains(currentChair))
+        {
+            chairList.Add(currentChair);
+            Recalculator();
+        }
+    }
+
+    public void TryRemoveChair(ChairCheckPoint removeChair)
+    {
+        if (chairList.Contains(removeChair))
+        {
+            chairList.Remove(removeChair);
+            Recalculator();
+        }
+    }
+
 }

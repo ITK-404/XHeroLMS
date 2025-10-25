@@ -28,11 +28,13 @@ public class LearnUI : MonoBehaviour
 
     public void Show()
     {
+        Debug.Log("Show Learn UI");
         container.gameObject.SetActive(true);
     }
 
     public void Hide()
     {
+        Debug.Log("Hide Learn UI");
         container.gameObject.SetActive(false);
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class ChairCheckPoint : MonoBehaviour
 {
@@ -13,19 +13,24 @@ public class ChairCheckPoint : MonoBehaviour
     private void LateUpdate()
     {
         var direction = player.transform.position - transform.position;
-        direction.Normalize();
-        spriteCheckPoint.transform.forward = direction;
-    }
 
+        if (direction.y < 0f)
+            direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.0001f)
+            spriteCheckPoint.transform.forward = direction.normalized;
+    }
     private bool IsPlayer(GameObject other)
     {
         return other.CompareTag("Player");
     }
+
+
     private void OnTriggerEnter(Collider other)
     {
         if (IsPlayer(other.gameObject))
         {
-            //Debug.Log("Enter dính player", other.gameObject);
+            //Debug.Log("Enter dï¿½nh player", other.gameObject);
             PlayerChairManager.Instance.TrySetChair(this);
         }
     }
@@ -34,13 +39,8 @@ public class ChairCheckPoint : MonoBehaviour
     {
         if (IsPlayer(other.gameObject))
         {
-            //Debug.Log("Exit dính player",gameObject);
+            //Debug.Log("Exit dï¿½nh player",gameObject);
             PlayerChairManager.Instance.TryRemoveChair(this);
         }
-    }
-
-    public void Sitdown()
-    {
-
     }
 }
