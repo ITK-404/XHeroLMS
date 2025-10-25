@@ -2,17 +2,27 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using Unity.Cinemachine;
+public enum ViewState
+{
+    Player,
+    Default,
+    Sitdown,
+    External,
+    FullScreen
+}
 
 [DisallowMultipleComponent]
 public class QuadCinemachineController : MonoBehaviour
 {
-    private enum ViewState { Player, Def, Ex }
-
+ 
     [Header("Scene Refs")]
     public GameObject quad;
+
     public Camera mainRenderCamera;
-    public Camera targetCamera;
     public CinemachineCamera playerVCam;
+    public CinemachineCamera targetVCam;
+    public CinemachineCamera sitdownVcam;
+    // VCam bám theo targetCamera.transform
     public Button btnDef;
     public Button btnEx;
     public Button btnFull;
@@ -22,10 +32,10 @@ public class QuadCinemachineController : MonoBehaviour
 
     [Header("Priority")]
     public int playerPriority = 10;
-    public int targetPriority = 20;             // > playerPriority để thắng
+
+    public int targetPriority = 20; // > playerPriority để thắng
 
     private Vector3 originalQuadPos;
-    private CinemachineCamera targetVCam;       // VCam bám theo targetCamera.transform
     private int originalPlayerPriority;
     private bool targetWasEnabled;
     private float targetOriginalDepth;
@@ -48,21 +58,11 @@ public class QuadCinemachineController : MonoBehaviour
     {
         EnsureBrainOnMain();
 
-        // targetCamera chỉ làm anchor -> tắt render
-        if (targetCamera)
-        {
-            targetWasEnabled     = targetCamera.enabled;
-            targetOriginalDepth  = targetCamera.depth;
-            targetCamera.enabled = false;
-        }
-
         if (playerVCam)
         {
             originalPlayerPriority = playerVCam.Priority;
-            playerVCam.Priority    = playerPriority;
+            playerVCam.Priority = playerPriority;
         }
-
-        CreateOrUpdateTargetVCam();
 
         // World/ScreenSpace-Camera canvases raycast qua Main Camera
         if (worldSpaceCanvases != null && mainRenderCamera != null)
@@ -78,8 +78,8 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-        if (btnDef)  btnDef.onClick.AddListener(OnDefClicked);
-        if (btnEx)   btnEx.onClick.AddListener(OnExClicked);
+        if (btnDef) btnDef.onClick.AddListener(OnDefClicked);
+        if (btnEx) btnEx.onClick.AddListener(OnExClicked);
         if (btnFull) btnFull.onClick.AddListener(OnFullClicked);
 
         state = ViewState.Player;
@@ -92,28 +92,6 @@ public class QuadCinemachineController : MonoBehaviour
         if (!brain) brain = mainRenderCamera.gameObject.AddComponent<CinemachineBrain>();
     }
 
-    void CreateOrUpdateTargetVCam()
-    {
-        if (!targetCamera) return;
-
-        if (!targetVCam)
-        {
-            var go = new GameObject("~VCam_TargetAnchor");
-            targetVCam = go.AddComponent<CinemachineCamera>();
-            targetVCam.Priority = playerPriority - 1; // mặc định dưới player
-        }
-
-        // copy pose/lens từ targetCamera
-        var t = targetCamera.transform;
-        targetVCam.transform.SetPositionAndRotation(t.position, t.rotation);
-
-        var lens = targetVCam.Lens;
-        lens.FieldOfView = targetCamera.fieldOfView;
-        if (targetCamera.orthographic)
-            lens.OrthographicSize = targetCamera.orthographicSize;
-        targetVCam.Lens = lens;
-    }
-
     // ===== Buttons =====
     public void OnDefClicked()
     {
@@ -123,16 +101,17 @@ public class QuadCinemachineController : MonoBehaviour
                 GoTargetDef();
                 break;
 
-            case ViewState.Def:
+            case ViewState.Default:
                 SetQuadZ(-1.2f);
-                state = ViewState.Ex;
+                state = ViewState.External;
                 break;
 
-            case ViewState.Ex:
+            case ViewState.External:
                 SetQuadZ(originalQuadPos.z);
-                state = ViewState.Def;
+                state = ViewState.Default;
                 break;
         }
+
         learnUI?.Show();
         UpdateLearnUI();
         videoPlayerController.DefEx();
@@ -148,15 +127,16 @@ public class QuadCinemachineController : MonoBehaviour
                 GoTargetEx();
                 break;
 
-            case ViewState.Def:
+            case ViewState.Default:
                 SetQuadZ(-1.2f);
-                state = ViewState.Ex;
+                state = ViewState.External;
                 break;
 
-            case ViewState.Ex:
+            case ViewState.External:
                 SetQuadZ(-1.2f);
                 break;
         }
+
         learnUI?.Hide();
         UpdateLearnUI();
         videoPlayerController.DefEx();
@@ -173,24 +153,22 @@ public class QuadCinemachineController : MonoBehaviour
     // ===== Actions =====
     void GoTargetDef()
     {
-        CreateOrUpdateTargetVCam();
         SetQuadZ(originalQuadPos.z);
         MakeTargetLive();
-        state = ViewState.Def;
+        state = ViewState.Default;
     }
 
     void GoTargetEx()
     {
-        CreateOrUpdateTargetVCam();
         SetQuadZ(-1.2f);
         MakeTargetLive();
-        state = ViewState.Ex;
+        state = ViewState.External;
     }
 
     void GoPlayer()
     {
-        if (playerVCam)  playerVCam.Priority  = Mathf.Max(playerPriority, targetPriority + 1);
-        if (targetVCam)  targetVCam.Priority  = playerPriority - 1;
+        if (playerVCam) playerVCam.Priority = Mathf.Max(playerPriority, targetPriority + 1);
+        if (targetVCam) targetVCam.Priority = playerPriority - 1;
         state = ViewState.Player;
     }
 
@@ -198,7 +176,7 @@ public class QuadCinemachineController : MonoBehaviour
     {
         if (!playerVCam || !targetVCam) return;
         playerVCam.Priority = playerPriority;
-        targetVCam.Priority = targetPriority;   // Brain blend nhẹ (hoặc instant tuỳ Default Blend)
+        targetVCam.Priority = targetPriority; // Brain blend nhẹ (hoặc instant tuỳ Default Blend)
     }
 
     void SetQuadZ(float z)
@@ -214,11 +192,12 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current)
             EventSystem.current.SetSelectedGameObject(null);
     }
-void UpdateLearnUI()
-{
-    if (!learnUI) return;
-    if (state == ViewState.Ex) learnUI.Hide();
-    else                       learnUI.Show();  // Player & Def đều hiện
-}
 
+    void UpdateLearnUI()
+    {
+        if (!learnUI) return;
+        if (state == ViewState.External) learnUI.Hide();
+        else learnUI.Show(); // Player & Def đều hiện
+    }
+    
 }

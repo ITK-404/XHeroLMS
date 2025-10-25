@@ -15,7 +15,6 @@ public class PlayerChairManager : MonoBehaviour
         Sitdown
     }
     public static PlayerChairManager Instance;
-    public CinemachineCamera sitdownCamera;
     public CinemachineBrain brain;
     private ChairCheckPoint[] allCheckPoints;
     private List<ChairCheckPoint> chairList = new();
@@ -53,8 +52,7 @@ public class PlayerChairManager : MonoBehaviour
     {
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
-        sitdownCamera.Priority = 0;
-
+        QuadCameraManager.Instance.ChangeCameraState(ViewState.Player);
         foreach (var item in allCheckPoints)
         {
             item.Show(true);
@@ -116,8 +114,8 @@ public class PlayerChairManager : MonoBehaviour
         {
             playerState = PlayerState.Sitdown;
             Debug.Log("Sit down");
-            sitdownCamera.transform.position = temp.checkPoint.transform.position;
-            sitdownCamera.Priority = 2;
+     
+            QuadCameraManager.Instance.ChangeToSitdownCameraState(temp.checkPoint.transform.position);
             // ẩn tất cả icon của item
             foreach (var item in allCheckPoints)
             {
