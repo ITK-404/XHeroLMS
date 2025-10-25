@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class ChairCheckPoint : MonoBehaviour
 {
@@ -22,8 +22,22 @@ public class ChairCheckPoint : MonoBehaviour
         return other.CompareTag("Player");
     }
 
-    public void Sitdown()
-    {
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (IsPlayer(other.gameObject))
+        {
+            //Debug.Log("Enter d�nh player", other.gameObject);
+            PlayerChairManager.Instance.TrySetChair(this);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (IsPlayer(other.gameObject))
+        {
+            //Debug.Log("Exit d�nh player",gameObject);
+            PlayerChairManager.Instance.TryRemoveChair(this);
+        }
     }
 }
