@@ -6,11 +6,9 @@ using UnityEngine;
 public class QuadCameraManager : MonoBehaviour
 {
     public static QuadCameraManager Instance;
-    
     public CinemachineCamera playerCamera;
     public CinemachineCamera localRoomCamera;
     public CinemachineCamera sitdownCamera;
-    public ViewState playerViewState;
     private List<CinemachineCamera> cameraList = new();
 
     private void Awake()
@@ -21,52 +19,50 @@ public class QuadCameraManager : MonoBehaviour
         cameraList.Add(localRoomCamera);
         cameraList.Add(sitdownCamera);
         
-        ChangeCameraState(ViewState.Player);
+        ChangeToPlayerCamera();
     }
 
     private void SetPriorityToCamera(CinemachineCamera adjustCamera)
     {
-        foreach (var camera in cameraList)
+        if (adjustCamera == null || cameraList == null || cameraList.Count == 0) return;
+
+        const int activePriority = 10;
+        const int inactivePriority = 0;
+
+        // Ensure the target is tracked
+        if (!cameraList.Contains(adjustCamera))
         {
-            if (camera == adjustCamera)
-            {
-                camera.Priority = 10;
-            }
-            else
-            {
-                camera.Priority = 0;
-            }
+            cameraList.Add(adjustCamera);
+        }
+
+        for (int i = 0; i < cameraList.Count; i++)
+        {
+            var cam = cameraList[i];
+            if (cam == null) continue;
+            cam.Priority = cam == adjustCamera ? activePriority : inactivePriority;
         }
     }
 
-    public void ChangeCameraState(ViewState viewState)
-    {
-        switch (viewState)
-        {
-            case ViewState.Player:
-                SetPriorityToCamera(playerCamera);
-                break;
-            case ViewState.Default:
-                SetPriorityToCamera(localRoomCamera);
-                break;
-            case ViewState.Sitdown:
-                SetPriorityToCamera(sitdownCamera);
-                break;
-            case ViewState.External:
-                SetPriorityToCamera(localRoomCamera);
-                break;
-            case ViewState.FullScreen:
-                // turn off UI 
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(viewState), viewState, null);
-        }
-    }
 
     public void ChangeToSitdownCameraState(Vector3 cameraPosition)
     {
-        ChangeCameraState(ViewState.Sitdown);
+        SetPriorityToCamera(sitdownCamera);
         sitdownCamera.transform.position = cameraPosition;
+    }
+    
+    public void ChangeToSitdownCameraState()
+    {
+        SetPriorityToCamera(sitdownCamera);
+    }
+
+    public void ChangeToPlayerCamera()
+    {
+        SetPriorityToCamera(playerCamera);
+    }
+
+    public void ChangeToLocalRoomCamera()
+    {
+        SetPriorityToCamera(localRoomCamera);
     }
     
 }
