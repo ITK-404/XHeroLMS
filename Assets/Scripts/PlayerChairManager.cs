@@ -21,7 +21,6 @@ public class PlayerChairManager : MonoBehaviour
     public GameObject player;
     public PlayerState playerState;
     [Header("UI")]
-    public static bool IsStantUp = false;
 
     VideoPlayerControllerPro videoPlayerControllerPro;
     public PlayerStandUI playerStandUI;
@@ -52,7 +51,7 @@ public class PlayerChairManager : MonoBehaviour
     {
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
-        QuadCameraManager.Instance.ChangeCameraState(ViewState.Player);
+        QuadCinemachineController.Instance.ChangeState(ViewState.Player);
         foreach (var item in allCheckPoints)
         {
             item.Show(true);
@@ -60,8 +59,6 @@ public class PlayerChairManager : MonoBehaviour
         // ẩn UI ngay khi bắt đầu đứng dậy
         playerStandUI.UILearnCanvas.Hide();
         playerStandUI.HideWatchVideoUI();
-        playerStandUI.ShowSitdownButton();
-        IsStantUp = true;
 
         videoPlayerControllerPro.ExitFullscreenUI();
         StopAllCoroutines();
@@ -114,8 +111,9 @@ public class PlayerChairManager : MonoBehaviour
         {
             playerState = PlayerState.Sitdown;
             Debug.Log("Sit down");
-     
             QuadCameraManager.Instance.ChangeToSitdownCameraState(temp.checkPoint.transform.position);
+            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+            
             // ẩn tất cả icon của item
             foreach (var item in allCheckPoints)
             {
@@ -124,7 +122,6 @@ public class PlayerChairManager : MonoBehaviour
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
-            playerStandUI.ShowStandUpButton();
             
             StartCoroutine(WaitForBlendDone(() =>
             {

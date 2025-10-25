@@ -63,4 +63,9 @@ public class PlayerStandUI : MonoBehaviour
         standupButton.gameObject.SetActive(true);
     }
 
+    public void HideButtons()
+    {
+        sitdownButton.gameObject.SetActive(false);
+        standupButton.gameObject.SetActive(false);
+    }
 }

@@ -90,7 +90,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
     RenderTexture _rt;
     Renderer _quadRenderer;
 
-    LearnUI learnUI;
 
     // ---- Lifecycle ----
     void Reset()
@@ -101,7 +100,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     void Awake()
     {
-        learnUI = FindAnyObjectByType<LearnUI>();
         if (!videoPlayer) videoPlayer = GetComponent<VideoPlayer>();
         if (videoQuad)    _quadRenderer = videoQuad.GetComponent<Renderer>();
 
@@ -342,8 +340,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (_isFullscreen) ExitFullscreenUI();
         else EnterFullscreenUI();
     }
-
-    void EnterFullscreenUI()
+    
+    [ContextMenu("EnterFullscreenUI")]
+    public void EnterFullscreenUI()
     {
         // if (videoQuad) videoQuad.gameObject.SetActive(false);
         if (videoQuad) fullscreenCanvas.gameObject.SetActive(true);
@@ -353,9 +352,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         _isFullscreen = true;
         OnFullscreenChanged?.Invoke(true);
-        learnUI?.Hide();
     }
-
+    
+    [ContextMenu("ExitFullscreenUI")]
     public void ExitFullscreenUI()
     {
         if (videoQuad) fullscreenCanvas.gameObject.SetActive(false);
@@ -365,7 +364,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         _isFullscreen = false;
         OnFullscreenChanged?.Invoke(false);
-        if (!PlayerChairManager.IsStantUp) learnUI?.Show();
     }
     
     public void DefEx()
