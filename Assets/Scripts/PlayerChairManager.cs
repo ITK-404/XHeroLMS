@@ -22,40 +22,21 @@ public class PlayerChairManager : MonoBehaviour
     public GameObject player;
     public PlayerState playerState;
     [Header("UI")]
-    public LearnUI learnUI;
-    public Canvas watchVideoCanvas;
-    public Button sitdownBtn;
-    public Button standupBtn;
     public static bool IsStantUp = false;
 
     VideoPlayerControllerPro videoPlayerControllerPro;
-
+    public PlayerStandUI playerStandUI;
+    public ChairCheckPoint currentCheckPoint;
+    
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
         Instance = this;
 
-        learnUI.OnClickReturnBtn += PlayerStandup;
 
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
-        watchVideoCanvas.gameObject.SetActive(false);
-    }
-
-    private void OnDestroy()
-    {
-        learnUI.OnClickReturnBtn -= PlayerStandup;
-    }
-
-    private void Update()
-    {
-        if(currentCheckPoint == null)
-        {
-            sitdownBtn.gameObject.SetActive(false);
-            standupBtn.gameObject.SetActive(false);
-        }
-        
     }
 
     private IEnumerator WaitForBlendDone(Action action)
@@ -78,8 +59,10 @@ public class PlayerChairManager : MonoBehaviour
         {
             item.Show(true);
         }
-        learnUI.Hide();
-        watchVideoCanvas.gameObject.SetActive(false);
+        // ẩn UI ngay khi bắt đầu đứng dậy
+        playerStandUI.UILearnCanvas.Hide();
+        playerStandUI.HideWatchVideoUI();
+        playerStandUI.ShowSitdownButton();
         IsStantUp = true;
 
         videoPlayerControllerPro.ExitFullscreenUI();
@@ -88,11 +71,10 @@ public class PlayerChairManager : MonoBehaviour
         {
             Debug.Log("bật lại input");
             InputBlocker.SetBlocked(false);
-            ShowSitdownButton();
+            
         }));
     }
 
-    public ChairCheckPoint currentCheckPoint;
     private void Recalculator()
     {
         var playerForward = brain.transform.forward;
@@ -122,11 +104,12 @@ public class PlayerChairManager : MonoBehaviour
         currentCheckPoint = temp;
 
     }
+    
     public void PlayerSitdown()
     {
+    
         // sit down logic
-   
-
+        
         ChairCheckPoint temp = currentCheckPoint;
      
         if (temp != null)
@@ -135,35 +118,23 @@ public class PlayerChairManager : MonoBehaviour
             Debug.Log("Sit down");
             sitdownCamera.transform.position = temp.checkPoint.transform.position;
             sitdownCamera.Priority = 2;
-
+            // ẩn tất cả icon của item
             foreach (var item in allCheckPoints)
             {
                 item.Show(false);
             }
-
+            // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
-
+            playerStandUI.ShowStandUpButton();
+            
             StartCoroutine(WaitForBlendDone(() =>
             {
-                ShowStandUpButton();
-                watchVideoCanvas.gameObject.SetActive(true);
-                learnUI.Show();
+                // Hiện UI ngay sau khi ngồi xuống hoàn tất
+                playerStandUI.ShowWatchVideoUI();
+                playerStandUI.UILearnCanvas.Show();
             }));
         }
-    }
-
-
-    public void ShowSitdownButton()
-    {
-        sitdownBtn.gameObject.SetActive(true);
-        standupBtn.gameObject.SetActive(false);
-    }
-
-    public void ShowStandUpButton()
-    {
-        sitdownBtn.gameObject.SetActive(false);
-        standupBtn.gameObject.SetActive(true);
     }
 
     public void TrySetChair(ChairCheckPoint currentChair)
