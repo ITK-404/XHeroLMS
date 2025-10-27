@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using Unity.Cinemachine;
+using UnityEditor.UIElements;
 
 public enum ViewState
 {
@@ -43,6 +45,7 @@ public class QuadCinemachineController : MonoBehaviour
 
     private QuadCameraManager quadCamManager;
     public PlayerStandUI playerStandUI;
+    [SerializeField] private List<ToggleVideoType> toggleVideoList = new();
 
     void Awake()
     {
@@ -51,6 +54,11 @@ public class QuadCinemachineController : MonoBehaviour
         videoPlayerController = FindAnyObjectByType<VideoPlayerControllerPro>();
         if (!mainRenderCamera) mainRenderCamera = Camera.main;
         if (quad) originalQuadPos = quad.transform.position;
+
+        foreach (var item in toggleVideoList)
+        {
+            item.OnClickVideoAction += ChangeState;
+        }
     }
 
     void Start()
@@ -71,15 +79,13 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-        if (btnDef) btnDef.onClick.AddListener(() => ChangeState(ViewState.Default));
-        if (btnEx) btnEx.onClick.AddListener(() => ChangeState(ViewState.External));
-        if (btnFull) btnFull.onClick.AddListener(() => ChangeState(ViewState.FullScreen));
-
         state = ViewState.Player;
     }
 
     public void ChangeState(ViewState newState)
     {
+        
+        Debug.Log("Thay đổi sang view state: " + newState);
         if (newState == state)
         {
             // change to player camera
@@ -137,6 +143,14 @@ public class QuadCinemachineController : MonoBehaviour
         }
 
         ClearUISelection();
+        
+        foreach (var item in toggleVideoList)
+        {
+            item.ChangeState(item.watchVideoState == state
+                ? ToggleBaseUI.State.Active
+                : ToggleBaseUI.State.DeActive);
+        }
+
     }
 
     void SetQuadZ(float z)

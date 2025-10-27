@@ -1,6 +1,7 @@
 ﻿using Pathfinding;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PointClickSystem : MonoBehaviour
 {
@@ -112,6 +113,9 @@ public class PointClickSystem : MonoBehaviour
         
         if (Input.GetMouseButtonDown(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject())
+                return;
+            
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
             if (PlayerChairManager.Instance)
