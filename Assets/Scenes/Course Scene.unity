@@ -1697,6 +1697,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1403999529}
   - component: {fileID: 1403999528}
+  - component: {fileID: 1403999530}
   m_Layer: 0
   m_Name: ObjectManager
   m_TagString: Untagged
@@ -1719,6 +1720,8 @@ MonoBehaviour:
   baseUrl: https://apis-dev.xheroapp.com
   overrideAccessToken: 
   useTokenFromStore: 1
+  runOnlyWhenKeyMatches: 1
+  requiredKey: All Courses
   limitPerPage: 100
   keyword: 
   category: 
@@ -1751,6 +1754,33 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1403999530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1403999527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 149995fe7f464ec43a9d81bcdc597561, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseListPageMyUI
+  baseUrl: https://apis-dev.xheroapp.com
+  overrideAccessToken: 
+  useTokenFromStore: 1
+  runOnlyWhenKeyMatches: 1
+  requiredKey: My Courses
+  limitPerPage: 100
+  contentParent: {fileID: 253751633}
+  shelfPrefab: {fileID: 6288866273221082004, guid: 7a896b6f9f79f934c87256d7789c37ec, type: 3}
+  shelfSpacingY: 260
+  firstShelfOffset: {x: 0, y: 0}
+  autoRunOnStart: 1
+  clearOldOnReload: 1
+  useCurrentPriceFirst: 1
+  priceFormat: "{0:#,0}\u20AB"
+  forceEnterForMyCourse: 1
 --- !u!1 &1498237816
 GameObject:
   m_ObjectHideFlags: 0

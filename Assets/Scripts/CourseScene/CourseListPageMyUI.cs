@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class CourseListPageAllUI : MonoBehaviour
+public class CourseListPageMyUI : MonoBehaviour
 {
     [Header("API")]
     public string baseUrl = "https://apis-dev.xheroapp.com";
@@ -19,15 +19,10 @@ public class CourseListPageAllUI : MonoBehaviour
     [Header("Auto-run gate (optional)")]
     [Tooltip("Chỉ chạy khi key scene khớp (đọc từ CourseMenuButtons)")]
     public bool runOnlyWhenKeyMatches = true;
-    public string requiredKey = CourseMenuButtons.KEY_ALL;
+    public string requiredKey = CourseMenuButtons.KEY_MY;
 
-    [Header("Query (/lms/courses)")]
+    [Header("Query (/users/lms/courses)")]
     public int limitPerPage = 100;
-    public string keyword = "";
-    public string category = "";
-    public string tag = "";
-    public string sortBy = "";   // ví dụ "createdAt"
-    public string order = "";    // "asc" | "desc"
 
     [Header("UI – Kệ sách")]
     [Tooltip("Content (RectTransform) để chứa các kệ")]
@@ -47,10 +42,9 @@ public class CourseListPageAllUI : MonoBehaviour
     public bool useCurrentPriceFirst = true;
     public string priceFormat = "{0:#,0}₫";
 
-    [Header("Book model tuning (không ảnh hưởng kệ)")]
-    [Range(0.1f, 2f)] public float bookModelScale = 0.85f;
-    public Vector3 bookModelLocalOffset = Vector3.zero;
-    public Vector3 bookModelLocalEulerOffset = Vector3.zero;
+    [Header("My Courses options")]
+    [Tooltip("Ẩn Buy / bật Enter cho các khóa đã đăng ký")]
+    public bool forceEnterForMyCourse = true;
 
     // cache
     private readonly List<CourseData> _courses = new();
@@ -74,11 +68,11 @@ public class CourseListPageAllUI : MonoBehaviour
         if (runOnlyWhenKeyMatches)
             ok = CourseMenuButtons.GetSavedKey() == requiredKey;
 
-        if (ok) StartCoroutine(LoadAndSpawnAll());
+        if (ok) StartCoroutine(LoadAndSpawnMyList());
     }
 
-    /// <summary>ALL: Fetch toàn bộ rồi render thành nhiều kệ; mỗi kệ 4 quyển.</summary>
-    public IEnumerator LoadAndSpawnAll()
+    /// <summary>MY: Lấy danh sách khóa học đã đăng ký bằng /users/lms/courses (phân trang) rồi render.</summary>
+    public IEnumerator LoadAndSpawnMyList()
     {
         if (!EnsureUI()) yield break;
         _courses.Clear();
@@ -86,7 +80,7 @@ public class CourseListPageAllUI : MonoBehaviour
         string token = GetToken();
         if (string.IsNullOrWhiteSpace(token))
         {
-            Debug.LogWarning("[CourseList/ALL] No token. Set overrideAccessToken or TokenStore.AccessToken.");
+            Debug.LogWarning("[CourseList/MY] No token. Set overrideAccessToken or TokenStore.AccessToken.");
             yield break;
         }
 
@@ -94,32 +88,39 @@ public class CourseListPageAllUI : MonoBehaviour
         int page = 0;
         while (true)
         {
-            string url = BuildUrl(nextSkip, limitPerPage);
+            string url = $"{baseUrl}/users/lms/courses?skip={nextSkip}&limit={limitPerPage}";
             string body = null;
 
             yield return GET(url, token,
                 onSuccess: s => body = s,
-                onErrorBody: err => Debug.LogError($"[CourseList/ALL] GET failed page={page}, skip={nextSkip}. Body:\n{err}")
+                onErrorBody: err => Debug.LogError($"[CourseList/MY] GET my-courses failed page={page}, skip={nextSkip}. Body:\n{err}")
             );
 
             if (string.IsNullOrEmpty(body)) break;
 
-            string arr = ExtractItemsArray(body);
-            var objects = SplitTopLevelObjects(arr);
-            if (objects.Count == 0) break;
+            // API thường trả {"list":[ { course: {...}, ... }, ... ]} hoặc {"items":[...]}
+            string arr = ExtractNamedArray(body, "list");
+            if (string.IsNullOrEmpty(arr)) arr = ExtractNamedArray(body, "items");
+            if (string.IsNullOrEmpty(arr)) break;
 
-            foreach (var obj in objects)
+            var items = SplitTopLevelObjects(arr);
+            if (items.Count == 0) break;
+
+            foreach (var item in items)
             {
-                var data = ParseCourse(obj);
+                string courseObj = ExtractNamedObject(item, "course");
+                if (string.IsNullOrEmpty(courseObj)) continue;
+
+                var data = ParseCourse(courseObj);
                 if (data != null) _courses.Add(data);
             }
 
-            if (objects.Count < limitPerPage) break;
+            if (items.Count < limitPerPage) break;
             nextSkip += limitPerPage;
             page++;
         }
 
-        SpawnShelves(_courses);
+        SpawnShelves(_courses, isMy:true);
     }
 
     // ================== RENDER ==================
@@ -129,12 +130,12 @@ public class CourseListPageAllUI : MonoBehaviour
     {
         if (shelfPrefab == null)
         {
-            Debug.LogError("[CourseList/ALL] shelfPrefab (BookShelfUI) chưa được gán.");
+            Debug.LogError("[CourseList/MY] shelfPrefab (BookShelfUI) chưa được gán.");
             return false;
         }
         if (contentParent == null)
         {
-            Debug.LogError("[CourseList/ALL] contentParent (RectTransform) chưa được gán.");
+            Debug.LogError("[CourseList/MY] contentParent (RectTransform) chưa được gán.");
             return false;
         }
 
@@ -146,7 +147,7 @@ public class CourseListPageAllUI : MonoBehaviour
         return true;
     }
 
-    void SpawnShelves(List<CourseData> list)
+    void SpawnShelves(List<CourseData> list, bool isMy)
     {
         int shelfCount = Mathf.CeilToInt(list.Count / (float)BOOKS_PER_SHELF);
         for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
@@ -166,11 +167,11 @@ public class CourseListPageAllUI : MonoBehaviour
             int take  = Mathf.Min(BOOKS_PER_SHELF, list.Count - start);
             var slice = list.GetRange(start, take);
 
-            ApplyDataToShelf(shelf, slice);
+            ApplyDataToShelf(shelf, slice, isMyCourse:isMy);
         }
     }
 
-    void ApplyDataToShelf(BookShelfUI shelf, List<CourseData> slice)
+    void ApplyDataToShelf(BookShelfUI shelf, List<CourseData> slice, bool isMyCourse)
     {
         if (shelf.books == null || shelf.books.Length == 0)
             shelf.books = shelf.GetComponentsInChildren<BookHandler>(true);
@@ -211,8 +212,15 @@ public class CourseListPageAllUI : MonoBehaviour
                 slot.bookHandleUI.RefreshColor();
             }
 
-            bool showBuy = (data.currentPrice ?? data.originalPrice) > 0;
-            slot.SetBuyCourse(showBuy);
+            if (isMyCourse && forceEnterForMyCourse)
+            {
+                slot.SetBuyCourse(false);
+            }
+            else
+            {
+                bool showBuy = (data.currentPrice ?? data.originalPrice) > 0;
+                slot.SetBuyCourse(showBuy);
+            }
         }
     }
 
@@ -238,17 +246,6 @@ public class CourseListPageAllUI : MonoBehaviour
         }
     }
 
-    string BuildUrl(int skip, int limit)
-    {
-        var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
-        if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
-        if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
-        if (!string.IsNullOrEmpty(tag))      sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
-        if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
-        return sb.ToString();
-    }
-
     string GetToken()
     {
         if (!string.IsNullOrWhiteSpace(overrideAccessToken))
@@ -266,29 +263,35 @@ public class CourseListPageAllUI : MonoBehaviour
         return t;
     }
 
-    // ---------------- Minimal JSON ----------------
-    string ExtractItemsArray(string raw)
+    // --- JSON ---
+    string ExtractNamedArray(string raw, string name)
     {
-        if (string.IsNullOrEmpty(raw)) return "[]";
+        if (string.IsNullOrEmpty(raw)) return null;
+        int key = raw.IndexOf($"\"{name}\"", StringComparison.OrdinalIgnoreCase);
+        if (key < 0) return null;
 
-        int idxItems = raw.IndexOf("\"items\"", StringComparison.OrdinalIgnoreCase);
-        if (idxItems >= 0)
-        {
-            int b = raw.IndexOf('[', idxItems);
-            if (b >= 0)
-            {
-                int e = FindMatchingBracket(raw, b, '[', ']');
-                if (e > b) return raw.Substring(b, e - b + 1);
-            }
-        }
+        int bracket = raw.IndexOf('[', key);
+        if (bracket < 0) return null;
 
-        int firstArr = raw.IndexOf('[');
-        if (firstArr >= 0)
-        {
-            int end = FindMatchingBracket(raw, firstArr, '[', ']');
-            if (end > firstArr) return raw.Substring(firstArr, end - firstArr + 1);
-        }
-        return "[]";
+        int end = FindMatchingBracket(raw, bracket, '[', ']');
+        if (end <= bracket) return null;
+
+        return raw.Substring(bracket, end - bracket + 1);
+    }
+
+    string ExtractNamedObject(string raw, string name)
+    {
+        if (string.IsNullOrEmpty(raw)) return null;
+        int key = raw.IndexOf($"\"{name}\"", StringComparison.OrdinalIgnoreCase);
+        if (key < 0) return null;
+
+        int brace = raw.IndexOf('{', key);
+        if (brace < 0) return null;
+
+        int end = FindMatchingBracket(raw, brace, '{', '}');
+        if (end <= brace) return null;
+
+        return raw.Substring(brace, end - brace + 1);
     }
 
     int FindMatchingBracket(string s, int openIdx, char openCh, char closeCh)
@@ -389,15 +392,13 @@ public class CourseListPageAllUI : MonoBehaviour
 
     string MatchStringField(string objJson, string field)
     {
-        var rx = new Regex($"\"{Regex.Escape(field)}\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
-        var m = rx.Match(objJson);
+        var m = Regex.Match(objJson, $"\"{Regex.Escape(field)}\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
         return m.Success ? m.Groups[1].Value : null;
     }
 
     string MatchNumberField(string objJson, string field)
     {
-        var rx = new Regex($"\"{Regex.Escape(field)}\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)", RegexOptions.IgnoreCase);
-        var m = rx.Match(objJson);
+        var m = Regex.Match(objJson, $"\"{Regex.Escape(field)}\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)", RegexOptions.IgnoreCase);
         return m.Success ? m.Groups[1].Value : null;
     }
 
