@@ -10,7 +10,7 @@ public class ToggleBaseUI : MonoBehaviour
     public Action<State> OnValueChange;
     public UnityEvent OnToggleOn;
     public UnityEvent OnToggleOff;
-
+  
     private void OnValidate()
     {
         if(btn == null)
@@ -60,6 +60,6 @@ public class ToggleBaseUI : MonoBehaviour
 
     public virtual void OnClickButton()
     {
-        
+
     }
 }
