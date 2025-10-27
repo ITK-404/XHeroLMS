@@ -1,8 +1,6 @@
 ﻿using Pathfinding;
-using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
@@ -14,6 +12,11 @@ public class PointClickSystem : MonoBehaviour
     private CharacterController characterController;
     public float moveSpeed = 5;
     public float rotationSpeed = 10f;
+
+    // gravity
+    public float gravity = -9.81f;
+    public float gravityMultiplier = 1f;
+    private float verticalVelocity = 0f;
 
     private Vector3 move;
     private ChairCheckPoint currentCheckPoint;
@@ -29,11 +32,24 @@ public class PointClickSystem : MonoBehaviour
         if (InputBlocker.IsBlocked())
             return;
 
+        // Gravity update
+        bool isGrounded = characterController != null && characterController.isGrounded;
+        if (isGrounded && verticalVelocity < 0f)
+        {
+            // small negative to keep contact with ground
+            verticalVelocity = -1f;
+        }
+        else
+        {
+            verticalVelocity += gravity * gravityMultiplier * Time.deltaTime;
+        }
+
         float h = Input.GetAxisRaw("Horizontal"); // A/D
         float v = Input.GetAxisRaw("Vertical"); // W/S
 
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
+
         bool isMoving = Mathf.Abs(v) > 0.1f;
         bool isRotate = Mathf.Abs(h) > 0.1f;
         if (isMoving || isRotate)
@@ -41,7 +57,11 @@ public class PointClickSystem : MonoBehaviour
             ai.isStopped = true;
             ai.canMove = false;
             ai.destination = ai.position;
-            characterController.Move(forwardMove * moveSpeed * Time.deltaTime);
+
+            // combine horizontal movement with vertical velocity
+            Vector3 horizontal = forwardMove * moveSpeed;
+            Vector3 totalMove = horizontal + Vector3.up * verticalVelocity;
+            characterController.Move(totalMove * Time.deltaTime);
 
             StopWaitToMoveChair();
         }
@@ -49,6 +69,9 @@ public class PointClickSystem : MonoBehaviour
         {
             ai.isStopped = false;
             ai.canMove = true;
+
+            // when AI is moving the transform, still apply vertical movement for gravity
+            characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
         }
 
         // Left/right rotation
