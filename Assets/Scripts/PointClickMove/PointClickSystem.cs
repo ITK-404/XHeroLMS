@@ -1,6 +1,7 @@
 ﻿using Pathfinding;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PointClickSystem : MonoBehaviour
 {
@@ -20,6 +21,13 @@ public class PointClickSystem : MonoBehaviour
 
     private Vector3 move;
     private ChairCheckPoint currentCheckPoint;
+
+    private PlayerCamera playerCamera;
+    
+    private void Awake()
+    {
+        playerCamera = GetComponent<PlayerCamera>();
+    }
 
     void OnEnable()
     {
@@ -97,40 +105,62 @@ public class PointClickSystem : MonoBehaviour
 
     private void MoveByClick()
     {
+        if (playerCamera == null)
+        {
+            Debug.LogError("Player camera is null");
+            return;
+        }
+        
         if (Input.GetMouseButtonDown(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject())
+                return;
+            
             Vector3 mousePosition = Input.mousePosition;
-            Ray ray = Camera.main.ScreenPointToRay(mousePosition);
-            if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
+            Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
+            if (PlayerChairManager.Instance)
             {
-                if (chairHit.collider.CompareTag("CheckPoint"))
-                {
-                    StopWaitToMoveChair();
-                    Debug.Log("Đánh dính check point");
-                    var position = chairHit.transform.position;
-                    var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-                    Vector3 groundPos = (Vector3)node.position;
-
-                    ai.destination = groundPos;
-                    lastPickPosition = groundPos;
-
-                    if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
-                    if (currentCheckPoint != null)
-                    {
-                        currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
-                        waitMoveToChair = StartCoroutine(WaitForRechPos());
-                    }
-
-                    return;
-                }
+                MoveToChairHandle(ray);
+                return;
             }
-
 
             if (Physics.Raycast(ray, out var groundHit, groundLayerMask))
             {
+                Debug.Log("bắn dính mặt đất, bắt đầu di chuyển");
                 ai.destination = groundHit.point;
                 lastPickPosition = groundHit.point;
+            }
+            else
+            {
+                Debug.Log("Không bắn dính mặt đất rồi");
+            }
+        }
+    }
+
+    private void MoveToChairHandle(Ray ray)
+    {
+        if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
+        {
+            if (chairHit.collider.CompareTag("CheckPoint"))
+            {
+                StopWaitToMoveChair();
+                Debug.Log("Đánh dính check point");
+                var position = chairHit.transform.position;
+                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+                Vector3 groundPos = (Vector3)node.position;
+
+                ai.destination = groundPos;
+                lastPickPosition = groundPos;
+
+                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
+                if (currentCheckPoint != null)
+                {
+                    currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
+                    waitMoveToChair = StartCoroutine(WaitForRechPos());
+                }
+
+                return;
             }
         }
     }
