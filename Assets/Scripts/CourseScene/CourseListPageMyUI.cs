@@ -24,30 +24,51 @@ public class CourseListPageMyUI : MonoBehaviour
     [Header("Query (/users/lms/courses)")]
     public int limitPerPage = 100;
 
-    [Header("UI – Kệ sách")]
-    [Tooltip("Content (RectTransform) để chứa các kệ")]
-    public RectTransform contentParent;
-    [Tooltip("Prefab KỆ (chứa BookShelfUI với 4 BookHandler con)")]
-    public BookShelfUI shelfPrefab;
-
-    [Tooltip("Khoảng cách dọc giữa các kệ (UI anchoredPosition)")]
-    public float shelfSpacingY = 260f;
-    [Tooltip("Offset X,Y cho kệ đầu tiên (UI anchoredPosition)")]
-    public Vector2 firstShelfOffset = Vector2.zero;
-
-    public bool autoRunOnStart = true;
-    public bool clearOldOnReload = true;
+    [Header("UI – Kệ sách (global default)")]
+    [Tooltip("Kệ mặc định dùng nếu view cụ thể không chỉ định shelfPrefab riêng")]
+    public BookShelfUI globalShelfPrefab;
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
     public string priceFormat = "{0:#,0}₫";
 
+    [Header("Layout (cho mỗi view)")]
+    [Tooltip("Khoảng cách dọc giữa các kệ (anchoredPosition)")]
+    public float shelfSpacingY = 260f;
+    [Tooltip("Offset X,Y cho kệ đầu tiên (anchoredPosition)")]
+    public Vector2 firstShelfOffset = Vector2.zero;
+
+    public bool clearOldOnReload = true;
+    public bool autoRunOnStart = true;
+
     [Header("My Courses options")]
     [Tooltip("Ẩn Buy / bật Enter cho các khóa đã đăng ký")]
     public bool forceEnterForMyCourse = true;
 
+    [Serializable]
+    public class GroupView
+    {
+        [Tooltip("Root ScrollView / Panel của view để bật/tắt")]
+        public GameObject root;
+        [Tooltip("Content RectTransform bên trong ScrollView")]
+        public RectTransform contentParent;
+        [Tooltip("Kệ riêng cho view này (optional). Để trống sẽ dùng globalShelfPrefab")]
+        public BookShelfUI shelfPrefabOverride;
+    }
+
+    [Header("4 View tương ứng 4 group")]
+    public GroupView basicView;     // group = "basic"
+    public GroupView advancedView;  // group = "advanced"
+    public GroupView intensiveView; // group = "intensive"
+    public GroupView businessView;  // group = "business"
+
+    [Header("Default")]
+    [Tooltip("Mặc định mở group 'basic' ngay khi vào scene")]
+    public bool defaultOpenBasic = true;
+
     // cache
-    private readonly List<CourseData> _courses = new();
+    private readonly List<CourseData> _courses = new List<CourseData>();
+    private string _currentDesiredGroup = null; // khi muốn chỉ hiển thị 1 view (nếu dùng Tab)
 
     [Serializable]
     public class CourseData
@@ -58,6 +79,22 @@ public class CourseListPageMyUI : MonoBehaviour
         public string seoUrl;
         public float? originalPrice;
         public float? currentPrice;
+
+        // group info (đọc từ course trong my-courses)
+        public string group;          // "basic" | "advanced" | "intensive" | "business" ...
+        public List<string> groups;   // optional array fallback
+    }
+
+    private void Awake()
+    {
+        // Ẩn tất cả root để ngăn các script con chạy khi inactive
+        if (basicView?.root)     basicView.root.SetActive(false);
+        if (advancedView?.root)  advancedView.root.SetActive(false);
+        if (intensiveView?.root) intensiveView.root.SetActive(false);
+        if (businessView?.root)  businessView.root.SetActive(false);
+
+        if (defaultOpenBasic)
+            _currentDesiredGroup = "basic";
     }
 
     private void Start()
@@ -68,13 +105,37 @@ public class CourseListPageMyUI : MonoBehaviour
         if (runOnlyWhenKeyMatches)
             ok = CourseMenuButtons.GetSavedKey() == requiredKey;
 
-        if (ok) StartCoroutine(LoadAndSpawnMyList());
+        if (!ok)
+        {
+            Debug.Log($"[CourseList/MY] Skip auto-run. SavedKey={CourseMenuButtons.GetSavedKey()}, required={requiredKey}");
+            return;
+        }
+
+        StartCoroutine(LoadAndSpawnMyList());
+    }
+
+    /// Public: gọi khi đổi tab để chỉ hiển thị 1 group
+    public void RefreshForTab(CourseLessonTabID id)
+    {
+        _currentDesiredGroup = MapGroup(id);
+        RenderAccordingToCurrentGroup();
+    }
+
+    public static string MapGroup(CourseLessonTabID id)
+    {
+        switch (id)
+        {
+            case CourseLessonTabID.CoBan:       return "basic";
+            case CourseLessonTabID.NangCao:     return "advanced";
+            case CourseLessonTabID.ChuyenSau:   return "intensive";
+            case CourseLessonTabID.DoanhNghiep: return "business";
+            default:                            return null;
+        }
     }
 
     /// <summary>MY: Lấy danh sách khóa học đã đăng ký bằng /users/lms/courses (phân trang) rồi render.</summary>
     public IEnumerator LoadAndSpawnMyList()
     {
-        if (!EnsureUI()) yield break;
         _courses.Clear();
 
         string token = GetToken();
@@ -98,7 +159,7 @@ public class CourseListPageMyUI : MonoBehaviour
 
             if (string.IsNullOrEmpty(body)) break;
 
-            // API thường trả {"list":[ { course: {...}, ... }, ... ]} hoặc {"items":[...]}
+            // API thường trả {"list":[ { course: {...}, ... } ]} hoặc {"items":[...]}
             string arr = ExtractNamedArray(body, "list");
             if (string.IsNullOrEmpty(arr)) arr = ExtractNamedArray(body, "items");
             if (string.IsNullOrEmpty(arr)) break;
@@ -108,8 +169,13 @@ public class CourseListPageMyUI : MonoBehaviour
 
             foreach (var item in items)
             {
+                // mỗi item có field "course": { ... }
                 string courseObj = ExtractNamedObject(item, "course");
-                if (string.IsNullOrEmpty(courseObj)) continue;
+                if (string.IsNullOrEmpty(courseObj))
+                {
+                    Debug.LogWarning("[CourseList/MY] item không có field 'course' → bỏ qua");
+                    continue;
+                }
 
                 var data = ParseCourse(courseObj);
                 if (data != null) _courses.Add(data);
@@ -120,39 +186,95 @@ public class CourseListPageMyUI : MonoBehaviour
             page++;
         }
 
-        SpawnShelves(_courses, isMy:true);
+        RenderAccordingToCurrentGroup();
     }
 
     // ================== RENDER ==================
     private const int BOOKS_PER_SHELF = 4;
 
-    bool EnsureUI()
+    void RenderAccordingToCurrentGroup()
     {
-        if (shelfPrefab == null)
+        if (!string.IsNullOrEmpty(_currentDesiredGroup))
         {
-            Debug.LogError("[CourseList/MY] shelfPrefab (BookShelfUI) chưa được gán.");
-            return false;
-        }
-        if (contentParent == null)
-        {
-            Debug.LogError("[CourseList/MY] contentParent (RectTransform) chưa được gán.");
-            return false;
+            ToggleAllRoots(false);
+            var view = GetViewByGroup(_currentDesiredGroup);
+            if (view == null || view.contentParent == null)
+            {
+                Debug.LogError($"[CourseList/MY] View for group '{_currentDesiredGroup}' chưa gán contentParent.");
+                return;
+            }
+            if (view.root != null) view.root.SetActive(true);
+            if (clearOldOnReload) ClearContent(view.contentParent);
+
+            var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
+            SpawnShelvesInto(view, list, isMy: true);
+            return;
         }
 
-        if (clearOldOnReload)
-        {
-            for (int i = contentParent.childCount - 1; i >= 0; i--)
-                Destroy(contentParent.GetChild(i).gameObject);
-        }
-        return true;
+        // Không có tab → render đúng group cho từng view
+        RenderAllGroupsToTheirViews();
     }
 
-    void SpawnShelves(List<CourseData> list, bool isMy)
+    void RenderAllGroupsToTheirViews()
     {
+        RenderOneGroup("basic",     basicView);
+        RenderOneGroup("advanced",  advancedView);
+        RenderOneGroup("intensive", intensiveView);
+        RenderOneGroup("business",  businessView);
+    }
+
+    void RenderOneGroup(string groupKey, GroupView view)
+    {
+        if (view == null || view.contentParent == null) return;
+
+        if (view.root != null) view.root.SetActive(true);
+        if (clearOldOnReload) ClearContent(view.contentParent);
+
+        var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
+        SpawnShelvesInto(view, list, isMy: true);
+    }
+
+    void ToggleAllRoots(bool active)
+    {
+        if (basicView != null && basicView.root != null)         basicView.root.SetActive(active);
+        if (advancedView != null && advancedView.root != null)   advancedView.root.SetActive(active);
+        if (intensiveView != null && intensiveView.root != null) intensiveView.root.SetActive(active);
+        if (businessView != null && businessView.root != null)   businessView.root.SetActive(active);
+    }
+
+    GroupView GetViewByGroup(string groupKey)
+    {
+        switch ((groupKey ?? "").ToLowerInvariant())
+        {
+            case "basic":     return basicView;
+            case "advanced":  return advancedView;
+            case "intensive": return intensiveView;
+            case "business":  return businessView;
+            default:          return null;
+        }
+    }
+
+    void ClearContent(RectTransform content)
+    {
+        for (int i = content.childCount - 1; i >= 0; i--)
+            Destroy(content.GetChild(i).gameObject);
+    }
+
+    void SpawnShelvesInto(GroupView view, List<CourseData> list, bool isMy)
+    {
+        if (view == null || view.contentParent == null) return;
+
+        var shelfPrefab = view.shelfPrefabOverride != null ? view.shelfPrefabOverride : globalShelfPrefab;
+        if (shelfPrefab == null)
+        {
+            Debug.LogError("[CourseList/MY] Chưa gán shelfPrefab (global hoặc view override).");
+            return;
+        }
+
         int shelfCount = Mathf.CeilToInt(list.Count / (float)BOOKS_PER_SHELF);
         for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
         {
-            var shelf = Instantiate(shelfPrefab, contentParent);
+            var shelf = Instantiate(shelfPrefab, view.contentParent);
             var rt = shelf.transform as RectTransform;
             if (rt != null)
             {
@@ -167,7 +289,7 @@ public class CourseListPageMyUI : MonoBehaviour
             int take  = Mathf.Min(BOOKS_PER_SHELF, list.Count - start);
             var slice = list.GetRange(start, take);
 
-            ApplyDataToShelf(shelf, slice, isMyCourse:isMy);
+            ApplyDataToShelf(shelf, slice, isMyCourse: isMy);
         }
     }
 
@@ -195,8 +317,8 @@ public class CourseListPageMyUI : MonoBehaviour
             {
                 if (slot.bookHandleUI.priceText != null)
                 {
-                    float? price = useCurrentPriceFirst ? data.currentPrice ?? data.originalPrice
-                                                        : data.originalPrice ?? data.currentPrice;
+                    float? price = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)
+                                                        : (data.originalPrice ?? data.currentPrice);
                     slot.bookHandleUI.priceText.text = price.HasValue
                         ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, price.Value)
                         : "";
@@ -209,12 +331,14 @@ public class CourseListPageMyUI : MonoBehaviour
                         : "";
                 }
 
-                slot.bookHandleUI.RefreshColor();
+                // Tránh lỗi Coroutine khi object inactive
+                if (slot.bookHandleUI.isActiveAndEnabled)
+                    slot.bookHandleUI.RefreshColor();
             }
 
             if (isMyCourse && forceEnterForMyCourse)
             {
-                slot.SetBuyCourse(false);
+                slot.SetBuyCourse(false); // My course: ẩn Buy, show Enter
             }
             else
             {
@@ -263,7 +387,7 @@ public class CourseListPageMyUI : MonoBehaviour
         return t;
     }
 
-    // --- JSON ---
+    // --- JSON helpers ---
     string ExtractNamedArray(string raw, string name)
     {
         if (string.IsNullOrEmpty(raw)) return null;
@@ -371,6 +495,10 @@ public class CourseListPageMyUI : MonoBehaviour
         float? p1 = TryParseFloat(MatchNestedNumberField(objJson, "coursePrice", "originalPrice"));
         float? p2 = TryParseFloat(MatchNestedNumberField(objJson, "coursePrice", "currentPrice"));
 
+        // group / groups có thể nằm trực tiếp trên course
+        string group = MatchStringField(objJson, "group");
+        var groups = MatchStringArrayField(objJson, "groups");
+
         return new CourseData
         {
             id = id,
@@ -378,7 +506,9 @@ public class CourseListPageMyUI : MonoBehaviour
             sku = sku,
             seoUrl = seoUrl,
             originalPrice = p1,
-            currentPrice = p2
+            currentPrice = p2,
+            group = string.IsNullOrEmpty(group) ? null : group.Trim(),
+            groups = groups
         };
     }
 
@@ -430,5 +560,45 @@ public class CourseListPageMyUI : MonoBehaviour
 
         string sub = objJson.Substring(braceIdx, end - braceIdx + 1);
         return MatchNumberField(sub, child);
+    }
+
+    // parse array of strings for field name (e.g., "groups": ["basic","advanced"])
+    List<string> MatchStringArrayField(string objJson, string field)
+    {
+        int fIdx = objJson.IndexOf($"\"{field}\"", StringComparison.OrdinalIgnoreCase);
+        if (fIdx < 0) return null;
+
+        int arrStart = objJson.IndexOf('[', fIdx);
+        if (arrStart < 0) return null;
+
+        int arrEnd = FindMatchingBracket(objJson, arrStart, '[', ']');
+        if (arrEnd <= arrStart) return null;
+
+        string arr = objJson.Substring(arrStart + 1, arrEnd - arrStart - 1);
+        var list = new List<string>();
+        var rxItem = new Regex("\"([^\"]*)\"");
+        foreach (Match m in rxItem.Matches(arr))
+        {
+            var s = m.Groups[1].Value?.Trim();
+            if (!string.IsNullOrEmpty(s)) list.Add(s);
+        }
+        return list.Count > 0 ? list : null;
+    }
+
+    bool MatchesGroup(CourseData c, string desired)
+    {
+        if (string.IsNullOrEmpty(desired) || c == null) return true;
+
+        if (!string.IsNullOrEmpty(c.group) &&
+            string.Equals(c.group, desired, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (c.groups != null)
+        {
+            for (int i = 0; i < c.groups.Count; i++)
+                if (string.Equals(c.groups[i], desired, StringComparison.OrdinalIgnoreCase))
+                    return true;
+        }
+        return false;
     }
 }

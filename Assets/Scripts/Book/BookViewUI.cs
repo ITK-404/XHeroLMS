@@ -17,6 +17,7 @@ public class BookViewUI : MonoBehaviour
 
     public void RefreshColor()
     {
+        if (!isActiveAndEnabled) return;
         StartCoroutine(DelayOneFrame());
     }
 

@@ -5,63 +5,83 @@ using UnityEngine.UI;
 public class TabUI : MonoBehaviour
 {
     public CourseLessonTabID tabID;
-    public TabItemManagerUI manager;
+
+    [Header("Refs")]
+    public TabItemManagerUI manager;                   // optional
+    [Tooltip("Kéo thả CourseListPageAllUI vào đây")]
+    public CourseListPageAllUI listUI;                 // <- GẮN QUA INSPECTOR
+
     private Button button;
 
+    [Header("Visuals")]
     public Sprite activeSprite;
     public Sprite deActiveSprite;
-
     public TextMeshProUGUI nameTitle;
     public TMP_ColorGradient gradient;
-
     public Color deActiveColor;
+
     private void Awake()
     {
         button = GetComponent<Button>();
-        button.onClick.AddListener(OnClickTab);
+        if (button != null) button.onClick.AddListener(OnClickTab);
         ActiveState(false);
     }
 
-
     private void OnDestroy()
     {
-        button.onClick.AddListener(OnClickTab);
+        if (button != null) button.onClick.RemoveListener(OnClickTab); // FIX
     }
 
     private void OnClickTab()
     {
-        manager.ActiveTab(tabID);
+        // 1) Bật/tắt state UI của tab (nếu bạn có manager)
+        if (manager != null) manager.ActiveTab(tabID);
+
+        // 2) Gọi CourseListPageAllUI để LỌC VÀ RENDER LẠI THEO GROUP
+        //    Ưu tiên dùng reference đã gắn trong Inspector
+        var target = listUI;
+        if (target == null)
+        {
+            // fallback an toàn (trường hợp quên gán)
+#if UNITY_2022_2_OR_NEWER
+            target = FindFirstObjectByType<CourseListPageAllUI>();
+#else
+            target = Object.FindObjectOfType<CourseListPageAllUI>();
+#endif
+        }
+
+        if (target != null)
+        {
+            target.RefreshForTab(tabID);
+        }
+        else
+        {
+            Debug.LogWarning($"[TabUI] Không tìm thấy CourseListPageAllUI để refresh (tabID={tabID}).");
+        }
     }
 
     public void ActiveState(bool state)
     {
         if (button == null) return;
-        if (state)
-        {
-            button.image.sprite = activeSprite;
-        }
-        else
-        {
-            button.image.sprite = deActiveSprite;
-        }
 
+        button.image.sprite = state ? activeSprite : deActiveSprite;
         SetGradientActive(state);
     }
 
     public void SetGradientActive(bool enable)
     {
-        var tmp = nameTitle;
+        if (nameTitle == null) return;
+
         if (enable)
         {
-            tmp.enableVertexGradient = true;
-            tmp.colorGradientPreset = gradient;
+            nameTitle.enableVertexGradient = true;
+            nameTitle.colorGradientPreset = gradient;
         }
         else
         {
-            tmp.enableVertexGradient = false;
-            tmp.color = deActiveColor; // hoặc màu text gốc
+            nameTitle.enableVertexGradient = false;
+            nameTitle.color = deActiveColor;
         }
-
-        tmp.ForceMeshUpdate(); // refresh lại màu
+        nameTitle.ForceMeshUpdate();
     }
 }
