@@ -7,10 +7,10 @@ public class SpriteToggleListenUI : MonoBehaviour
     public Sprite onSprite;
     public Sprite offSprite;
     public Image image;
-
+    public bool isActive;
     private void OnValidate()
     {
-        if(image == null)
+        if (image == null)
         {
             image = GetComponent<Image>();
         }
@@ -19,18 +19,22 @@ public class SpriteToggleListenUI : MonoBehaviour
     private void Awake()
     {
         ToggleBase = GetComponent<ToggleBaseUI>();
-        ToggleBase.OnToggleOff.AddListener(ChangeStateOn);
-        ToggleBase.OnToggleOff.AddListener(ChangeStateOff);
-    }
-    [ContextMenu("Change State On")]
-    private void ChangeStateOn()
-    {
-        image.sprite = onSprite;
+        if (ToggleBase != null)
+            ToggleBase.OnValueChange += OnValueChange;
+        else
+            Debug.LogWarning($"ToggleBaseUI not found on {name}");
     }
 
-    [ContextMenu("Change State Off")]
-    private void ChangeStateOff()
+    private void OnDestroy()
     {
-        image.sprite = offSprite;
+        if (ToggleBase != null)
+            ToggleBase.OnValueChange -= OnValueChange;
+    }
+
+    private void OnValueChange(ToggleBaseUI.State obj)
+    {
+        isActive = (obj == ToggleBaseUI.State.Active);
+        if (image != null)
+            image.sprite = isActive ? onSprite : offSprite;
     }
 }
