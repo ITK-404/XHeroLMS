@@ -143,6 +143,14 @@ MonoBehaviour:
   deActiveGroup: {fileID: 8294421692426951286}
   isOpen: 0
   lessonList: []
+  finishColor: {r: 0.9764706, g: 0.8745098, b: 0.6, a: 1}
+  unFinishColor: {r: 1, g: 1, b: 1, a: 1}
+  scrollActiveUnlock: {fileID: 21300000, guid: c8f4f419f55961a4e994a0db30abb859, type: 3}
+  scrollActiveLock: {fileID: 21300000, guid: ff81bb55d2805d247ba6f2abd701819a, type: 3}
+  scrollDeActiveUnlock: {fileID: 21300000, guid: c8f4f419f55961a4e994a0db30abb859, type: 3}
+  scrollDeActiveLock: {fileID: 21300000, guid: c37d93f4ccf644e43bdf65d0e93b4cb6, type: 3}
+  scrollActiveImg: {fileID: 581436985380987124}
+  scrollDeActiveImg: {fileID: 7909763238213117139}
 --- !u!114 &1288364123702094937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -367,34 +375,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_fontSize
-      value: 22
-      objectReference: {fileID: 0}
-    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_fontSizeBase
-      value: 22
-      objectReference: {fileID: 0}
-    - target: {fileID: 2946678632725905359, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2946678632725905359, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2946678632725905359, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2946678632725905359, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7177505369809184452, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -411,6 +391,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &581436985380987124 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6206850593489967902, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &777330665267505693 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6123530441254605303, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
@@ -443,6 +434,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 614124159074481035, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
   m_PrefabInstance: {fileID: 6787633141387115498}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7909763238213117139 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3744632730255548217, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &8294421692426951286 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3254186031631245724, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}

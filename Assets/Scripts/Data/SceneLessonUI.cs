@@ -121,6 +121,7 @@ public class SceneLessonUI : MonoBehaviour
                     //EnsureItemLayout((RectTransform)headerChapter.transform);
                     //SetLabel(headerChapter, "Chapter", chapTitle);
                     headerChapter.titleName.text = $"{chapTitle}";
+                    // headerChapter.SetUnlock();
                 }
                 ChapterUIManager.Instance.AddToList(headerChapter);
 
@@ -149,8 +150,10 @@ public class SceneLessonUI : MonoBehaviour
                     lessonUI.linkVideo2 = link2;
                     lessonUI.OnClickPlayVideo = PlayVideo;
                     lessonUI.chapterUI = headerChapter;
-
+                    
                     headerChapter.AddToList(lessonUI);
+                    
+                    Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
                 }
             }
         }
