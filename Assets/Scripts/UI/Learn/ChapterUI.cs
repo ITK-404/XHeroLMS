@@ -51,9 +51,13 @@ public class ChapterUI : MonoBehaviour
     private void SelectThisChapter()
     {
         Debug.Log("On Select This Chapter");
+        if (ChapterUIManager.Instance.IsSelectChapter(this))
+        {
+            return;
+        }
         ChapterUIManager.Instance.Select(this);
     }
-
+    
     private void ToggleOn()
     {
         Debug.Log("Toggle on");
