@@ -173,7 +173,7 @@ public class CourseListPageMyUI : MonoBehaviour
                 string courseObj = ExtractNamedObject(item, "course");
                 if (string.IsNullOrEmpty(courseObj))
                 {
-                    Debug.LogWarning("[CourseList/MY] item không có field 'course' → bỏ qua");
+                    Debug.LogWarning("[CourseList/MY] item không có field 'course' -> bỏ qua");
                     continue;
                 }
 
@@ -211,7 +211,7 @@ public class CourseListPageMyUI : MonoBehaviour
             return;
         }
 
-        // Không có tab → render đúng group cho từng view
+        // Không có tab -> render đúng group cho từng view
         RenderAllGroupsToTheirViews();
     }
 
