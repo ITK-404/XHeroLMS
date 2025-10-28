@@ -56,10 +56,6 @@ public class ChapterUI : MonoBehaviour
 
     private void ToggleOn()
     {
-        if (!isUnlock)
-        {
-            return;
-        }
         Debug.Log("Toggle on");
         isOpen = true;
         lessonContainer.gameObject.SetActive(isOpen);
