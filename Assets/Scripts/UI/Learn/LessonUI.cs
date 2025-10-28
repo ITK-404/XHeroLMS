@@ -5,18 +5,23 @@ using UnityEngine.UI;
 
 public class LessonUI : MonoBehaviour
 {
-    public TextMeshProUGUI titleTMP;
-    public Button btn;
-    public Color normalColor;
-    public Color selectColor;
-    public bool isSelect = false;
-
+    [Header("References")]
     public ChapterUI chapterUI;
-
-    public Action<string> OnClickPlayVideo;
+    public GameObject frameHighlight;
+    
+    [Header("UI")]
+    public Button btn;
+    public TextMeshProUGUI titleTMP;
+    public Color textNormalColor;
+    public Color textSelectColor;
+    public Image iconImg;
+    public Sprite onActiveIcon;
+    public Sprite onDeActiveIcon;
     [Header("Data")]
-
     public string linkVideo2;
+    public bool isSelect = false;
+    
+    public Action<string> OnClickPlayVideo;
     private void Awake()
     {
         btn.onClick.AddListener(OnClickBtn);
@@ -38,6 +43,9 @@ public class LessonUI : MonoBehaviour
     {
         Debug.Log("Set active lesson: " + active, gameObject);
         isSelect = active;
-        titleTMP.color = active ? selectColor : normalColor;
+        titleTMP.color = active ? textSelectColor : textNormalColor;
+        frameHighlight.gameObject.SetActive(active);
+        
+        iconImg.sprite = active ? onActiveIcon : onDeActiveIcon;
     }
 }
