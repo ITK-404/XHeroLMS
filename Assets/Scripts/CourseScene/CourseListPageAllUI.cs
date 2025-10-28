@@ -25,7 +25,7 @@ public class CourseListPageAllUI : MonoBehaviour
     public int limitPerPage = 100;
     public string keyword = "";
     public string category = "";
-    public string tag = "";
+    // public string tag = "";
     public string sortBy = "";   // ví dụ "createdAt"
     public string order = "";    // "asc" | "desc"
 
@@ -113,7 +113,7 @@ public bool defaultOpenBasic = true;
         RenderAccordingToCurrentGroup();
     }
 
-    /// Map enum tab → group string
+    /// Map enum tab -> group string
     public static string MapGroup(CourseLessonTabID id)
     {
         switch (id)
@@ -198,14 +198,12 @@ public bool defaultOpenBasic = true;
             SpawnShelvesInto(view, list);
             return;
         }
-
-        // Nếu chưa có group (ví dụ chưa bấm tab) -> render ĐÚNG group vào từng view (nếu có UI)
+        
         RenderAllGroupsToTheirViews();
     }
 
     void RenderAllGroupsToTheirViews()
     {
-        // bật tất cả root đã set, rồi render theo group tương ứng
         RenderOneGroup("basic",     basicView);
         RenderOneGroup("advanced",  advancedView);
         RenderOneGroup("intensive", intensiveView);
@@ -356,7 +354,7 @@ public bool defaultOpenBasic = true;
         if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
         if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
         if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
-        if (!string.IsNullOrEmpty(tag))      sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
+        // if (!string.IsNullOrEmpty(tag))      sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
     }

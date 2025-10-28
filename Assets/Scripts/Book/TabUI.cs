@@ -7,9 +7,11 @@ public class TabUI : MonoBehaviour
     public CourseLessonTabID tabID;
 
     [Header("Refs")]
-    public TabItemManagerUI manager;                   // optional
-    [Tooltip("Kéo thả CourseListPageAllUI vào đây")]
-    public CourseListPageAllUI listUI;                 // <- GẮN QUA INSPECTOR
+    public TabItemManagerUI manager;
+    [Tooltip("Kéo thả CourseListPageAllUI vào đây (nếu dùng tab ALL)")]
+    public CourseListPageAllUI listUIAll;
+    [Tooltip("Kéo thả CourseListPageMyUI vào đây (nếu dùng tab MY)")]
+    public CourseListPageMyUI listUIMy;
 
     private Button button;
 
@@ -18,7 +20,7 @@ public class TabUI : MonoBehaviour
     public Sprite deActiveSprite;
     public TextMeshProUGUI nameTitle;
     public TMP_ColorGradient gradient;
-    public Color deActiveColor;
+    public Color deActiveColor = Color.white;
 
     private void Awake()
     {
@@ -29,34 +31,57 @@ public class TabUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (button != null) button.onClick.RemoveListener(OnClickTab); // FIX
+        if (button != null) button.onClick.RemoveListener(OnClickTab);
     }
 
     private void OnClickTab()
     {
-        // 1) Bật/tắt state UI của tab (nếu bạn có manager)
-        if (manager != null) manager.ActiveTab(tabID);
+        if (manager != null)
+            manager.ActiveTab(tabID);
+            
+        string savedKey = CourseMenuButtons.GetSavedKey();
+        
+        object target = null;
 
-        // 2) Gọi CourseListPageAllUI để LỌC VÀ RENDER LẠI THEO GROUP
-        //    Ưu tiên dùng reference đã gắn trong Inspector
-        var target = listUI;
-        if (target == null)
+        if (savedKey == CourseMenuButtons.KEY_ALL)
         {
-            // fallback an toàn (trường hợp quên gán)
+            target = listUIAll;
+            if (target == null)
+            {
+                // fallback an toàn: tìm trong scene đúng loại ALL
 #if UNITY_2022_2_OR_NEWER
-            target = FindFirstObjectByType<CourseListPageAllUI>();
+                target = FindFirstObjectByType<CourseListPageAllUI>();
 #else
-            target = Object.FindObjectOfType<CourseListPageAllUI>();
+                target = Object.FindObjectOfType<CourseListPageAllUI>();
 #endif
-        }
-
-        if (target != null)
-        {
-            target.RefreshForTab(tabID);
+            }
         }
         else
         {
-            Debug.LogWarning($"[TabUI] Không tìm thấy CourseListPageAllUI để refresh (tabID={tabID}).");
+            target = listUIMy;
+            if (target == null)
+            {
+                // fallback an toàn: tìm trong scene đúng loại MY
+#if UNITY_2022_2_OR_NEWER
+                target = FindFirstObjectByType<CourseListPageMyUI>();
+#else
+                target = Object.FindObjectOfType<CourseListPageMyUI>();
+#endif
+            }
+        }
+
+        // Gọi RefreshForTab cho đúng component
+        if (target is CourseListPageAllUI allUI && allUI != null)
+        {
+            allUI.RefreshForTab(tabID);
+        }
+        else if (target is CourseListPageMyUI myUI && myUI != null)
+        {
+            myUI.RefreshForTab(tabID);
+        }
+        else
+        {
+            Debug.LogWarning($"[TabUI] Không tìm thấy UI phù hợp để refresh (tabID={tabID}, key={savedKey}).");
         }
     }
 
@@ -64,7 +89,16 @@ public class TabUI : MonoBehaviour
     {
         if (button == null) return;
 
-        button.image.sprite = state ? activeSprite : deActiveSprite;
+        // An toàn khi thiếu Image hoặc Sprite
+        var img = button.image;
+        if (img != null)
+        {
+            if (state && activeSprite != null)
+                img.sprite = activeSprite;
+            else if (!state && deActiveSprite != null)
+                img.sprite = deActiveSprite;
+        }
+
         SetGradientActive(state);
     }
 
@@ -75,7 +109,10 @@ public class TabUI : MonoBehaviour
         if (enable)
         {
             nameTitle.enableVertexGradient = true;
-            nameTitle.colorGradientPreset = gradient;
+            if (gradient != null)
+            {
+                nameTitle.colorGradientPreset = gradient;
+            }
         }
         else
         {

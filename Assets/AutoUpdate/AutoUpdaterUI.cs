@@ -104,7 +104,7 @@ public class AutoUpdaterUI : MonoBehaviour
 
             // Tải patch (.zip)
             state = State.Downloading;
-            uiTitle = $"Có bản mới {current} → {remoteVer}";
+            uiTitle = $"Có bản mới {current} -> {remoteVer}";
             uiMessage = "Đang tải bản cập nhật…";
             progress01 = 0f;
 
