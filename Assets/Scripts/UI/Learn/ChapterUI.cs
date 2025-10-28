@@ -20,7 +20,18 @@ public class ChapterUI : MonoBehaviour
 
     public List<LessonUI> lessonList = new();
 
+    public Color finishColor;
+    public Color unFinishColor;
 
+    [Header("Sprite")]
+    public Sprite scrollActiveUnlock;
+    public Sprite scrollActiveLock;
+    public Sprite scrollDeActiveUnlock;
+    public Sprite scrollDeActiveLock;
+    public Image scrollActiveImg;
+    public Image scrollDeActiveImg;
+
+    private bool isUnlock = false;
     private void Awake()
     {
         toggleOpenBtn.onClick.AddListener(ToggleOn);
@@ -45,6 +56,10 @@ public class ChapterUI : MonoBehaviour
 
     private void ToggleOn()
     {
+        if (!isUnlock)
+        {
+            return;
+        }
         Debug.Log("Toggle on");
         isOpen = true;
         lessonContainer.gameObject.SetActive(isOpen);
@@ -73,7 +88,7 @@ public class ChapterUI : MonoBehaviour
     {
         lessonList.Add(lessonUI);
     }
-
+    [ContextMenu("Highlight")]
     public void Highlight()
     {
         ToggleOn();
@@ -81,12 +96,27 @@ public class ChapterUI : MonoBehaviour
         deActiveGroup.gameObject.SetActive(false);
     }
 
+    [ContextMenu("UnHighlight")]
     public void UnHighlight()
     {
         ToggleOff();
         activeGroup.gameObject.SetActive(false);
         deActiveGroup.gameObject.SetActive(true);
     }
+
+    public void SetUnlock(bool unlock)
+    {
+        scrollActiveImg.sprite = unlock ? scrollActiveUnlock : scrollActiveLock;
+        scrollDeActiveImg.sprite = unlock ? scrollDeActiveUnlock : scrollDeActiveLock;
+        titleName.color = unlock ? finishColor : unFinishColor;
+        
+        isUnlock = unlock;
+    }
+    
+    [ContextMenu("SetUnlock UI")]
+    public void SetUnLockUI() => SetUnlock(true);
+    [ContextMenu("SetLock UI")]
+    public void SetLockUI() => SetUnlock(false);
 }
 
 public class QuestionUI : MonoBehaviour
