@@ -15,6 +15,8 @@ public class TabItemManagerUI : MonoBehaviour
     [SerializeField] private GameObject shelfContainer;
     [SerializeField] private GameObject tabContainer;
 
+    public GameObject container;
+    
     private void Awake()
     {
         tabIDs = GetComponentsInChildren<BookShelfManager>();
@@ -80,4 +82,15 @@ public class TabItemManagerUI : MonoBehaviour
             item.ActiveState(isActiveCurrentUI);
         }
     }
+
+    public void Show()
+    {
+        container.gameObject.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        container.gameObject.SetActive(false);
+    }
+    
 }
