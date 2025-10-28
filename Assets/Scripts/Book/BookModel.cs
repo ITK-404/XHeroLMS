@@ -75,7 +75,7 @@ public class BookModel : MonoBehaviour
             return;
         }
         container.transform.DOKill();
-        container.transform.DOScale(Vector3.one, 1).SetEase(Ease.OutSine);
+        container.transform.DOScale(Vector3.one, .6f).SetEase(Ease.OutSine);
 
         return;
         if (tween != null)
@@ -117,7 +117,7 @@ public class BookModel : MonoBehaviour
 
     private IEnumerator StartRotate()
     {
-        float duration = .3f;
+        float duration = 0.8f;
         float elapsedTime = 0;
         while (true)
         {
