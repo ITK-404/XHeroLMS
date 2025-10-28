@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -31,6 +32,8 @@ public class SceneLessonUI : MonoBehaviour
     private string _seo;
     private string _courseTitle = "(no course title)";
 
+    public Action<LmsCoursePrivate> OnLoadCourseDone;
+    
     private void Awake()
     {
         _ = LmsStore.Instance; // đảm bảo singleton tồn tại
@@ -88,7 +91,7 @@ public class SceneLessonUI : MonoBehaviour
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null) { Debug.LogError($"[SceneLessonUI] Private null cho courseId='{courseId}'"); yield break; }
         _courseTitle = string.IsNullOrEmpty(p.title) ? "(no course title)" : p.title;
-
+        OnLoadCourseDone?.Invoke(p);
         BuildListUI(p);
     }
 
@@ -237,3 +240,4 @@ public class SceneLessonUI : MonoBehaviour
     [System.Serializable] public class SceneSeoItem { public string sceneName; public string _id; public string seo; public string image; public string title; }
     [System.Serializable] class SceneSeoList { public List<SceneSeoItem> items = new(); }
 }
+

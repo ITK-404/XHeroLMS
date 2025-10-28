@@ -1,11 +1,14 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CourseReviewUI : MonoBehaviour
 {
    public static CourseReviewUI Instance { get; private set; }
-   public GameObject container;
    public TabItemManagerUI tabItemManagerUI;
+   public GameObject container;
+
+   public Button returnBtn;
    private void Awake()
    {
       if (Instance != null && Instance != this)
@@ -15,6 +18,19 @@ public class CourseReviewUI : MonoBehaviour
       }
       Instance = this;
       Hide();
+      
+      returnBtn.onClick.AddListener(HideCourseReview);
+   }
+
+   private void OnDestroy()
+   {
+      returnBtn.onClick.RemoveListener(HideCourseReview);
+   }
+
+   private void HideCourseReview()
+   {
+      Hide();
+      tabItemManagerUI.Show();
    }
 
    public void ReviewBook(BookHandler bookHandler)
