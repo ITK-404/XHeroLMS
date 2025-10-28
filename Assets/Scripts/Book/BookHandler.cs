@@ -19,7 +19,7 @@ public class BookHandler : MonoBehaviour
         bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
         bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
 
-
+        bookModel.OnPlayerClickBook += OnPlayerClickBook;
         SetBuyCourse(true);
     }
 
@@ -27,8 +27,15 @@ public class BookHandler : MonoBehaviour
     {
         bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
         bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
+        
+        bookModel.OnPlayerClickBook -= OnPlayerClickBook;
     }
     
+    private void OnPlayerClickBook()
+    {
+        CourseReviewUI.Instance.ReviewBook(this);
+    }
+
     public void UpdateData()
     {
 
