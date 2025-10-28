@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using static UnityEngine.CullingGroup;
 
@@ -21,6 +21,7 @@ public class VideoPauseUI : MonoBehaviour
 
     private void OnPlayVideoChanged(bool OnStateChanged)
     {
+        Debug.Log("Trạng thái play video thay đổi: " + OnStateChanged);
         background.gameObject.SetActive(!OnStateChanged);
         pauseIcon.gameObject.SetActive(!OnStateChanged);
     }
