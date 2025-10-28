@@ -64,7 +64,6 @@ public class PointClickSystem : MonoBehaviour
         {
             ai.isStopped = true;
             ai.canMove = false;
-            ai.destination = ai.position;
 
             // combine horizontal movement with vertical velocity
             Vector3 horizontal = forwardMove * moveSpeed;
@@ -75,8 +74,7 @@ public class PointClickSystem : MonoBehaviour
         }
         else
         {
-            ai.isStopped = false;
-            ai.canMove = true;
+
 
             // when AI is moving the transform, still apply vertical movement for gravity
             characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
@@ -114,14 +112,17 @@ public class PointClickSystem : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             if (EventSystem.current.IsPointerOverGameObject())
+            {
+                Debug.Log("Chặn bởi UI");
                 return;
+            }
             
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
             if (PlayerChairManager.Instance)
             {
-                MoveToChairHandle(ray);
-                return;
+                if(MoveToChairHandle(ray))
+                    return;
             }
 
             if (Physics.Raycast(ray, out var groundHit, groundLayerMask))
@@ -129,6 +130,9 @@ public class PointClickSystem : MonoBehaviour
                 Debug.Log("bắn dính mặt đất, bắt đầu di chuyển");
                 ai.destination = groundHit.point;
                 lastPickPosition = groundHit.point;
+                
+                ai.isStopped = false;
+                ai.canMove = true;
             }
             else
             {
@@ -137,7 +141,7 @@ public class PointClickSystem : MonoBehaviour
         }
     }
 
-    private void MoveToChairHandle(Ray ray)
+    private bool MoveToChairHandle(Ray ray)
     {
         if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
         {
@@ -149,20 +153,23 @@ public class PointClickSystem : MonoBehaviour
                 var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
 
                 Vector3 groundPos = (Vector3)node.position;
-
+                ai.isStopped = false;
+                ai.canMove = true;
                 ai.destination = groundPos;
                 lastPickPosition = groundPos;
 
-                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
+                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return false;
                 if (currentCheckPoint != null)
                 {
                     currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                     waitMoveToChair = StartCoroutine(WaitForRechPos());
                 }
 
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
     private IEnumerator WaitForRechPos()
