@@ -4,14 +4,14 @@ using UnityEngine;
 public class BuyReviewCourseManager : MonoBehaviour
 {
     public static BuyReviewCourseManager Instance;
-    [SerializeField] private  CourseReviewUI courseReviewUI;
+    [SerializeField] private CourseReviewUI courseReviewUI;
     [SerializeField] private TabItemManagerUI tabItemManagerUI;
 
-    [SerializeField] private  SceneLessonUI sceneLessonUI;
+    [SerializeField] private SceneLessonUI sceneLessonUI;
 
 
     private BookHandler currentBookSelect;
-    
+
     private void Awake()
     {
         Instance = this;
@@ -40,6 +40,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         // cần handling lỗi
         // create logic for turn off and of loading data
         sceneLessonUI.overrideSeo = currentBookSelect.book_seo;
+        Debug.Log("Load book by seo: " + currentBookSelect.book_seo);
         yield return sceneLessonUI.LoadCourseDataCoroutine();
     }
 

@@ -1,63 +1,54 @@
-﻿using TMPro;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
-public class ChapterReviewCourseUI : MonoBehaviour
+public class ChapterReviewCourseUI : ChapterBaseUI
 {
-    public TextMeshProUGUI titleName;   
     public Color selectColor;
     public Color unSelectColor;
     public Button background;
-    public GameObject lessonContainer;
     public CourseReviewUI courseReviewUI;
-    public Button toggleOpenBtn;
-    public Button toggleOffBtn;
 
-    private bool isOpen;
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
+        if (background != null)
+            background.onClick.AddListener(Toggle);
+
+        // ensure default color when created
+        if (titleName != null)
+            titleName.color = unSelectColor;
         
-        toggleOpenBtn.onClick.AddListener(ToggleOn);
-        toggleOffBtn.onClick.AddListener(ToggleOff);
-        background.onClick.AddListener(SelectChapter);
+        UnHighlight();
+        ShowActiveUI(false);
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
-        background.onClick.RemoveListener(SelectChapter);
-    }
-
-    private void SelectChapter()
-    {
-        courseReviewUI.Select(this);
+        if (background != null)
+            background.onClick.RemoveListener(Toggle);
+        base.OnDestroy();
     }
 
     public void Highlight()
     {
-        titleName.color = selectColor;
+        if (titleName != null) titleName.color = selectColor;
     }
 
     public void UnHighlight()
     {
-        titleName.color = unSelectColor;
+        if (titleName != null) titleName.color = unSelectColor;
     }
     
-    private void ToggleOn()
+    public virtual void Toggle()
     {
-        SelectChapter();
-        Debug.Log("Toggle on");
-        isOpen = true;
-        lessonContainer.gameObject.SetActive(isOpen);
-        toggleOpenBtn.gameObject.SetActive(false);
-        toggleOffBtn.gameObject.SetActive(true);
-    }
-
-    private void ToggleOff()
-    {
-        Debug.Log("Toggle off");
-        isOpen = false;
-        lessonContainer.gameObject.SetActive(isOpen);
-        toggleOpenBtn.gameObject.SetActive(true);
-        toggleOffBtn.gameObject.SetActive(false);
+        if (isOpen)
+        {
+            ToggleOff();
+        }
+        else
+        {
+            ToggleOn();
+            courseReviewUI.Select(this);
+        }
     }
 }
