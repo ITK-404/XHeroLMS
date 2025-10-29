@@ -1,5 +1,4 @@
-using NUnit.Framework;
-using System;
+
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -36,7 +35,10 @@ public class ChapterUI : MonoBehaviour
     {
         toggleOpenBtn.onClick.AddListener(ToggleOn);
         toggleOffBtn.onClick.AddListener(ToggleOff);
-        bannerBtn.onClick.AddListener(SelectThisChapter);
+        if (bannerBtn != null)
+        {
+            bannerBtn.onClick.AddListener(SelectThisChapter);
+        }
 
         UnHighlight();
     }
@@ -45,7 +47,10 @@ public class ChapterUI : MonoBehaviour
     {
         toggleOpenBtn.onClick.RemoveListener(ToggleOn);
         toggleOffBtn.onClick.RemoveListener(ToggleOff);
-        bannerBtn.onClick.RemoveListener(SelectThisChapter);
+        if (bannerBtn != null)
+        {
+            bannerBtn.onClick.RemoveListener(SelectThisChapter);
+        }
     }
 
     private void SelectThisChapter()
@@ -60,6 +65,10 @@ public class ChapterUI : MonoBehaviour
     
     private void ToggleOn()
     {
+        if (!ChapterUIManager.Instance.IsSelectChapter(this))
+        {
+            ChapterUIManager.Instance.Select(this);
+        }
         Debug.Log("Toggle on");
         isOpen = true;
         lessonContainer.gameObject.SetActive(isOpen);
@@ -69,6 +78,7 @@ public class ChapterUI : MonoBehaviour
 
     private void ToggleOff()
     {
+        
         Debug.Log("Toggle off");
         isOpen = false;
         lessonContainer.gameObject.SetActive(isOpen);
@@ -92,16 +102,22 @@ public class ChapterUI : MonoBehaviour
     public void Highlight()
     {
         ToggleOn();
-        activeGroup.gameObject.SetActive(true);
-        deActiveGroup.gameObject.SetActive(false);
+        ShowActiveUI(true);
     }
 
     [ContextMenu("UnHighlight")]
     public void UnHighlight()
     {
         ToggleOff();
-        activeGroup.gameObject.SetActive(false);
-        deActiveGroup.gameObject.SetActive(true);
+        ShowActiveUI(false);
+    }
+
+    private void ShowActiveUI(bool active)
+    {
+        if(activeGroup)
+            activeGroup.gameObject.SetActive(active);
+        if(deActiveGroup)
+            deActiveGroup.gameObject.SetActive(!active);
     }
 
     public void SetUnlock(bool unlock)
@@ -119,7 +135,7 @@ public class ChapterUI : MonoBehaviour
     public void SetLockUI() => SetUnlock(false);
 }
 
-public class QuestionUI : MonoBehaviour
+public class LessonReviewUI : MonoBehaviour
 {
-
+    
 }
