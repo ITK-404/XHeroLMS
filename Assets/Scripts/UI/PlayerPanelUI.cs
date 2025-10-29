@@ -12,7 +12,15 @@ public class PlayerPanelUI : MonoBehaviour
     private void Awake()
     {
         container.gameObject.SetActive(false);
-        LoginController.OnLoginComplete += Show;
+        // LoginController.OnLoginComplete += Show;
+        if (TokenStore.IsAuthenticated)
+        {
+            Show();
+        }
+        else
+        {
+            LoginController.OnLoginComplete += Show;
+        }
     }
 
     private void OnDestroy()

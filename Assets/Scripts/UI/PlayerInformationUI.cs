@@ -9,7 +9,10 @@ public class PlayerInformationUI : MonoBehaviour
     {
         LoginController.OnLoginComplete += FillData;
     }
-
+    private void OnEnable()
+    {
+        FillData();
+    }
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= FillData;
