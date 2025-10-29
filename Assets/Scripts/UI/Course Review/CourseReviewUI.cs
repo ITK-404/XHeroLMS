@@ -1,55 +1,159 @@
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CourseReviewUI : MonoBehaviour
 {
-   public static CourseReviewUI Instance { get; private set; }
-   public TabItemManagerUI tabItemManagerUI;
-   public GameObject container;
+    public GameObject container;
+    public GameObject pageContainer;
+    public Button returnBtn;
+    public ChapterReviewCourseUI chapterUIPrefab;
+    public LessonReviewUI lessonUIPrefab;
+    public List<ChapterReviewCourseUI> chapterList = new();
 
-   public Button returnBtn;
-   private void Awake()
-   {
-      if (Instance != null && Instance != this)
-      {
-         Destroy(gameObject);
-         return;
-      }
-      Instance = this;
-      Hide();
-      
-      returnBtn.onClick.AddListener(HideCourseReview);
-   }
+    public void ReviewBook(BookHandler bookHandler)
+    {
+        // xử lý review
+        Debug.Log($"Book Name {bookHandler.book_name}");
+        Debug.Log($"Book SKU {bookHandler.book_sku}");
+        Debug.Log($"Book Seo {bookHandler.book_seo}");
+    }
 
-   private void OnDestroy()
-   {
-      returnBtn.onClick.RemoveListener(HideCourseReview);
-   }
+    public void Show()
+    {
+        container.gameObject.SetActive(true);
+    }
 
-   private void HideCourseReview()
-   {
-      Hide();
-      tabItemManagerUI.Show();
-   }
+    public void Hide()
+    {
+        container.gameObject.SetActive(false);
+    }
 
-   public void ReviewBook(BookHandler bookHandler)
-   {
-      // xử lý review
-      Show();
-      tabItemManagerUI.Hide();
-      Debug.Log($"Book Name {bookHandler.book_name}");
-      Debug.Log($"Book SKU {bookHandler.book_sku}");
-      Debug.Log($"Book Seo {bookHandler.book_seo}");
-   }
+    public void RefreshCourseUI(LmsCoursePrivate lmsCoursePrivate)
+    {
+        Debug.Log("Refresh preview course UI");
+        if (lmsCoursePrivate == null)
+        {
+            Debug.LogError("course private is null");
+            return;
+        }
 
-   private void Show()
-   {
-      container.gameObject.SetActive(true);
-   }
+        Show();
+        BuildData(lmsCoursePrivate);
+    }
 
-   public void Hide()
-   {
-      container.gameObject.SetActive(false);
-   }
+    private void ClearExisting()
+    {
+        chapterList.Clear();
+        if (pageContainer == null) return;
+
+        // collect children first to avoid issues while removing
+        var children = new List<GameObject>(pageContainer.transform.childCount);
+        for (int i = 0; i < pageContainer.transform.childCount; i++)
+        {
+            children.Add(pageContainer.transform.GetChild(i).gameObject);
+        }
+
+        foreach (var child in children)
+        {
+#if UNITY_EDITOR
+            DestroyImmediate(child);
+#else
+            Destroy(child);
+#endif
+        }
+    }
+
+    private void BuildData(LmsCoursePrivate lmsCoursePrivate)
+    {
+        ClearExisting();
+
+        if (lmsCoursePrivate.chapters == null || lmsCoursePrivate.chapters.Count == 0)
+        {
+            Debug.Log("Chapter đang null, không thể load khóa học");
+            return;
+        }
+
+        foreach (var ch in lmsCoursePrivate.chapters)
+        {
+            var header = BuildChapter(ch);
+
+            foreach (var lesson in ch.lessons)
+            {
+                BuildLesson(header, lesson);
+            }
+        }
+    }
+
+    private ChapterReviewCourseUI BuildChapter(LmsChapter ch)
+    {
+        if (chapterUIPrefab == null || container == null) return null;
+
+        string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
+        var headerChapter = Instantiate(chapterUIPrefab, pageContainer.transform);
+        if (headerChapter == null) return null;
+
+        if (headerChapter.titleName != null)
+            headerChapter.titleName.text = chapTitle;
+        headerChapter.courseReviewUI = this;
+
+        chapterList.Add(headerChapter);
+        return headerChapter;
+    }
+
+    private void BuildLesson(ChapterReviewCourseUI headerChapter, LmsPrivateLesson lesson)
+    {
+        if (lessonUIPrefab == null || headerChapter == null) return;
+
+        string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
+        if (string.IsNullOrEmpty(lessonTitle)) return; // skip unnamed lessons
+
+
+        if (headerChapter.lessonContainer == null)
+        {
+            Debug.LogWarning("Header chapter lessonContainer is null, skipping lesson instantiation");
+            return;
+        }
+
+        var lessonUI = Instantiate(lessonUIPrefab, headerChapter.lessonContainer.transform);
+        if (lessonUI == null) return;
+
+        if (lessonUI.titleTMP != null)
+            lessonUI.titleTMP.text = lessonTitle;
+    }
+
+    private ChapterReviewCourseUI chapterReviewCourseUI;
+
+    public void Select(ChapterReviewCourseUI chapterReviewCourseUI)
+    {
+        if (chapterReviewCourseUI == null)
+        {
+            foreach (var chapter in chapterList)
+            {
+                chapter.UnHighlight();
+                chapter.ShowActiveUI(false);
+            }
+
+            return;
+        }
+        
+        
+        Debug.Log("Select Chapter: " + chapterList.Count);
+        foreach (var chapter in chapterList)
+        {
+            if (chapter == chapterReviewCourseUI)
+            {
+                chapter.Highlight();
+                chapter.ToggleOn();
+            }
+            else
+            {
+                chapter.UnHighlight();
+                chapter.ToggleOff();
+            }   
+            chapter.ShowActiveUI(chapter == chapterReviewCourseUI);
+        }
+
+        this.chapterReviewCourseUI = chapterReviewCourseUI;
+    }
 }

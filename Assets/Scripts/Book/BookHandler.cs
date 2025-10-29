@@ -33,7 +33,7 @@ public class BookHandler : MonoBehaviour
     
     private void OnPlayerClickBook()
     {
-        CourseReviewUI.Instance.ReviewBook(this);
+        BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
     }
 
     public void UpdateData()
