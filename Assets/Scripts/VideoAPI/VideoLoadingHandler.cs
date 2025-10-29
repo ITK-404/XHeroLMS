@@ -174,3 +174,8 @@ public class VideoLoadingHandler : MonoBehaviour
             _vp.Play();
     }
 }
+
+public class PreviewCou
+{
+    
+}

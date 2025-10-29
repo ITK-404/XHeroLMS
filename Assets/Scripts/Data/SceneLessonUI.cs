@@ -41,6 +41,13 @@ public class SceneLessonUI : MonoBehaviour
         yield return LoadCourseDataCoroutine();
     }
 
+    private bool isLoading = false;
+
+    public bool IsLoading
+    {
+        get => isLoading;
+    }
+
     public IEnumerator LoadCourseDataCoroutine()
     {
         //if (!content || !itemPrefab || !headerPrefab)
@@ -48,7 +55,7 @@ public class SceneLessonUI : MonoBehaviour
         //    Debug.LogError("[SceneLessonUI] Thiếu tham chiếu content/itemPrefab/headerPrefab.");
         //    yield break;
         //}
-
+        isLoading = true;
         // Lấy SEO
         if (!string.IsNullOrEmpty(overrideSeo)) _seo = overrideSeo.Trim();
         else
@@ -57,6 +64,7 @@ public class SceneLessonUI : MonoBehaviour
             if (!txt)
             {
                 Debug.LogError($"[SceneLessonUI] Missing Resources/{resourceJsonName}.json");
+                isLoading = false;
                 yield break;
             }
 
@@ -83,6 +91,7 @@ public class SceneLessonUI : MonoBehaviour
             if (item == null)
             {
                 Debug.LogError($"[SceneLessonUI] No SEO mapping for scene '{sceneName}'");
+                isLoading = false;
                 yield break;
             }
 
@@ -96,6 +105,7 @@ public class SceneLessonUI : MonoBehaviour
             if (!TokenStore.IsAuthenticated)
             {
                 Debug.LogError("[SceneLessonUI] Not authenticated -> không thể fetch.");
+                isLoading = false;
                 yield break;
             }
 
@@ -104,6 +114,7 @@ public class SceneLessonUI : MonoBehaviour
             courseId = LmsStore.Instance.GetCourseIdBySeo(_seo);
             if (string.IsNullOrEmpty(courseId))
             {
+                isLoading = false;
                 Debug.LogError($"[SceneLessonUI] Không resolve được courseId cho seo='{_seo}'");
                 yield break;
             }
@@ -116,6 +127,7 @@ public class SceneLessonUI : MonoBehaviour
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
         {
+            isLoading = false;
             Debug.LogError($"[SceneLessonUI] Private null cho courseId='{courseId} {overrideSeo}'");
             yield break;
         }
@@ -123,6 +135,7 @@ public class SceneLessonUI : MonoBehaviour
         _courseTitle = string.IsNullOrEmpty(p.title) ? "(no course title)" : p.title;
 
         OnLoadCourseDone?.Invoke(p);
+        isLoading = false;
     }
 
 

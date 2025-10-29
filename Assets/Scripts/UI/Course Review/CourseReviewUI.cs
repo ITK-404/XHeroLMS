@@ -4,21 +4,15 @@ using UnityEngine.UI;
 
 public class CourseReviewUI : MonoBehaviour
 {
-    public GameObject container;
-    public GameObject pageContainer;
+    [SerializeField]  GameObject container;
+    [SerializeField]  GameObject pageContainer;
     public Button returnBtn;
-    public ChapterReviewCourseUI chapterUIPrefab;
-    public LessonReviewUI lessonUIPrefab;
-    public List<ChapterReviewCourseUI> chapterList = new();
+    [SerializeField]  ChapterReviewCourseUI chapterUIPrefab;
+    [SerializeField]  LessonReviewUI lessonUIPrefab;
+    [SerializeField]  List<ChapterReviewCourseUI> chapterList = new();
+    [SerializeField] PlayVideoOpenBook playVideoOpenBook;
 
-    public void ReviewBook(BookHandler bookHandler)
-    {
-        // xử lý review
-        Debug.Log($"Book Name {bookHandler.book_name}");
-        Debug.Log($"Book SKU {bookHandler.book_sku}");
-        Debug.Log($"Book Seo {bookHandler.book_seo}");
-    }
-
+    
     public void Show()
     {
         container.gameObject.SetActive(true);
@@ -37,8 +31,6 @@ public class CourseReviewUI : MonoBehaviour
             Debug.LogError("course private is null");
             return;
         }
-
-        Show();
         BuildData(lmsCoursePrivate);
     }
 
