@@ -1,17 +1,16 @@
-using System;
 using System.Collections.Generic;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CourseReviewUI : MonoBehaviour
 {
     public GameObject container;
-
+    public GameObject pageContainer;
     public Button returnBtn;
     public ChapterReviewCourseUI chapterUIPrefab;
-    public LessonUI lessonUIPrefab;
+    public LessonReviewUI lessonUIPrefab;
     public List<ChapterReviewCourseUI> chapterList = new();
+
     public void ReviewBook(BookHandler bookHandler)
     {
         // xử lý review
@@ -38,73 +37,123 @@ public class CourseReviewUI : MonoBehaviour
             Debug.LogError("course private is null");
             return;
         }
+
         Show();
+        BuildData(lmsCoursePrivate);
+    }
+
+    private void ClearExisting()
+    {
+        chapterList.Clear();
+        if (pageContainer == null) return;
+
+        // collect children first to avoid issues while removing
+        var children = new List<GameObject>(pageContainer.transform.childCount);
+        for (int i = 0; i < pageContainer.transform.childCount; i++)
+        {
+            children.Add(pageContainer.transform.GetChild(i).gameObject);
+        }
+
+        foreach (var child in children)
+        {
+#if UNITY_EDITOR
+            DestroyImmediate(child);
+#else
+            Destroy(child);
+#endif
+        }
     }
 
     private void BuildData(LmsCoursePrivate lmsCoursePrivate)
     {
-        if (lmsCoursePrivate.chapters != null)
+        ClearExisting();
+
+        if (lmsCoursePrivate.chapters == null || lmsCoursePrivate.chapters.Count == 0)
         {
-            foreach (var ch in lmsCoursePrivate.chapters)
+            Debug.Log("Chapter đang null, không thể load khóa học");
+            return;
+        }
+
+        foreach (var ch in lmsCoursePrivate.chapters)
+        {
+            var header = BuildChapter(ch);
+
+            foreach (var lesson in ch.lessons)
             {
-                if (ch == null) continue;
-
-                // Header CHAPTER (nếu có tên)
-                string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
-                ChapterReviewCourseUI headerChapter = null;
-                if (!string.IsNullOrEmpty(chapTitle))
-                {
-                    headerChapter = Instantiate(chapterUIPrefab, container.transform);
-                    //headerChapter.transform.SetParent(content, false);
-                    //EnsureItemLayout((RectTransform)headerChapter.transform);
-                    //SetLabel(headerChapter, "Chapter", chapTitle);
-                    headerChapter.titleName.text = $"{chapTitle}";
-                    // headerChapter.SetUnlock();
-                }
-                chapterList.Add(headerChapter);
-
-                // Các bài học trong chapter
-                if (ch.lessons == null) continue;
-                foreach (var lesson in ch.lessons)
-                {
-                    if (lesson == null) continue;
-
-                    string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
-                    if (string.IsNullOrEmpty(lessonTitle)) continue; // ẩn bài không tên
-
-                    string link2 = !string.IsNullOrEmpty(lesson.videoLink2) ? lesson.videoLink2 :
-                        (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
-
-                    var lessonUI = Instantiate(lessonUIPrefab, headerChapter.lessonContainer.transform);
-                    //lessonUI.transform.SetParent(headerChapter.lessonContainer.transform, false);
-                    //EnsureItemLayout((RectTransform)lessonUI.transform);
-
-                    // Luôn hiển thị vào Title (kể cả “Câu hỏi …”), QA ẩn
-                    //SetLabel(lessonUI, "Title", lessonTitle);
-                    //SetLabel(lessonUI, "QA", ""); // rỗng -> bị ẩn
-                    lessonUI.titleTMP.text = $"{lessonTitle}";
-                    // Click phát video
-
-                    lessonUI.linkVideo2 = link2;
-                    
-                    Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
-                }
+                BuildLesson(header, lesson);
             }
         }
     }
 
+    private ChapterReviewCourseUI BuildChapter(LmsChapter ch)
+    {
+        if (chapterUIPrefab == null || container == null) return null;
+
+        string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
+        var headerChapter = Instantiate(chapterUIPrefab, pageContainer.transform);
+        if (headerChapter == null) return null;
+
+        if (headerChapter.titleName != null)
+            headerChapter.titleName.text = chapTitle;
+        headerChapter.courseReviewUI = this;
+
+        chapterList.Add(headerChapter);
+        return headerChapter;
+    }
+
+    private void BuildLesson(ChapterReviewCourseUI headerChapter, LmsPrivateLesson lesson)
+    {
+        if (lessonUIPrefab == null || headerChapter == null) return;
+
+        string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
+        if (string.IsNullOrEmpty(lessonTitle)) return; // skip unnamed lessons
+
+
+        if (headerChapter.lessonContainer == null)
+        {
+            Debug.LogWarning("Header chapter lessonContainer is null, skipping lesson instantiation");
+            return;
+        }
+
+        var lessonUI = Instantiate(lessonUIPrefab, headerChapter.lessonContainer.transform);
+        if (lessonUI == null) return;
+
+        if (lessonUI.titleTMP != null)
+            lessonUI.titleTMP.text = lessonTitle;
+    }
+
+    private ChapterReviewCourseUI chapterReviewCourseUI;
+
     public void Select(ChapterReviewCourseUI chapterReviewCourseUI)
     {
+        if (chapterReviewCourseUI == null)
+        {
+            foreach (var chapter in chapterList)
+            {
+                chapter.UnHighlight();
+                chapter.ShowActiveUI(false);
+            }
+
+            return;
+        }
+        
+        
+        Debug.Log("Select Chapter: " + chapterList.Count);
         foreach (var chapter in chapterList)
         {
             if (chapter == chapterReviewCourseUI)
             {
                 chapter.Highlight();
+                chapter.ToggleOn();
             }
             else
             {
                 chapter.UnHighlight();
+                chapter.ToggleOff();
             }   
+            chapter.ShowActiveUI(chapter == chapterReviewCourseUI);
         }
+
+        this.chapterReviewCourseUI = chapterReviewCourseUI;
     }
 }

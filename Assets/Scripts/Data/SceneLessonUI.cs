@@ -116,7 +116,7 @@ public class SceneLessonUI : MonoBehaviour
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
         {
-            Debug.LogError($"[SceneLessonUI] Private null cho courseId='{courseId}'");
+            Debug.LogError($"[SceneLessonUI] Private null cho courseId='{courseId} {overrideSeo}'");
             yield break;
         }
 
