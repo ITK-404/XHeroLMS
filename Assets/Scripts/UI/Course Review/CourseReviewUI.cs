@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -79,6 +80,9 @@ public class CourseReviewUI : MonoBehaviour
         if (lessonUIPrefab == null || headerChapter == null) return;
 
         string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
+
+        int.TryParse(lesson.duration,out int value);
+        string duration = FormatFromSeconds(value);
         if (string.IsNullOrEmpty(lessonTitle)) return; // skip unnamed lessons
 
 
@@ -93,8 +97,18 @@ public class CourseReviewUI : MonoBehaviour
 
         if (lessonUI.titleTMP != null)
             lessonUI.titleTMP.text = lessonTitle;
+        if (lessonUI.duration != null)
+        {
+            lessonUI.duration.text = duration;
+        }
     }
-
+    private string FormatFromSeconds(int totalSeconds)
+    {
+        totalSeconds = Math.Max(0, totalSeconds);
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        return $"{minutes:D2} phút {seconds:D2} giây";
+    }
     private ChapterReviewCourseUI chapterReviewCourseUI;
 
     public void Select(ChapterReviewCourseUI chapterReviewCourseUI)
