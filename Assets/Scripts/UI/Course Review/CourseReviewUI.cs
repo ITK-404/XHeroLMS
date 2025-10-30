@@ -5,14 +5,12 @@ using UnityEngine.UI;
 public class CourseReviewUI : MonoBehaviour
 {
     [SerializeField]  GameObject container;
-    [SerializeField]  GameObject pageContainer;
     public Button returnBtn;
     [SerializeField]  ChapterReviewCourseUI chapterUIPrefab;
     [SerializeField]  LessonReviewUI lessonUIPrefab;
     [SerializeField]  List<ChapterReviewCourseUI> chapterList = new();
     [SerializeField] PlayVideoOpenBook playVideoOpenBook;
-
-    
+    [SerializeField] private BookPageCreator bookPageCreator;
     public void Show()
     {
         container.gameObject.SetActive(true);
@@ -34,31 +32,10 @@ public class CourseReviewUI : MonoBehaviour
         BuildData(lmsCoursePrivate);
     }
 
-    private void ClearExisting()
-    {
-        chapterList.Clear();
-        if (pageContainer == null) return;
-
-        // collect children first to avoid issues while removing
-        var children = new List<GameObject>(pageContainer.transform.childCount);
-        for (int i = 0; i < pageContainer.transform.childCount; i++)
-        {
-            children.Add(pageContainer.transform.GetChild(i).gameObject);
-        }
-
-        foreach (var child in children)
-        {
-#if UNITY_EDITOR
-            DestroyImmediate(child);
-#else
-            Destroy(child);
-#endif
-        }
-    }
 
     private void BuildData(LmsCoursePrivate lmsCoursePrivate)
     {
-        ClearExisting();
+        bookPageCreator.ClearExistPages();
 
         if (lmsCoursePrivate.chapters == null || lmsCoursePrivate.chapters.Count == 0)
         {
@@ -66,27 +43,27 @@ public class CourseReviewUI : MonoBehaviour
             return;
         }
 
-        int totalItems = lmsCoursePrivate.chapters.Count / 10;
-        int itemsPerPage = 10;
-        int totalPages = Mathf.CeilToInt((float)totalItems / itemsPerPage);
-        
+        int index = 0;
         foreach (var ch in lmsCoursePrivate.chapters)
         {
-            var header = BuildChapter(ch);
+            var page = bookPageCreator.TryGetOrCreatePageHolder();
+            var header = BuildChapter(ch,page);
 
             foreach (var lesson in ch.lessons)
             {
                 BuildLesson(header, lesson);
             }
         }
+
+        bookPageCreator.InitFirstPage();
     }
 
-    private ChapterReviewCourseUI BuildChapter(LmsChapter ch)
+    private ChapterReviewCourseUI BuildChapter(LmsChapter ch,Transform content)
     {
         if (chapterUIPrefab == null || container == null) return null;
 
         string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
-        var headerChapter = Instantiate(chapterUIPrefab, pageContainer.transform);
+        var headerChapter = Instantiate(chapterUIPrefab, content);
         if (headerChapter == null) return null;
 
         if (headerChapter.titleName != null)
