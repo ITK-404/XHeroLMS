@@ -275,6 +275,10 @@ public class RegistrationController : MonoBehaviour
 
         // otpBy by toggles (email/sms)
         string otpBy = (toggleSms != null && toggleSms.isOn) ? "phone" : "email";
+        // username chuẩn cho SMS
+        string username84 = ConvertPhoneTo84(phoneDigits).Trim();
+
+        string idForOtp = (otpBy == "email") ? email : username84;
 
         // province (id) – optional
         // string provinceId = GetSelectedProvinceId();
@@ -295,24 +299,21 @@ public class RegistrationController : MonoBehaviour
 
         var payload = new RegisterPayload
         {
-            username = username,
-            isApp = false,
-            password = pass1,
-            retypePassword = pass2,
-            otpBy = otpBy,          // "phone" nếu chọn SMS, "email" nếu chọn Email
-            registerPlatform = "lms",
-            isFromGame = false,
-            isUsernameEmail = false,
+            username          = idForOtp,                // << dùng email khi otpBy=email
+            isUsernameEmail   = (otpBy == "email"),      // << bật cờ cho BE
+            isApp             = false,
+            password          = pass1,
+            retypePassword    = pass2,
+            otpBy             = otpBy,                   // "email" | "phone"
+            registerPlatform  = "web",
+            isFromGame        = false,
 
-            fullName = fullName,
-            email = email,
-            // province = provinceId, // nếu server muốn name thì thay GetSelectedProvinceName()
-            province = GetSelectedProvinceName(),
-            gender = gender
-            // có thể thêm birthYear/birthDay/device/deviceToken nếu bạn có
+            fullName          = fullName,
+            email             = email,
+            province          = GetSelectedProvinceName(),
+            gender            = gender
         };
-
-        StartCoroutine(RegisterRoutine(payload, username));
+        StartCoroutine(RegisterRoutine(payload, username84));
     }
 
     private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
@@ -355,8 +356,20 @@ public class RegistrationController : MonoBehaviour
                 if (targetOtp == null)
                     targetOtp = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
 
-                if (targetOtp != null) targetOtp.SetUsername(username84);
-                else Debug.LogWarning("[Register] Không tìm thấy OtpVerificationController để SetUsername.");
+                // if (targetOtp != null) targetOtp.SetUsername(username84);
+                // else Debug.LogWarning("[Register] Không tìm thấy OtpVerificationController để SetUsername.");
+                if (targetOtp != null)
+                {
+                    // truyền đúng contact theo kênh đã chọn
+                    string contact = (payload.otpBy == "email") ? payload.email : username84;
+                    targetOtp.SetContact(contact, payload.otpBy, "register");
+                }
+
+                // (tuỳ chọn) lưu session để các panel khác dùng
+                AuthFlowSession.LastOtpIdentifier = (payload.otpBy == "email") ? payload.email : username84;
+                AuthFlowSession.LastOtpBy         = payload.otpBy;
+                AuthFlowSession.LastOtpPurpose    = "register";
+
             }
             else
             {
