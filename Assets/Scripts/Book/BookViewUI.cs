@@ -5,7 +5,6 @@ using UnityEngine.UI;
 
 public class BookViewUI : MonoBehaviour
 {
-
     public Button enterCourseBtn;
     public Button buyCourseBtn;
     public Color leftColor;
@@ -17,6 +16,7 @@ public class BookViewUI : MonoBehaviour
     {
         ShowEnterCourse();
     }
+    
 
     [ContextMenu("Refresh Color")]
     public void RefreshColor()
