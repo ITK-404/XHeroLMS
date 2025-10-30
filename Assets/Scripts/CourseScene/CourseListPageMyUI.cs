@@ -312,23 +312,26 @@ public class CourseListPageMyUI : MonoBehaviour
             slot.book_name = data.title ?? "(no title)";
             slot.book_sku  = data.sku ?? "";
             slot.book_seo  = data.seoUrl ?? "";
-
+            
             if (slot.bookHandleUI != null)
             {
                 if (slot.bookHandleUI.priceText != null)
                 {
                     float? price = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)
                                                         : (data.originalPrice ?? data.currentPrice);
-                    slot.bookHandleUI.priceText.text = price.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, price.Value)
-                        : "";
+                    // slot.bookHandleUI.priceText.text = price.HasValue
+                    //     ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, price.Value)
+                    //     : "";
+                    slot.bookHandleUI.priceText.text = "";
                 }
 
                 if (slot.bookHandleUI.fullPriceText != null)
                 {
-                    slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
-                        : "";
+                    // slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
+                    //     ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
+                    //     : "";
+                    slot.bookHandleUI.fullPriceText.text = "";
+                    
                 }
 
                 // Tránh lỗi Coroutine khi object inactive
