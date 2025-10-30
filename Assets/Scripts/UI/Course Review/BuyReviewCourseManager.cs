@@ -8,45 +8,51 @@ public class BuyReviewCourseManager : MonoBehaviour
     [SerializeField] private CourseReviewUI courseReviewUI;
     [SerializeField] private TabItemManagerUI tabItemManagerUI;
 
-    [SerializeField] private SceneLessonUI sceneLessonUI;
     [SerializeField] private PlayVideoOpenBook playVideoOpenBook;
     [SerializeField] private PlayVideoHandleUI playVideoHandleUI;
     [SerializeField] private Button replayButton;
-    
+    [SerializeField] private Button enterCourseBtn;
     private BookHandler currentBookSelect;
 
-    private bool autoSkip = false;
+    private bool autoSkipVideo = false;
 
     private void Awake()
     {
         Instance = this;
         ShowBuyCourseUI();
 
-        sceneLessonUI.OnLoadCourseDone += courseReviewUI.RefreshCourseUI;
         courseReviewUI.returnBtn.onClick.AddListener(ShowBuyCourseUI);
         replayButton.onClick.AddListener(() =>
         {
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
+        enterCourseBtn.onClick.AddListener(EnterCourse);
         
-        playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) =>
-        {
-            autoSkip = value;
-        });
+        playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
         playVideoHandleUI.autoSkipToggle.isOn = false;
     }
 
+
     private void OnDestroy()
     {
-        sceneLessonUI.OnLoadCourseDone -= courseReviewUI.RefreshCourseUI;
         courseReviewUI.returnBtn.onClick.RemoveListener(ShowBuyCourseUI);
-        
+        enterCourseBtn.onClick.RemoveListener(EnterCourse);
+
         replayButton.onClick.RemoveListener(() =>
         {
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
+    }
+
+    private void EnterCourse()
+    {
+        Debug.Log("Enter course "+SeoResolver.IsContainData());
+        if (SeoResolver.IsContainData())
+        {
+            LoadingTransition.Load(SeoResolver.DefaultScene);
+        }
     }
 
     public void ShowBookPreviewUI(BookHandler bookHandler)
@@ -56,40 +62,64 @@ public class BuyReviewCourseManager : MonoBehaviour
             Debug.Log("Book handler is null");
             return;
         }
-        
+
         Debug.Log("Bắt đầu hiển thị UI sách preview");
+        needFetchData = currentBookSelect != bookHandler;
         currentBookSelect = bookHandler;
-        if (autoSkip)
+        if (currentBookSelect == null)
         {
-            courseReviewUI.Show();
-            tabItemManagerUI.Hide();
-            playVideoHandleUI.Hide();
+            Debug.LogError("Sách bị null không thể load");
+            return;
         }
-        else
-        {
-            tabItemManagerUI.Hide();
-            courseReviewUI.Hide();
-            StopCoroutine(ShowPreviewCoroutine());
-            StartCoroutine(ShowPreviewCoroutine());
-        }
-        
+        StopCoroutine(ShowPreviewCoroutine());
+        StartCoroutine(ShowPreviewCoroutine());
     }
+
+    private bool needFetchData;
 
     private IEnumerator ShowPreviewCoroutine()
     {
         // cần handling lỗi
         // create logic for turn off and of loading data
-        playVideoHandleUI.Show();
-        sceneLessonUI.overrideSeo = currentBookSelect.book_seo;
-        Debug.Log("Bắt đầu play video");
-        
+        playVideoHandleUI.Hide();
+        SeoResolver.seoCourse = currentBookSelect.book_seo;
         Debug.Log("Load book by seo: " + currentBookSelect.book_seo);
+        ShowBuyCourseUI();
+        LoadingUI.Show();
+        // hiển thị loading UI
+        if (needFetchData)
+        {
+            yield return SeoResolver.LoadPrivateAndFillData();
+            yield return new WaitForSecondsRealtime(1);
+        }
         
-        StartCoroutine(sceneLessonUI.LoadCourseDataCoroutine());
-        yield return playVideoOpenBook.PlayCoroutine();
+
+        LoadingUI.Hide();
+
+        // không có data không hiển thị nữa
+        if (!SeoResolver.IsContainData())
+        {
+            Debug.Log("Không có data");
+            yield break;
+        }
+
+        Debug.Log("Có data hiển thị đi");
+        courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
+
+        if (!autoSkipVideo)
+        {
+            Debug.Log("Skip Video");
+            playVideoHandleUI.Show();
+
+            yield return playVideoOpenBook.PlayCoroutine();
+        }
+
+
         Debug.Log("Đã Play xong video");
-       
+
+        // Hiển thị UI preview ban đầu
         courseReviewUI.Show();
+        tabItemManagerUI.Hide();
         playVideoHandleUI.Hide();
     }
 
@@ -97,31 +127,14 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         // must wait for 
         StopCoroutine(ShowPreviewCoroutine());
-        
+
         playVideoOpenBook.Stop();
-        
-        
-        StartCoroutine(WaitForLoading());
     }
 
-    private IEnumerator WaitForLoading()
-    {
-        while (sceneLessonUI.IsLoading)
-        {
-            yield return null;
-        }
-        courseReviewUI.Show();
-    }
 
     public void ShowBuyCourseUI()
     {
         courseReviewUI.Hide();
         tabItemManagerUI.Show();
-    }
-
-    public void ShowCourseReviewUI()
-    {
-        courseReviewUI.Show();
-        tabItemManagerUI.Hide();
     }
 }
