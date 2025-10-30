@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class TabItemManagerUI : MonoBehaviour
@@ -11,7 +12,7 @@ public class TabItemManagerUI : MonoBehaviour
     private BookShelfManager[] tabIDs;
     private TabUI[] tabButtonsList;
     private CourseLessonTabID currentItemID;
-
+    [SerializeField] Button returnBtn;
     [SerializeField] private GameObject shelfContainer;
     [SerializeField] private GameObject tabContainer;
 
@@ -21,7 +22,10 @@ public class TabItemManagerUI : MonoBehaviour
     {
         tabIDs = GetComponentsInChildren<BookShelfManager>();
         tabButtonsList = GetComponentsInChildren<TabUI>();
-
+        returnBtn.onClick.AddListener(() =>
+        {
+            LoadingTransition.Load("NewScene");
+        });
         foreach (var item in tabIDs)
         {
             tabList.Add(item.CourseID, item);
@@ -35,7 +39,6 @@ public class TabItemManagerUI : MonoBehaviour
 
         ActiveTab(currentItemID);
     }
-  
 
     private string GetNameCourseTitle(CourseLessonTabID ID)
     {
