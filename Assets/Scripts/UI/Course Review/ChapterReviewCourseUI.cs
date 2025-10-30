@@ -41,6 +41,12 @@ public class ChapterReviewCourseUI : ChapterBaseUI
     
     public virtual void Toggle()
     {
+        if (courseReviewUI != null)
+        {
+            courseReviewUI.Select(this);
+            return;
+        }
+
         if (isOpen)
         {
             ToggleOff();
@@ -48,7 +54,6 @@ public class ChapterReviewCourseUI : ChapterBaseUI
         else
         {
             ToggleOn();
-            courseReviewUI.Select(this);
         }
     }
 }

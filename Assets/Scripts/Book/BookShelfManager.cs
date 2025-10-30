@@ -34,7 +34,7 @@ public class BookShelfManager : MonoBehaviour
             {
                 book.bookModel.DeActiveGrayScale();
             }
-            book.bookHandleUI.priceText.text = "1.000.000đ";
+            // book.bookHandleUI.priceText.text = "1.000.000đ";
             book.bookHandleUI.RefreshColor();
         }
     }

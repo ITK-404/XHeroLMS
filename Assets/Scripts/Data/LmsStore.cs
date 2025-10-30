@@ -509,6 +509,7 @@ public class LmsPrivateLesson
     public string type;        // "video" | "text" ...
     public string videoLink;   // có thể có
     public string videoLink2;  // có thể có
+    public string duration;
     public CompletionCondition completionCondition;
 }
 [Serializable]
