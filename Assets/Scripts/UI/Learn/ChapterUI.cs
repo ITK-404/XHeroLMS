@@ -30,8 +30,7 @@ public class ChapterUI : ChapterBaseUI
         {
             bannerBtn.onClick.AddListener(SelectThisChapter);
         }
-
-        UnHighlight();
+        ShowActiveUI(false);
     }
 
     protected override void OnDestroy()
@@ -55,18 +54,21 @@ public class ChapterUI : ChapterBaseUI
 
     public override void ToggleOn()
     {
+        base.ToggleOn();
         if (!ChapterUIManager.Instance.IsSelectChapter(this))
         {
             ChapterUIManager.Instance.Select(this);
         }
-        Debug.Log("Toggle on");
-        base.ToggleOn();
+        ShowActiveUI(true);
+        lessonContainer.gameObject.SetActive(true);
+        
     }
 
     public override void ToggleOff()
     {
-        Debug.Log("Toggle off");
         base.ToggleOff();
+        ShowActiveUI(false);
+        lessonContainer.gameObject.SetActive(false);
     }
 
     public void SelectLesson(LessonUI lessonUI)
@@ -85,15 +87,15 @@ public class ChapterUI : ChapterBaseUI
     [ContextMenu("Highlight")]
     public void Highlight()
     {
+        Debug.Log("Highlight");
         ToggleOn();
-        ShowActiveUI(true);
     }
 
     [ContextMenu("UnHighlight")]
     public void UnHighlight()
     {
+        Debug.Log("UnHighlight");
         ToggleOff();
-        ShowActiveUI(false);
     }
 
     public void SetUnlock(bool unlock)
@@ -107,4 +109,5 @@ public class ChapterUI : ChapterBaseUI
     public void SetUnLockUI() => SetUnlock(true);
     [ContextMenu("SetLock UI")]
     public void SetLockUI() => SetUnlock(false);
+    
 }

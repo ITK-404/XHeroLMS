@@ -41,7 +41,7 @@ public class ChapterBaseUI : MonoBehaviour
     // Open chapter content
     public virtual void ToggleOn()
     {
-        Debug.Log("Toggle On");
+        Debug.Log("Toggle On", gameObject);
         isOpen = true;
         if (scrollView != null)
             scrollView.SetActive(isOpen);
@@ -54,7 +54,7 @@ public class ChapterBaseUI : MonoBehaviour
     // Close chapter content
     public virtual void ToggleOff()
     {
-        Debug.Log("Toggle Off");
+        Debug.Log("Toggle Off", gameObject);
         isOpen = false;
         if (scrollView != null)
             scrollView.SetActive(isOpen);
@@ -64,7 +64,6 @@ public class ChapterBaseUI : MonoBehaviour
             toggleOffBtn.gameObject.SetActive(false);
     }
 
- 
 
     // visual active/deactive group handling (used by some implementations)
     public virtual void ShowActiveUI(bool active)
