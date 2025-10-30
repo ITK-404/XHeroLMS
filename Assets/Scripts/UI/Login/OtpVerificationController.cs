@@ -1,26 +1,29 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections;
 using UnityEngine.Networking;
 using System.Text;
+using System.Collections;
 
 public class OtpVerificationController : MonoBehaviour
 {
     [Header("API")]
     public string baseUrl = "https://apis-dev.xheroapp.com";
 
-    // Danh sách các endpoint dự phòng; có thể thêm/bớt trong Inspector
+    // Thử nhiều endpoint verify (đăng ký / quên mật khẩu dùng chung payload {username, otp})
     public string[] otpPathsToTry = new string[]
     {
-        "/users/otpverification",      // snake kiểu không gạch
-        "/users/otp-verification",     // có gạch
-        "/users/otpVerification"       // camelCase
+        "/users/otpverification",
+        "/users/otp-verification",
+        "/users/otpVerification",
+        "/users/otp/verify" // dự phòng cho flow forgot
     };
 
-    private const string PREF_USERNAME84 = "REG_USERNAME_84";
+    private const string PREF_USERNAME84       = "REG_USERNAME_84";
+    private const string PREF_OTP_BY           = "REG_OTP_BY";
+    private const string PREF_OTP_IDENTIFIER   = "REG_OTP_IDENTIFIER";
 
-    [Header("Texts hiển thị thời gian")]
+    [Header("Hiển thị thời gian")]
     public TextMeshProUGUI minuteText;
     public TextMeshProUGUI secondText;
 
@@ -28,16 +31,25 @@ public class OtpVerificationController : MonoBehaviour
     public TMP_InputField[] otpInputs = new TMP_InputField[6];
 
     [Header("Buttons")]
-    public Button btnEnter; // gọi API xác thực
+    public Button btnEnter;
     public Button btnBack;
 
-    [Header("Cấu hình thời gian (giây)")]
-    public int totalSeconds = 60; // ví dụ: 1 phút
+    [Header("Timer (giây)")]
+    public int totalSeconds = 60;
 
-    [Header("Panels")]
+    [Header("Panels (sử dụng 1 trong 2)")]
+    public GameObject successPanel; // dùng cho flow đăng ký
+    public GameObject imageToShow;
     public GameObject currentPanel;
     public GameObject backPanel;
-    public GameObject successPanel;
+
+    [Header("Reset Password flow (optional)")]
+    [Tooltip("Mở panel Reset Password khi OTP thuộc flow quên mật khẩu")]
+    public bool openResetOnSuccess = true;
+    public GameObject resetPanel;                           // panel nhập mật khẩu mới
+    public ResetPasswordController resetController;         // ref để truyền username
+    [Tooltip("Giá trị mục đích OTP khi quên mật khẩu (đồng bộ với ForgotController)")]
+    public string forgotPurposeKey = "forgot-password";
 
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
@@ -47,19 +59,29 @@ public class OtpVerificationController : MonoBehaviour
     private bool isRunning = false;
     private bool isSubmitting = false;
 
-    // Username 84... từ bước Đăng ký (truyền vào ở RegistrationController khi đăng ký thành công)
-    [SerializeField] private string username84 = "";
+    // Liên hệ xác thực (email hoặc 84xxxxx)
+    [SerializeField] private string contactIdentifier = "";
+    [SerializeField] private string otpByChannel = ""; // "phone" | "email"
+    [SerializeField] private string otpPurpose = "";   // "forgot-password" | "register" ...
 
-    /// <summary>Được gọi từ RegistrationController sau khi đăng ký OK.</summary>
-    public void SetUsername(string username84FromRegister)
+    /// <summary>Gọi khi chuyển từ Register/Forgot sang OTP</summary>
+    public void SetContact(string identifier, string otpBy, string purpose = "")
     {
-        username84 = (username84FromRegister ?? "").Trim();
-        AuthFlowSession.LastRegUsername84 = username84; // RAM session
+        contactIdentifier = (identifier ?? "").Trim();
+        otpByChannel      = (otpBy ?? "").Trim();
+        otpPurpose        = (purpose ?? "").Trim();
+
+        AuthFlowSession.LastOtpIdentifier = contactIdentifier;
+        AuthFlowSession.LastOtpBy         = otpByChannel;
+        if (!string.IsNullOrEmpty(otpPurpose)) AuthFlowSession.LastOtpPurpose = otpPurpose;
     }
+
+    /// <summary>Giữ tương thích cũ (đăng ký: nhận số 84...)</summary>
+    public void SetUsername(string username84FromRegister) => SetContact(username84FromRegister, "phone", "register");
 
     private void OnEnable()
     {
-        EnsureUsernameFromSessionOrPrefs();
+        EnsureContactFromSessionOrPrefs();
 
         // Clear 6 ô và focus
         for (int i = 0; i < otpInputs.Length; i++)
@@ -71,10 +93,9 @@ public class OtpVerificationController : MonoBehaviour
 
     private void Start()
     {
-        EnsureUsernameFromSessionOrPrefs();
+        EnsureContactFromSessionOrPrefs();
         ResetTimer();
 
-        // Setup input OTP & listeners
         for (int i = 0; i < otpInputs.Length; i++)
         {
             int index = i;
@@ -103,7 +124,6 @@ public class OtpVerificationController : MonoBehaviour
 
     private void Update()
     {
-        // Backspace: nếu ô đang focus rỗng -> nhảy về ô trước và xoá nó
         if (Input.GetKeyDown(KeyCode.Backspace))
         {
             for (int i = 0; i < otpInputs.Length; i++)
@@ -121,46 +141,50 @@ public class OtpVerificationController : MonoBehaviour
         }
     }
 
-    // ===== Username sourcing =====
-    private void EnsureUsernameFromSessionOrPrefs()
+    // ===== Contact sourcing =====
+    private void EnsureContactFromSessionOrPrefs()
     {
-        if (!string.IsNullOrEmpty(username84)) return;
+        if (!string.IsNullOrEmpty(contactIdentifier)) return;
 
-        if (!string.IsNullOrEmpty(AuthFlowSession.LastRegUsername84))
+        // RAM session (ưu tiên forgot; fallback register)
+        if (!string.IsNullOrEmpty(AuthFlowSession.LastOtpIdentifier))
         {
-            username84 = AuthFlowSession.LastRegUsername84.Trim();
-            if (!string.IsNullOrEmpty(username84)) return;
+            contactIdentifier = AuthFlowSession.LastOtpIdentifier.Trim();
         }
+        if (string.IsNullOrEmpty(otpByChannel)) otpByChannel = AuthFlowSession.LastOtpBy;
+        if (string.IsNullOrEmpty(otpPurpose))   otpPurpose   = AuthFlowSession.LastOtpPurpose;
 
-        username84 = PlayerPrefs.GetString(PREF_USERNAME84, "").Trim();
-        // nếu vẫn rỗng, sẽ báo khi bấm Enter
+        if (!string.IsNullOrEmpty(contactIdentifier)) return;
+
+        // PlayerPrefs
+        contactIdentifier = PlayerPrefs.GetString(PREF_OTP_IDENTIFIER, "").Trim();
+        if (string.IsNullOrEmpty(contactIdentifier))
+            contactIdentifier = PlayerPrefs.GetString(PREF_USERNAME84, "").Trim(); // từ đăng ký
+
+        if (string.IsNullOrEmpty(otpByChannel))
+            otpByChannel = PlayerPrefs.GetString(PREF_OTP_BY, otpByChannel);
     }
 
     // ===== OTP inputs =====
     private void OnInputChanged(int index, string value)
     {
         if (value.Length > 0 && index < otpInputs.Length - 1 && otpInputs[index + 1] != null)
-        {
-            otpInputs[index + 1].Select(); // qua ô kế
-        }
+            otpInputs[index + 1].Select();
         else if (value.Length == 0 && index > 0 && otpInputs[index - 1] != null)
-        {
-            otpInputs[index - 1].Select(); // quay về ô trước
-        }
+            otpInputs[index - 1].Select();
     }
 
     private void OnEnterClicked()
     {
         if (isSubmitting) return;
 
-        EnsureUsernameFromSessionOrPrefs();
-
+        EnsureContactFromSessionOrPrefs();
         string otpCode = GetOtp().Trim();
 
-        if (string.IsNullOrEmpty(username84))
+        if (string.IsNullOrEmpty(contactIdentifier))
         {
-            if (errorText) errorText.text = "Thiếu số điện thoại (username). Vui lòng thử lại.";
-            Debug.LogWarning("[OTP] username rỗng. Hãy đảm bảo Registration đã gọi SetUsername hoặc Prefs đã lưu.");
+            if (errorText) errorText.text = "Thiếu thông tin liên hệ (email/số điện thoại).";
+            Debug.LogWarning("[OTP] contactIdentifier rỗng.");
             return;
         }
 
@@ -170,7 +194,7 @@ public class OtpVerificationController : MonoBehaviour
             return;
         }
 
-        StartCoroutine(VerifyOtpRoutine(username84, otpCode));
+        StartCoroutine(VerifyOtpRoutine(contactIdentifier, otpCode));
     }
 
     private IEnumerator VerifyOtpRoutine(string username, string otp)
@@ -179,22 +203,38 @@ public class OtpVerificationController : MonoBehaviour
         isSubmitting = true;
         if (btnEnter) btnEnter.interactable = false;
 
-        // Thử từng endpoint trong otpPathsToTry
-        string lastErrText = null;
-        for (int i = 0; i < otpPathsToTry.Length; i++)
+        // In ra để chắc chắn đang ở flow nào và username đang dùng là gì
+        Debug.Log($"[OTP] purpose='{otpPurpose}' forgotKey='{forgotPurposeKey}' username='{username}' otp='{otp}'");
+
+        // Chốt luồng
+        bool isForgot = !string.IsNullOrEmpty(otpPurpose) && otpPurpose == forgotPurposeKey;
+
+        // DÙNG HẰNG NỘI BỘ – KHÔNG CHO INSPECTOR OVERRIDE
+        string[] registerPaths = {
+        "/users/otpverification",
+        "/users/otp-verification",
+        "/users/otpVerification"
+    };
+        string[] forgotPaths = {
+        "/users/password-reset/otp-verification",
+        "/api/v1/users/password-reset/otp-verification"
+    };
+
+        var pathList = isForgot ? forgotPaths : registerPaths;
+
+        foreach (var rawPath in pathList)
         {
-            string path = otpPathsToTry[i]?.Trim();
+            var path = (rawPath ?? "").Trim();
             if (string.IsNullOrEmpty(path)) continue;
 
-            string url  = baseUrl.TrimEnd('/') + path;
+            string url = baseUrl.TrimEnd('/') + path;
             string json = "{\"username\":\"" + EscapeJson(username) + "\",\"otp\":\"" + EscapeJson(otp) + "\"}";
-
-            Debug.Log($"[OTP] Calling: {url} payload={json}");
+            Debug.Log($"[OTP] Try ({(isForgot ? "FORGOT" : "REGISTER")}) → {url} ; body={json}");
 
             using (var req = new UnityWebRequest(url, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
-                req.uploadHandler   = new UploadHandlerRaw(bodyRaw);
+                req.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
 
@@ -203,44 +243,47 @@ public class OtpVerificationController : MonoBehaviour
 #if UNITY_2020_2_OR_NEWER
                 bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
 #else
-                bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
+            bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
 #endif
-
-                // Thành công -> break ngay
                 if (ok)
                 {
-                    Debug.Log("[OTP] Verify OK via " + path + " -> " + req.downloadHandler.text);
+                    Debug.Log("[OTP] Verify OK → " + req.downloadHandler.text);
 
-                    if (isRunning)
+                    if (isRunning) { StopAllCoroutines(); isRunning = false; }
+
+                    if (isForgot && openResetOnSuccess && resetPanel != null)
                     {
-                        StopAllCoroutines();
-                        isRunning = false;
+                        if (resetController != null) resetController.SetUsername(username);
+                        if (currentPanel) currentPanel.SetActive(false);
+                        resetPanel.SetActive(true);
                     }
-                    if (currentPanel) currentPanel.SetActive(false);
-                    if (successPanel) successPanel.SetActive(true);
+                    else
+                    {
+                        if (currentPanel) currentPanel.SetActive(false);
+                        if (successPanel)
+                        {
+                            successPanel.SetActive(true);
+                        }
+                        if (imageToShow) imageToShow.gameObject.SetActive(true);
+                    }
 
                     isSubmitting = false;
                     if (btnEnter) btnEnter.interactable = true;
                     yield break;
                 }
 
-                // Nếu là 404 -> thử endpoint tiếp theo
+                Debug.LogWarning($"[OTP] FAIL {req.responseCode} at {path}: {req.error}\n{req.downloadHandler.text}");
+
                 if (req.responseCode == 404)
                 {
-                    Debug.LogWarning($"[OTP] 404 Not Found at {path}. Trying next candidate if any...");
-                    lastErrText = $"404 Not Found at {path}";
+                    // thử path tiếp theo
                     continue;
                 }
 
-                // Nếu lỗi khác 404: dừng thử và báo lỗi
-                lastErrText = $"OTP Verify FAIL ({req.responseCode}): {req.error}\n{req.downloadHandler.text}";
-                Debug.LogWarning(lastErrText);
                 if (errorText)
-                {
                     errorText.text = string.IsNullOrEmpty(req.downloadHandler.text)
                         ? "Xác thực OTP thất bại. Vui lòng thử lại."
                         : req.downloadHandler.text;
-                }
 
                 isSubmitting = false;
                 if (btnEnter) btnEnter.interactable = true;
@@ -248,33 +291,20 @@ public class OtpVerificationController : MonoBehaviour
             }
         }
 
-        // Nếu chạy hết mảng mà vẫn không thành công (thường do 404 tất cả)
-        if (errorText)
-        {
-            errorText.text = "Không tìm thấy endpoint OTP (404). Hãy kiểm tra đường dẫn trên server hoặc chỉnh otpPathsToTry.";
-        }
-        Debug.LogWarning("[OTP] All candidates returned 404. Kiểm tra lại route trên server/Swagger.");
-
+        if (errorText) errorText.text = "Không tìm thấy endpoint OTP verify (404).";
         isSubmitting = false;
         if (btnEnter) btnEnter.interactable = true;
     }
 
-    // ==== Nút quay lại ====
+    // ==== Back ====
     private void OnBackClicked()
     {
-        Debug.Log("Quay lại panel trước");
-
-        if (isRunning)
-        {
-            StopAllCoroutines();
-            isRunning = false;
-        }
-
+        if (isRunning) { StopAllCoroutines(); isRunning = false; }
         if (currentPanel) currentPanel.SetActive(false);
         if (backPanel)    backPanel.SetActive(true);
     }
 
-    // ==== Đếm ngược ====
+    // ==== Timer ====
     private void ResetTimer()
     {
         remainingSeconds = totalSeconds;
@@ -296,7 +326,6 @@ public class OtpVerificationController : MonoBehaviour
             yield return new WaitForSeconds(1);
             remainingSeconds--;
         }
-
         if (minuteText) minuteText.text = "00";
         if (secondText) secondText.text = "00";
         isRunning = false;
