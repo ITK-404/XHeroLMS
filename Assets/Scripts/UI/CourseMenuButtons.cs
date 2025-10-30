@@ -7,7 +7,7 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("UI")]
     public Button btnAllCourses;
     public Button btnMyCourses;
-
+    
     [Header("Destination")]
     [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
@@ -41,4 +41,10 @@ public class CourseMenuButtons : MonoBehaviour
     {
         return PlayerPrefs.GetString(COURSE_KEY_PREF, KEY_ALL);
     }
+}
+
+public static class PlayerData
+{
+    public static Vector3 worldPosition;
+    public static Quaternion worldRotation;
 }

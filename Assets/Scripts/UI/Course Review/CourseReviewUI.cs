@@ -39,7 +39,7 @@ public class CourseReviewUI : MonoBehaviour
     private void BuildData(LmsCoursePrivate lmsCoursePrivate)
     {
         bookPageCreator.ClearExistPages();
-
+        chapterList.Clear();
         if (lmsCoursePrivate.chapters == null || lmsCoursePrivate.chapters.Count == 0)
         {
             Debug.Log("Chapter đang null, không thể load khóa học");
