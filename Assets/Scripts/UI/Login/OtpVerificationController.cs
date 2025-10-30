@@ -10,18 +10,9 @@ public class OtpVerificationController : MonoBehaviour
     [Header("API")]
     public string baseUrl = "https://apis-dev.xheroapp.com";
 
-    // Thử nhiều endpoint verify (đăng ký / quên mật khẩu dùng chung payload {username, otp})
-    public string[] otpPathsToTry = new string[]
-    {
-        "/users/otpverification",
-        "/users/otp-verification",
-        "/users/otpVerification",
-        "/users/otp/verify" // dự phòng cho flow forgot
-    };
-
-    private const string PREF_USERNAME84       = "REG_USERNAME_84";
-    private const string PREF_OTP_BY           = "REG_OTP_BY";
-    private const string PREF_OTP_IDENTIFIER   = "REG_OTP_IDENTIFIER";
+    private const string PREF_USERNAME84     = "REG_USERNAME_84";
+    private const string PREF_OTP_BY         = "REG_OTP_BY";
+    private const string PREF_OTP_IDENTIFIER = "REG_OTP_IDENTIFIER";
 
     [Header("Hiển thị thời gian")]
     public TextMeshProUGUI minuteText;
@@ -37,32 +28,37 @@ public class OtpVerificationController : MonoBehaviour
     [Header("Timer (giây)")]
     public int totalSeconds = 60;
 
-    [Header("Panels (sử dụng 1 trong 2)")]
+    [Header("Panels")]
     public GameObject successPanel; // dùng cho flow đăng ký
-    public GameObject imageToShow;
+    public GameObject imageToShow;  // optional: show logo/ảnh khi verify OK
     public GameObject currentPanel;
     public GameObject backPanel;
 
     [Header("Reset Password flow (optional)")]
     [Tooltip("Mở panel Reset Password khi OTP thuộc flow quên mật khẩu")]
     public bool openResetOnSuccess = true;
-    public GameObject resetPanel;                           // panel nhập mật khẩu mới
-    public ResetPasswordController resetController;         // ref để truyền username
-    [Tooltip("Giá trị mục đích OTP khi quên mật khẩu (đồng bộ với ForgotController)")]
+    public GameObject resetPanel;
+    public ResetPasswordController resetController;
+    [Tooltip("Giá trị purpose cho flow forgot (đồng bộ với ForgotController)")]
     public string forgotPurposeKey = "forgot-password";
+
+    [Header("Resend OTP")]
+    public Button resendButton;
+    public int resendCooldownSeconds = 60;
 
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
 
     // ========= State =========
-    private int remainingSeconds;
-    private bool isRunning = false;
-    private bool isSubmitting = false;
+    private int  remainingSeconds;
+    private bool isRunning       = false;
+    private bool isSubmitting    = false;
+    private bool _resending      = false;
 
     // Liên hệ xác thực (email hoặc 84xxxxx)
     [SerializeField] private string contactIdentifier = "";
-    [SerializeField] private string otpByChannel = ""; // "phone" | "email"
-    [SerializeField] private string otpPurpose = "";   // "forgot-password" | "register" ...
+    [SerializeField] private string otpByChannel      = ""; // "phone" | "email"
+    [SerializeField] private string otpPurpose        = ""; // "forgot-password" | "register"
 
     /// <summary>Gọi khi chuyển từ Register/Forgot sang OTP</summary>
     public void SetContact(string identifier, string otpBy, string purpose = "")
@@ -76,7 +72,7 @@ public class OtpVerificationController : MonoBehaviour
         if (!string.IsNullOrEmpty(otpPurpose)) AuthFlowSession.LastOtpPurpose = otpPurpose;
     }
 
-    /// <summary>Giữ tương thích cũ (đăng ký: nhận số 84...)</summary>
+    /// <summary>Giữ tương thích cũ (đăng ký qua SMS: nhận số 84...)</summary>
     public void SetUsername(string username84FromRegister) => SetContact(username84FromRegister, "phone", "register");
 
     private void OnEnable()
@@ -89,6 +85,15 @@ public class OtpVerificationController : MonoBehaviour
 
         if (otpInputs.Length > 0 && otpInputs[0] != null) otpInputs[0].Select();
         if (errorText) errorText.text = "";
+
+        // Bind resend
+        if (resendButton)
+        {
+            resendButton.onClick.RemoveListener(OnClickResend);
+            resendButton.onClick.AddListener(OnClickResend);
+            SetButtonLabel(resendButton, "Gửi lại OTP");
+            resendButton.interactable = true;
+        }
     }
 
     private void Start()
@@ -96,6 +101,7 @@ public class OtpVerificationController : MonoBehaviour
         EnsureContactFromSessionOrPrefs();
         ResetTimer();
 
+        // OTP inputs
         for (int i = 0; i < otpInputs.Length; i++)
         {
             int index = i;
@@ -107,6 +113,7 @@ public class OtpVerificationController : MonoBehaviour
 
         if (otpInputs.Length > 0 && otpInputs[0] != null) otpInputs[0].Select();
 
+        // Buttons
         if (btnEnter) btnEnter.onClick.AddListener(OnEnterClicked);
         if (btnBack)  btnBack.onClick.AddListener(OnBackClicked);
 
@@ -120,10 +127,12 @@ public class OtpVerificationController : MonoBehaviour
 
         if (btnEnter) btnEnter.onClick.RemoveListener(OnEnterClicked);
         if (btnBack)  btnBack.onClick.RemoveListener(OnBackClicked);
+        if (resendButton) resendButton.onClick.RemoveListener(OnClickResend);
     }
 
     private void Update()
     {
+        // Backspace: lùi focus
         if (Input.GetKeyDown(KeyCode.Backspace))
         {
             for (int i = 0; i < otpInputs.Length; i++)
@@ -203,22 +212,21 @@ public class OtpVerificationController : MonoBehaviour
         isSubmitting = true;
         if (btnEnter) btnEnter.interactable = false;
 
-        // In ra để chắc chắn đang ở flow nào và username đang dùng là gì
         Debug.Log($"[OTP] purpose='{otpPurpose}' forgotKey='{forgotPurposeKey}' username='{username}' otp='{otp}'");
 
-        // Chốt luồng
+        // CHỐT luồng theo purpose
         bool isForgot = !string.IsNullOrEmpty(otpPurpose) && otpPurpose == forgotPurposeKey;
 
-        // DÙNG HẰNG NỘI BỘ – KHÔNG CHO INSPECTOR OVERRIDE
+        // Endpoint theo luồng (đừng chỉnh trong Inspector để tránh sai)
         string[] registerPaths = {
-        "/users/otpverification",
-        "/users/otp-verification",
-        "/users/otpVerification"
-    };
+            "/users/otpverification",
+            "/users/otp-verification",
+            "/users/otpVerification"
+        };
         string[] forgotPaths = {
-        "/users/password-reset/otp-verification",
-        "/api/v1/users/password-reset/otp-verification"
-    };
+            "/users/password-reset/otp-verification",
+            "/api/v1/users/password-reset/otp-verification"
+        };
 
         var pathList = isForgot ? forgotPaths : registerPaths;
 
@@ -243,7 +251,7 @@ public class OtpVerificationController : MonoBehaviour
 #if UNITY_2020_2_OR_NEWER
                 bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
 #else
-            bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
+                bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
 #endif
                 if (ok)
                 {
@@ -260,11 +268,8 @@ public class OtpVerificationController : MonoBehaviour
                     else
                     {
                         if (currentPanel) currentPanel.SetActive(false);
-                        if (successPanel)
-                        {
-                            successPanel.SetActive(true);
-                        }
-                        if (imageToShow) imageToShow.gameObject.SetActive(true);
+                        if (successPanel) successPanel.SetActive(true);
+                        if (imageToShow)  imageToShow.gameObject.SetActive(true);
                     }
 
                     isSubmitting = false;
@@ -274,16 +279,22 @@ public class OtpVerificationController : MonoBehaviour
 
                 Debug.LogWarning($"[OTP] FAIL {req.responseCode} at {path}: {req.error}\n{req.downloadHandler.text}");
 
-                if (req.responseCode == 404)
-                {
-                    // thử path tiếp theo
-                    continue;
-                }
+                // Sai endpoint → thử cái tiếp theo
+                if (req.responseCode == 404) continue;
 
-                if (errorText)
-                    errorText.text = string.IsNullOrEmpty(req.downloadHandler.text)
-                        ? "Xác thực OTP thất bại. Vui lòng thử lại."
-                        : req.downloadHandler.text;
+                // Sai mã → dọn input + gợi ý resend
+                if (req.responseCode == 400 && (req.downloadHandler.text ?? "").Contains("wrong_otp"))
+                {
+                    ClearOtpInputs();
+                    if (errorText) errorText.text = "Mã OTP không đúng hoặc đã hết hạn. Hãy nhập lại hoặc bấm Gửi lại OTP.";
+                }
+                else
+                {
+                    if (errorText)
+                        errorText.text = string.IsNullOrEmpty(req.downloadHandler.text)
+                            ? "Xác thực OTP thất bại. Vui lòng thử lại."
+                            : req.downloadHandler.text;
+                }
 
                 isSubmitting = false;
                 if (btnEnter) btnEnter.interactable = true;
@@ -294,6 +305,93 @@ public class OtpVerificationController : MonoBehaviour
         if (errorText) errorText.text = "Không tìm thấy endpoint OTP verify (404).";
         isSubmitting = false;
         if (btnEnter) btnEnter.interactable = true;
+    }
+
+    // ==== Resend ====
+    private void OnClickResend()
+    {
+        if (_resending) return;
+        EnsureContactFromSessionOrPrefs();
+
+        if (string.IsNullOrEmpty(contactIdentifier))
+        {
+            if (errorText) errorText.text = "Thiếu email/số điện thoại để gửi lại OTP.";
+            return;
+        }
+
+        StartCoroutine(ResendOtpRoutine(contactIdentifier, otpByChannel, otpPurpose));
+    }
+
+    private IEnumerator ResendOtpRoutine(string identifier, string otpBy, string purpose)
+    {
+        _resending = true;
+        if (resendButton) resendButton.interactable = false;
+
+        // functionName theo luồng
+        string functionName = (purpose == forgotPurposeKey) ? "forgot-password" : "register";
+
+        // /users/otp?username=...&otpBy=...&isApp=false&functionName=...&platform=web
+        string baseU = baseUrl.TrimEnd('/');
+        string qUser = UnityWebRequest.EscapeURL(identifier);
+        string qBy   = UnityWebRequest.EscapeURL(otpBy);
+        string qFun  = UnityWebRequest.EscapeURL(functionName);
+        string url   = $"{baseU}/users/otp?username={qUser}&otpBy={qBy}&isApp=false&functionName={qFun}&platform=web";
+
+        using (var req = UnityWebRequest.Get(url))
+        {
+            req.downloadHandler = new DownloadHandlerBuffer();
+            yield return req.SendWebRequest();
+
+#if UNITY_2020_2_OR_NEWER
+            bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
+#else
+            bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
+#endif
+            if (ok)
+            {
+                Debug.Log($"[OTP] Resend OK ({otpBy}/{functionName}) → {req.downloadHandler.text}");
+                // Reset đếm ngược mỗi lần gửi lại
+                ResetTimer();
+                if (errorText) errorText.text = "Đã gửi lại OTP. Vui lòng kiểm tra hộp thư/tin nhắn.";
+            }
+            else
+            {
+                var body = req.downloadHandler.text;
+                Debug.LogWarning($"[OTP] Resend FAIL {req.responseCode}: {req.error}\n{body}");
+                if (errorText) errorText.text = string.IsNullOrEmpty(body) ? "Gửi lại OTP thất bại." : body;
+            }
+        }
+
+        // Cooldown chống spam resend
+        float cd = Mathf.Max(5, resendCooldownSeconds);
+        float t = cd;
+        while (t > 0f)
+        {
+            SetButtonLabel(resendButton, $"Gửi lại ({Mathf.CeilToInt(t)}s)");
+            yield return new WaitForSecondsRealtime(1f);
+            t -= 1f;
+        }
+
+        if (resendButton)
+        {
+            resendButton.interactable = true;
+            SetButtonLabel(resendButton, "Gửi lại OTP");
+        }
+
+        _resending = false;
+    }
+
+    private void SetButtonLabel(Button btn, string text)
+    {
+        if (!btn) return;
+        var tmp = btn.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (tmp) tmp.text = text;
+    }
+
+    private void ClearOtpInputs()
+    {
+        foreach (var f in otpInputs) if (f) f.text = "";
+        if (otpInputs != null && otpInputs.Length > 0 && otpInputs[0]) otpInputs[0].Select();
     }
 
     // ==== Back ====
