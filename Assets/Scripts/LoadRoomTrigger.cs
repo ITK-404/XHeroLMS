@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -63,7 +65,23 @@ public class LoadRoomTrigger : MonoBehaviour
         TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
         if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
 
-        LoadingTransition.Load(sceneName); // dùng loader của bạn
+
+        StartCoroutine(TryEnterCourse());
+    }
+    
+    private IEnumerator TryEnterCourse()
+    {
+        LoadingUI.Show();
+        SeoResolver.SetSeoCourse(sceneName);
+        yield return new WaitForSecondsRealtime(1);
+        yield return SeoResolver.LoadPrivateAndFillData();
+        
+        LoadingUI.Hide();
+
+        if (SeoResolver.IsContainData())
+        {
+            LoadingTransition.Load(SeoResolver.DefaultScene);
+        }
     }
 
     private void PlacePlayer(GameObject player, Vector3 pos, Quaternion rot)

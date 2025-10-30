@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System.Collections;
+using NUnit.Framework;
 using UnityEngine;
 
 public class BookHandler : MonoBehaviour
@@ -20,6 +21,7 @@ public class BookHandler : MonoBehaviour
         bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
 
         bookModel.OnPlayerClickBook += OnPlayerClickBook;
+        
         SetBuyCourse(true);
     }
 
@@ -43,7 +45,22 @@ public class BookHandler : MonoBehaviour
 
     private void EnterCourse()
     {
+        StartCoroutine(TryEnterCourse());
+    }
 
+    private IEnumerator TryEnterCourse()
+    {
+        LoadingUI.Show();
+        SeoResolver.seoCourse = book_seo;
+        yield return new WaitForSecondsRealtime(1);
+        yield return SeoResolver.LoadPrivateAndFillData();
+        
+        LoadingUI.Hide();
+
+        if (SeoResolver.IsContainData())
+        {
+            LoadingTransition.Load(SeoResolver.DefaultScene);
+        }
     }
 
     private void BuyCourse()
