@@ -7,6 +7,16 @@ public class PlayVideoOpenBook : MonoBehaviour
     public VideoPlayer videoPlayer;
     public AudioSource audioSource;
 
+    private void Awake()
+    {
+        string url = "file://" + Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
+#if !UNITY_EDITOR && UNITY_ANDROID
+             url = Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
+#endif
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = url;
+    }
+
     public IEnumerator PlayCoroutine()
     {
         // dừng phát nếu đang phát
