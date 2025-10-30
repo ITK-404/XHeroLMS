@@ -66,6 +66,10 @@ public class CourseReviewUI : MonoBehaviour
             return;
         }
 
+        int totalItems = lmsCoursePrivate.chapters.Count / 10;
+        int itemsPerPage = 10;
+        int totalPages = Mathf.CeilToInt((float)totalItems / itemsPerPage);
+        
         foreach (var ch in lmsCoursePrivate.chapters)
         {
             var header = BuildChapter(ch);

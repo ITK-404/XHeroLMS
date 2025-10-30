@@ -26,7 +26,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         courseReviewUI.returnBtn.onClick.AddListener(ShowBuyCourseUI);
         replayButton.onClick.AddListener(() =>
         {
-            playVideoHandleUI.autoSkipToggle.SetIsOnWithoutNotify(false);
+            playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
         
@@ -34,6 +34,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         {
             autoSkip = value;
         });
+        playVideoHandleUI.autoSkipToggle.isOn = false;
     }
 
     private void OnDestroy()
@@ -43,7 +44,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         
         replayButton.onClick.RemoveListener(() =>
         {
-            playVideoHandleUI.autoSkipToggle.SetIsOnWithoutNotify(false);
+            playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
     }
