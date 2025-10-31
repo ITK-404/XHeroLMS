@@ -18,14 +18,22 @@ public class CourseMenuButtons : MonoBehaviour
     // Hằng số để dùng thống nhất
     public const string KEY_ALL = "All Courses";
     public const string KEY_MY  = "My Courses";
-
+    public Transform player;
     void Awake()
     {
         if (btnAllCourses != null)
-            btnAllCourses.onClick.AddListener(() => Go(KEY_ALL));
+            btnAllCourses.onClick.AddListener(() =>
+            {
+                PlayerLocator.Save(player.gameObject);
+                Go(KEY_ALL);
+            });
 
         if (btnMyCourses != null)
-            btnMyCourses.onClick.AddListener(() => Go(KEY_MY));
+            btnMyCourses.onClick.AddListener(() =>
+            {
+                PlayerLocator.Save(player.gameObject);
+                Go(KEY_MY);
+            });
     }
 
     void Go(string key)
