@@ -379,23 +379,26 @@ public class MapColliderBuilderWindow : EditorWindow
     {
         if (!root) return;
 
-        var all = root.GetComponentsInChildren<Transform>(true);
-        foreach (var t in all)
+        var allTransforms = root.GetComponentsInChildren<Transform>(true);
+        foreach (var t in allTransforms)
         {
             if (!t) continue;
 
-            var marker = t.GetComponent<GeneratedColliderMarker>();
-            if (marker == null) continue;
-
+            // Xóa tất cả collider (dù có marker hay không)
             var colliders = t.GetComponents<Collider>();
             foreach (var c in colliders)
             {
                 Undo.DestroyObjectImmediate(c);
                 removed++;
             }
-            Undo.DestroyObjectImmediate(marker);
+
+            // Nếu có marker thì cũng xóa luôn marker
+            var marker = t.GetComponent<GeneratedColliderMarker>();
+            if (marker)
+                Undo.DestroyObjectImmediate(marker);
         }
-    }
+
+}
 
     // ================= Utils =================
     static List<GameObject> GetAllSceneGameObjects(bool includeInactive)
