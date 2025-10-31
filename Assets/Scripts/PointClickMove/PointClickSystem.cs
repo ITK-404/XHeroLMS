@@ -39,7 +39,6 @@ public class PointClickSystem : MonoBehaviour
     {
         if (InputBlocker.IsBlocked())
             return;
-
         // Gravity update
         bool isGrounded = characterController != null && characterController.isGrounded;
         if (isGrounded && verticalVelocity < 0f)
@@ -87,7 +86,10 @@ public class PointClickSystem : MonoBehaviour
             transform.Rotate(0, rotationAmount, 0);
         }
 
-        MoveByClick();
+        if (!TeleMapController._mapActive)
+        {
+           MoveByClick();
+        }
     }
 
     private void StopWaitToMoveChair()
@@ -103,6 +105,8 @@ public class PointClickSystem : MonoBehaviour
 
     private void MoveByClick()
     {
+
+        
         if (playerCamera == null)
         {
             Debug.LogError("Player camera is null");

@@ -60,7 +60,10 @@ public class LoadRoomTrigger : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
-
+        if (!TokenStore.IsAuthenticated)
+        {
+            return;
+        }
         if (savePlayerPosition)
         {
             var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
@@ -68,11 +71,8 @@ public class LoadRoomTrigger : MonoBehaviour
             var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
             TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
             if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
-        }
-
-        if (savePlayerPosition)
-        {
-            StartCoroutine(TryEnterCourse());
+            
+                StartCoroutine(TryEnterCourse());
         }
         else
         {
