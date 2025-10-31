@@ -471,6 +471,6 @@ public class MapColliderBuilderWindow : EditorWindow
     }
     // Dummy type to mark generated colliders
     [AddComponentMenu("")]
-    private class GeneratedColliderMarker : MonoBehaviour { }
+    public class GeneratedColliderMarker : MonoBehaviour { }
 }
 #endif
