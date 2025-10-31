@@ -13,10 +13,15 @@ public class LoadingScreenController : MonoBehaviour
     public TMP_Text textLoading;
     public ParticleSystem loadingParticle;
     public Slider sliderUI;
+
     [Header("Loading Text Animation")]
     public float dotSpeed = 0.5f;
     string baseText = "Loading";
     float imageSwitchInterval = 1f;
+
+    [Header("Display Timing")]
+    [Tooltip("Thời gian hiển thị loading tối thiểu (giây).")]
+    public float minDisplaySeconds = 3f;
 
     [Header("Visual Progress Settings")]
     [Tooltip("Cho phép % hiển thị đi trước tiến trình thật một chút để đỡ đứng hình.")]
@@ -40,12 +45,18 @@ public class LoadingScreenController : MonoBehaviour
     private List<Image> _images = new();
     private int _currentImageIndex = -1;
 
+    // post-activate syncing
+    private bool _sceneLoadedFired = false;
+    private string _targetSceneName;
+    private float _displayStartTime;
+
     void Awake()
     {
         if (imageScene1) _images.Add(imageScene1);
         foreach (var img in _images) if (img) img.gameObject.SetActive(false);
 
         if (progressRing) progressRing.fillAmount = 0f;
+        if (sliderUI) sliderUI.value = 0f;
 
         // bảo vệ độ dài mảng mốc/thời gian
         if (milestoneDurations == null || milestoneDurations.Length != milestonePercents.Length)
@@ -59,19 +70,24 @@ public class LoadingScreenController : MonoBehaviour
     void Start()
     {
         if (!string.IsNullOrEmpty(LoadingTransition.TargetSceneName))
-            StartCoroutine(LoadByNameRoutine(LoadingTransition.TargetSceneName));
+        {
+            _targetSceneName = LoadingTransition.TargetSceneName;
+            StartCoroutine(LoadByNameRoutine(_targetSceneName));
+        }
     }
-
 
     IEnumerator LoadByNameRoutine(string sceneName)
     {
         _isLoading = true;
+        _displayStartTime = Time.unscaledTime; // đếm thời gian hiển thị tối thiểu
+
         SetProgress(0f);
 
         var op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false;
         _async = op;
 
+        // bắt đầu đổi ảnh
         StartCoroutine(CycleRandomImages());
 
         // chạy qua các mốc 30-50-60-70-80-90
@@ -85,7 +101,7 @@ public class LoadingScreenController : MonoBehaviour
             float start = visual;
             while (t < dur)
             {
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
                 float planned = Mathf.Lerp(start, target, t / dur);
 
                 // không cho hiển thị vượt quá tiến trình thật + headroom
@@ -114,24 +130,57 @@ public class LoadingScreenController : MonoBehaviour
             yield return null;
         }
 
+        // Đảm bảo thời gian hiển thị tối thiểu trước khi bước vào 90->100
+        float remainMin = Mathf.Max(0f, minDisplaySeconds - (Time.unscaledTime - _displayStartTime));
+        if (remainMin > 0f)
+            yield return new WaitForSecondsRealtime(remainMin * 0.3f); // chia bớt, phần còn lại ghép vào fake fill
+
         // 90% -> 100% mượt trong fakeFillDuration
         float elapsed = 0f;
         while (elapsed < fakeFillDuration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             float s = Mathf.Clamp01(elapsed / fakeFillDuration);
             float planned = Mathf.Lerp(0.90f, 1f, s);
 
-            // phần này không cần cap theo op.progress nữa vì Unity đã sẵn sàng activate
             SetProgress(planned);
             yield return null;
         }
 
         SetProgress(1f);
-        yield return new WaitForSeconds(0.2f);
 
-        _isLoading = false;
+        // Đảm bảo tổng thời gian >= minDisplaySeconds
+        float remain = Mathf.Max(0f, minDisplaySeconds - (Time.unscaledTime - _displayStartTime));
+        if (remain > 0f)
+            yield return new WaitForSecondsRealtime(remain);
+        
+        // Đăng ký lắng nghe sceneLoaded và giữ Overlay sống sang scene mới.
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        DontDestroyOnLoad(gameObject);
+
+        // Cho phép kích hoạt scene đích
+        _isLoading = false; // dừng vòng ảnh & dot trong Update
         op.allowSceneActivation = true;
+
+        // Chờ callback sceneLoaded
+        yield return new WaitUntil(() => _sceneLoadedFired);
+
+        // Đợi qua ít nhất 1 frame của scene đích để model/material bắt đầu render
+        yield return new WaitForEndOfFrame();
+        
+        // yield return new WaitForEndOfFrame();
+
+        // Xoá overlay loading
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        Destroy(gameObject);
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (string.IsNullOrEmpty(_targetSceneName) || scene.name == _targetSceneName)
+        {
+            _sceneLoadedFired = true;
+        }
     }
 
     void SetProgress(float t)
@@ -142,11 +191,18 @@ public class LoadingScreenController : MonoBehaviour
         // hiển thị Loading + phần trăm + dấu chấm
         if (textLoading)
             textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
-        float lerpValue = Mathf.Lerp(progressRing.fillAmount, _currentProgress, Time.deltaTime * 5);
-        if (progressRing)
-            progressRing.fillAmount = lerpValue;
 
-        sliderUI.value = lerpValue;
+        if (progressRing)
+        {
+            float lerpValue = Mathf.Lerp(progressRing.fillAmount, _currentProgress, Time.unscaledDeltaTime * 5f);
+            progressRing.fillAmount = lerpValue;
+            if (sliderUI) sliderUI.value = lerpValue;
+        }
+        else if (sliderUI)
+        {
+            float lerpValue = Mathf.Lerp(sliderUI.value, _currentProgress, Time.unscaledDeltaTime * 5f);
+            sliderUI.value = lerpValue;
+        }
     }
 
     IEnumerator CycleRandomImages()
@@ -164,7 +220,7 @@ public class LoadingScreenController : MonoBehaviour
             _currentImageIndex = nextIndex;
             _images[_currentImageIndex].gameObject.SetActive(true);
 
-            yield return new WaitForSeconds(imageSwitchInterval);
+            yield return new WaitForSecondsRealtime(imageSwitchInterval);
         }
 
         foreach (var img in _images) img.gameObject.SetActive(false);
@@ -174,7 +230,7 @@ public class LoadingScreenController : MonoBehaviour
     {
         if (!_isLoading) return;
 
-        _dotTimer += Time.deltaTime;
+        _dotTimer += Time.unscaledDeltaTime;
         if (_dotTimer >= dotSpeed)
         {
             _dotTimer = 0f;
