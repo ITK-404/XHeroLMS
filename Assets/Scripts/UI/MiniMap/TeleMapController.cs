@@ -1,3 +1,4 @@
+using Pathfinding;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -17,7 +18,7 @@ public class TeleMapController : MonoBehaviour
     public float yLift = 0.02f;
 
     // state
-    bool _mapActive;
+    public static bool _mapActive;
     float _savedPlayerY;
     float _playerCamDepth;
 
@@ -127,6 +128,8 @@ bool IsTaggedItemsRecursive(Transform t)
         if (!player) return;
 
         var cc = player.GetComponent<CharacterController>();
+        var AIPath = player.GetComponent<IAstarAI>();
+        AIPath.destination = targetPos;
         if (cc)
         {
             bool was = cc.enabled;
