@@ -21,6 +21,7 @@ public class LoadRoomTrigger : MonoBehaviour
     [Header("Debug")]
     public bool verbose = false;
 
+    public bool savePlayerPosition = false;
     // Chặn đặt trùng nhiều lần trong cùng 1 scene (nếu có nhiều cổng)
     private static string _restoredSceneOnce = null;
 
@@ -58,15 +59,24 @@ public class LoadRoomTrigger : MonoBehaviour
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
 
+        if (savePlayerPosition)
+        {
+            var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
+            var savePos = (returnPoint ? returnPoint.position : transform.position) + extraOffset;
+            var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
+            TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
+            if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
+        }
 
-        var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
-        var savePos = (returnPoint ? returnPoint.position : transform.position) + extraOffset;
-        var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
-        TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
-        if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
+        if (savePlayerPosition)
+        {
+            StartCoroutine(TryEnterCourse());
+        }
+        else
+        {
+            LoadingTransition.Load(sceneName);
+        }
 
-
-        StartCoroutine(TryEnterCourse());
     }
     
     private IEnumerator TryEnterCourse()
