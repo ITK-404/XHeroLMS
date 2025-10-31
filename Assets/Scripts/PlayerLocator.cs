@@ -33,4 +33,11 @@ public static class PlayerLocator
         if (hadRB) rb.isKinematic = rbWasKinematic;
         if (cc) cc.enabled = true;
     }
+
+    public static void Save(GameObject player)
+    {
+        WorldPosition = player.transform.position;
+        WorldRotation = player.transform.rotation;
+        isSaved = true;
+    }
 }

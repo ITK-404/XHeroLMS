@@ -12876,6 +12876,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 3137a234429183449bfffc1c624fcbdd, type: 2}
+    - target: {fileID: 6214368094394770547, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7439087120271888094, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -12886,7 +12890,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 714133b225128204a9637c7761f7d94f, type: 2}
     - target: {fileID: 8585352019130675193, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 12.4
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 8585352019130675193, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.y
@@ -17867,6 +17871,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 3137a234429183449bfffc1c624fcbdd, type: 2}
+    - target: {fileID: 6214368094394770547, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7439087120271888094, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -17877,11 +17885,11 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 714133b225128204a9637c7761f7d94f, type: 2}
     - target: {fileID: 8585352019130675193, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalScale.x
-      value: -1
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8585352019130675193, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -68.2
+      value: -100.35
       objectReference: {fileID: 0}
     - target: {fileID: 8585352019130675193, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.y
@@ -51476,6 +51484,7 @@ MonoBehaviour:
   btnAllCourses: {fileID: 150733037}
   btnMyCourses: {fileID: 547981028}
   courseSceneName: Course Scene
+  player: {fileID: 3705668464690039549}
 --- !u!1 &1539803777 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1057969114743464370, guid: 4ca62814a0aa4ee4ebe4333f95221277, type: 3}
@@ -65425,7 +65434,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!182 &1919055600
 WindZone:
   m_ObjectHideFlags: 0
@@ -67047,6 +67056,51 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -6070367291976421399, guid: 50680f56e029939498bc5ddaca415ed3, type: 3}
+--- !u!1 &1964853329
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1964853331}
+  - component: {fileID: 1964853330}
+  m_Layer: 0
+  m_Name: Restore Checkpoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1964853330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1964853329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89604396edc9411491d0a830c6bc2ed8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestoreCheckPoint
+  player: {fileID: 8692491915194145231}
+--- !u!4 &1964853331
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1964853329}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1966498246 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5876393462126424225, guid: 6be834408b638d54e9c3c490d55ce819, type: 3}
@@ -74504,3 +74558,4 @@ SceneRoots:
   - {fileID: 1509608856}
   - {fileID: 414360975}
   - {fileID: 541301922}
+  - {fileID: 1964853331}
