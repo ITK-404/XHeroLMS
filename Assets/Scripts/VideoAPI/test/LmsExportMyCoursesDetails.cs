@@ -76,10 +76,6 @@ public class LmsExportMyCoursesDetails : MonoBehaviour
         string minimized = TransformMyCoursesJson(myCoursesJson);
         SaveText(minimizedOutputFile, minimized, prettyPrintJson);
         Debug.Log($"[LMS] Saved minimized list: {SavedPath(minimizedOutputFile)}");
-
-        // (Tuỳ chọn) Nếu vẫn muốn tải chi tiết từng course như trước, có thể giữ đoạn dưới:
-        // var allCourseIds = ExtractAllCourseIdsFromMyCourses(myCoursesJson);
-        // foreach (var courseId in allCourseIds) { ... GET /lms/courses/{id} ... }
     }
 
     // ---------- HTTP ----------
@@ -126,7 +122,7 @@ public class LmsExportMyCoursesDetails : MonoBehaviour
         return t;
     }
 
-    // ---------- Helpers: trích toàn bộ course._id từ /users/lms/courses ----------
+    // ---------- trích toàn bộ course._id từ /users/lms/courses ----------
     List<string> ExtractAllCourseIdsFromMyCourses(string json)
     {
         var ids = new List<string>();

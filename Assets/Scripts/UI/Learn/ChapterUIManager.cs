@@ -23,4 +23,9 @@ public class ChapterUIManager : MonoBehaviour
         currentChapter = chapter;
         currentChapter?.Highlight();
     }
+
+    public bool IsSelectChapter(ChapterUI chapterUI)
+    {
+        return currentChapter == chapterUI;
+    }
 }

@@ -5,7 +5,6 @@ using UnityEngine.UI;
 
 public class BookViewUI : MonoBehaviour
 {
-
     public Button enterCourseBtn;
     public Button buyCourseBtn;
     public Color leftColor;
@@ -13,10 +12,16 @@ public class BookViewUI : MonoBehaviour
     public TextMeshProUGUI priceText;
     public TextMeshProUGUI fullPriceText;
 
-    [ContextMenu("Refresh Color")]
+    private void Awake()
+    {
+        ShowEnterCourse();
+    }
+    
 
+    [ContextMenu("Refresh Color")]
     public void RefreshColor()
     {
+        if (!isActiveAndEnabled) return;
         StartCoroutine(DelayOneFrame());
     }
 
@@ -59,4 +64,15 @@ public class BookViewUI : MonoBehaviour
 
     }
 
+    public void ShowEnterCourse()
+    {
+        enterCourseBtn.gameObject.SetActive(true);
+        buyCourseBtn.gameObject.SetActive(false);
+    }
+
+    public void ShowBuyCourseButton()
+    {
+        enterCourseBtn.gameObject.SetActive(false);
+        buyCourseBtn.gameObject.SetActive(true);
+    }
 }

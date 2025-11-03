@@ -1,6 +1,8 @@
-﻿using DG.Tweening;
+﻿using System;
+using DG.Tweening;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class BookModel : MonoBehaviour
@@ -11,6 +13,8 @@ public class BookModel : MonoBehaviour
     private bool isTweenDone = false;
     private float speed = 1;
 
+    public Action OnPlayerClickBook;
+    
     private void Awake()
     {
         smoothCurve = AnimationUltis.CreateInOutBackCurve();
@@ -51,13 +55,14 @@ public class BookModel : MonoBehaviour
             Debug.LogError("Container is null");
             return;
         }
+
         isTweenDone = false;
         Debug.Log("On Mouse Enter");
         //container.DOKill();
         //container.DORotate(new Vector3(0, 360, 0), 2, RotateMode.FastBeyond360).SetEase(Ease.InOutBack);
         speed = 1;
         container.transform.DOKill();
-        container.transform.DOScale(Vector3.one * 1.1f, 1).SetEase(Ease.InSine);
+        container.transform.DOScale(Vector3.one * 1.1f, 0.5f).SetEase(Ease.InSine);
         StopAllCoroutines();
         StartCoroutine(StartRotate());
     }
@@ -70,7 +75,7 @@ public class BookModel : MonoBehaviour
             return;
         }
         container.transform.DOKill();
-        container.transform.DOScale(Vector3.one, 1).SetEase(Ease.OutSine);
+        container.transform.DOScale(Vector3.one, .6f).SetEase(Ease.OutSine);
 
         return;
         if (tween != null)
@@ -86,6 +91,11 @@ public class BookModel : MonoBehaviour
             
         });
         
+    }
+
+    private void OnMouseDown()
+    {
+        OnPlayerClickBook?.Invoke();
     }
 
     private void Update()
@@ -107,7 +117,7 @@ public class BookModel : MonoBehaviour
 
     private IEnumerator StartRotate()
     {
-        float duration = 1;
+        float duration = 0.8f;
         float elapsedTime = 0;
         while (true)
         {

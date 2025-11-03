@@ -10,7 +10,7 @@ public class ToggleBaseUI : MonoBehaviour
     public Action<State> OnValueChange;
     public UnityEvent OnToggleOn;
     public UnityEvent OnToggleOff;
-
+  
     private void OnValidate()
     {
         if(btn == null)
@@ -22,6 +22,12 @@ public class ToggleBaseUI : MonoBehaviour
     protected virtual void Awake()
     {
         btn = GetComponent<Button>();
+        btn.onClick.AddListener(OnClickButton);
+    }
+
+    private void OnDestroy()
+    {
+        btn.onClick.RemoveListener(OnClickButton);
     }
 
     public enum State
@@ -50,5 +56,10 @@ public class ToggleBaseUI : MonoBehaviour
         }
 
         ChangeState(currentState);
+    }
+
+    public virtual void OnClickButton()
+    {
+
     }
 }

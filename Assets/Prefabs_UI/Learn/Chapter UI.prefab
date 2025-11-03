@@ -72,15 +72,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
   m_Padding:
-    m_Left: 0
+    m_Left: 132
     m_Right: 0
-    m_Top: 11
+    m_Top: 8
     m_Bottom: 11
-  m_ChildAlignment: 4
+  m_ChildAlignment: 3
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 290, y: 30}
-  m_Spacing: {x: 0, y: 3}
+  m_CellSize: {x: 344.7, y: 46.41}
+  m_Spacing: {x: 0, y: 15}
   m_Constraint: 1
   m_ConstraintCount: 1
 --- !u!1 &8928962124120286802
@@ -143,6 +143,14 @@ MonoBehaviour:
   deActiveGroup: {fileID: 8294421692426951286}
   isOpen: 0
   lessonList: []
+  finishColor: {r: 0.9764706, g: 0.8745098, b: 0.6, a: 1}
+  unFinishColor: {r: 1, g: 1, b: 1, a: 1}
+  scrollActiveUnlock: {fileID: 21300000, guid: c8f4f419f55961a4e994a0db30abb859, type: 3}
+  scrollActiveLock: {fileID: 21300000, guid: ff81bb55d2805d247ba6f2abd701819a, type: 3}
+  scrollDeActiveUnlock: {fileID: 21300000, guid: c8f4f419f55961a4e994a0db30abb859, type: 3}
+  scrollDeActiveLock: {fileID: 21300000, guid: c37d93f4ccf644e43bdf65d0e93b4cb6, type: 3}
+  scrollActiveImg: {fileID: 581436985380987124}
+  scrollDeActiveImg: {fileID: 7909763238213117139}
 --- !u!114 &1288364123702094937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -203,11 +211,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 290
+      value: 344.7
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 30
+      value: 46.41
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_LocalPosition.x
@@ -239,11 +247,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 145
+      value: 304.35
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -26
+      value: -31.205
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -367,22 +375,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_fontSize
-      value: 25
-      objectReference: {fileID: 0}
-    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_fontSizeBase
-      value: 25
-      objectReference: {fileID: 0}
-    - target: {fileID: 7683876446002439676, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 3.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7708551473939114440, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -399,6 +391,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &581436985380987124 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6206850593489967902, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &777330665267505693 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6123530441254605303, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
@@ -431,6 +434,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 614124159074481035, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
   m_PrefabInstance: {fileID: 6787633141387115498}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7909763238213117139 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3744632730255548217, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &8294421692426951286 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3254186031631245724, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
@@ -513,11 +527,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 290
+      value: 344.7
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 30
+      value: 46.41
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_LocalPosition.x
@@ -549,11 +563,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 145
+      value: 304.35
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -59
+      value: -92.615005
       objectReference: {fileID: 0}
     - target: {fileID: 2761880096421992255, guid: 8f34e81ef99b8b14397af28eecde72c8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

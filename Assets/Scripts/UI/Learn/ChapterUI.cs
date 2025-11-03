@@ -1,64 +1,74 @@
-using NUnit.Framework;
-using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ChapterUI : MonoBehaviour
+public class ChapterUI : ChapterBaseUI
 {
-    [Header("References")]
-    public TextMeshProUGUI titleName;
-    public GameObject lessonContainer;
-    public Button toggleOpenBtn;
-    public Button toggleOffBtn;
+    [Header("References (chapter)")]
     public Button bannerBtn;
-    public GameObject activeGroup; 
-    public GameObject deActiveGroup; 
+
     [Header("Setting")]
-    [SerializeField] private bool isOpen = false;
+    [SerializeField] private bool isOpenSerialized; // preserved for inspector compatibility
 
     public List<LessonUI> lessonList = new();
 
+    public Color finishColor;
+    public Color unFinishColor;
 
-    private void Awake()
+    [Header("Sprite")]
+    public Sprite scrollActiveUnlock;
+    public Sprite scrollActiveLock;
+    public Sprite scrollDeActiveUnlock;
+    public Sprite scrollDeActiveLock;
+    public Image scrollActiveImg;
+    public Image scrollDeActiveImg;
+
+    protected override void Awake()
     {
-        toggleOpenBtn.onClick.AddListener(ToggleOn);
-        toggleOffBtn.onClick.AddListener(ToggleOff);
-        bannerBtn.onClick.AddListener(SelectThisChapter);
-
-        UnHighlight();
+        base.Awake();
+        if (bannerBtn != null)
+        {
+            bannerBtn.onClick.AddListener(SelectThisChapter);
+        }
+        ShowActiveUI(false);
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
-        toggleOpenBtn.onClick.RemoveListener(ToggleOn);
-        toggleOffBtn.onClick.RemoveListener(ToggleOff);
-        bannerBtn.onClick.RemoveListener(SelectThisChapter);
+        if (bannerBtn != null)
+        {
+            bannerBtn.onClick.RemoveListener(SelectThisChapter);
+        }
+        base.OnDestroy();
     }
 
     private void SelectThisChapter()
     {
         Debug.Log("On Select This Chapter");
+        if (ChapterUIManager.Instance.IsSelectChapter(this))
+        {
+            return;
+        }
         ChapterUIManager.Instance.Select(this);
     }
 
-    private void ToggleOn()
+    public override void ToggleOn()
     {
-        Debug.Log("Toggle on");
-        isOpen = true;
-        lessonContainer.gameObject.SetActive(isOpen);
-        toggleOpenBtn.gameObject.SetActive(false);
-        toggleOffBtn.gameObject.SetActive(true);
+        base.ToggleOn();
+        if (!ChapterUIManager.Instance.IsSelectChapter(this))
+        {
+            ChapterUIManager.Instance.Select(this);
+        }
+        ShowActiveUI(true);
+        lessonContainer.gameObject.SetActive(true);
+        
     }
 
-    private void ToggleOff()
+    public override void ToggleOff()
     {
-        Debug.Log("Toggle off");
-        isOpen = false;
-        lessonContainer.gameObject.SetActive(isOpen);
-        toggleOpenBtn.gameObject.SetActive(true);
-        toggleOffBtn.gameObject.SetActive(false);
+        base.ToggleOff();
+        ShowActiveUI(false);
+        lessonContainer.gameObject.SetActive(false);
     }
 
     public void SelectLesson(LessonUI lessonUI)
@@ -74,22 +84,30 @@ public class ChapterUI : MonoBehaviour
         lessonList.Add(lessonUI);
     }
 
+    [ContextMenu("Highlight")]
     public void Highlight()
     {
+        Debug.Log("Highlight");
         ToggleOn();
-        activeGroup.gameObject.SetActive(true);
-        deActiveGroup.gameObject.SetActive(false);
     }
 
+    [ContextMenu("UnHighlight")]
     public void UnHighlight()
     {
+        Debug.Log("UnHighlight");
         ToggleOff();
-        activeGroup.gameObject.SetActive(false);
-        deActiveGroup.gameObject.SetActive(true);
     }
-}
 
-public class QuestionUI : MonoBehaviour
-{
-
+    public void SetUnlock(bool unlock)
+    {
+        if (scrollActiveImg != null) scrollActiveImg.sprite = unlock ? scrollActiveUnlock : scrollActiveLock;
+        if (scrollDeActiveImg != null) scrollDeActiveImg.sprite = unlock ? scrollDeActiveUnlock : scrollDeActiveLock;
+        if (titleName != null) titleName.color = unlock ? finishColor : unFinishColor;
+    }
+    
+    [ContextMenu("SetUnlock UI")]
+    public void SetUnLockUI() => SetUnlock(true);
+    [ContextMenu("SetLock UI")]
+    public void SetLockUI() => SetUnlock(false);
+    
 }

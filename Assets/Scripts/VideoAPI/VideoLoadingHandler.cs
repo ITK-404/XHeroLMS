@@ -42,7 +42,7 @@ public class VideoLoadingHandler : MonoBehaviour
 
     void Start()
     {
-        // Nếu có clip/url sẵn từ Inspector → show ngay
+        // Nếu có clip/url sẵn từ Inspector -> show ngay
         if (_vp.clip != null || !string.IsNullOrEmpty(_vp.url))
         {
             _waitingFirstFrame = true;
@@ -94,7 +94,7 @@ public class VideoLoadingHandler : MonoBehaviour
     {
         if (string.IsNullOrEmpty(url))
         {
-            Debug.LogWarning("[VideoLoadingHandler] URL rỗng → không loading.");
+            Debug.LogWarning("[VideoLoadingHandler] URL rỗng -> không loading.");
             LoadingUI.Hide();
             return;
         }
@@ -173,4 +173,9 @@ public class VideoLoadingHandler : MonoBehaviour
         if (_vp.isPrepared && autoplay)
             _vp.Play();
     }
+}
+
+public class PreviewCou
+{
+    
 }

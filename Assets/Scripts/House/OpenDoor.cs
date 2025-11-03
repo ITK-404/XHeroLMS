@@ -2,13 +2,15 @@ using UnityEngine;
 
 public class OpenDoor : MonoBehaviour
 {
+    private static readonly int IsOpen = Animator.StringToHash("IsOpen");
     public Animator doorAnimator;
     private void OnTriggerEnter(Collider other)
     {
         if (IsPlayer(other))
         {
             // open
-            doorAnimator.SetBool("IsOpen", true);
+            Debug.Log("Door trigger enter",gameObject);
+            doorAnimator.SetBool(IsOpen, true);
         }
     }
 
@@ -17,7 +19,8 @@ public class OpenDoor : MonoBehaviour
         if (IsPlayer(other))
         {
             // close
-            doorAnimator.SetBool("IsOpen", false);
+            Debug.Log("Door trigger exit",gameObject);
+            doorAnimator.SetBool(IsOpen, false);
         }
     }
 
