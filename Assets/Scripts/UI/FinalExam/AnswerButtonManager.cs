@@ -6,6 +6,7 @@ public class AnswerButtonManager : MonoBehaviour
     [SerializeField] private int totalAnswer = 3;
     [SerializeField] private int maxAnswer = 1;
 
+    [SerializeField] private Transform spawnContainer;
     [SerializeField] private Transform container;
     [SerializeField] private AnswerButton answerButtonPrefab;
     private List<AnswerButton> answerButtonList = new();
@@ -33,10 +34,10 @@ public class AnswerButtonManager : MonoBehaviour
         ClearExitButtons();
 
         bool isMultipleChoice = maxAnswer > 1;
-        
+
         for (int i = 0; i < totalAnswer; i++)
         {
-            var btn = Instantiate(answerButtonPrefab, container);
+            var btn = Instantiate(answerButtonPrefab, spawnContainer);
             btn.OnSelectButton = SelectAnswer;
             btn.ActiveSelect(false);
 
@@ -52,7 +53,7 @@ public class AnswerButtonManager : MonoBehaviour
             }
         }
     }
-    
+
     public void SelectAnswer(AnswerButton answerButton)
     {
         if (answerStack.Contains(answerButton))
@@ -61,7 +62,7 @@ public class AnswerButtonManager : MonoBehaviour
             answerButton.ActiveSelect(false);
             return;
         }
-        
+
         if (answerStack.Count >= maxAnswer)
         {
             var oldest = answerStack[0];
@@ -83,4 +84,7 @@ public class AnswerButtonManager : MonoBehaviour
             Debug.Log("Answer Button: ", item.gameObject);
         }
     }
+
+    public void Show() => container.gameObject.SetActive(true);
+    public void Hide() => container.gameObject.SetActive(false);
 }
