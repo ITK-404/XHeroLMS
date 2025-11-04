@@ -1,4 +1,5 @@
 ﻿using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +14,8 @@ public class AnswerButton : MonoBehaviour
 
     [SerializeField] private Image backgroundImg;
     [SerializeField] private Image checkmarkImg;
-
+    [SerializeField] private Image selectImg;
+    [SerializeField] private TextMeshProUGUI answerTmp;
     public Toggle toggle;
     private bool value;
     public Action<AnswerButton> OnSelectButton;
@@ -45,6 +47,16 @@ public class AnswerButton : MonoBehaviour
     {
         backgroundImg.sprite = circle_checkmark;
         checkmarkImg.sprite = circle_none;
+    }
+
+    public void SetText(string answerText)
+    {
+        answerTmp.text = answerText;
+    }
+
+    public void ActiveSelect(bool isSelect)
+    {
+        selectImg.gameObject.SetActive(isSelect);
     }
 }
 

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 815392727638888132}
   - component: {fileID: 7299890464571027955}
   - component: {fileID: 8431802407652334487}
+  - component: {fileID: 951643014819248543}
   m_Layer: 5
   m_Name: Question - Exam UI
   m_TagString: Untagged
@@ -80,6 +81,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &951643014819248543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733002677267857832}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bd2c91440ac42c092b48d6d486ab668, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnswerButton
+  square_checkmark: {fileID: 21300000, guid: 19a25dfc3be885c42ae3f3a227e39450, type: 3}
+  square_none: {fileID: 21300000, guid: 88e5c71c80bb43545a3e2779a26f4a14, type: 3}
+  circle_checkmark: {fileID: 21300000, guid: 73ddc1e6d7b897d479be4c0ea77235de, type: 3}
+  circle_none: {fileID: 21300000, guid: dd3d43bcad2b48a4491e3ff6948e059a, type: 3}
+  backgroundImg: {fileID: 1490081941732306816}
+  checkmarkImg: {fileID: 3596457353839367375}
+  selectImg: {fileID: 7498118851278573353}
+  answerTmp: {fileID: 6319070283771525961}
+  toggle: {fileID: 2621585773250977454}
 --- !u!1 &1746252034968870563
 GameObject:
   m_ObjectHideFlags: 0
@@ -296,7 +318,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 0.81960785, b: 0.32156864, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
