@@ -10,7 +10,7 @@ public class AnswerButtonManager : MonoBehaviour
     [SerializeField] private AnswerButton answerButtonPrefab;
     private List<AnswerButton> answerButtonList = new();
 
-    private Stack<AnswerButton> answerStack = new();
+    private List<AnswerButton> answerStack = new();
 
     private void Start()
     {
@@ -33,6 +33,7 @@ public class AnswerButtonManager : MonoBehaviour
         ClearExitButtons();
 
         bool isMultipleChoice = maxAnswer > 1;
+        
         for (int i = 0; i < totalAnswer; i++)
         {
             var btn = Instantiate(answerButtonPrefab, container);
@@ -51,21 +52,27 @@ public class AnswerButtonManager : MonoBehaviour
             }
         }
     }
-
+    
     public void SelectAnswer(AnswerButton answerButton)
     {
+        if (answerStack.Contains(answerButton))
+        {
+            answerStack.Remove(answerButton);
+            answerButton.ActiveSelect(false);
+            return;
+        }
         
         if (answerStack.Count >= maxAnswer)
         {
-            Debug.Log("Đã vượt quá giới hạn và tắt đi button ở cuối");
-            var btn = answerStack.Pop();
-            btn.ActiveSelect(false);
+            var oldest = answerStack[0];
+            answerStack.RemoveAt(0);
+            oldest.ActiveSelect(false);
         }
 
         Debug.Log("Thêm button mới vào và kích hoạt");
 
         answerButton.ActiveSelect(true);
-        answerStack.Push(answerButton);
+        answerStack.Add(answerButton);
     }
 
     [ContextMenu("Get All Selected Answer")]
