@@ -16,37 +16,38 @@ public class AnswerButton : MonoBehaviour
     [SerializeField] private Image checkmarkImg;
     [SerializeField] private Image selectImg;
     [SerializeField] private TextMeshProUGUI answerTmp;
+
+    [SerializeField] private Button clickBtn;
     public Toggle toggle;
-    private bool value;
+    public bool value;
     public Action<AnswerButton> OnSelectButton;
     private void Awake()
     {
-        toggle.onValueChanged.AddListener(ChangedValue);
+        clickBtn.onClick.AddListener(ClickSelectBtn);
     }
 
     private void OnDestroy()
     {
-        toggle.onValueChanged.RemoveListener(ChangedValue);
+        clickBtn.onClick.RemoveListener(ClickSelectBtn);
     }
 
-    private void ChangedValue(bool value)
+    private void ClickSelectBtn()
     {
-        this.value = value;
         OnSelectButton?.Invoke(this);
     }
 
     [ContextMenu("Active Multiple Choice")]
     public void ActiveMultipleChoice()
     {
-        backgroundImg.sprite = square_checkmark;
-        checkmarkImg.sprite = square_none;
+        checkmarkImg.sprite = square_checkmark;
+        backgroundImg.sprite = square_none;
     }
 
     [ContextMenu("Active Single Choice")]
     public void ActiveSingleChoice()
     {
-        backgroundImg.sprite = circle_checkmark;
-        checkmarkImg.sprite = circle_none;
+        checkmarkImg.sprite = circle_checkmark;
+        backgroundImg.sprite = circle_none;
     }
 
     public void SetText(string answerText)
@@ -56,11 +57,8 @@ public class AnswerButton : MonoBehaviour
 
     public void ActiveSelect(bool isSelect)
     {
+        value = isSelect;
         selectImg.gameObject.SetActive(isSelect);
+        toggle.isOn = isSelect;
     }
-}
-
-public class AnswerButtonManager : MonoBehaviour
-{
-    
 }
