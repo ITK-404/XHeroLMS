@@ -60,7 +60,7 @@ public class LoadRoomTrigger : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
-        if (!TokenStore.IsAuthenticated)
+        if (!TokenStore.IsAuthenticated && savePlayerPosition)
         {
             return;
         }
