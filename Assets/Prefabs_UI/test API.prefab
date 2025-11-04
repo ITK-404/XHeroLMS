@@ -10,6 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 2763291023842120883}
   - component: {fileID: 1295770143547479424}
+  - component: {fileID: 3194382494258339881}
+  - component: {fileID: 112835109297695455}
+  - component: {fileID: 1617684858498137793}
   m_Layer: 0
   m_Name: test API
   m_TagString: Untagged
@@ -39,21 +42,82 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2923626319511774526}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65530dbe9c03f254eb911cc5f3097c39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LmsApiTester
   baseUrl: https://apis-dev.xheroapp.com
+  overrideAccessToken: 
+  useTokenFromStore: 1
   skip: 0
   limit: 10
   keyword: 
-  tag: 
   category: 
-  isHasExam: 0
   sortBy: 
   order: 
+  prettyPrintJson: 1
+--- !u!114 &3194382494258339881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923626319511774526}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b102360cbe6fa464d9e407d311c483ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LmsExportAllCourses
+  baseUrl: https://apis-dev.xheroapp.com
   overrideAccessToken: 
-  tryAutoPlayVideo: 1
-  targetVideoPlayer: {fileID: 0}
-  saveJsonToDisk: 1
+  useTokenFromStore: 1
+  startButton: {fileID: 0}
+  skip: 0
+  limit: 100
+  keyword: 
+  category: 
+  tag: 
+  sortBy: 
+  order: 
+  prettyPrintJson: 1
+  outputFileName: courses_market.json
+--- !u!114 &112835109297695455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923626319511774526}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11e93b387b5742e48a28a0321a8794eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LmsExportMyCoursesDetails
+  baseUrl: https://apis-dev.xheroapp.com
+  overrideAccessToken: 
+  useTokenFromStore: 1
+  startButton: {fileID: 0}
+  skip: 0
+  limit: 200
+  prettyPrintJson: 1
+  alsoSaveMyListRaw: 1
+  minimizedOutputFile: courses_my_min.json
+--- !u!114 &1617684858498137793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923626319511774526}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fcd4c161d08e634080b3cd54fee47fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExamQuickTester
+  baseUrl: https://apis-dev.xheroapp.com
+  courseId: PUT_COURSE_ID_HERE
+  showCorrectAnswer: 0
+  useTokenFromStore: 1
+  tokenOverride: 
+  autoRunOnStart: 1
