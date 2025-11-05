@@ -84,9 +84,12 @@ public class CourseListView : MonoBehaviour
                     // Click phát video
 
                     lessonUI.linkVideo2 = link2;
+                    lessonUI.courseID = lesson._id;
+                    lessonUI.type = lesson.type;
+                    
                     lessonUI.OnClickPlayVideo = PlayVideo;
                     lessonUI.chapterUI = headerChapter;
-                    
+                    lessonUI.percent = lesson.completionCondition.percent;
                     headerChapter.AddToList(lessonUI);
                     
                     Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
