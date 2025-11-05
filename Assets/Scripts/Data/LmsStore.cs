@@ -118,7 +118,7 @@ public class LmsStore : MonoBehaviour
     public IReadOnlyCollection<string> GetMyCourseIds() => _myCourseIds;
     public IReadOnlyList<LmsCourseUser> GetMyCourses() => Data.userCourses;
 
-    /// <summary>Trả về examId (có thể = "" nếu không có), ưu tiên Private → Market → MyCourses.</summary>
+    /// <summary>Trả về examId (có thể = "" nếu không có), ưu tiên Private -> Market -> MyCourses.</summary>
     public string GetFinalExamId(string courseId)
     {
         if (string.IsNullOrEmpty(courseId)) return "";

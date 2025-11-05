@@ -1,8 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -11,18 +10,13 @@ public class ExamAutoFindAndDump : MonoBehaviour
     [Header("API")]
     public string baseUrl = "https://apis-dev.xheroapp.com";
 
-    [Header("Options")]
-    public bool showCorrectAnswer = false;
-
-    [Tooltip("Ghi token vào JSON debug (bật theo yêu cầu test).")]
-    public bool includeTokenInDump = true;
-
-    [Tooltip("Tự copy 'Bearer <token>' vào clipboard sau khi lấy token.")]
-    public bool copyBearerToClipboard = true;
-
     [Header("Auth")]
     public bool useTokenFromStore = true;
-    [TextArea(1,4)] public string tokenOverride = "";
+    [TextArea(1,3)] public string tokenOverride = "";
+
+    [Header("Output")]
+    public bool prettyPrint = true;
+    public bool openFolderAfterSave = true;
 
     [Header("Run")]
     public bool autoRunOnStart = true;
@@ -37,227 +31,170 @@ public class ExamAutoFindAndDump : MonoBehaviour
 
     IEnumerator Run()
     {
-        // --- TOKEN ---
-        string token = tokenOverride;
-        if (useTokenFromStore)
-        {
-            try
-            {
-                var p = typeof(TokenStore).GetProperty("AccessToken");
-                if (p != null) token = (string)p.GetValue(null, null);
-            } catch {}
-        }
+        // 0) Token
+        string token = GetToken();
         if (string.IsNullOrEmpty(token))
         {
-            Debug.LogError("[ExamAuto] Missing token. Login or paste tokenOverride.");
+            Debug.LogError("[ExamAuto] Missing token. Hãy login hoặc dán tokenOverride.");
             yield break;
         }
-
-        string api = baseUrl.TrimEnd('/');
         string bearer = "Bearer " + token;
+        string api = baseUrl.TrimEnd('/');
 
-        // Log chuỗi để dùng ngay trên Swagger / Postman
-        Debug.Log("[ExamAuto] === Authorization header for Swagger / Postman ===");
-        Debug.Log("Header name: Authorization");
-        Debug.Log("Header value: " + bearer); // <- dán vào ô 'authorization' của Swagger
-        Debug.Log("[ExamAuto] ================================================");
+        // 1) Warmup LmsStore -> tải MyCourses + Private + Market (nếu cần)
+        yield return LmsStore.Instance.WarmupAll(0, 300, "", "", "", "");
 
-        // Copy clipboard (tuỳ chọn)
-        if (copyBearerToClipboard)
-        {
-            GUIUtility.systemCopyBuffer = bearer;
-            Debug.Log("[ExamAuto] Copied to clipboard: " + bearer);
-        }
-
-        // --- 1) GET my-courses ---
-        string myUrl = $"{api}/users/lms/courses?skip=0&limit=500";
-        string myBody = null; long myCode = 0;
-        yield return HttpGet(myUrl, bearer, (body, code) => { myBody = body; myCode = code; });
-        if (myCode >= 400 || string.IsNullOrEmpty(myBody))
-        {
-            Debug.LogError($"[ExamAuto] Cannot load my-courses. HTTP {myCode}\n{myBody}");
-            yield break;
-        }
-
-        // Trích danh sách courseId
-        var courseIds = ExtractCourseIds(myBody);
-        if (courseIds.Count == 0)
-        {
-            Debug.LogError("[ExamAuto] No course found in my-courses.");
-            yield break;
-        }
-
-        // Dump JSON: token + courseIds (+ raw my-courses)
-        var dumpJson = BuildDumpJson(
-            includeTokenInDump ? token : null,
-            includeTokenInDump ? bearer : null,
-            courseIds,
-            api
-        );
-        Debug.Log("[ExamAuto] DEBUG DUMP JSON:\n" + dumpJson);
-        var dumpPath = System.IO.Path.Combine(Application.persistentDataPath, "exam_debug_info.json");
-        System.IO.File.WriteAllText(dumpPath, dumpJson, Encoding.UTF8);
-        Debug.Log("[ExamAuto] Saved dump: " + dumpPath);
-
-        var rawPath = System.IO.Path.Combine(Application.persistentDataPath, "my_courses_raw.json");
-        System.IO.File.WriteAllText(rawPath, myBody, Encoding.UTF8);
-        Debug.Log("[ExamAuto] Saved my-courses raw: " + rawPath);
-
-        // --- 2) Quét từng course để cố lấy đề ---
-        // 2a) Ưu tiên course có finalExam._id trong /lms/courses/{id}
+        // 2) Quét MyCourses để tìm course có finalExam (LmsStore đã normalize)
         string pickedCourseId = null;
-        string pickedExamId = null;
+        string pickedExamId   = null;
+        string pickedTitle    = null;
 
-        foreach (var cid in courseIds)
+        var myCourses = LmsStore.Instance.GetMyCourses();
+        if (myCourses != null)
         {
-            string detailUrl = $"{api}/lms/courses/{cid}";
-            string detailBody = null; long detailCode = 0;
-            yield return HttpGet(detailUrl, bearer, (body, code) => { detailBody = body; detailCode = code; });
-
-            if (detailCode < 400 && !string.IsNullOrEmpty(detailBody))
+            foreach (var uc in myCourses)
             {
-                var m = Regex.Match(detailBody, "\"finalExam\"\\s*:\\s*\\{[^}]*?\"_id\"\\s*:\\s*\"([^\"]+)\"", RegexOptions.Singleline);
-                if (m.Success)
+                var c = uc?.course;
+                if (c == null || string.IsNullOrEmpty(c._id)) continue;
+
+                // finalExam đã được LmsStore chuẩn hoá từ settings.finalExam
+                string fe = LmsStore.Instance.GetFinalExamId(c._id);
+                if (!string.IsNullOrEmpty(fe))
                 {
-                    pickedCourseId = cid;
-                    pickedExamId = m.Groups[1].Value;
-                    Debug.Log($"[ExamAuto] Found finalExam: course={pickedCourseId}, examId={pickedExamId}");
+                    pickedCourseId = c._id;
+                    pickedExamId   = fe;
+                    pickedTitle    = string.IsNullOrEmpty(c.title) ? c._id : c.title;
                     break;
                 }
             }
         }
 
-        // 2b) Nếu có examId → mở phiên thi (không bắt buộc thành công)
-        if (!string.IsNullOrEmpty(pickedCourseId) && !string.IsNullOrEmpty(pickedExamId))
+        if (string.IsNullOrEmpty(pickedCourseId) || string.IsNullOrEmpty(pickedExamId))
         {
-            string openUrl = $"{api}/lms/exam/{pickedExamId}/course/{pickedCourseId}";
-            string openBody = null; long openCode = 0;
-            yield return HttpGet(openUrl, bearer, (body, code) => { openBody = body; openCode = code; });
-            if (openCode >= 400) Debug.LogWarning($"[ExamAuto] Open session HTTP {openCode}\n{openBody}");
-        }
-
-        // 2c) Lấy đề: nếu đã pick được course có exam → thử result-exam trước với course đó
-        // Nếu không thành công, fallback: thử gọi thẳng /lms/result-exam cho TỪNG course trong list.
-        if (!string.IsNullOrEmpty(pickedCourseId))
-        {
-            bool ok = false;
-            yield return TryFetchQuestions(api, bearer, pickedCourseId, showCorrectAnswer, success => ok = success);
-            if (ok) yield break; // đã lấy được đề và đã lưu file
-        }
-
-        // 2d) Fallback mạnh tay: thử lần lượt tất cả course bằng /lms/result-exam/{courseId}
-        foreach (var cid in courseIds)
-        {
-            bool ok = false;
-            yield return TryFetchQuestions(api, bearer, cid, showCorrectAnswer, success => ok = success);
-            if (ok) yield break;
-        }
-
-        Debug.LogError("[ExamAuto] No exam questions fetched. Likely no course is configured for exams or backend blocks start.");
-    }
-
-    // ----- Try fetch questions for a courseId -----
-    IEnumerator TryFetchQuestions(string api, string bearer, string courseId, bool showCorrect, Action<bool> done)
-    {
-        string resultUrl = $"{api}/lms/result-exam/{courseId}";
-        if (showCorrect) resultUrl += "?mode=show_correct_answer";
-
-        string qBody = null; long qCode = 0;
-        yield return HttpGet(resultUrl, bearer, (body, code) => { qBody = body; qCode = code; });
-
-        Debug.Log($"[ExamAuto] result-exam ({courseId}) HTTP {qCode}");
-        if (qCode >= 400 || string.IsNullOrEmpty(qBody))
-        {
-            done?.Invoke(false);
+            Debug.LogError("[ExamAuto] Không tìm thấy khóa học nào trong MyCourses có finalExam. " +
+                           "Hãy kiểm tra lại dữ liệu BE (settings.finalExam) hoặc enroll vào một khóa có exam.");
             yield break;
         }
 
-        // Đã có JSON (tùy BE, có thể là questions). Lưu lại cho bạn kiểm tra.
-        Debug.Log("[ExamAuto] QUESTIONS(?) JSON:\n" + qBody);
-        var path = System.IO.Path.Combine(Application.persistentDataPath, $"exam_{courseId}.json");
-        try { System.IO.File.WriteAllText(path, qBody, Encoding.UTF8); Debug.Log("[ExamAuto] Saved: " + path); }
-        catch (Exception ex) { Debug.LogWarning("[ExamAuto] Save failed: " + ex.Message); }
+        Debug.Log($"[ExamAuto] Picked course: {pickedTitle} ({pickedCourseId}), examId={pickedExamId}");
 
-        done?.Invoke(true);
+        // 3) Gọi đúng API: /lms/exam/{examId}/course/{courseId}
+        string url = $"{api}/lms/exam/{pickedExamId}/course/{pickedCourseId}";
+        string body = null; long code = 0;
+        yield return HttpGet(url, bearer, (b, c) => { body = b; code = c; });
+
+        if (code >= 400 || string.IsNullOrEmpty(body))
+        {
+            Debug.LogError($"[ExamAuto] HTTP {code}\n{body}");
+            yield break;
+        }
+
+        // 4) Dump full JSON
+        var dir = Application.persistentDataPath;
+        var fullPath = Path.Combine(dir, $"exam_{pickedCourseId}_{pickedExamId}.json");
+        var output = prettyPrint ? TryPretty(body) : body;
+        try { File.WriteAllText(fullPath, output, Encoding.UTF8); } catch (Exception ex) { Debug.LogWarning(ex.Message); }
+        Debug.Log($"[ExamAuto] Saved full JSON -> {fullPath}");
+
+        // 5) Tách questions (nếu có)
+        var q = ExtractArray(body, "questions");
+        if (!string.IsNullOrEmpty(q))
+        {
+            var qPath = Path.Combine(dir, $"exam_{pickedCourseId}_{pickedExamId}_questions.json");
+            var qJson = prettyPrint ? TryPretty("{\"questions\":" + q + "}") : "{\"questions\":" + q + "}";
+            try { File.WriteAllText(qPath, qJson, Encoding.UTF8); } catch (Exception ex) { Debug.LogWarning(ex.Message); }
+            Debug.Log($"[ExamAuto] Saved questions -> {qPath}");
+        }
+        else
+        {
+            Debug.Log("[ExamAuto] Response không có field 'questions'. Xem file full JSON.");
+        }
+
+        if (openFolderAfterSave)
+        {
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+            System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + fullPath.Replace('/', '\\') + "\"");
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+            System.Diagnostics.Process.Start("open", "-R \"" + fullPath + "\"");
+#else
+            Debug.Log("[ExamAuto] Output folder: " + dir);
+#endif
+        }
     }
 
-    // ----- HTTP helper -----
-    IEnumerator HttpGet(string url, string bearerHeader, Action<string,long> onDone)
+    // ---------- Helpers ----------
+    string GetToken()
+    {
+        if (useTokenFromStore && TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken))
+            return TokenStore.AccessToken;
+        return tokenOverride?.Trim();
+    }
+
+    IEnumerator HttpGet(string url, string bearer, Action<string,long> done)
     {
         using (var req = UnityWebRequest.Get(url))
         {
-            // CHỈ cần Authorization: Bearer <token>
-            req.SetRequestHeader("Authorization", bearerHeader);
+            // Một số API chấp nhận cả 'authorization' lẫn 'Authorization'
+            req.SetRequestHeader("authorization", TokenStore.AccessToken ?? "");
+            req.SetRequestHeader("Authorization", bearer);
             req.SetRequestHeader("Accept", "application/json");
+
+            Debug.Log("[HTTP GET] " + url);
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-            bool error = req.result == UnityWebRequest.Result.ConnectionError ||
-                         req.result == UnityWebRequest.Result.ProtocolError;
+            bool error = req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError;
 #else
             bool error = req.isNetworkError || req.isHttpError;
 #endif
-            string body = req.downloadHandler.text ?? "";
-            long code = req.responseCode;
+            var body = req.downloadHandler.text ?? "";
+            var code = req.responseCode;
             if (error && string.IsNullOrEmpty(body)) body = req.error ?? "(network/protocol error)";
-            onDone?.Invoke(body, code);
+            done?.Invoke(body, code);
         }
     }
 
-    // ----- Extract courseIds from /users/lms/courses -----
-    List<string> ExtractCourseIds(string json)
+    // Cắt mảng JSON theo tên field (đủ dùng để debug)
+    string ExtractArray(string raw, string field)
     {
-        var ids = new List<string>();
-        // tìm "course": { "_id": "<id>" }
-        var itemRegex = new Regex("\"course\"\\s*:\\s*\\{(.*?)\\}", RegexOptions.Singleline);
-        foreach (Match m in itemRegex.Matches(json))
+        if (string.IsNullOrEmpty(raw)) return null;
+        var key = $"\"{field}\"";
+        int i = raw.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+        if (i < 0) return null;
+        int s = raw.IndexOf('[', i); if (s < 0) return null;
+        int depth = 0;
+        for (int p = s; p < raw.Length; p++)
         {
-            string obj = "{" + m.Groups[1].Value + "}";
-            var idMatch = Regex.Match(obj, "\"_id\"\\s*:\\s*\"([^\"]+)\"");
-            if (idMatch.Success)
+            if (raw[p] == '[') depth++;
+            else if (raw[p] == ']')
             {
-                string id = idMatch.Groups[1].Value;
-                if (!string.IsNullOrEmpty(id)) ids.Add(id);
+                depth--;
+                if (depth == 0) return raw.Substring(s, p - s + 1);
             }
         }
-        return ids;
+        return null;
     }
 
-    // ----- Build simple JSON dump (token + bearer + courseIds + curl) -----
-    string BuildDumpJson(string accessToken, string bearerHeader, List<string> courseIds, string api)
+    string TryPretty(string raw)
     {
-        // lệnh curl mẫu (thay <courseId> để test)
-        string curlExample = $"curl -X GET \"{api}/lms/result-exam/<courseId>\" -H \"Authorization: {Escape(bearerHeader ?? "Bearer <ACCESS_TOKEN>")}\" -H \"Accept: application/json\"";
-
-        var sb = new StringBuilder();
-        sb.Append("{");
-
-        if (!string.IsNullOrEmpty(accessToken))
+        try
         {
-            sb.Append("\"accessToken\":\"").Append(Escape(accessToken)).Append("\",");
+            var sb = new StringBuilder();
+            int indent = 0; bool str = false; char prev = '\0';
+            foreach (var ch in raw)
+            {
+                if (ch == '"' && prev != '\\') str = !str;
+                if (!str)
+                {
+                    if (ch == '{' || ch == '[') { sb.Append(ch).Append('\n'); indent++; sb.Append(new string(' ', indent * 2)); prev = ch; continue; }
+                    if (ch == '}' || ch == ']') { sb.Append('\n'); indent = Mathf.Max(0, indent - 1); sb.Append(new string(' ', indent * 2)).Append(ch); prev = ch; continue; }
+                    if (ch == ',') { sb.Append(ch).Append('\n').Append(new string(' ', indent * 2)); prev = ch; continue; }
+                    if (ch == ':') { sb.Append(": "); prev = ch; continue; }
+                }
+                sb.Append(ch); prev = ch;
+            }
+            return sb.ToString();
         }
-        if (!string.IsNullOrEmpty(bearerHeader))
-        {
-            sb.Append("\"authorizationHeader\":\"").Append(Escape(bearerHeader)).Append("\",");
-        }
-
-        sb.Append("\"courseIds\":[");
-        for (int i = 0; i < courseIds.Count; i++)
-        {
-            if (i > 0) sb.Append(",");
-            sb.Append("\"").Append(Escape(courseIds[i])).Append("\"");
-        }
-        sb.Append("],");
-
-        sb.Append("\"curlExample\":\"").Append(Escape(curlExample)).Append("\"");
-
-        sb.Append("}");
-        return sb.ToString();
-    }
-
-    string Escape(string s)
-    {
-        if (string.IsNullOrEmpty(s)) return "";
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        catch { return raw; }
     }
 }
