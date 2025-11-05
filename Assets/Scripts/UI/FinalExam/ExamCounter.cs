@@ -23,6 +23,7 @@ public class ExamCounter : MonoBehaviour
 
     public void StartCounter()
     {
+        return;
         StopCoroutine(Counter());
         StartCoroutine(Counter());
     }
