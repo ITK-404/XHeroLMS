@@ -157,15 +157,14 @@ public class LmsApiMinimalExporter : MonoBehaviour
     string BuildMarketUrl()
     {
         var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
-        if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
-        if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
-        if (!string.IsNullOrEmpty(tag))      sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
+        if (!string.IsNullOrEmpty(keyword)) sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
+        if (!string.IsNullOrEmpty(sortBy)) sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
+        if (!string.IsNullOrEmpty(order)) sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
+        if (!string.IsNullOrEmpty(tag)) sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
     }
-
-    // ---------- Helpers: parsing tối giản ----------
+    
     string ExtractFirstId(string json)
     {
         if (string.IsNullOrEmpty(json)) return null;

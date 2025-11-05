@@ -46,8 +46,8 @@ public class ExamAutoFindAndDump : MonoBehaviour
 
         // 2) Quét MyCourses để tìm course có finalExam (LmsStore đã normalize)
         string pickedCourseId = null;
-        string pickedExamId   = null;
-        string pickedTitle    = null;
+        string pickedExamId = null;
+        string pickedTitle = null;
 
         var myCourses = LmsStore.Instance.GetMyCourses();
         if (myCourses != null)
@@ -62,8 +62,8 @@ public class ExamAutoFindAndDump : MonoBehaviour
                 if (!string.IsNullOrEmpty(fe))
                 {
                     pickedCourseId = c._id;
-                    pickedExamId   = fe;
-                    pickedTitle    = string.IsNullOrEmpty(c.title) ? c._id : c.title;
+                    pickedExamId = fe;
+                    pickedTitle = string.IsNullOrEmpty(c.title) ? c._id : c.title;
                     break;
                 }
             }
@@ -121,8 +121,7 @@ public class ExamAutoFindAndDump : MonoBehaviour
 #endif
         }
     }
-
-    // ---------- Helpers ----------
+    
     string GetToken()
     {
         if (useTokenFromStore && TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken))

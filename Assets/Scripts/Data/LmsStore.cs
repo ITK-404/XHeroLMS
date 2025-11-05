@@ -478,7 +478,7 @@ public class LmsStore : MonoBehaviour
         return (NowUnix - fetchedAtUnix) > ttlSeconds;
     }
 
-    // JsonUtility helpers
+    // JsonUtility
     [Serializable]
     class ListWrapper<T> { public List<T> items; }
 
@@ -497,7 +497,7 @@ public class LmsStore : MonoBehaviour
         catch { return "{\"items\":[]}"; }
     }
 
-    // ==== Normalize helpers (finalExam luôn non-null) ====
+    // ==== Normalize (finalExam luôn non-null) ====
     void NormalizeFinalExam(LmsCourse c)
     {
         if (c == null) return;

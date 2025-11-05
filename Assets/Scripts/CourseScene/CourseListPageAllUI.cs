@@ -571,7 +571,7 @@ public bool defaultOpenBasic = true;
         return list.Count > 0 ? list : null;
     }
 
-    // ================== GROUP FILTER HELPERS ==================
+    // ================== GROUP FILTER ==================
     bool MatchesGroup(CourseData c, string desired)
     {
         if (string.IsNullOrEmpty(desired) || c == null) return true;

@@ -226,7 +226,7 @@ public class ForgotController : MonoBehaviour
         if (btnEnter) btnEnter.interactable = true;
     }
 
-    // ======= Validators & Helpers =======
+    // ======= Validators =======
     // public static bool IsValidPhone(string phoneDigits) => Regex.IsMatch(phoneDigits ?? "", @"^(0?\d{9,10})$");
     public static bool IsValidPhone(string phoneDigits)
     {
