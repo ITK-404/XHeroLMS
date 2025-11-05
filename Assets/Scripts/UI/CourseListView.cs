@@ -16,7 +16,7 @@ public class CourseListView : MonoBehaviour
     public float verticalSpacing = 6f;
 
     public SceneLessonUI sceneLessonUI;
-
+    public string courseID;
     private void Awake()
     {
         sceneLessonUI.OnLoadCourseDone += BuildListUI;
@@ -39,7 +39,7 @@ public class CourseListView : MonoBehaviour
         //headerCourse.transform.SetParent(content, false);
         //EnsureItemLayout((RectTransform)headerCourse.transform);
         //SetLabel(headerCourse, "Chapter", _courseTitle);
-
+        courseID = p._id;
         // ===== Với mỗi CHAPTER: tạo header chương + các item bài =====
         if (p.chapters != null)
         {
@@ -57,6 +57,7 @@ public class CourseListView : MonoBehaviour
                     //EnsureItemLayout((RectTransform)headerChapter.transform);
                     //SetLabel(headerChapter, "Chapter", chapTitle);
                     headerChapter.titleName.text = $"{chapTitle}";
+                    headerChapter.chapterID = ch._id;
                     // headerChapter.SetUnlock();
                 }
                 ChapterUIManager.Instance.AddToList(headerChapter);
@@ -84,7 +85,7 @@ public class CourseListView : MonoBehaviour
                     // Click phát video
 
                     lessonUI.linkVideo2 = link2;
-                    lessonUI.courseID = lesson._id;
+                    lessonUI.lessonID = lesson._id;
                     lessonUI.type = lesson.type;
                     
                     lessonUI.OnClickPlayVideo = PlayVideo;
