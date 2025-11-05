@@ -19,7 +19,7 @@ public class LessonUI : MonoBehaviour
     public Sprite onDeActiveIcon;
 
     [Header("Data")]
-    public string courseID;
+    public string lessonID;
     public string linkVideo2;
     public string type;
     public bool isSelect = false;

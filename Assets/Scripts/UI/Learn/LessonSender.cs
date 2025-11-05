@@ -19,7 +19,7 @@ public class LessonSender : MonoBehaviour
     [ContextMenu("Test item")]
     private void Test()
     {
-        StartCoroutine(PostResultLesson(lessonUI.courseID));
+        StartCoroutine(PostResultLesson(lessonUI.lessonID));
     }
     public IEnumerator PostResultLesson(string courseId)
     {
