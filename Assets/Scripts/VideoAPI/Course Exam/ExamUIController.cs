@@ -11,38 +11,38 @@ using UnityEngine.UI;
 
 public class ExamUIController : MonoBehaviour
 {
-    [Header("API Source (auto)")]
-    //Tự build URL từ LmsStore.baseUrl + pathTemplate + (examId, courseId).
-    public bool autoBuildUrl = true;
+    [Header("Routing / Strict Mode")]
+    // Bật chế độ CHỈ NHẬN ID từ PlayerPrefs và/hoặc override; KHÔNG fallback sang LmsStore
+    public bool strictIdsFromPlayerPrefs = true;
 
-    //Template URL path. {0} = examId, {1} = courseId (nếu có).
-    public string pathTemplate = "/lms/exam/{0}/course/{1}";
+    // Cho phép override cứng trên Inspector (ưu tiên cao nhất)
+    public string overrideExamId = "";
+    public string overrideCourseId = "";
 
-    //ExamId đọc từ PlayerPrefs nếu không tìm được qua LmsStore và overrideExamId rỗng.
-    public string examIdPrefsKey = "EXAM_CURRENT_ID";
-
-    //CourseId đọc từ PlayerPrefs khi không tìm được qua LmsStore và override rỗng.
+    [Header("PlayerPrefs Keys (phải trùng với nơi bạn lưu ở CourseListView)")]
+    public string examIdPrefsKey   = "EXAM_CURRENT_ID";
     public string courseIdPrefsKey = "EXAM_CURRENT_COURSE_ID";
 
-    //Điền nếu muốn ghi đè examId (ưu tiên cao nhất).
-    public string overrideExamId = "";
+    [Header("API Source")]
+    // Tự build URL từ baseUrl + pathTemplate; KHÔNG dùng nếu bạn set apiUrl thủ công
+    public bool autoBuildUrl = true;
 
-    [Header("API Fallback (manual)")]
-    //Nếu tắt autoBuildUrl, dùng URL này để GET trực tiếp.
+    // {0} = examId, {1} = courseId (nếu endpoint cần)
+    public string pathTemplate = "/lms/exam/{0}/course/{1}";
+
+    // Nếu tắt autoBuildUrl, dùng URL này để GET trực tiếp
     public string apiUrl = "";
 
-    //Tự lấy Bearer token từ TokenStore.AccessToken; có thể ghi đè bằng trường dưới.
+    [Header("Auth")]
     public bool useTokenFromStore = true;
-
-    //Để trống nếu dùng TokenStore.AccessToken.
     public string overrideAccessToken = "";
 
     [Header("Where to spawn")]
-    public Transform content;                    // nơi spawn câu hỏi + đáp án
+    public Transform content;
 
     [Header("Prefabs")]
-    public TMP_Text prefabCauHoi;                // prefab TMP_Text
-    public AnswerButton prefabCauTraLoi;         // prefab AnswerButton của bạn
+    public TMP_Text prefabCauHoi;
+    public AnswerButton prefabCauTraLoi;
 
     [Header("Buttons & Timer")]
     public Button btnBack;
@@ -52,16 +52,16 @@ public class ExamUIController : MonoBehaviour
 
     [Header("Options")]
     public bool autoStart = true;
-    public string timeFormat = "{0:00}:{1:00}";  // mm:ss
-    public float requestTimeout = 15f;           // giây
+    public string timeFormat = "{0:00}:{1:00}";
+    public float requestTimeout = 15f;
 
-    [Header("UI Labels")]
-    public TMP_Text textQuestionCounter;   // "01/30"
-    public Button   btnBatDau;             // nút Bắt đầu thi
-    public TMP_Text textExamTitle;         // tiêu đề bài thi
-    public TMP_Text textTotalQuestions;    // "Số câu hỏi: 30"
-    public TMP_Text textTotalDuration;     // "Thời gian: 30:00"
-    public TMP_Text textPassNeed;          // "Cần đạt: 24/30 (80%)"
+    [Header("Header UI")]
+    public TMP_Text textQuestionCounter; // "01/30"
+    public Button   btnBatDau;
+    public TMP_Text textExamTitle;
+    public TMP_Text textTotalQuestions;
+    public TMP_Text textTotalDuration;
+    public TMP_Text textPassNeed;
 
     [Header("Debug")]
     public bool debugVerbose = true;
@@ -75,11 +75,8 @@ public class ExamUIController : MonoBehaviour
     private readonly Dictionary<string, HashSet<int>> selectedMap = new();
     private readonly List<AnswerButton> spawnedOptions = new();
 
-    // Header parsed info
     private string examTitle = "";
-    private int passPointPercent = 80; // default nếu API không trả
-
-    // Flow
+    private int passPointPercent = 80;
     private bool examStarted = false;
 
     bool _loadingShown = false;
@@ -101,7 +98,6 @@ public class ExamUIController : MonoBehaviour
 
     void Awake()
     {
-        EnsureLmsStore(); // ép khởi tạo singleton
         if (btnBack)   btnBack.onClick.AddListener(OnBack);
         if (btnNext)   btnNext.onClick.AddListener(OnNext);
         if (btnNopBai) btnNopBai.onClick.AddListener(OnSubmit);
@@ -110,46 +106,35 @@ public class ExamUIController : MonoBehaviour
 
     void Start()
     {
-        // Trước khi bắt đầu, khoá các nút điều hướng
+        // Trước khi bắt đầu, khoá điều hướng
         UpdateNavButtons();
-        UpdateQuestionCounter(); // sẽ hiển thị 00/00 cho tới khi có dữ liệu
-        if (autoStart) StartCoroutine(StartWithWarmup());
+        UpdateQuestionCounter();
+
+        if (autoStart) StartCoroutine(StartGate());
     }
 
-    IEnumerator StartWithWarmup()
+    IEnumerator StartGate()
     {
         ShowLoading(true);
 
-        IEnumerator warmup = null;
-
-        // Lấy IEnumerator warmup bằng reflection (bên trong try/catch, KHÔNG yield ở đây)
-        try
+        // BẮT BUỘC: chỉ khi có đủ ID thì mới load
+        if (!TryGetIds(out var examId, out var courseId))
         {
-            var t = Type.GetType("LmsStore");
-            var inst = t?.GetProperty("Instance")?.GetValue(null, null);
-            var miWarmupAll = t?.GetMethod("WarmupAll", new Type[] {
-                typeof(int), typeof(int), typeof(string), typeof(string), typeof(string), typeof(string)
-            });
+            if (debugVerbose)
+                Debug.LogWarning("[ExamUI] Thiếu ExamID/CourseID trong PlayerPrefs/override. Không gọi API.");
 
-            if (miWarmupAll != null && inst != null)
-            {
-                warmup = miWarmupAll.Invoke(inst, new object[] { 0, 300, "", "", "", "" }) as IEnumerator;
-            }
-            else if (debugVerbose)
-            {
-                Debug.LogWarning("[ExamUI] WarmupAll() not found or LmsStore.Instance null. Bỏ qua warmup.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning("[ExamUI] WarmupAll fail: " + ex.Message);
+            // Tắt loading và hiển thị trạng thái rỗng
+            ShowNoQuestion();
+            ShowLoading(false);
+
+            // Bạn có thể disable btnBatDau cho rõ ràng
+            if (btnBatDau) btnBatDau.interactable = false;
+            yield break;
         }
 
-        // THỰC HIỆN yield Ở NGOÀI try/catch
-        if (warmup != null)
-            yield return warmup;
-
+        // Có ID -> bắt đầu
         StartExamFromApi();
+        yield break;
     }
 
     [ContextMenu("Start exam from API")]
@@ -160,12 +145,11 @@ public class ExamUIController : MonoBehaviour
 
         ShowLoading(true);
 
-        string finalUrl = autoBuildUrl ? BuildApiUrlAuto() : apiUrl;
+        string finalUrl = autoBuildUrl ? BuildApiUrlStrict() : apiUrl;
         if (string.IsNullOrEmpty(finalUrl))
         {
-            Debug.LogError("[ExamUI] Không thể xác định API URL. Kiểm tra LmsStore/baseUrl, pathTemplate, examId/courseId (PlayerPrefs) hoặc apiUrl.");
+            Debug.LogError("[ExamUI] Không thể xác định API URL (thiếu ID hoặc path sai).");
             ShowNoQuestion();
-
             ShowLoading(false);
             return;
         }
@@ -173,53 +157,27 @@ public class ExamUIController : MonoBehaviour
         StartCoroutine(FetchAndSetup(finalUrl));
     }
 
-    string BuildApiUrlAuto()
+    // ========== CHỈ build URL từ override/PlayerPrefs (KHÔNG fallback LmsStore) ==========
+    string BuildApiUrlStrict()
     {
-        string baseUrl = GetBaseUrlFromLmsStore();
-        if (string.IsNullOrEmpty(baseUrl))
-        {
-            if (debugVerbose) Debug.LogWarning("[ExamUI] LmsStore.Instance.baseUrl rỗng.");
-            return null;
-        }
+        string baseUrl = GetBaseUrl();
+        if (string.IsNullOrEmpty(baseUrl)) return null;
         if (!baseUrl.EndsWith("/")) baseUrl += "/";
 
         string path = pathTemplate.TrimStart('/');
 
-        // ——— Lấy examId & courseId ———
-        string examId = null;
-        string courseId = null;
-
-        // 1) overrideExamId (ưu tiên cao nhất)
-        if (!string.IsNullOrEmpty(overrideExamId))
-            examId = overrideExamId;
-
-        // 2) LmsStore (sau warmup): tự pick cặp (examId, courseId)
-        if (string.IsNullOrEmpty(examId) || (path.Contains("{1}") && string.IsNullOrEmpty(courseId)))
+        if (!TryGetIds(out var examId, out var courseId))
         {
-            var pick = TryPickExamFromLmsStore();
-            if (string.IsNullOrEmpty(examId))   examId = pick.examId;
-            if (string.IsNullOrEmpty(courseId)) courseId = pick.courseId;
-        }
-
-        // 3) Fallback PlayerPrefs
-        if (string.IsNullOrEmpty(examId))
-            examId = PlayerPrefs.GetString(examIdPrefsKey, "");
-        if (path.Contains("{1}") && string.IsNullOrEmpty(courseId))
-            courseId = PlayerPrefs.GetString(courseIdPrefsKey, "");
-
-        if (string.IsNullOrEmpty(examId))
-        {
-            Debug.LogWarning("[ExamUI] examId trống. Không thể build URL.");
             return null;
         }
 
-        // Cho phép template chỉ có {0}
+        // Build URL theo template
         string finalUrl;
         if (path.Contains("{1}"))
         {
             if (string.IsNullOrEmpty(courseId))
             {
-                Debug.LogWarning("[ExamUI] courseId trống nhưng pathTemplate cần {1}. Hãy enroll/warmup hoặc set PlayerPrefs/override.");
+                if (debugVerbose) Debug.LogWarning("[ExamUI] courseId rỗng nhưng pathTemplate cần {1}.");
                 return null;
             }
             finalUrl = baseUrl + string.Format(path, examId, courseId);
@@ -229,22 +187,14 @@ public class ExamUIController : MonoBehaviour
             finalUrl = baseUrl + string.Format(path, examId);
         }
 
-        if (debugVerbose) Debug.Log($"[ExamUI] Built URL: {finalUrl}");
+        if (debugVerbose)
+            Debug.Log($"[ExamUI] Built URL (STRICT): {finalUrl} | examId={examId}, courseId={courseId}");
+
         return finalUrl;
     }
 
-    void EnsureLmsStore()
-    {
-        try
-        {
-            var t = Type.GetType("LmsStore");
-            var propInst = t?.GetProperty("Instance");
-            _ = propInst?.GetValue(null, null);
-        }
-        catch { }
-    }
-
-    string GetBaseUrlFromLmsStore()
+    // Lấy baseUrl từ LmsStore (hoặc bạn có thể đổi sang const nếu muốn)
+    string GetBaseUrl()
     {
         try
         {
@@ -262,64 +212,37 @@ public class ExamUIController : MonoBehaviour
         return null;
     }
 
-    // ===== Helper reflection an toàn cho Field hoặc Property =====
-    static object GetMemberValue(object obj, string name)
+    // Kiểm tra & lấy ID từ override/PlayerPrefs theo strict mode
+    bool TryGetIds(out string examId, out string courseId)
     {
-        if (obj == null) return null;
-        var type = obj.GetType();
-        // field
-        var fi = type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (fi != null) return fi.GetValue(obj);
-        // property
-        var pi = type.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (pi != null) return pi.GetValue(obj, null);
-        return null;
-    }
+        examId = "";
+        courseId = "";
 
-    static string GetStringMember(object obj, string name)
-    {
-        return GetMemberValue(obj, name) as string;
-    }
+        // 1) override (ưu tiên cao nhất)
+        if (!string.IsNullOrEmpty(overrideExamId))   examId   = overrideExamId;
+        if (!string.IsNullOrEmpty(overrideCourseId)) courseId = overrideCourseId;
 
-    // ==== Chọn (examId, courseId) từ MyCourses giống script dump ====
-    private (string examId, string courseId, string title) TryPickExamFromLmsStore()
-    {
-        try
+        // 2) PlayerPrefs (được CourseListView set)
+        if (string.IsNullOrEmpty(examId))
+            examId = PlayerPrefs.GetString(examIdPrefsKey, "");
+        if (string.IsNullOrEmpty(courseId))
+            courseId = PlayerPrefs.GetString(courseIdPrefsKey, "");
+
+        // Nếu pathTemplate chỉ có {0} thì không bắt buộc courseId
+        bool needCourse = pathTemplate != null && pathTemplate.Contains("{1}");
+
+        if (string.IsNullOrEmpty(examId))
         {
-            var t = Type.GetType("LmsStore");
-            var inst = t?.GetProperty("Instance")?.GetValue(null, null);
-            if (inst == null) return (null, null, null);
-
-            var miGetMyCourses   = t.GetMethod("GetMyCourses");
-            var miGetFinalExamId = t.GetMethod("GetFinalExamId", new Type[] { typeof(string) });
-            var myCourses = miGetMyCourses?.Invoke(inst, null) as System.Collections.IEnumerable;
-            if (myCourses == null || miGetFinalExamId == null) return (null, null, null);
-
-            foreach (var uc in myCourses)
-            {
-                if (uc == null) continue;
-
-                var course   = GetMemberValue(uc, "course");     // field or prop
-                var courseId = GetStringMember(course, "_id");   // field or prop
-                if (string.IsNullOrEmpty(courseId)) continue;
-
-                var fe = miGetFinalExamId.Invoke(inst, new object[] { courseId }) as string;
-                if (!string.IsNullOrEmpty(fe))
-                {
-                    var title = GetStringMember(course, "title");
-                    if (debugVerbose) Debug.Log($"[ExamUI] Picked examId={fe}, courseId={courseId} (title={title})");
-                    return (fe, courseId, title);
-                }
-            }
+            return false;
         }
-        catch (Exception ex)
+        if (needCourse && string.IsNullOrEmpty(courseId))
         {
-            Debug.LogWarning("[ExamUI] TryPickExamFromLmsStore fail: " + ex.Message);
+            return false;
         }
-        return (null, null, null);
+        return true;
     }
 
-    // ===================== FETCH + SETUP (Header trước, chưa bắt đầu thi) =====================
+    // ===================== FETCH + SETUP =====================
     IEnumerator FetchAndSetup(string finalUrl)
     {
         string token = GetAccessToken();
@@ -341,9 +264,7 @@ public class ExamUIController : MonoBehaviour
         {
             Debug.LogError($"[ExamUI] API ERROR: {req.responseCode} {req.error}");
             ShowNoQuestion();
-
             ShowLoading(false);
-
             yield break;
         }
 
@@ -359,29 +280,25 @@ public class ExamUIController : MonoBehaviour
         {
             Debug.LogError("[ExamUI] Không tìm thấy mảng \"questions\" trong JSON response.");
             ShowNoQuestion();
-
             ShowLoading(false);
-
             yield break;
         }
 
         paper = FallbackParseToPaper(questionsJson);
 
-        // Lấy mô tả (description) và làm sạch về plain text để đổ UI
+        // Header info
         string descHtml = ExtractStringField(raw, "description") ?? "";
         examTitle = CleanHtmlToPlainText(descHtml);
-
-        // Nếu vẫn cần pass %
         passPointPercent = ExtractIntField(raw, "passPointPercent", 80);
 
-        if (debugVerbose) Debug.Log($"[ExamUI] Parsed questions: {paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
+        if (debugVerbose) Debug.Log($"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
 
         // Cập nhật header (chưa bắt đầu thi)
         examStarted = false;
-        ClearContent(); // dọn vùng content, chưa render câu hỏi
+        ClearContent();
         UpdateHeaderInfo();
-        UpdateNavButtons();      // khoá điều hướng đến khi bắt đầu
-        UpdateQuestionCounter(); // hiển thị 00/NN
+        UpdateNavButtons();
+        UpdateQuestionCounter();
 
         ShowLoading(false);
     }
@@ -399,10 +316,8 @@ public class ExamUIController : MonoBehaviour
         examStarted = true;
         currentIndex = 0;
 
-        // Render câu đầu tiên
         RenderCurrentQuestion();
 
-        // Bắt đầu timer
         if (timerCo != null) StopCoroutine(timerCo);
         if (durationSeconds > 0) timerCo = StartCoroutine(TimerCountdown());
     }
@@ -449,11 +364,7 @@ public class ExamUIController : MonoBehaviour
 
     void RenderCurrentQuestion()
     {
-        if (!examStarted)
-        {
-            // Chưa bắt đầu thi: không render câu hỏi
-            return;
-        }
+        if (!examStarted) return;
 
         if (paper == null || paper.questions == null || paper.questions.Count == 0)
         {
@@ -545,7 +456,7 @@ public class ExamUIController : MonoBehaviour
         bool canNav = examStarted && paper != null && paper.Count > 0;
         if (btnBack) btnBack.interactable = canNav && currentIndex > 0;
         if (btnNext) btnNext.interactable = canNav && currentIndex < paper.Count - 1;
-        if (btnNopBai) btnNopBai.interactable = canNav; // có thể để true luôn tùy flow
+        if (btnNopBai) btnNopBai.interactable = canNav;
     }
 
     void OnBack()
@@ -586,18 +497,14 @@ public class ExamUIController : MonoBehaviour
         }
     }
 
-    // ===================== HEADER / LABELS =====================
     void UpdateHeaderInfo()
     {
         int total = paper?.Count ?? 0;
 
-        // Title
         if (textExamTitle) textExamTitle.text = string.IsNullOrEmpty(examTitle) ? "Bài thi" : examTitle;
 
-        // Total questions
         if (textTotalQuestions) textTotalQuestions.text = $"{total}";
 
-        // Duration label
         if (textTotalDuration)
         {
             int mm = Mathf.Max(0, durationSeconds) / 60;
@@ -605,7 +512,6 @@ public class ExamUIController : MonoBehaviour
             textTotalDuration.text = $"{string.Format(timeFormat, mm, ss)}";
         }
 
-        // Pass requirement
         if (textPassNeed)
         {
             int need = Mathf.CeilToInt(total * (passPointPercent / 100f));
@@ -630,7 +536,7 @@ public class ExamUIController : MonoBehaviour
         string right = total.ToString().PadLeft(width, '0');
         textQuestionCounter.text = $"{left}/{right}";
     }
-    
+
     string ExtractQuestionsArray(string raw, out int durationSec)
     {
         durationSec = 0;
@@ -685,24 +591,23 @@ public class ExamUIController : MonoBehaviour
         return null;
     }
 
-string ExtractStringField(string raw, string field)
-{
-    if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return null;
-    try
+    string ExtractStringField(string raw, string field)
     {
-        // match: "<field>" : "<json-string-with-escapes>"
-        var pattern = $"\"{Regex.Escape(field)}\"\\s*:\\s*\"(?<val>(?:\\\\.|[^\"\\\\])*)\"";
-        var m = Regex.Match(raw, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (m.Success)
+        if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return null;
+        try
         {
-            var val = m.Groups["val"].Value;
-            val = Regex.Unescape(val);
-            return val; 
+            var pattern = $"\"{Regex.Escape(field)}\"\\s*:\\s*\"(?<val>(?:\\\\.|[^\\" + "\"\\\\])*)\"";
+            var m = Regex.Match(raw, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (m.Success)
+            {
+                var val = m.Groups["val"].Value;
+                val = Regex.Unescape(val);
+                return val;
+            }
         }
+        catch { }
+        return null;
     }
-    catch { }
-    return null;
-}
 
     int ExtractIntField(string raw, string field, int fallback = 0)
     {
@@ -776,30 +681,21 @@ string ExtractStringField(string raw, string field)
             return ExamQuestionType.MULTIPLE_CHOICE;
         return ExamQuestionType.SINGLE_CHOICE;
     }
+
     string CleanHtmlToPlainText(string html)
     {
         if (string.IsNullOrEmpty(html)) return "";
 
         string s = html;
 
-        // br, p
         s = Regex.Replace(s, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
         s = Regex.Replace(s, @"</\s*p\s*>", "\n", RegexOptions.IgnoreCase);
         s = Regex.Replace(s, @"<\s*p[^>]*>", "", RegexOptions.IgnoreCase);
 
-        // &nbsp; → space
         s = Regex.Replace(s, @"&nbsp;", " ", RegexOptions.IgnoreCase);
-
-        // remove other tags
         s = Regex.Replace(s, @"<[^>]+>", "");
-
-        // decode entities (&quot; &amp; …)
         s = WebUtility.HtmlDecode(s);
-
-        // bỏ tất cả loại dấu nháy phổ biến
         s = Regex.Replace(s, "[\"“”‘’«»]+", "");
-
-        // gọn khoảng trắng / dòng
         s = Regex.Replace(s, @"[ \t]+\n", "\n");
         s = Regex.Replace(s, @"\n{3,}", "\n\n");
 

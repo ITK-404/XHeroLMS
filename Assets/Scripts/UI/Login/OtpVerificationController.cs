@@ -429,8 +429,7 @@ public class OtpVerificationController : MonoBehaviour
         isRunning = false;
         Debug.Log("Hết thời gian OTP!");
     }
-
-    // ==== Helpers ====
+    
     private string GetOtp()
     {
         var sb = new StringBuilder(6);

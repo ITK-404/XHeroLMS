@@ -61,7 +61,8 @@ public static class ExamParser
 
         foreach (var qr in root.questions)
         {
-            var q = new ExamQuestion {
+            var q = new ExamQuestion
+            {
                 id = qr._id ?? "",
                 title = HtmlToText(qr.title),
                 type = MapType(qr.type),
@@ -98,8 +99,6 @@ public static class ExamParser
 
         return paper;
     }
-
-    // ----- helpers -----
 
     static ExamQuestionType MapType(string t)
     {

@@ -162,9 +162,9 @@ public class LmsExportMyCoursesDetails : MonoBehaviour
             if (string.IsNullOrEmpty(courseObj))
                 continue;
 
-            string id   = MatchStringField(courseObj, "_id");
+            string id = MatchStringField(courseObj, "_id");
             string title = MatchStringField(courseObj, "title");
-            string sku  = MatchStringField(courseObj, "sku");
+            string sku = MatchStringField(courseObj, "sku");
 
             // seo.url
             string seoObj = ExtractNamedObject(courseObj, "seo");
@@ -211,8 +211,7 @@ public class LmsExportMyCoursesDetails : MonoBehaviour
         sb.Append(']');
         return sb.ToString();
     }
-
-    // ---------- Low-level JSON helpers (tối giản, không dùng lib ngoài) ----------
+    
     // Tìm "[ ... ]" theo tên thuộc tính (ví dụ "list")
     string ExtractNamedArray(string raw, string name)
     {
