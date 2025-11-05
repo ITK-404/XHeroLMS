@@ -101,6 +101,7 @@ public class QuadCinemachineController : MonoBehaviour
         {
             case ViewState.Player:
                 quadCamManager.ChangeToPlayerCamera();
+                SetQuadZ(originalQuadPos.z);
                 break;
             case ViewState.Default:
                 quadCamManager.ChangeToLocalRoomCamera();
