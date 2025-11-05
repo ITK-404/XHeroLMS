@@ -153,7 +153,7 @@ public class ForgotController : MonoBehaviour
             if (string.IsNullOrEmpty(path)) continue;
 
             var url = baseUrl.TrimEnd('/') + path + query;
-            Debug.Log($"[Forgot] Try OTP request → {url}");
+            Debug.Log($"[Forgot] Try OTP request -> {url}");
 
             using (var req = UnityWebRequest.Get(url))
             {

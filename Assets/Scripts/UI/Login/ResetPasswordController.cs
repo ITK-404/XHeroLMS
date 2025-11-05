@@ -77,7 +77,7 @@ public string baseUrl = "https://apis-dev.xheroapp.com";
             if (string.IsNullOrEmpty(path)) continue;
 
             string url = baseUrl.TrimEnd('/') + path;
-            Debug.Log($"[ResetPassword] TRY PUT → {url} body={json}");
+            Debug.Log($"[ResetPassword] TRY PUT -> {url} body={json}");
 
             using (var req = new UnityWebRequest(url, "PUT"))
             {
