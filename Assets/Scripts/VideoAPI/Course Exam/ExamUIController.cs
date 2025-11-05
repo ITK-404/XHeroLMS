@@ -498,7 +498,7 @@ public class ExamUIController : MonoBehaviour
     }
 
     void UpdateHeaderInfo()
-    {
+    {                   
         int total = paper?.Count ?? 0;
 
         if (textExamTitle) textExamTitle.text = string.IsNullOrEmpty(examTitle) ? "Bài thi" : examTitle;
