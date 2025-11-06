@@ -9,7 +9,185 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-public class ExamUIController : MonoBehaviour
+public partial class ExamUIController
+{
+    private ExamQuestionType FormatStringToExamQuestion(string t)
+    {
+        if (string.Equals(t, "SINGLE_CHOICE", StringComparison.OrdinalIgnoreCase))
+            return ExamQuestionType.SINGLE_CHOICE;
+        if (string.Equals(t, "MULTIPLE_CHOICE", StringComparison.OrdinalIgnoreCase))
+            return ExamQuestionType.MULTIPLE_CHOICE;
+        return ExamQuestionType.SINGLE_CHOICE;
+    }
+
+    public static string CleanHtmlToPlainText(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return "";
+
+        string s = html;
+
+        s = Regex.Replace(s, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"</\s*p\s*>", "\n", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"<\s*p[^>]*>", "", RegexOptions.IgnoreCase);
+
+        s = Regex.Replace(s, @"&nbsp;", " ", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"<[^>]+>", "");
+        s = WebUtility.HtmlDecode(s);
+        s = Regex.Replace(s, "[\"“”‘’«»]+", "");
+        s = Regex.Replace(s, @"[ \t]+\n", "\n");
+        s = Regex.Replace(s, @"\n{3,}", "\n\n");
+
+        return s.Trim();
+    }
+    
+    [Serializable]
+    private class QuestionsWrapper
+    {
+        public List<QuestionRaw> questions;
+    }
+
+    [Serializable]
+    private class QuestionRaw
+    {
+        public string _id;
+        public string title;
+        public string type;
+        public List<string> answers;
+    }
+
+    private string CleanOptionText(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return "";
+        html = Regex.Replace(html, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"</?\s*p\s*>", "", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"<[^>]+>", "");
+        return WebUtility.HtmlDecode(html).Trim();
+    }
+
+    private ExamPaper FallbackParseToPaper(string questionsJson)
+    {
+        string wrapped = questionsJson.TrimStart().StartsWith("[")
+            ? "{\"questions\":" + questionsJson + "}"
+            : questionsJson;
+
+        var wrapper = JsonUtility.FromJson<QuestionsWrapper>(wrapped);
+        var result = new ExamPaper { questions = new List<ExamQuestion>() };
+
+        if (wrapper?.questions == null) return result;
+
+        foreach (var q in wrapper.questions)
+        {
+            var eq = new ExamQuestion
+            {
+                id = string.IsNullOrEmpty(q._id) ? Guid.NewGuid().ToString() : q._id,
+                title = q.title ?? "",
+                type = FormatStringToExamQuestion(q.type),
+                options = new List<string>()
+            };
+
+            if (q.answers != null)
+                foreach (var a in q.answers)
+                    eq.options.Add(CleanOptionText(a));
+
+            result.questions.Add(eq);
+        }
+
+        return result;
+    }
+
+    private int ExtractIntField(string raw, string field, int fallback = 0)
+    {
+        if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return fallback;
+        try
+        {
+            var m = Regex.Match(raw, $"\"{Regex.Escape(field)}\"\\s*:\\s*(-?\\d+)", RegexOptions.IgnoreCase);
+            if (m.Success && int.TryParse(m.Groups[1].Value, out int v)) return v;
+        }
+        catch
+        {
+        }
+
+        return fallback;
+    }
+
+    private string ExtractStringField(string raw, string field)
+    {
+        if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return null;
+        try
+        {
+            var pattern = $"\"{Regex.Escape(field)}\"\\s*:\\s*\"(?<val>(?:\\\\.|[^\\" + "\"\\\\])*)\"";
+            var m = Regex.Match(raw, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (m.Success)
+            {
+                var val = m.Groups["val"].Value;
+                val = Regex.Unescape(val);
+                return val;
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
+    private string ExtractQuestionsArray(string raw, out int durationSec)
+    {
+        durationSec = 0;
+        if (string.IsNullOrEmpty(raw))
+        {
+            if (debugVerbose) Debug.LogWarning("[ExamUI] ExtractQuestionsArray: raw is NULL/Empty.");
+            return null;
+        }
+
+        try
+        {
+            var durMatch = Regex.Match(raw, @"""duration""\s*:\s*(\d+)", RegexOptions.IgnoreCase);
+            if (durMatch.Success) int.TryParse(durMatch.Groups[1].Value, out durationSec);
+
+            var key = "\"questions\"";
+            int i = raw.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+            if (i < 0)
+            {
+                Debug.LogError("[ExamUI] Can't find \"questions\" key in JSON.");
+                return null;
+            }
+
+            int s = raw.IndexOf('[', i);
+            if (s < 0)
+            {
+                Debug.LogError("[ExamUI] Can't find '[' after \"questions\".");
+                return null;
+            }
+
+            int depth = 0;
+            for (int p = s; p < raw.Length; p++)
+            {
+                if (raw[p] == '[') depth++;
+                else if (raw[p] == ']')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        string arr = raw.Substring(s, p - s + 1);
+                        if (debugVerbose) Debug.Log($"[ExamUI] Extracted questions array length={arr.Length}");
+                        return arr;
+                    }
+                }
+            }
+
+            Debug.LogError("[ExamUI] Could not match the closing ']' for questions array.");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[ExamUI] ExtractQuestionsArray EXCEPTION: " + ex.Message);
+        }
+
+        return null;
+    }
+}
+
+public partial class ExamUIController : MonoBehaviour
 {
     [Header("Routing / Strict Mode")]
     // Bật chế độ CHỈ NHẬN ID từ PlayerPrefs và/hoặc override; KHÔNG fallback sang LmsStore
@@ -20,7 +198,8 @@ public class ExamUIController : MonoBehaviour
     public string overrideCourseId = "";
 
     [Header("PlayerPrefs Keys (phải trùng với nơi bạn lưu ở CourseListView)")]
-    public string examIdPrefsKey   = "EXAM_CURRENT_ID";
+    public string examIdPrefsKey = "EXAM_CURRENT_ID";
+
     public string courseIdPrefsKey = "EXAM_CURRENT_COURSE_ID";
 
     [Header("API Source")]
@@ -35,6 +214,7 @@ public class ExamUIController : MonoBehaviour
 
     [Header("Auth")]
     public bool useTokenFromStore = true;
+
     public string overrideAccessToken = "";
 
     [Header("Where to spawn")]
@@ -42,22 +222,26 @@ public class ExamUIController : MonoBehaviour
 
     [Header("Prefabs")]
     public TMP_Text prefabCauHoi;
+
     public AnswerButton prefabCauTraLoi;
 
     [Header("Buttons & Timer")]
     public Button btnBack;
+
     public Button btnNext;
     public Button btnNopBai;
     public TMP_Text textDemNguoc;
 
     [Header("Options")]
     public bool autoStart = true;
+
     public string timeFormat = "{0:00}:{1:00}";
     public float requestTimeout = 15f;
 
     [Header("Header UI")]
     public TMP_Text textQuestionCounter; // "01/30"
-    public Button   btnBatDau;
+
+    public Button btnBatDau;
     public TMP_Text textExamTitle;
     public TMP_Text textTotalQuestions;
     public TMP_Text textTotalDuration;
@@ -80,6 +264,7 @@ public class ExamUIController : MonoBehaviour
     private bool examStarted = false;
 
     bool _loadingShown = false;
+
     void ShowLoading(bool show)
     {
         if (show)
@@ -98,8 +283,8 @@ public class ExamUIController : MonoBehaviour
 
     void Awake()
     {
-        if (btnBack)   btnBack.onClick.AddListener(OnBack);
-        if (btnNext)   btnNext.onClick.AddListener(OnNext);
+        if (btnBack) btnBack.onClick.AddListener(OnBack);
+        if (btnNext) btnNext.onClick.AddListener(OnNext);
         if (btnNopBai) btnNopBai.onClick.AddListener(OnSubmit);
         if (btnBatDau) btnBatDau.onClick.AddListener(BeginExam);
     }
@@ -180,6 +365,7 @@ public class ExamUIController : MonoBehaviour
                 if (debugVerbose) Debug.LogWarning("[ExamUI] courseId rỗng nhưng pathTemplate cần {1}.");
                 return null;
             }
+
             finalUrl = baseUrl + string.Format(path, examId, courseId);
         }
         else
@@ -208,7 +394,10 @@ public class ExamUIController : MonoBehaviour
             var prop = t.GetProperty("baseUrl");
             if (prop != null) return prop.GetValue(inst, null) as string;
         }
-        catch { }
+        catch
+        {
+        }
+
         return null;
     }
 
@@ -219,7 +408,7 @@ public class ExamUIController : MonoBehaviour
         courseId = "";
 
         // 1) override (ưu tiên cao nhất)
-        if (!string.IsNullOrEmpty(overrideExamId))   examId   = overrideExamId;
+        if (!string.IsNullOrEmpty(overrideExamId)) examId = overrideExamId;
         if (!string.IsNullOrEmpty(overrideCourseId)) courseId = overrideCourseId;
 
         // 2) PlayerPrefs (được CourseListView set)
@@ -235,10 +424,12 @@ public class ExamUIController : MonoBehaviour
         {
             return false;
         }
+
         if (needCourse && string.IsNullOrEmpty(courseId))
         {
             return false;
         }
+
         return true;
     }
 
@@ -291,7 +482,9 @@ public class ExamUIController : MonoBehaviour
         examTitle = CleanHtmlToPlainText(descHtml);
         passPointPercent = ExtractIntField(raw, "passPointPercent", 80);
 
-        if (debugVerbose) Debug.Log($"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
+        if (debugVerbose)
+            Debug.Log(
+                $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
 
         // Cập nhật header (chưa bắt đầu thi)
         examStarted = false;
@@ -336,12 +529,16 @@ public class ExamUIController : MonoBehaviour
                 if (prop != null)
                 {
                     var value = prop.GetValue(null) as string;
-                    if (debugVerbose) Debug.Log($"[ExamUI] TokenStore.AccessToken {(string.IsNullOrEmpty(value) ? "EMPTY" : "OK")}");
+                    if (debugVerbose)
+                        Debug.Log($"[ExamUI] TokenStore.AccessToken {(string.IsNullOrEmpty(value) ? "EMPTY" : "OK")}");
                     return value;
                 }
             }
         }
-        catch { }
+        catch
+        {
+        }
+
         return null;
     }
 
@@ -426,7 +623,8 @@ public class ExamUIController : MonoBehaviour
                 if (isSingle)
                 {
                     foreach (var other in spawnedOptions)
-                        if (other != btn) other.ActiveSelect(false);
+                        if (other != btn)
+                            other.ActiveSelect(false);
 
                     picked.Clear();
                     bool turnOn = !btn.value;
@@ -491,14 +689,20 @@ public class ExamUIController : MonoBehaviour
                 int ss = Mathf.Max(0, remain) % 60;
                 textDemNguoc.text = string.Format(timeFormat, mm, ss);
             }
-            if (remain <= 0) { OnSubmit(); yield break; }
+
+            if (remain <= 0)
+            {
+                OnSubmit();
+                yield break;
+            }
+
             yield return new WaitForSeconds(1f);
             remain--;
         }
     }
 
     void UpdateHeaderInfo()
-    {                   
+    {
         int total = paper?.Count ?? 0;
 
         if (textExamTitle) textExamTitle.text = string.IsNullOrEmpty(examTitle) ? "Bài thi" : examTitle;
@@ -535,170 +739,5 @@ public class ExamUIController : MonoBehaviour
         string left = current.ToString().PadLeft(width, '0');
         string right = total.ToString().PadLeft(width, '0');
         textQuestionCounter.text = $"{left}/{right}";
-    }
-
-    string ExtractQuestionsArray(string raw, out int durationSec)
-    {
-        durationSec = 0;
-        if (string.IsNullOrEmpty(raw))
-        {
-            if (debugVerbose) Debug.LogWarning("[ExamUI] ExtractQuestionsArray: raw is NULL/Empty.");
-            return null;
-        }
-
-        try
-        {
-            var durMatch = Regex.Match(raw, @"""duration""\s*:\s*(\d+)", RegexOptions.IgnoreCase);
-            if (durMatch.Success) int.TryParse(durMatch.Groups[1].Value, out durationSec);
-
-            var key = "\"questions\"";
-            int i = raw.IndexOf(key, StringComparison.OrdinalIgnoreCase);
-            if (i < 0)
-            {
-                Debug.LogError("[ExamUI] Can't find \"questions\" key in JSON.");
-                return null;
-            }
-
-            int s = raw.IndexOf('[', i);
-            if (s < 0)
-            {
-                Debug.LogError("[ExamUI] Can't find '[' after \"questions\".");
-                return null;
-            }
-
-            int depth = 0;
-            for (int p = s; p < raw.Length; p++)
-            {
-                if (raw[p] == '[') depth++;
-                else if (raw[p] == ']')
-                {
-                    depth--;
-                    if (depth == 0)
-                    {
-                        string arr = raw.Substring(s, p - s + 1);
-                        if (debugVerbose) Debug.Log($"[ExamUI] Extracted questions array length={arr.Length}");
-                        return arr;
-                    }
-                }
-            }
-
-            Debug.LogError("[ExamUI] Could not match the closing ']' for questions array.");
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError("[ExamUI] ExtractQuestionsArray EXCEPTION: " + ex.Message);
-        }
-        return null;
-    }
-
-    string ExtractStringField(string raw, string field)
-    {
-        if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return null;
-        try
-        {
-            var pattern = $"\"{Regex.Escape(field)}\"\\s*:\\s*\"(?<val>(?:\\\\.|[^\\" + "\"\\\\])*)\"";
-            var m = Regex.Match(raw, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            if (m.Success)
-            {
-                var val = m.Groups["val"].Value;
-                val = Regex.Unescape(val);
-                return val;
-            }
-        }
-        catch { }
-        return null;
-    }
-
-    int ExtractIntField(string raw, string field, int fallback = 0)
-    {
-        if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(field)) return fallback;
-        try
-        {
-            var m = Regex.Match(raw, $"\"{Regex.Escape(field)}\"\\s*:\\s*(-?\\d+)", RegexOptions.IgnoreCase);
-            if (m.Success && int.TryParse(m.Groups[1].Value, out int v)) return v;
-        }
-        catch { }
-        return fallback;
-    }
-
-    string CleanOptionText(string html)
-    {
-        if (string.IsNullOrEmpty(html)) return "";
-        html = Regex.Replace(html, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</?\s*p\s*>", "", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"<[^>]+>", "");
-        return WebUtility.HtmlDecode(html).Trim();
-    }
-
-    [Serializable] private class QuestionRaw
-    {
-        public string _id;
-        public string title;
-        public string type;
-        public List<string> answers;
-    }
-
-    [Serializable] private class QuestionsWrapper
-    {
-        public List<QuestionRaw> questions;
-    }
-
-    private ExamPaper FallbackParseToPaper(string questionsJson)
-    {
-        string wrapped = questionsJson.TrimStart().StartsWith("[")
-            ? "{\"questions\":" + questionsJson + "}"
-            : questionsJson;
-
-        var wrapper = JsonUtility.FromJson<QuestionsWrapper>(wrapped);
-        var result = new ExamPaper { questions = new List<ExamQuestion>() };
-
-        if (wrapper?.questions == null) return result;
-
-        foreach (var q in wrapper.questions)
-        {
-            var eq = new ExamQuestion
-            {
-                id    = string.IsNullOrEmpty(q._id) ? Guid.NewGuid().ToString() : q._id,
-                title = q.title ?? "",
-                type  = ToType(q.type),
-                options = new List<string>()
-            };
-
-            if (q.answers != null)
-                foreach (var a in q.answers)
-                    eq.options.Add(CleanOptionText(a));
-
-            result.questions.Add(eq);
-        }
-        return result;
-    }
-
-    private ExamQuestionType ToType(string t)
-    {
-        if (string.Equals(t, "SINGLE_CHOICE", StringComparison.OrdinalIgnoreCase))
-            return ExamQuestionType.SINGLE_CHOICE;
-        if (string.Equals(t, "MULTIPLE_CHOICE", StringComparison.OrdinalIgnoreCase))
-            return ExamQuestionType.MULTIPLE_CHOICE;
-        return ExamQuestionType.SINGLE_CHOICE;
-    }
-
-    string CleanHtmlToPlainText(string html)
-    {
-        if (string.IsNullOrEmpty(html)) return "";
-
-        string s = html;
-
-        s = Regex.Replace(s, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
-        s = Regex.Replace(s, @"</\s*p\s*>", "\n", RegexOptions.IgnoreCase);
-        s = Regex.Replace(s, @"<\s*p[^>]*>", "", RegexOptions.IgnoreCase);
-
-        s = Regex.Replace(s, @"&nbsp;", " ", RegexOptions.IgnoreCase);
-        s = Regex.Replace(s, @"<[^>]+>", "");
-        s = WebUtility.HtmlDecode(s);
-        s = Regex.Replace(s, "[\"“”‘’«»]+", "");
-        s = Regex.Replace(s, @"[ \t]+\n", "\n");
-        s = Regex.Replace(s, @"\n{3,}", "\n\n");
-
-        return s.Trim();
     }
 }
