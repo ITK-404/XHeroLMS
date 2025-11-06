@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -255,34 +257,83 @@ public partial class ExamUIController : MonoBehaviour
         return true;
     }
 
+    public static string offlineExamFile = "exam_6698e1fc0b5596af157b45c3_66add60cb04daa3a3a3694f2.json";
+    private static string offlineFilePath => Path.Combine(Application.persistentDataPath, offlineExamFile);
+
+    public static string TryReadAllText()
+    {
+        string content = "";
+        var path = offlineFilePath;
+        if (!File.Exists(path))
+        {
+            Debug.Log("Dường dẫn không tồn tại");
+            return content;
+        }
+
+        try
+        {
+            content = File.ReadAllText(path);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to read file: {path}\n{ex}");
+        }
+
+        return content;
+    }
+
     // ===================== FETCH + SETUP =====================
     IEnumerator FetchAndSetup(string finalUrl)
     {
         string token = GetAccessToken();
+        string offlineContent = "";
+
         using var req = UnityWebRequest.Get(finalUrl);
         req.timeout = Mathf.CeilToInt(Mathf.Max(1f, requestTimeout));
         if (!string.IsNullOrEmpty(token))
+        {
+            Debug.Log("Dùng online data (API)");
             req.SetRequestHeader("Authorization", "Bearer " + token);
-        req.SetRequestHeader("Accept", "application/json");
+            req.SetRequestHeader("Accept", "application/json");
 
-        if (debugVerbose) Debug.Log($"[ExamUI] GET {finalUrl}");
-        yield return req.SendWebRequest();
+            if (debugVerbose) Debug.Log($"[ExamUI] GET {finalUrl}");
+            yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-        bool hasErr = req.result != UnityWebRequest.Result.Success;
+            bool hasErr = req.result != UnityWebRequest.Result.Success;
 #else
         bool hasErr = req.isNetworkError || req.isHttpError;
 #endif
-        if (hasErr)
-        {
-            Debug.LogError($"[ExamUI] API ERROR: {req.responseCode} {req.error}");
-            ShowNoQuestion();
-            ShowLoading(false);
-            yield break;
+            if (hasErr)
+            {
+                Debug.LogError($"[ExamUI] API ERROR: {req.responseCode} {req.error}");
+                ShowNoQuestion();
+                ShowLoading(false);
+                yield break;
+            }
         }
+        else
+        {
+            Debug.Log("Dùng offline data (local file)");
+            offlineContent = TryReadAllText();
+            if (string.IsNullOrWhiteSpace(offlineContent))
+            {
+                ShowNoQuestion();
+                ShowLoading(false);
+                yield break;
+            }
+            
+        }
+        
+        string onlineText = req.downloadHandler?.text;
+        string raw = !string.IsNullOrWhiteSpace(onlineText) ? onlineText : offlineContent;
+        
 
-        string raw = req.downloadHandler.text ?? "";
-        if (debugVerbose) Debug.Log($"[ExamUI] Response length={raw.Length}");
+        if (debugVerbose)
+        {
+            Debug.Log($"[ExamUI] Response length={raw.Length}");
+            Debug.Log($"[ExamUI] Raw Data ={raw}");
+        }
 
         // Parse duration + questions
         if (TryExtractExamInformation(raw)) yield break;
