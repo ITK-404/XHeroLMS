@@ -72,7 +72,10 @@ public partial class ExamUIController : MonoBehaviour
     public TMP_Text textTotalQuestions;
     public TMP_Text textTotalDuration;
     public TMP_Text textPassNeed;
+    public Image multiple_hint;
 
+    public GameObject correctCheck;
+    public GameObject inCorrectCheck;
     [Header("Debug")]
     public bool debugVerbose = true;
 
@@ -120,6 +123,9 @@ public partial class ExamUIController : MonoBehaviour
         if (btnNext) btnNext.onClick.AddListener(OnNext);
         if (btnNopBai) btnNopBai.onClick.AddListener(OnSubmit);
         if (btnBatDau) btnBatDau.onClick.AddListener(BeginExam);
+        
+        correctCheck.gameObject.SetActive(false);
+        inCorrectCheck.gameObject.SetActive(false);
     }
 
     void Start()
@@ -468,6 +474,9 @@ public partial class ExamUIController : MonoBehaviour
             case ExamQuestionType.SINGLE_CHOICE:
             case ExamQuestionType.MULTIPLE_CHOICE:
                 RenderOptions(q);
+                
+                multiple_hint.gameObject.SetActive(q.type == ExamQuestionType.MULTIPLE_CHOICE);
+
                 break;
              case ExamQuestionType.ESSAY:
                 RenderEssay(q);
@@ -480,6 +489,7 @@ public partial class ExamUIController : MonoBehaviour
         UpdateNavButtons();
         UpdateQuestionCounter();
     }
+
 
     void RenderOptions(ExamQuestion q)
     {
