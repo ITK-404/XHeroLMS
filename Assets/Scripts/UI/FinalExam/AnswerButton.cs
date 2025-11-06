@@ -11,18 +11,26 @@ public class AnswerButton : MonoBehaviour
     [Header("Multiple choice sprite")]
     [SerializeField] private Sprite circle_checkmark;
     [SerializeField] private Sprite circle_none;
-
+    [Header("Toggle")]
     [SerializeField] private Image backgroundImg;
     [SerializeField] private Image checkmarkImg;
     [SerializeField] private Image selectImg;
+    [Header("Other Stuff")]
     [SerializeField] private TextMeshProUGUI answerTmp;
-
     [SerializeField] private Button clickBtn;
+    [SerializeField] private Image correctImg;
+    [Header("Color")]
+    public Color selectColor;
+    public Color correctColor;
+    public Color inCorrectColor;
+    
     public Toggle toggle;
     public bool value;
     public Action<AnswerButton> OnSelectButton;
+    
     private void Awake()
     {
+        correctImg.gameObject.SetActive(false);
         clickBtn.onClick.AddListener(ClickSelectBtn);
     }
 
@@ -60,5 +68,24 @@ public class AnswerButton : MonoBehaviour
         value = isSelect;
         selectImg.gameObject.SetActive(isSelect);
         toggle.isOn = isSelect;
+        
+     
+    }
+
+    public Sprite correctSprite;
+    public Sprite inCorrectSprite;
+    public void SetCorrectColor()
+    {
+        correctImg.gameObject.SetActive(true);
+        selectImg.color = correctColor;
+        correctImg.sprite = correctSprite;
+    }
+
+    public void SetInCorrectColor()
+    {
+        correctImg.gameObject.SetActive(true);
+        selectImg.color = inCorrectColor;
+        correctImg.sprite = inCorrectSprite;
+        
     }
 }
