@@ -53,7 +53,7 @@ public class LessonProgressManager : MonoBehaviour
     {
         StopAllCoroutines();
         if (_current != null) TrySendNow(); // send final
-        UnwireAll();
+        UnwireAll(); 
     }
 
     void OnApplicationQuit()
