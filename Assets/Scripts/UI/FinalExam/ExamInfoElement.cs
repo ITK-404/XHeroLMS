@@ -4,31 +4,45 @@ using UnityEngine.UI;
 
 public class ExamInfoElement : MonoBehaviour
 {
-    [SerializeField] private Sprite unansweredSprite;
-    [SerializeField] private Sprite answeredSprite;
-    [SerializeField] private Image answerImg;
+    [SerializeField] private Image answeredImg;
+    [SerializeField] private Image unAsweredImg;
+    [SerializeField] private Image selectAnsweredImg;
     [SerializeField] private TextMeshProUGUI coloredTmp;
     [SerializeField] private TextMeshProUGUI grayTmp;
-    
+    [SerializeField] private TextMeshProUGUI gradientTmp;
+
+    private void Awake()
+    {
+        SetUnansweredButton();
+    }
+
     public void SetAnsweredButton()
     {
-        if (answerImg != null)
-            answerImg.sprite = answeredSprite;
         coloredTmp.gameObject.SetActive(true);
         grayTmp.gameObject.SetActive(false);
+        gradientTmp.gameObject.SetActive(false);
     }
 
     public void SetUnansweredButton()
     {
-        if (answerImg != null)
-            answerImg.sprite = unansweredSprite;
         coloredTmp.gameObject.SetActive(false);
         grayTmp.gameObject.SetActive(true);
+        gradientTmp.gameObject.SetActive(false);
     }
 
-    public void SetQuestionIndexText(string text)
+    public void ShowSelectedAnswerButton()
     {
-        coloredTmp.text = text;
-        grayTmp.text = text;
+        coloredTmp.gameObject.SetActive(false);
+        grayTmp.gameObject.SetActive(false);
+        gradientTmp.gameObject.SetActive(true);
     }
+
+    public void SetQuestionIndexText(int index)
+    {
+        string formatIndex = $"Câu\n{index}";
+        coloredTmp.text = formatIndex;
+        grayTmp.text = formatIndex;
+        gradientTmp.text = formatIndex;
+    }
+   
 }
