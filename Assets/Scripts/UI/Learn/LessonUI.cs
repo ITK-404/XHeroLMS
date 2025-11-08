@@ -25,6 +25,10 @@ public class LessonUI : MonoBehaviour
     public bool isSelect = false;
     public string percent;
     public Action<string> OnClickPlayVideo;
+    [Header("Learning progress")]
+    public string duration;
+    public int progressTime;
+
     private void Awake()
     {
         btn.onClick.AddListener(OnClickBtn);

@@ -2,7 +2,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
-using System.Collections;
 
 public class CourseListView : MonoBehaviour
 {
@@ -24,17 +23,7 @@ public class CourseListView : MonoBehaviour
     public string finalExamSectionTitle = "Bài thi cuối khóa";
     public string finalExamItemTitle    = "Vào bài thi";
 
-    private void Awake()
-    {
-        sceneLessonUI.OnLoadCourseDone += BuildListUI;
-    }
-
-    private void OnDestroy()
-    {
-        sceneLessonUI.OnLoadCourseDone -= BuildListUI;
-    }
-
-    private void BuildListUI(LmsCoursePrivate p)
+    public void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
 
@@ -82,12 +71,17 @@ public class CourseListView : MonoBehaviour
                     lessonUI.lessonID = lesson._id;
                     lessonUI.type = lesson.type;
 
-                    lessonUI.OnClickPlayVideo = PlayVideo;
                     lessonUI.chapterUI = headerChapter;
+                    
                     lessonUI.percent = lesson.completionCondition.percent;
-                    headerChapter.AddToList(lessonUI);
-
+                    lessonUI.OnClickPlayVideo = PlayVideo;
+                    lessonUI.progressTime = lesson.progressTime;
+                    lessonUI.duration = lesson.duration;
+                    // update progress time
+                    // int.TryParse(lesson.progressTime, out int progressTime);
+                    
                     Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
+                    headerChapter.AddToList(lessonUI);
                 }
             }
         }

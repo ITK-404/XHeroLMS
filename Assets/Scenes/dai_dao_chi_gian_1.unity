@@ -30442,6 +30442,53 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -4014692659132020010, guid: 58d5dddb88fcb764b97cea7bb86240aa, type: 3}
+--- !u!1 &1546505756
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1546505758}
+  - component: {fileID: 1546505757}
+  m_Layer: 0
+  m_Name: Course Progress API
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1546505757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1546505756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 907d56720c024e12b5229014c9258f44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseProgressAPI
+  baseUrl: https://apis-dev.xheroapp.com
+  courseID: 
+  lessonUI: {fileID: 3817720841529014809}
+--- !u!4 &1546505758
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1546505756}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3817720841529014810}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1557838484
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -37181,7 +37228,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3654399772274247240, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
   m_PrefabInstance: {fileID: 3817720841529014808}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 3817720841529014811}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8f1e2cf4dba01614e8a17f0935da944d, type: 3}
@@ -37345,9 +37392,62 @@ PrefabInstance:
       objectReference: {fileID: 6006074316233282182}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 5878477755605994895, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1546505758}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2023139846862013215, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3817720841529014813}
   m_SourcePrefab: {fileID: 100100000, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+--- !u!114 &3817720841529014809 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8877307646901009592, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+  m_PrefabInstance: {fileID: 3817720841529014808}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce6bdd196b1286c47b8a1665d991224f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseScrollViewBuilder
+--- !u!224 &3817720841529014810 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 5878477755605994895, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+  m_PrefabInstance: {fileID: 3817720841529014808}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3817720841529014811 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2023139846862013215, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+  m_PrefabInstance: {fileID: 3817720841529014808}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3817720841529014812 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8290777133652782523, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+  m_PrefabInstance: {fileID: 3817720841529014808}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3817720841529014811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa2f7b0119d743bfa2e7e9bf9bd8ab77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseListView
+--- !u!114 &3817720841529014813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3817720841529014811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6765193ed4334891bef7994d78140089, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseLearnHandle
+  sceneLessonUI: {fileID: 3817720841529014809}
+  courseProgressAPI: {fileID: 1546505757}
+  courseListView: {fileID: 3817720841529014812}
 --- !u!1001 &4958568703526269618
 PrefabInstance:
   m_ObjectHideFlags: 0
