@@ -4,6 +4,7 @@ using UnityEngine.UI;
 
 public class ChapterUI : ChapterBaseUI
 {
+    public string chapterID;
     [Header("References (chapter)")]
     public Button bannerBtn;
 

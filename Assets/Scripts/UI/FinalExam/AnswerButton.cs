@@ -1,4 +1,5 @@
 ﻿using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,45 +11,81 @@ public class AnswerButton : MonoBehaviour
     [Header("Multiple choice sprite")]
     [SerializeField] private Sprite circle_checkmark;
     [SerializeField] private Sprite circle_none;
-
+    [Header("Toggle")]
     [SerializeField] private Image backgroundImg;
     [SerializeField] private Image checkmarkImg;
-
+    [SerializeField] private Image selectImg;
+    [Header("Other Stuff")]
+    [SerializeField] private TextMeshProUGUI answerTmp;
+    [SerializeField] private Button clickBtn;
+    [SerializeField] private Image correctImg;
+    [Header("Color")]
+    public Color selectColor;
+    public Color correctColor;
+    public Color inCorrectColor;
+    
     public Toggle toggle;
-    private bool value;
+    public bool value;
     public Action<AnswerButton> OnSelectButton;
+    
     private void Awake()
     {
-        toggle.onValueChanged.AddListener(ChangedValue);
+        correctImg.gameObject.SetActive(false);
+        clickBtn.onClick.AddListener(ClickSelectBtn);
     }
 
     private void OnDestroy()
     {
-        toggle.onValueChanged.RemoveListener(ChangedValue);
+        clickBtn.onClick.RemoveListener(ClickSelectBtn);
     }
 
-    private void ChangedValue(bool value)
+    private void ClickSelectBtn()
     {
-        this.value = value;
         OnSelectButton?.Invoke(this);
     }
 
     [ContextMenu("Active Multiple Choice")]
     public void ActiveMultipleChoice()
     {
-        backgroundImg.sprite = square_checkmark;
-        checkmarkImg.sprite = square_none;
+        checkmarkImg.sprite = square_checkmark;
+        backgroundImg.sprite = square_none;
     }
 
     [ContextMenu("Active Single Choice")]
     public void ActiveSingleChoice()
     {
-        backgroundImg.sprite = circle_checkmark;
-        checkmarkImg.sprite = circle_none;
+        checkmarkImg.sprite = circle_checkmark;
+        backgroundImg.sprite = circle_none;
     }
-}
 
-public class AnswerButtonManager : MonoBehaviour
-{
-    
+    public void SetText(string answerText)
+    {
+        answerTmp.text = answerText;
+    }
+
+    public void ActiveSelect(bool isSelect)
+    {
+        value = isSelect;
+        selectImg.gameObject.SetActive(isSelect);
+        toggle.isOn = isSelect;
+        
+     
+    }
+
+    public Sprite correctSprite;
+    public Sprite inCorrectSprite;
+    public void SetCorrectColor()
+    {
+        correctImg.gameObject.SetActive(true);
+        selectImg.color = correctColor;
+        correctImg.sprite = correctSprite;
+    }
+
+    public void SetInCorrectColor()
+    {
+        correctImg.gameObject.SetActive(true);
+        selectImg.color = inCorrectColor;
+        correctImg.sprite = inCorrectSprite;
+        
+    }
 }

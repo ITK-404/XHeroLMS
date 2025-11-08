@@ -390,7 +390,7 @@ public class CourseListPageMyUI : MonoBehaviour
         return t;
     }
 
-    // --- JSON helpers ---
+    // --- JSON ---
     string ExtractNamedArray(string raw, string name)
     {
         if (string.IsNullOrEmpty(raw)) return null;

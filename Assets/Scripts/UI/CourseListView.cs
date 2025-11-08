@@ -2,13 +2,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using System.Collections;
 
 public class CourseListView : MonoBehaviour
 {
     public ScrollRect scrollRect;
     public Transform content;           // Content của ScrollView
-    public ChapterUI headerPrefab;     // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
-    public LessonUI itemPrefab;  
+    public ChapterUI headerPrefab;      // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
+    public LessonUI itemPrefab;
     public VideoPlayer videoPlayer;
 
     [Tooltip("Chiều cao mặc định cho item nếu prefab không có LayoutElement.")]
@@ -16,6 +17,12 @@ public class CourseListView : MonoBehaviour
     public float verticalSpacing = 6f;
 
     public SceneLessonUI sceneLessonUI;
+    public string courseID;
+
+    // ====== FINAL EXAM (thêm mới) ======
+    [Header("Final Exam")]
+    public string finalExamSectionTitle = "Bài thi cuối khóa";
+    public string finalExamItemTitle    = "Vào bài thi";
 
     private void Awake()
     {
@@ -30,15 +37,14 @@ public class CourseListView : MonoBehaviour
     private void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
+
         // Clear cũ
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
 
-        // ===== Header khóa học (1 lần) =====
-        //var headerCourse = Instantiate(headerPrefab);
-        //headerCourse.transform.SetParent(content, false);
-        //EnsureItemLayout((RectTransform)headerCourse.transform);
-        //SetLabel(headerCourse, "Chapter", _courseTitle);
+        // Lấy courseID an toàn (p._id hoặc p.course._id)
+        courseID = GetStringMember(p, "_id")
+                   ?? GetStringMember(GetMemberValue(p, "course"), "_id");
 
         // ===== Với mỗi CHAPTER: tạo header chương + các item bài =====
         if (p.chapters != null)
@@ -53,11 +59,8 @@ public class CourseListView : MonoBehaviour
                 if (!string.IsNullOrEmpty(chapTitle))
                 {
                     headerChapter = Instantiate(headerPrefab, content);
-                    //headerChapter.transform.SetParent(content, false);
-                    //EnsureItemLayout((RectTransform)headerChapter.transform);
-                    //SetLabel(headerChapter, "Chapter", chapTitle);
                     headerChapter.titleName.text = $"{chapTitle}";
-                    // headerChapter.SetUnlock();
+                    headerChapter.chapterID = ch._id;
                 }
                 ChapterUIManager.Instance.AddToList(headerChapter);
 
@@ -71,27 +74,43 @@ public class CourseListView : MonoBehaviour
                     if (string.IsNullOrEmpty(lessonTitle)) continue; // ẩn bài không tên
 
                     string link2 = !string.IsNullOrEmpty(lesson.videoLink2) ? lesson.videoLink2 :
-                        (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
+                                   (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
 
                     var lessonUI = Instantiate(itemPrefab, headerChapter.lessonContainer.transform);
-                    //lessonUI.transform.SetParent(headerChapter.lessonContainer.transform, false);
-                    //EnsureItemLayout((RectTransform)lessonUI.transform);
-
-                    // Luôn hiển thị vào Title (kể cả “Câu hỏi …”), QA ẩn
-                    //SetLabel(lessonUI, "Title", lessonTitle);
-                    //SetLabel(lessonUI, "QA", ""); // rỗng -> bị ẩn
                     lessonUI.titleTMP.text = $"{lessonTitle}";
-                    // Click phát video
-
                     lessonUI.linkVideo2 = link2;
+                    lessonUI.lessonID = lesson._id;
+                    lessonUI.type = lesson.type;
+
                     lessonUI.OnClickPlayVideo = PlayVideo;
                     lessonUI.chapterUI = headerChapter;
-                    
+                    lessonUI.percent = lesson.completionCondition.percent;
                     headerChapter.AddToList(lessonUI);
-                    
+
                     Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
                 }
             }
+        }
+
+        // ====== Append “Bài thi cuối khóa” nếu course.settings.finalExam có ID hợp lệ ======
+        var finalExamId = TryGetFinalExamId(p);
+        if (!string.IsNullOrEmpty(finalExamId))
+        {
+            var headerFinal = Instantiate(headerPrefab, content);
+            headerFinal.titleName.text = finalExamSectionTitle;
+            headerFinal.chapterID = null; // không cần id chương
+            ChapterUIManager.Instance.AddToList(headerFinal);
+
+            var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
+            finalItem.titleTMP.text = finalExamItemTitle;
+            finalItem.linkVideo2 = "";           // không dùng video
+            finalItem.lessonID  = finalExamId;   // giữ examId để xử lý sau
+            finalItem.type      = "FINAL_EXAM";  // đánh dấu loại
+            finalItem.chapterUI = headerFinal;
+            headerFinal.AddToList(finalItem);
+
+            // Click = chuyển sang scene thi (lưu prefs)
+            finalItem.OnClickPlayVideo = (_) => OnClickFinalExam(finalItem);
         }
 
         // Rebuild layout để tính lại vị trí/chiều cao
@@ -100,7 +119,7 @@ public class CourseListView : MonoBehaviour
 
         if (scrollRect) scrollRect.verticalNormalizedPosition = 1f;
     }
-     
+
     private void PlayVideo(string url)
     {
         if (string.IsNullOrEmpty(url)) { Debug.LogWarning("[SceneLessonUI] Video URL rỗng."); return; }
@@ -110,6 +129,7 @@ public class CourseListView : MonoBehaviour
         videoPlayer.Play();
         Debug.Log("[SceneLessonUI] Playing: " + url);
     }
+
     private void EnsureListLayout(RectTransform rt)
     {
         var vlg = rt.GetComponent<VerticalLayoutGroup>();
@@ -132,7 +152,6 @@ public class CourseListView : MonoBehaviour
         var le = rt.GetComponent<LayoutElement>();
         if (!le) le = rt.gameObject.AddComponent<LayoutElement>();
 
-        // Nếu prefab chưa set preferredHeight, dùng fallback
         if (le.preferredHeight <= 0f)
         {
             float h = rt.sizeDelta.y;
@@ -167,5 +186,130 @@ public class CourseListView : MonoBehaviour
 
         obj.SetActive(!string.IsNullOrEmpty(trimmed));
     }
+    
+    static object GetMemberValue(object obj, string name)
+    {
+        if (obj == null) return null;
+        var t = obj.GetType();
 
+        var fi = t.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (fi != null) return fi.GetValue(obj);
+
+        var pi = t.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (pi != null) return pi.GetValue(obj, null);
+
+        return null;
+    }
+
+    static string GetStringMember(object obj, params string[] names)
+    {
+        if (obj == null || names == null) return null;
+        foreach (var n in names)
+        {
+            var v = GetMemberValue(obj, n) as string;
+            if (!string.IsNullOrEmpty(v)) return v;
+        }
+        return null;
+    }
+
+    // ====== Tìm ID chỉ trong finalExam ======
+    static readonly string[] FinalExamIdKeys = { "examId", "_id", "id" };
+
+    // ID hợp lệ (Mongo 24 hex)
+    static bool IsLikelyId(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        var t = s.Trim();
+        return System.Text.RegularExpressions.Regex.IsMatch(t, "^[a-fA-F0-9]{24}$");
+    }
+
+    // Chỉ quét trong object finalExam, KHÔNG fallback sang settings/course
+    static string FindIdInObjectOnly(object obj)
+    {
+        if (obj == null) return null;
+
+        // string trực tiếp
+        if (obj is string s && IsLikelyId(s)) return s.Trim();
+
+        // dictionary
+        if (obj is System.Collections.IDictionary dict)
+        {
+            foreach (var key in dict.Keys)
+            {
+                var ks = key?.ToString();
+                if (string.IsNullOrEmpty(ks)) continue;
+
+                foreach (var k in FinalExamIdKeys)
+                {
+                    if (string.Equals(ks, k, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        var val = dict[key];
+                        var hit = FindIdInObjectOnly(val);
+                        if (IsLikelyId(hit)) return hit;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // object thường: thử đúng các key ID
+        var t = obj.GetType();
+        foreach (var k in FinalExamIdKeys)
+        {
+            var v = GetMemberValue(obj, k);
+            var hit = FindIdInObjectOnly(v);
+            if (IsLikelyId(hit)) return hit;
+        }
+
+        return null;
+    }
+
+    [SerializeField] bool debugFinalExam = true;
+
+    // Chỉ trả ID khi THẬT SỰ có settings.finalExam
+    string TryGetFinalExamId(object courseLike)
+    {
+        // Một số API trả { course: {...} }, số khác trả thẳng {...}
+        var course = GetMemberValue(courseLike, "course") ?? courseLike;
+
+        // Tìm settings ở các tên phổ biến
+        var settings = GetMemberValue(course, "settings")
+                       ?? GetMemberValue(course, "courseSettings");
+
+        // finalExam có thể nằm trong settings hoặc (ít gặp) ngay trên course
+        var finalExam = GetMemberValue(settings, "finalExam")
+                        ?? GetMemberValue(course, "finalExam");
+
+        // Không có finalExam => không có bài thi
+        if (finalExam == null)
+        {
+            if (debugFinalExam) Debug.Log("[CourseListView] finalExam: null -> no exam.");
+            return null;
+        }
+
+        // Nếu là string/id hoặc object chứa id
+        string id = FindIdInObjectOnly(finalExam);
+
+        if (debugFinalExam)
+        {
+            var tFinal = finalExam.GetType().FullName;
+            Debug.Log($"[CourseListView] finalExam type={tFinal}, parsedId={(id ?? "<null>")}");
+        }
+
+        return IsLikelyId(id) ? id : null;
+    }
+
+    // ===== Click nút “Vào bài thi” =====
+    private void OnClickFinalExam(LessonUI finalItem)
+    {
+        // Lưu thông tin cần thiết cho scene thi
+        PlayerPrefs.SetString("EXAM_CURRENT_ID", finalItem.lessonID);
+        PlayerPrefs.SetString("EXAM_CURRENT_COURSE_ID", courseID);
+        PlayerPrefs.Save();
+
+        Debug.Log($"[CourseListView] Saved ExamID={finalItem.lessonID}, CourseID={courseID}");
+
+        // Chuyển sang scene thi
+        LoadingTransition.Load("UI_Creator Scene");
+    }
 }

@@ -153,7 +153,7 @@ public class ForgotController : MonoBehaviour
             if (string.IsNullOrEmpty(path)) continue;
 
             var url = baseUrl.TrimEnd('/') + path + query;
-            Debug.Log($"[Forgot] Try OTP request → {url}");
+            Debug.Log($"[Forgot] Try OTP request -> {url}");
 
             using (var req = UnityWebRequest.Get(url))
             {
@@ -226,7 +226,7 @@ public class ForgotController : MonoBehaviour
         if (btnEnter) btnEnter.interactable = true;
     }
 
-    // ======= Validators & Helpers =======
+    // ======= Validators =======
     // public static bool IsValidPhone(string phoneDigits) => Regex.IsMatch(phoneDigits ?? "", @"^(0?\d{9,10})$");
     public static bool IsValidPhone(string phoneDigits)
     {

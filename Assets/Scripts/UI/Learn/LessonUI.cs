@@ -17,10 +17,13 @@ public class LessonUI : MonoBehaviour
     public Image iconImg;
     public Sprite onActiveIcon;
     public Sprite onDeActiveIcon;
+
     [Header("Data")]
+    public string lessonID;
     public string linkVideo2;
+    public string type;
     public bool isSelect = false;
-    
+    public string percent;
     public Action<string> OnClickPlayVideo;
     private void Awake()
     {

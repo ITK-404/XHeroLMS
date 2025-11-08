@@ -93,7 +93,7 @@ public class BookModel : MonoBehaviour
         
     }
 
-    private void OnMouseDown()
+    private void OnMouseUpAsButton()
     {
         OnPlayerClickBook?.Invoke();
     }

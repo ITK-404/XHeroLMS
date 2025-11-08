@@ -118,6 +118,35 @@ public class LmsStore : MonoBehaviour
     public IReadOnlyCollection<string> GetMyCourseIds() => _myCourseIds;
     public IReadOnlyList<LmsCourseUser> GetMyCourses() => Data.userCourses;
 
+    /// <summary>Trả về examId (có thể = "" nếu không có), ưu tiên Private -> Market -> MyCourses.</summary>
+    public string GetFinalExamId(string courseId)
+    {
+        if (string.IsNullOrEmpty(courseId)) return "";
+
+        if (_idxPrivateById.TryGetValue(courseId, out var p) && p != null && !string.IsNullOrEmpty(p.finalExam))
+            return p.finalExam;
+
+        if (_idxMarketById.TryGetValue(courseId, out var m) && m != null && !string.IsNullOrEmpty(m.finalExam))
+            return m.finalExam;
+
+        if (Data.userCourses != null)
+        {
+            foreach (var uc in Data.userCourses)
+            {
+                if (uc?.course?._id == courseId && !string.IsNullOrEmpty(uc.course.finalExam))
+                    return uc.course.finalExam;
+            }
+        }
+        return "";
+    }
+
+    /// <summary>Tra examId theo SEO (có thể = "" nếu không có).</summary>
+    public string GetFinalExamIdBySeo(string seoUrl)
+    {
+        var id = GetCourseIdBySeo(seoUrl);
+        return string.IsNullOrEmpty(id) ? "" : GetFinalExamId(id);
+    }
+
     #endregion
 
     #region Fetchers with TTL
@@ -135,6 +164,11 @@ public class LmsStore : MonoBehaviour
         {
             var root = JsonUtility.FromJson<ListWrapper<LmsCourse>>(WrapAsListRoot(body, "data"));
             Data.marketCourses = root.items ?? new List<LmsCourse>();
+
+            if (Data.marketCourses != null)
+                foreach (var c in Data.marketCourses)
+                    NormalizeFinalExam(c);
+
             Data.marketFetchedAtUnix = NowUnix;
             Debug.Log($"[LMS] Market fetched: {Data.marketCourses.Count} items.");
             RebuildIndexes();
@@ -155,6 +189,11 @@ public class LmsStore : MonoBehaviour
         {
             var root = JsonUtility.FromJson<ListWrapper<LmsCourseUser>>(WrapAsListRoot(body, "data"));
             Data.userCourses = root.items ?? new List<LmsCourseUser>();
+
+            if (Data.userCourses != null)
+                foreach (var uc in Data.userCourses)
+                    NormalizeFinalExam(uc?.course);
+
             Data.myCoursesFetchedAtUnix = NowUnix;
             Debug.Log($"[LMS] MyCourses fetched: {Data.userCourses.Count} items.");
             RebuildIndexes();
@@ -204,6 +243,9 @@ public class LmsStore : MonoBehaviour
                 Debug.LogError($"[LMS] Parse private FAILED for courseId='{courseId}'. Body snippet:\n{body.Substring(0, Mathf.Min(body.Length, 400))}");
                 return;
             }
+
+            // NEW: chuẩn hoá finalExam
+            NormalizeFinalExam(p);
 
             // replace or add
             int idx = Data.coursePrivates.FindIndex(x => x._id == p._id);
@@ -394,6 +436,15 @@ public class LmsStore : MonoBehaviour
             Debug.Log("[LMS] Loaded store : " + StorePath);
         }
         catch (Exception e) { Debug.LogWarning("[LMS] Load failed: " + e.Message); Data = new StoreData(); }
+
+        // NEW: normalize lại dữ liệu cũ để finalExam luôn non-null
+        if (Data.marketCourses != null)
+            foreach (var c in Data.marketCourses) NormalizeFinalExam(c);
+        if (Data.userCourses != null)
+            foreach (var uc in Data.userCourses) NormalizeFinalExam(uc?.course);
+        if (Data.coursePrivates != null)
+            foreach (var p in Data.coursePrivates) NormalizeFinalExam(p);
+
         RebuildIndexes();
     }
 
@@ -427,28 +478,52 @@ public class LmsStore : MonoBehaviour
         return (NowUnix - fetchedAtUnix) > ttlSeconds;
     }
 
-    // JsonUtility helpers
+    // JsonUtility
     [Serializable]
     class ListWrapper<T> { public List<T> items; }
-static string WrapAsListRoot(string rawJson, string arrayField)
-{
-    try
+
+    static string WrapAsListRoot(string rawJson, string arrayField)
     {
-        int i = rawJson.IndexOf($"\"{arrayField}\"");
-        if (i < 0) return "{\"items\":[]}";
-        int startArr = rawJson.IndexOf('[', i);
-        int endArr = rawJson.LastIndexOf(']');
-        if (startArr < 0 || endArr < startArr) return "{\"items\":[]}";
-        var arr = rawJson.Substring(startArr, endArr - startArr + 1);
-        return "{\"items\":" + arr + "}";
+        try
+        {
+            int i = rawJson.IndexOf($"\"{arrayField}\"");
+            if (i < 0) return "{\"items\":[]}";
+            int startArr = rawJson.IndexOf('[', i);
+            int endArr = rawJson.LastIndexOf(']');
+            if (startArr < 0 || endArr < startArr) return "{\"items\":[]}";
+            var arr = rawJson.Substring(startArr, endArr - startArr + 1);
+            return "{\"items\":" + arr + "}";
+        }
+        catch { return "{\"items\":[]}"; }
     }
-    catch { return "{\"items\":[]}"; }
-}
+
+    // ==== Normalize (finalExam luôn non-null) ====
+    void NormalizeFinalExam(LmsCourse c)
+    {
+        if (c == null) return;
+        if (c.settings != null && !string.IsNullOrEmpty(c.settings.finalExam))
+            c.finalExam = c.settings.finalExam;
+        if (c.finalExam == null) c.finalExam = ""; // ensure non-null
+    }
+
+    void NormalizeFinalExam(LmsCoursePrivate p)
+    {
+        if (p == null) return;
+        if (p.settings != null && !string.IsNullOrEmpty(p.settings.finalExam))
+            p.finalExam = p.settings.finalExam;
+        if (p.finalExam == null) p.finalExam = ""; // ensure non-null
+    }
 
     #endregion
 }
 
 #region Data Models
+
+[Serializable]
+public class LmsSettings
+{
+    public string finalExam;   // BE có thể trả "finalExam": "<examId>"
+}
 
 [Serializable]
 public class LmsCourse
@@ -462,6 +537,10 @@ public class LmsCourse
 
     public SeoInfo seo;
     public string image;
+
+    // NEW
+    public LmsSettings settings; // giữ nguyên cấu trúc gốc nếu có
+    public string finalExam;     // tiện tra cứu nhanh; luôn != null ("" nếu không có)
 }
 
 [Serializable]
@@ -480,15 +559,14 @@ public class LmsCoursePrivate
     public string _id;
     public string title;
     public string description;
-
-    // giữ lại nếu BE có trả videoLink tổng
-    public string videoLink;               
-
-    // private trả về chapters -> thêm vào model
+    public string videoLink;
     public List<LmsChapter> chapters;
-
     public SeoInfo seo;
     public string image;
+
+    // NEW
+    public LmsSettings settings; // phòng khi BE trả trong private
+    public string finalExam;     // luôn != null ("" nếu không có)
 }
 
 // Chương trong private
@@ -505,13 +583,14 @@ public class LmsChapter
 public class LmsPrivateLesson
 {
     public string _id;
-    public string title;       // <-- JSON dùng "title"
+    public string title;       // JSON dùng "title"
     public string type;        // "video" | "text" ...
     public string videoLink;   // có thể có
     public string videoLink2;  // có thể có
     public string duration;
     public CompletionCondition completionCondition;
 }
+
 [Serializable]
 public class CompletionCondition
 {

@@ -305,6 +305,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: test API
       objectReference: {fileID: 0}
+    - target: {fileID: 2923626319511774526, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -27900,7 +27904,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 675998455425842396, guid: dcf9131ad70ee734c8eba36aad0fbc26, type: 3}
       propertyPath: sceneName
-      value: NewScene
+      value: New Scene
       objectReference: {fileID: 0}
     - target: {fileID: 1785711406583529467, guid: dcf9131ad70ee734c8eba36aad0fbc26, type: 3}
       propertyPath: m_Name
@@ -33405,6 +33409,59 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1843462793}
   m_Mesh: {fileID: 2931197327148945200, guid: 58d5dddb88fcb764b97cea7bb86240aa, type: 3}
+--- !u!1 &1844473180
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1844473182}
+  - component: {fileID: 1844473181}
+  m_Layer: 0
+  m_Name: ObjectPutManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1844473181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1844473180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbe0a690be2f84c42996b2850bfb128a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LessonProgressManager
+  baseUrl: https://apis-dev.xheroapp.com
+  useTokenFromStore: 1
+  overrideAccessToken: 
+  sendIntervalSeconds: 15
+  minDeltaToSend: 3
+  hardCapSeconds: 0
+  autoCourseIdFromPrefs: 1
+  courseIdPrefsKey: COURSE_CURRENT_ID
+  verboseLog: 1
+--- !u!4 &1844473182
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1844473180}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 821.0873, y: 54.00174, z: -383.8097}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1851131776
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -37140,7 +37197,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1103644510142711640, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000030517578
+      value: 0.000061035156
       objectReference: {fileID: 0}
     - target: {fileID: 1881019257604592744, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
       propertyPath: m_AnchorMax.x
@@ -37643,3 +37700,4 @@ SceneRoots:
   - {fileID: 2030360408}
   - {fileID: 781023568}
   - {fileID: 1114028877}
+  - {fileID: 1844473182}

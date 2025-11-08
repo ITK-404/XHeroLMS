@@ -237,7 +237,7 @@ public class OtpVerificationController : MonoBehaviour
 
             string url = baseUrl.TrimEnd('/') + path;
             string json = "{\"username\":\"" + EscapeJson(username) + "\",\"otp\":\"" + EscapeJson(otp) + "\"}";
-            Debug.Log($"[OTP] Try ({(isForgot ? "FORGOT" : "REGISTER")}) → {url} ; body={json}");
+            Debug.Log($"[OTP] Try ({(isForgot ? "FORGOT" : "REGISTER")}) -> {url} ; body={json}");
 
             using (var req = new UnityWebRequest(url, "POST"))
             {
@@ -255,7 +255,7 @@ public class OtpVerificationController : MonoBehaviour
 #endif
                 if (ok)
                 {
-                    Debug.Log("[OTP] Verify OK → " + req.downloadHandler.text);
+                    Debug.Log("[OTP] Verify OK -> " + req.downloadHandler.text);
 
                     if (isRunning) { StopAllCoroutines(); isRunning = false; }
 
@@ -279,10 +279,10 @@ public class OtpVerificationController : MonoBehaviour
 
                 Debug.LogWarning($"[OTP] FAIL {req.responseCode} at {path}: {req.error}\n{req.downloadHandler.text}");
 
-                // Sai endpoint → thử cái tiếp theo
+                // Sai endpoint -> thử cái tiếp theo
                 if (req.responseCode == 404) continue;
 
-                // Sai mã → dọn input + gợi ý resend
+                // Sai mã -> dọn input + gợi ý resend
                 if (req.responseCode == 400 && (req.downloadHandler.text ?? "").Contains("wrong_otp"))
                 {
                     ClearOtpInputs();
@@ -349,7 +349,7 @@ public class OtpVerificationController : MonoBehaviour
 #endif
             if (ok)
             {
-                Debug.Log($"[OTP] Resend OK ({otpBy}/{functionName}) → {req.downloadHandler.text}");
+                Debug.Log($"[OTP] Resend OK ({otpBy}/{functionName}) -> {req.downloadHandler.text}");
                 // Reset đếm ngược mỗi lần gửi lại
                 ResetTimer();
                 if (errorText) errorText.text = "Đã gửi lại OTP. Vui lòng kiểm tra hộp thư/tin nhắn.";
@@ -429,8 +429,7 @@ public class OtpVerificationController : MonoBehaviour
         isRunning = false;
         Debug.Log("Hết thời gian OTP!");
     }
-
-    // ==== Helpers ====
+    
     private string GetOtp()
     {
         var sb = new StringBuilder(6);

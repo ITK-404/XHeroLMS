@@ -419,18 +419,18 @@ public class RegistrationController : MonoBehaviour
     private void ValidateAll()
     {
         string fullName = fullNameField ? fullNameField.text.Trim() : "";
-        string phone    = phoneField    ? phoneField.text.Trim()    : "";
-        string email    = emailField    ? emailField.text.Trim()    : "";
-        string pass1    = passwordField ? passwordField.text        : "";
-        string pass2    = confirmPasswordField ? confirmPasswordField.text : "";
+        string phone = phoneField ? phoneField.text.Trim() : "";
+        string email = emailField ? emailField.text.Trim() : "";
+        string pass1 = passwordField ? passwordField.text : "";
+        string pass2 = confirmPasswordField ? confirmPasswordField.text : "";
 
         string normalizedPhone = NormalizeDigits(phone);
 
-        bool nameOk   = !string.IsNullOrEmpty(fullName);
-        bool phoneOk  = IsValidPhone(normalizedPhone);
-        bool emailOk  = IsValidEmail(email);
-        bool passOk   = IsValidPassword(pass1, passwordMinLen);
-        bool matchOk  = pass1 == pass2 && pass1.Length > 0;
+        bool nameOk = !string.IsNullOrEmpty(fullName);
+        bool phoneOk = IsValidPhone(normalizedPhone);
+        bool emailOk = IsValidEmail(email);
+        bool passOk = IsValidPassword(pass1, passwordMinLen);
+        bool matchOk = pass1 == pass2 && pass1.Length > 0;
 
         bool formOk = nameOk && phoneOk && emailOk && passOk && matchOk;
 
@@ -438,20 +438,16 @@ public class RegistrationController : MonoBehaviour
 
         if (errorText)
         {
-            if (!nameOk)        errorText.text = "Vui lòng nhập Họ và tên.";
-            else if (!phoneOk)  errorText.text = "Số điện thoại không hợp lệ.";
-            else if (!emailOk)  errorText.text = "Email không hợp lệ.";
-            else if (!passOk)   errorText.text = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
-            else if (!matchOk)  errorText.text = "Mật khẩu nhập lại không khớp.";
-            else if (!confirmed)errorText.text = "Hãy đồng ý điều khoản để tiếp tục.";
-            else                errorText.text = "";
+            if (!nameOk) errorText.text = "Vui lòng nhập Họ và tên.";
+            else if (!phoneOk) errorText.text = "Số điện thoại không hợp lệ.";
+            else if (!emailOk) errorText.text = "Email không hợp lệ.";
+            else if (!passOk) errorText.text = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
+            else if (!matchOk) errorText.text = "Mật khẩu nhập lại không khớp.";
+            else if (!confirmed) errorText.text = "Hãy đồng ý điều khoản để tiếp tục.";
+            else errorText.text = "";
         }
     }
-
-    // =========================
-    // HELPERS & REGEX
-    // =========================
-
+    
     private string NormalizeDigits(string s) => Regex.Replace(s ?? "", @"\D", "");
     public static bool IsValidPhone(string digitsOnly) => Regex.IsMatch(digitsOnly ?? "", @"^(0?\d{9,10})$");
     public static bool IsValidEmail(string email)      => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");

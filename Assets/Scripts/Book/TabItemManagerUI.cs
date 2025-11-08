@@ -24,7 +24,7 @@ public class TabItemManagerUI : MonoBehaviour
         tabButtonsList = GetComponentsInChildren<TabUI>();
         returnBtn.onClick.AddListener(() =>
         {
-            LoadingTransition.Load("NewScene");
+            LoadingTransition.Load("New Scene");
         });
         foreach (var item in tabIDs)
         {
