@@ -148,6 +148,13 @@ public class VideoLoadingHandler : MonoBehaviour
 
     private void OnLoopEnd(VideoPlayer source)
     {
+        if (!source.isLooping)
+        {
+            _waitingFirstFrame = false;
+            LoadingUI.Hide();
+            return;
+        }
+
         _waitingFirstFrame = true;
         _stallTimer = 0f;
         _lastFrame  = -1;

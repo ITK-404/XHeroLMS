@@ -25,6 +25,10 @@ public class CourseProgressAPI : MonoBehaviour
     private void OnLoadCourseDone(LmsCoursePrivate obj)
     {
         // update course ID
+        if (obj == null)
+        {
+            return;
+        }
         courseID = obj._id;
     }
 

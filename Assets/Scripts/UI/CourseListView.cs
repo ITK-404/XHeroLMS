@@ -112,6 +112,7 @@ public class CourseListView : MonoBehaviour
             var headerFinal = Instantiate(headerPrefab, content);
             headerFinal.titleName.text = finalExamSectionTitle;
             headerFinal.chapterID = null; // không cần id chương
+            
             ChapterUIManager.Instance.AddToList(headerFinal);
 
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
