@@ -2,47 +2,118 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+[DisallowMultipleComponent]
+[RequireComponent(typeof(Button))]
+[RequireComponent(typeof(Image))]
+[ExecuteAlways] // để OnValidate chạy trong Editor
 public class ExamInfoElement : MonoBehaviour
 {
-    [SerializeField] private Image answeredImg;
-    [SerializeField] private Image unAsweredImg;
-    [SerializeField] private Image selectAnsweredImg;
+    public enum State { Unanswered, Answered, Selected }
+
+    [Header("Sprites")]
+    [SerializeField] private Sprite sprUnanswered;
+    [SerializeField] private Sprite sprAnswered;
+    [SerializeField] private Sprite sprSelected;
+
+    [Header("UI Refs")]
+    [SerializeField] private Image  rootButtonImage;   // Image của Button
+    [SerializeField] private Button clickable;         // chính Button
     [SerializeField] private TextMeshProUGUI coloredTmp;
     [SerializeField] private TextMeshProUGUI grayTmp;
     [SerializeField] private TextMeshProUGUI gradientTmp;
 
+    // ===== lifecycle =====
+    private void Reset()
+    {
+        clickable       = GetComponent<Button>();
+        rootButtonImage = GetComponent<Image>();
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        AutoWire();
+        EnsureRootImageSetup();
+        // nếu thiếu sprite nào đó, đỡ bị null-ref
+        if (!Application.isPlaying) ApplyState(State.Unanswered);
+    }
+#endif
+
     private void Awake()
     {
-        SetUnansweredButton();
+        AutoWire();
+        EnsureRootImageSetup();
+        ApplyState(State.Unanswered);
     }
 
-    public void SetAnsweredButton()
+    private void OnEnable()
     {
-        coloredTmp.gameObject.SetActive(true);
-        grayTmp.gameObject.SetActive(false);
-        gradientTmp.gameObject.SetActive(false);
+        EnsureRootImageSetup();
     }
 
-    public void SetUnansweredButton()
-    {
-        coloredTmp.gameObject.SetActive(false);
-        grayTmp.gameObject.SetActive(true);
-        gradientTmp.gameObject.SetActive(false);
-    }
-
-    public void ShowSelectedAnswerButton()
-    {
-        coloredTmp.gameObject.SetActive(false);
-        grayTmp.gameObject.SetActive(false);
-        gradientTmp.gameObject.SetActive(true);
-    }
+    // ===== public API =====
+    public Button GetButton() => clickable;
 
     public void SetQuestionIndexText(int index)
     {
-        string formatIndex = $"Câu\n{index}";
-        coloredTmp.text = formatIndex;
-        grayTmp.text = formatIndex;
-        gradientTmp.text = formatIndex;
+        string t = $"Câu\n{index}";
+        if (coloredTmp)  coloredTmp.text  = t;
+        if (grayTmp)     grayTmp.text     = t;
+        if (gradientTmp) gradientTmp.text = t;
     }
-   
+
+    public void SetAnsweredButton()        => ApplyState(State.Answered);
+    public void SetUnansweredButton()      => ApplyState(State.Unanswered);
+    public void ShowSelectedAnswerButton() => ApplyState(State.Selected);
+
+    public void ApplyState(State s)
+    {
+        // text layers
+        if (coloredTmp) coloredTmp.gameObject.SetActive(s == State.Answered);
+        if (grayTmp) grayTmp.gameObject.SetActive(s == State.Unanswered);
+        if (gradientTmp) gradientTmp.gameObject.SetActive(s == State.Selected);
+
+        // đổi sprite trên Image chính
+        if (!rootButtonImage) return;
+
+        switch (s)
+        {
+            case State.Unanswered:
+                if (sprUnanswered) rootButtonImage.sprite = sprUnanswered;
+                break;
+            case State.Answered:
+                if (sprAnswered) rootButtonImage.sprite = sprAnswered;
+                break;
+            case State.Selected:
+                if (sprSelected) rootButtonImage.sprite = sprSelected;
+                break;
+        }
+    }
+    
+    private void AutoWire()
+    {
+        if (!clickable)       clickable       = GetComponent<Button>();
+        if (!rootButtonImage) rootButtonImage = GetComponent<Image>();
+        if (clickable && clickable.targetGraphic != rootButtonImage)
+            clickable.targetGraphic = rootButtonImage;
+    }
+
+    private void EnsureRootImageSetup()
+    {
+        if (!rootButtonImage) return;
+
+        // đảm bảo nhìn thấy
+        var c = rootButtonImage.color; c.a = 1f; rootButtonImage.color = c;
+        rootButtonImage.enabled        = true;
+        rootButtonImage.raycastTarget = true;
+        
+        rootButtonImage.preserveAspect = false;
+
+        // chọn type hợp lý
+        var cur = rootButtonImage.sprite;
+        if (cur && cur.border.sqrMagnitude > 0f)
+            rootButtonImage.type = Image.Type.Sliced;
+        else
+            rootButtonImage.type = Image.Type.Simple;
+    }
 }
