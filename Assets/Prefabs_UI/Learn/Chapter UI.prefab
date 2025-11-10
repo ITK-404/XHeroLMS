@@ -141,10 +141,11 @@ MonoBehaviour:
   toggleOffBtn: {fileID: 337012474585535531}
   activeGroup: {fileID: 777330665267505693}
   deActiveGroup: {fileID: 8294421692426951286}
+  chapterID: 
   bannerBtn: {fileID: 8625239723088165980}
   isOpenSerialized: 0
   lessonList: []
-  finishColor: {r: 0.9764706, g: 0.8745098, b: 0.6, a: 1}
+  finishColor: {r: 1, g: 0.9607843, b: 0.85882354, a: 1}
   unFinishColor: {r: 1, g: 1, b: 1, a: 1}
   scrollActiveUnlock: {fileID: 21300000, guid: c8f4f419f55961a4e994a0db30abb859, type: 3}
   scrollActiveLock: {fileID: 21300000, guid: ff81bb55d2805d247ba6f2abd701819a, type: 3}
@@ -152,6 +153,7 @@ MonoBehaviour:
   scrollDeActiveLock: {fileID: 21300000, guid: c37d93f4ccf644e43bdf65d0e93b4cb6, type: 3}
   scrollActiveImg: {fileID: 581436985380987124}
   scrollDeActiveImg: {fileID: 7909763238213117139}
+  lockGroup: {fileID: 4913739277680074808}
 --- !u!114 &1288364123702094937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -376,6 +378,74 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_colorMode
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontStyle
+      value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_enableVertexGradient
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.b
+      value: 0.7529412
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.g
+      value: 0.92941177
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.r
+      value: 0.98039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topRight.b
+      value: 0.7529412
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topRight.g
+      value: 0.92941177
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.topRight.r
+      value: 0.98039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomLeft.b
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomLeft.g
+      value: 0.8745098
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomLeft.r
+      value: 0.9764706
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomRight.b
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomRight.g
+      value: 0.8745098
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontColorGradient.bottomRight.r
+      value: 0.9764706
+      objectReference: {fileID: 0}
+    - target: {fileID: 1874517482388937682, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_Name
+      value: Lock Group
+      objectReference: {fileID: 0}
+    - target: {fileID: 3254186031631245724, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -419,6 +489,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &4913739277680074808 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1874517482388937682, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &5892520771964149676 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
