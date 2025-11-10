@@ -19,21 +19,39 @@ public class ChapterUIManager : MonoBehaviour
     
     public void AddToList(ChapterUI chapterUI)
     {
-        chaptersList.Add(chapterUI);
+        if (chaptersList.Contains(chapterUI) == false)
+        {
+            chaptersList.Add(chapterUI);
+        }
     }
     [ContextMenu("UpdateLessonProgress")]
     public void UpdateLessonProgress()
     {
-        chaptersList[0].ChangeState(ChapterUI.ChapterState.Lock);
+        if (chaptersList.Count == 0) return;
+
+        // snapshot completion status so changing UI states doesn't affect checks
+        var completed = new bool[chaptersList.Count];
+        for (int i = 0; i < chaptersList.Count; i++)
+        {
+            completed[i] = chaptersList[i].IsCompleteAll();
+        }
+
+        // decide state for the first chapter (usually unlocked)
+        chaptersList[0].ChangeState(ChapterUI.ChapterState.Normal);
+
         for (int i = 1; i < chaptersList.Count; i++)
         {
-            var chapter = chaptersList[i];
-            var isUnlockAll = chaptersList[i - 1].IsCompleteAll();
+            var isUnlockAll = completed[i - 1];
             var state = isUnlockAll ? ChapterUI.ChapterState.Normal : ChapterUI.ChapterState.Lock;
-            
-            chapter.ChangeState(state);
-            
-            Debug.Log($"Chapter :{chapter.titleName.text} is Unlock all {isUnlockAll}");
+            chaptersList[i].ChangeState(state);
+
+            Debug.Log($"Chapter :{chaptersList[i].titleName.text} is Unlock all {isUnlockAll}");
+        }
+
+        // reapply selection state after updating progress so selection doesn't affect completion checks
+        if (currentChapter != null && chaptersList.Contains(currentChapter))
+        {
+            currentChapter.ChangeState(ChapterUI.ChapterState.Select);
         }
     }
 
@@ -45,14 +63,11 @@ public class ChapterUIManager : MonoBehaviour
         {
             previousChapter.ChangeState(ChapterUI.ChapterState.Normal);
         }
+
         // update current chapter
         currentChapter = chapter;
-        
-        if (currentChapter != null)
-        {
-            currentChapter.ChangeState(ChapterUI.ChapterState.Select);
-        }
-        
+
+        // update progress first (will reapply selection)
         UpdateLessonProgress();
     }
 
