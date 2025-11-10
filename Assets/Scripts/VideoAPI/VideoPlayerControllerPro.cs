@@ -90,6 +90,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     RenderTexture _rt;
     Renderer _quadRenderer;
 
+    public Predicate<double> GetSkipVideoDuration;
 
     // ---- Lifecycle ----
     void Reset()
@@ -466,7 +467,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void SetTimeSafely(double t)
     {
         if (!videoPlayer) return;
-
+        if (GetSkipVideoDuration(t) == false)
+        {
+            Debug.Log("Cảnh báo, không thể skip video tới thời gian: "+t);
+            return;
+        }
+        
+        
         if (videoPlayer.frameRate > 0.01f && videoPlayer.frameCount > 0)
         {
             long frame = (long)Mathf.Clamp((float)(t * videoPlayer.frameRate), 0, (float)(videoPlayer.frameCount - 1));
