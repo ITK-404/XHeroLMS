@@ -5,7 +5,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class LessonProgressManager : MonoBehaviour
+public class LmsVideoProgressApiClient : MonoBehaviour
 {
     [Header("Scene/Refs")]
     private CourseListView courseListView;           // để lấy courseId và list LessonUI
