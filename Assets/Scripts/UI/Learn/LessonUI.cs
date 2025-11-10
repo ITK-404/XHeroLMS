@@ -26,7 +26,7 @@ public class LessonUI : MonoBehaviour
     public string percent;
     public Action<string> OnClickPlayVideo;
     [Header("Learning progress")]
-    public string duration;
+    public int duration;
     public int progressTime;
 
     private void Awake()
@@ -44,6 +44,9 @@ public class LessonUI : MonoBehaviour
     {
         chapterUI.SelectLesson(this);
         OnClickPlayVideo?.Invoke(linkVideo2);
+        // Gọi đến API để lưu tiến độ lesson trước
+        // Thay lesson đang học
+        
     }
 
     public void SetActive(bool active)

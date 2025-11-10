@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -6,13 +7,14 @@ using UnityEngine.Video;
 public class CourseListView : MonoBehaviour
 {
     public ScrollRect scrollRect;
-    public Transform content;           // Content của ScrollView
-    public ChapterUI headerPrefab;      // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
+    public Transform content; // Content của ScrollView
+    public ChapterUI headerPrefab; // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
     public LessonUI itemPrefab;
     public VideoPlayer videoPlayer;
 
     [Tooltip("Chiều cao mặc định cho item nếu prefab không có LayoutElement.")]
     public float fallbackItemHeight = 120f;
+
     public float verticalSpacing = 6f;
 
     public SceneLessonUI sceneLessonUI;
@@ -21,13 +23,18 @@ public class CourseListView : MonoBehaviour
     // ====== FINAL EXAM (thêm mới) ======
     [Header("Final Exam")]
     public string finalExamSectionTitle = "Bài thi cuối khóa";
-    public string finalExamItemTitle    = "Vào bài thi";
+
+    public string finalExamItemTitle = "Vào bài thi";
+
+    private List<ChapterUI> chapterList = new();
+
 
     public void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
 
         // Clear cũ
+        ChapterUIManager.Instance.ClearList();
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
 
@@ -41,6 +48,10 @@ public class CourseListView : MonoBehaviour
             foreach (var ch in p.chapters)
             {
                 if (ch == null) continue;
+                if (ch.chapterTitle == "Tài liệu khóa học")
+                {
+                    continue;
+                }
 
                 // Header CHAPTER (nếu có tên)
                 string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
@@ -51,6 +62,7 @@ public class CourseListView : MonoBehaviour
                     headerChapter.titleName.text = $"{chapTitle}";
                     headerChapter.chapterID = ch._id;
                 }
+
                 ChapterUIManager.Instance.AddToList(headerChapter);
 
                 // Các bài học trong chapter
@@ -62,8 +74,9 @@ public class CourseListView : MonoBehaviour
                     string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
                     if (string.IsNullOrEmpty(lessonTitle)) continue; // ẩn bài không tên
 
-                    string link2 = !string.IsNullOrEmpty(lesson.videoLink2) ? lesson.videoLink2 :
-                                   (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
+                    string link2 = !string.IsNullOrEmpty(lesson.videoLink2)
+                        ? lesson.videoLink2
+                        : (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
 
                     var lessonUI = Instantiate(itemPrefab, headerChapter.lessonContainer.transform);
                     lessonUI.titleTMP.text = $"{lessonTitle}";
@@ -72,19 +85,25 @@ public class CourseListView : MonoBehaviour
                     lessonUI.type = lesson.type;
 
                     lessonUI.chapterUI = headerChapter;
-                    
+
                     lessonUI.percent = lesson.completionCondition.percent;
                     lessonUI.OnClickPlayVideo = PlayVideo;
                     lessonUI.progressTime = lesson.progressTime;
-                    lessonUI.duration = lesson.duration;
+
+
+                    // parse duration 
+                    int.TryParse(lesson.duration, out var duration);
+                    lessonUI.duration = duration;
                     // update progress time
                     // int.TryParse(lesson.progressTime, out int progressTime);
-                    
-                    Debug.Log($"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
+
+                    Debug.Log(
+                        $"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
                     headerChapter.AddToList(lessonUI);
                 }
             }
         }
+
 
         // ====== Append “Bài thi cuối khóa” nếu course.settings.finalExam có ID hợp lệ ======
         var finalExamId = TryGetFinalExamId(p);
@@ -97,27 +116,41 @@ public class CourseListView : MonoBehaviour
 
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
             finalItem.titleTMP.text = finalExamItemTitle;
-            finalItem.linkVideo2 = "";           // không dùng video
-            finalItem.lessonID  = finalExamId;   // giữ examId để xử lý sau
-            finalItem.type      = "FINAL_EXAM";  // đánh dấu loại
+            finalItem.linkVideo2 = ""; // không dùng video
+            finalItem.lessonID = finalExamId; // giữ examId để xử lý sau
+            finalItem.type = "FINAL_EXAM"; // đánh dấu loại
             finalItem.chapterUI = headerFinal;
             headerFinal.AddToList(finalItem);
 
             // Click = chuyển sang scene thi (lưu prefs)
             finalItem.OnClickPlayVideo = (_) => OnClickFinalExam(finalItem);
+
+            ChapterUIManager.Instance.AddToList(headerFinal);
         }
 
         // Rebuild layout để tính lại vị trí/chiều cao
+        ChapterUIManager.Instance.UpdateLessonProgress();
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)content);
 
         if (scrollRect) scrollRect.verticalNormalizedPosition = 1f;
     }
 
+
     private void PlayVideo(string url)
     {
-        if (string.IsNullOrEmpty(url)) { Debug.LogWarning("[SceneLessonUI] Video URL rỗng."); return; }
-        if (!videoPlayer) { Debug.LogWarning("[SceneLessonUI] videoPlayer null."); return; }
+        if (string.IsNullOrEmpty(url))
+        {
+            Debug.LogWarning("[SceneLessonUI] Video URL rỗng.");
+            return;
+        }
+
+        if (!videoPlayer)
+        {
+            Debug.LogWarning("[SceneLessonUI] videoPlayer null.");
+            return;
+        }
+
         videoPlayer.source = VideoSource.Url;
         videoPlayer.url = url;
         videoPlayer.Play();
@@ -128,10 +161,10 @@ public class CourseListView : MonoBehaviour
     {
         var vlg = rt.GetComponent<VerticalLayoutGroup>();
         if (!vlg) vlg = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.childForceExpandWidth  = true;
+        vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
-        vlg.childControlWidth      = true;
-        vlg.childControlHeight     = true;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
         vlg.spacing = verticalSpacing;
         vlg.padding = new RectOffset(0, 0, 0, 0);
 
@@ -151,6 +184,7 @@ public class CourseListView : MonoBehaviour
             float h = rt.sizeDelta.y;
             le.preferredHeight = (h > 0f ? h : fallbackItemHeight);
         }
+
         le.minHeight = le.preferredHeight;
         le.flexibleHeight = 0f;
     }
@@ -180,16 +214,20 @@ public class CourseListView : MonoBehaviour
 
         obj.SetActive(!string.IsNullOrEmpty(trimmed));
     }
-    
+
     static object GetMemberValue(object obj, string name)
     {
         if (obj == null) return null;
         var t = obj.GetType();
 
-        var fi = t.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var fi = t.GetField(name,
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance);
         if (fi != null) return fi.GetValue(obj);
 
-        var pi = t.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var pi = t.GetProperty(name,
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance);
         if (pi != null) return pi.GetValue(obj, null);
 
         return null;
@@ -203,6 +241,7 @@ public class CourseListView : MonoBehaviour
             var v = GetMemberValue(obj, n) as string;
             if (!string.IsNullOrEmpty(v)) return v;
         }
+
         return null;
     }
 
@@ -243,6 +282,7 @@ public class CourseListView : MonoBehaviour
                     }
                 }
             }
+
             return null;
         }
 
