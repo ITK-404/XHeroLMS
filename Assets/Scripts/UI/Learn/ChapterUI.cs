@@ -1,10 +1,19 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ChapterUI : ChapterBaseUI
 {
+    public enum ChapterState
+    {
+        Lock,
+        Normal,
+        Select
+    }
+
     public string chapterID;
+
     [Header("References (chapter)")]
     public Button bannerBtn;
 
@@ -13,16 +22,22 @@ public class ChapterUI : ChapterBaseUI
 
     public List<LessonUI> lessonList = new();
 
-    public Color finishColor;
-    public Color unFinishColor;
+    [SerializeField] Color finishColor;
+    [SerializeField] Color unFinishColor;
 
     [Header("Sprite")]
-    public Sprite scrollActiveUnlock;
-    public Sprite scrollActiveLock;
-    public Sprite scrollDeActiveUnlock;
-    public Sprite scrollDeActiveLock;
-    public Image scrollActiveImg;
-    public Image scrollDeActiveImg;
+    [SerializeField] Sprite scrollActiveUnlock;
+
+    [SerializeField] Sprite scrollActiveLock;
+    [SerializeField] Sprite scrollDeActiveUnlock;
+    [SerializeField] Sprite scrollDeActiveLock;
+    [SerializeField] Image scrollActiveImg;
+    [SerializeField] Image scrollDeActiveImg;
+
+    private ChapterUIManager chapterUIManager;
+
+    private ChapterState chapterState;
+    public GameObject lockGroup;
 
     protected override void Awake()
     {
@@ -31,7 +46,11 @@ public class ChapterUI : ChapterBaseUI
         {
             bannerBtn.onClick.AddListener(SelectThisChapter);
         }
-        ShowActiveUI(false);
+    }
+
+    private void Start()
+    {
+        chapterUIManager = ChapterUIManager.Instance;
     }
 
     protected override void OnDestroy()
@@ -40,36 +59,58 @@ public class ChapterUI : ChapterBaseUI
         {
             bannerBtn.onClick.RemoveListener(SelectThisChapter);
         }
+
         base.OnDestroy();
     }
 
     private void SelectThisChapter()
     {
         Debug.Log("On Select This Chapter");
-        if (ChapterUIManager.Instance.IsSelectChapter(this))
+        if (chapterState == ChapterState.Lock)
         {
+            Debug.Log("This chapter is lock, cannot select");
             return;
         }
-        ChapterUIManager.Instance.Select(this);
+        // chapter state will handle inside here
+        if (!chapterUIManager.IsSelectChapter(this))
+        {
+            chapterUIManager.Select(this);
+        }
+        else
+        {
+            // toggle between 2 UI statee
+            if (chapterState == ChapterState.Normal)
+            {
+                ChangeState(ChapterState.Select);
+            }
+            else
+            {
+                ChangeState(ChapterState.Normal);
+            }
+        }
+
     }
 
     public override void ToggleOn()
     {
-        base.ToggleOn();
-        if (!ChapterUIManager.Instance.IsSelectChapter(this))
+        if (chapterState == ChapterState.Lock)
         {
-            ChapterUIManager.Instance.Select(this);
+            return;
         }
-        ShowActiveUI(true);
-        lessonContainer.gameObject.SetActive(true);
-        
+        base.ToggleOn();
+        SelectThisChapter();
+        UpdateUI();
     }
 
     public override void ToggleOff()
     {
+        if (chapterState == ChapterState.Lock)
+        {
+            return;
+        }
         base.ToggleOff();
-        ShowActiveUI(false);
-        lessonContainer.gameObject.SetActive(false);
+        ChangeState(ChapterState.Normal);
+        UpdateUI();
     }
 
     public void SelectLesson(LessonUI lessonUI)
@@ -85,30 +126,36 @@ public class ChapterUI : ChapterBaseUI
         lessonList.Add(lessonUI);
     }
 
-    [ContextMenu("Highlight")]
-    public void Highlight()
+    public void UpdateUI()
     {
-        Debug.Log("Highlight");
-        ToggleOn();
+        var currentState = chapterState;
+        deActiveGroup.gameObject.SetActive(currentState == ChapterState.Normal);
+        activeGroup.gameObject.SetActive(currentState == ChapterState.Select);
+        lessonContainer.gameObject.SetActive(currentState == ChapterState.Select);
+        lockGroup.gameObject.SetActive(currentState == ChapterState.Lock);
+        
+        titleName.color = currentState == ChapterState.Lock ? unFinishColor : finishColor;
+        titleName.enableVertexGradient = currentState == ChapterState.Normal;
     }
 
-    [ContextMenu("UnHighlight")]
-    public void UnHighlight()
+    public bool IsCompleteAll()
     {
-        Debug.Log("UnHighlight");
-        ToggleOff();
+        foreach (var lesson in lessonList)
+        {
+            bool isComplete = lesson.progressTime >= lesson.duration;
+
+            if (isComplete == false)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    public void SetUnlock(bool unlock)
+    public void ChangeState(ChapterState chapterState)
     {
-        if (scrollActiveImg != null) scrollActiveImg.sprite = unlock ? scrollActiveUnlock : scrollActiveLock;
-        if (scrollDeActiveImg != null) scrollDeActiveImg.sprite = unlock ? scrollDeActiveUnlock : scrollDeActiveLock;
-        if (titleName != null) titleName.color = unlock ? finishColor : unFinishColor;
+        this.chapterState = chapterState;
+        UpdateUI();
     }
-    
-    [ContextMenu("SetUnlock UI")]
-    public void SetUnLockUI() => SetUnlock(true);
-    [ContextMenu("SetLock UI")]
-    public void SetLockUI() => SetUnlock(false);
-    
 }

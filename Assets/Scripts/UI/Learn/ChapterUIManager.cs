@@ -12,16 +12,42 @@ public class ChapterUIManager : MonoBehaviour
         Instance = this;
     }
 
+    public void ClearList()
+    {
+        chaptersList.Clear();
+    }
+    
     public void AddToList(ChapterUI chapterUI)
     {
         chaptersList.Add(chapterUI);
     }
+    
+    public void UpdateLessonProgress()
+    {
+        chaptersList[0].ChangeState(ChapterUI.ChapterState.Lock);
+        for (int i = 1; i < chaptersList.Count; i++)
+        {
+            var chapter = chaptersList[i];
+            var isUnlockAll = chaptersList[i - 1].IsCompleteAll();
+            var state = isUnlockAll ? ChapterUI.ChapterState.Normal : ChapterUI.ChapterState.Lock;
+            chapter.ChangeState(state);
+        }
+    }
 
     public void Select(ChapterUI chapter)
     {
-        currentChapter?.UnHighlight();
+        // update previous chapter
+        var previousChapter = currentChapter;
+        if (previousChapter != null)
+        {
+            previousChapter.ChangeState(ChapterUI.ChapterState.Normal);
+        }
+        // update current chapter
         currentChapter = chapter;
-        currentChapter?.Highlight();
+        if (currentChapter != null)
+        {
+            currentChapter.ChangeState(ChapterUI.ChapterState.Select);
+        }
     }
 
     public bool IsSelectChapter(ChapterUI chapterUI)

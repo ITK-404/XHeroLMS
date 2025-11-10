@@ -250,6 +250,8 @@ public class LessonProgressManager : MonoBehaviour
             {
                 Debug.LogWarning($"[LPM] PUT FAIL code={req.responseCode} err={req.error} body={req.downloadHandler?.text}");
             }
+
+            target.progressTime = progress;
         }
     }
 
