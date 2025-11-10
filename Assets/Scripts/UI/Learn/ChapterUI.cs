@@ -71,6 +71,7 @@ public class ChapterUI : ChapterBaseUI
             Debug.Log("This chapter is lock, cannot select");
             return;
         }
+
         // chapter state will handle inside here
         if (!chapterUIManager.IsSelectChapter(this))
         {
@@ -88,7 +89,6 @@ public class ChapterUI : ChapterBaseUI
                 ChangeState(ChapterState.Normal);
             }
         }
-
     }
 
     public override void ToggleOn()
@@ -97,6 +97,7 @@ public class ChapterUI : ChapterBaseUI
         {
             return;
         }
+
         base.ToggleOn();
         SelectThisChapter();
         UpdateUI();
@@ -108,6 +109,7 @@ public class ChapterUI : ChapterBaseUI
         {
             return;
         }
+
         base.ToggleOff();
         ChangeState(ChapterState.Normal);
         UpdateUI();
@@ -115,10 +117,13 @@ public class ChapterUI : ChapterBaseUI
 
     public void SelectLesson(LessonUI lessonUI)
     {
+        // try update progress
         foreach (var item in lessonList)
         {
             item.SetActive(item == lessonUI);
         }
+
+        LessonProgressTracker.Instance.UpdateLesson(lessonUI);
     }
 
     public void AddToList(LessonUI lessonUI)
@@ -133,7 +138,7 @@ public class ChapterUI : ChapterBaseUI
         activeGroup.gameObject.SetActive(currentState == ChapterState.Select);
         lessonContainer.gameObject.SetActive(currentState == ChapterState.Select);
         lockGroup.gameObject.SetActive(currentState == ChapterState.Lock);
-        
+
         titleName.color = currentState == ChapterState.Lock ? unFinishColor : finishColor;
         titleName.enableVertexGradient = currentState == ChapterState.Normal;
     }

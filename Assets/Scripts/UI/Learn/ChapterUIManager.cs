@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,8 +6,7 @@ public class ChapterUIManager : MonoBehaviour
 {
     public static ChapterUIManager Instance;
     private List<ChapterUI> chaptersList = new();
-    private ChapterUI currentChapter;
-
+    public ChapterUI currentChapter;
     private void Awake()
     {
         Instance = this;
@@ -21,7 +21,7 @@ public class ChapterUIManager : MonoBehaviour
     {
         chaptersList.Add(chapterUI);
     }
-    
+    [ContextMenu("UpdateLessonProgress")]
     public void UpdateLessonProgress()
     {
         chaptersList[0].ChangeState(ChapterUI.ChapterState.Lock);
@@ -30,7 +30,10 @@ public class ChapterUIManager : MonoBehaviour
             var chapter = chaptersList[i];
             var isUnlockAll = chaptersList[i - 1].IsCompleteAll();
             var state = isUnlockAll ? ChapterUI.ChapterState.Normal : ChapterUI.ChapterState.Lock;
+            
             chapter.ChangeState(state);
+            
+            Debug.Log($"Chapter :{chapter.titleName.text} is Unlock all {isUnlockAll}");
         }
     }
 
@@ -44,10 +47,13 @@ public class ChapterUIManager : MonoBehaviour
         }
         // update current chapter
         currentChapter = chapter;
+        
         if (currentChapter != null)
         {
             currentChapter.ChangeState(ChapterUI.ChapterState.Select);
         }
+        
+        UpdateLessonProgress();
     }
 
     public bool IsSelectChapter(ChapterUI chapterUI)

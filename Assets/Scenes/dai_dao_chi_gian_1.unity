@@ -33419,6 +33419,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1844473182}
   - component: {fileID: 1844473181}
+  - component: {fileID: 1844473183}
   m_Layer: 0
   m_Name: ObjectPutManager
   m_TagString: Untagged
@@ -33441,12 +33442,10 @@ MonoBehaviour:
   baseUrl: https://apis-dev.xheroapp.com
   useTokenFromStore: 1
   overrideAccessToken: 
-  sendIntervalSeconds: 15
-  minDeltaToSend: 3
-  hardCapSeconds: 0
   autoCourseIdFromPrefs: 1
   courseIdPrefsKey: COURSE_CURRENT_ID
   verboseLog: 1
+  _courseId: 
 --- !u!4 &1844473182
 Transform:
   m_ObjectHideFlags: 0
@@ -33462,6 +33461,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1844473183
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1844473180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29b5f8b816984e9093a6d1ab4563ddf7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LessonProgressTracker
+  highestProgressTime: 0
+  lessonUI: {fileID: 0}
+  videoPlayerControllerPro: {fileID: 6006074316233282183}
+  lmsVideoProgressApiClient: {fileID: 1844473181}
+  sceneLessonUI: {fileID: 3817720841529014809}
 --- !u!114 &1851131776
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -37428,6 +37444,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+--- !u!114 &3817720841529014809 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8877307646901009592, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+  m_PrefabInstance: {fileID: 3817720841529014808}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce6bdd196b1286c47b8a1665d991224f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseScrollViewBuilder
 --- !u!1001 &4958568703526269618
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -37758,6 +37785,17 @@ VideoPlayer:
   m_CorrespondingSourceObject: {fileID: 265138482158902626, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
   m_PrefabInstance: {fileID: 6006074316233282178}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6006074316233282183 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5837359540616188873, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+  m_PrefabInstance: {fileID: 6006074316233282178}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88a2bb1bcae9d794284a4ab57065a537, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VideoPlayerControllerPro
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

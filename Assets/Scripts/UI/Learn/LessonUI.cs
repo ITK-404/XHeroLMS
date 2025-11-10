@@ -26,8 +26,8 @@ public class LessonUI : MonoBehaviour
     public string percent;
     public Action<string> OnClickPlayVideo;
     [Header("Learning progress")]
-    public int duration;
-    public int progressTime;
+    public float duration;
+    public float progressTime;
 
     private void Awake()
     {
@@ -57,5 +57,10 @@ public class LessonUI : MonoBehaviour
         frameHighlight.gameObject.SetActive(active);
         
         iconImg.sprite = active ? onActiveIcon : onDeActiveIcon;
+    }
+
+    public void TryUpdateProgress(float newProgressTime)
+    {
+        progressTime = Mathf.Clamp(newProgressTime + 1, progressTime, duration);
     }
 }
