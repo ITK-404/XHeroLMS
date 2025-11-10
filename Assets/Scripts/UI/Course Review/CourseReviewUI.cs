@@ -102,6 +102,7 @@ public class CourseReviewUI : MonoBehaviour
         {
             lessonUI.duration.text = duration;
         }
+
     }
     private string FormatFromSeconds(int totalSeconds)
     {

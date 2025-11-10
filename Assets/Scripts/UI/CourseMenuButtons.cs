@@ -7,7 +7,7 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("UI")]
     public Button btnAllCourses;
     public Button btnMyCourses;
-    
+    public Transform container;
     [Header("Destination")]
     [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
@@ -21,6 +21,16 @@ public class CourseMenuButtons : MonoBehaviour
     public Transform player;
     void Awake()
     {
+        
+        if (TokenStore.IsAuthenticated)
+        {
+            Show();
+        }
+        else
+        {
+            LoginController.OnLoginComplete += Show;
+        }
+        
         if (btnAllCourses != null)
             btnAllCourses.onClick.AddListener(() =>
             {
@@ -36,6 +46,10 @@ public class CourseMenuButtons : MonoBehaviour
             });
     }
 
+    private void Show()
+    {
+        container.gameObject.SetActive(true);
+    }
     void Go(string key)
     {
         PlayerPrefs.SetString(COURSE_KEY_PREF, key);
