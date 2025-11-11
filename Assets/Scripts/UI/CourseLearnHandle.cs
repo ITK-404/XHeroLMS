@@ -20,6 +20,8 @@ public class CourseLearnHandle : MonoBehaviour
     private void OnGetData(LmsCoursePrivate coursePrivate)
     {
         this.coursePrivate = coursePrivate;
+        courseProgressAPI.courseID = coursePrivate._id;
+        
         StartCoroutine(WaitingForProgress());
         // then waiting for fetch progress Data;
     }
