@@ -21,7 +21,6 @@ public class ToggleBaseUI : MonoBehaviour
 
     protected virtual void Awake()
     {
-        btn = GetComponent<Button>();
         btn.onClick.AddListener(OnClickButton);
     }
 
@@ -60,6 +59,6 @@ public class ToggleBaseUI : MonoBehaviour
 
     public virtual void OnClickButton()
     {
-
+        Toggle();
     }
 }

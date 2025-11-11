@@ -24,6 +24,7 @@ public class ChapterUIManager : MonoBehaviour
             chaptersList.Add(chapterUI);
         }
     }
+    
     [ContextMenu("UpdateLessonProgress")]
     public void UpdateLessonProgress()
     {

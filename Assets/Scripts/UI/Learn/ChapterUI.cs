@@ -34,6 +34,11 @@ public class ChapterUI : ChapterBaseUI
     [SerializeField] Image scrollActiveImg;
     [SerializeField] Image scrollDeActiveImg;
 
+    [Header("Lock Sprite")]
+    [SerializeField] private Sprite finalExamLockSprite;
+    [SerializeField] private Sprite finalExamUnLockSprite;
+    [SerializeField] private Image unlockExamImg;
+    [SerializeField] private Image lockExamImg;
     private ChapterUIManager chapterUIManager;
 
     private ChapterState chapterState;
@@ -162,5 +167,11 @@ public class ChapterUI : ChapterBaseUI
     {
         this.chapterState = chapterState;
         UpdateUI();
+    }
+
+    public void SetFinalExam()
+    {
+        lockExamImg.sprite = finalExamLockSprite;
+        unlockExamImg.sprite = finalExamUnLockSprite;
     }
 }
