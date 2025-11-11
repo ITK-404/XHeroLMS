@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1844350695119584535
 RectTransform:
   m_ObjectHideFlags: 0
@@ -34,10 +34,10 @@ RectTransform:
   - {fileID: 5828669331427810610}
   m_Father: {fileID: 3578325470828398243}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100, y: -134.655}
+  m_SizeDelta: {x: 476.7, y: 65.41}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7783479742454995287
 MonoBehaviour:
@@ -153,6 +153,10 @@ MonoBehaviour:
   scrollDeActiveLock: {fileID: 21300000, guid: c37d93f4ccf644e43bdf65d0e93b4cb6, type: 3}
   scrollActiveImg: {fileID: 581436985380987124}
   scrollDeActiveImg: {fileID: 7909763238213117139}
+  finalExamLockSprite: {fileID: 21300000, guid: 5fe117b9b24864e4795a564a460edae4, type: 3}
+  finalExamUnLockSprite: {fileID: 21300000, guid: c6cb4d81afc8d9144a316a430b6d33bd, type: 3}
+  unlockExamImg: {fileID: 7909763238213117139}
+  lockExamImg: {fileID: 7156382998896803068}
   lockGroup: {fileID: 4913739277680074808}
 --- !u!114 &1288364123702094937
 MonoBehaviour:
@@ -206,7 +210,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 150653225459941014, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 26.84
       objectReference: {fileID: 0}
     - target: {fileID: 150653225459941014, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -278,7 +282,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 50.84
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_LocalPosition.x
@@ -314,7 +318,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -36
+      value: -31.205
       objectReference: {fileID: 0}
     - target: {fileID: 3251290483948502737, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -334,7 +338,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4473666847781367973, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
       propertyPath: m_PreserveAspect
@@ -577,7 +581,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 614124159074481035, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 268.05
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 614124159074481035, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -969,6 +973,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &7156382998896803068 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4423115423192401686, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+  m_PrefabInstance: {fileID: 6787633141387115498}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!114 &7909763238213117139 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3744632730255548217, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
