@@ -55,6 +55,7 @@ public partial class ExamUIController : MonoBehaviour
     public Coroutine timerCo;
 
     public string examTitle = "";
+    public string examName  = "";
     public int passPointPercent = 80;
     public bool examStarted = false;
 
@@ -215,11 +216,11 @@ public partial class ExamUIController : MonoBehaviour
         examId = "";
         courseId = "";
 
-        // 1) override (ưu tiên cao nhất)
+        // override (ưu tiên cao nhất)
         if (!string.IsNullOrEmpty(overrideExamId)) examId = overrideExamId;
         if (!string.IsNullOrEmpty(overrideCourseId)) courseId = overrideCourseId;
 
-        // 2) PlayerPrefs (được CourseListView set)
+        // PlayerPrefs (được CourseListView set)
         if (string.IsNullOrEmpty(examId))
             examId = PlayerPrefs.GetString(examIdPrefsKey, "");
         if (string.IsNullOrEmpty(courseId))
@@ -354,6 +355,7 @@ public partial class ExamUIController : MonoBehaviour
         // Header info
         string descHtml = ExamFormat.ExtractStringField(raw, "description") ?? "";
         examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
+        examName = ExamFormat.ExtractStringField(raw, "title") ?? "";
         passPointPercent = ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
         return false;
     }
