@@ -31,7 +31,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         Dictionary<string, HashSet<int>> userPicked,
         Dictionary<string, List<int>> correctAnswers,
         int startIndex = 0,
-        Dictionary<string, List<string>> correctAnswerTexts = null) // NEW (optional)
+        Dictionary<string, List<string>> correctAnswerTexts = null)
     {
         SetReviewMode(true);
 
@@ -71,6 +71,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         _idx = Mathf.Clamp(startIndex, 0, (_paper?.questions?.Count ?? 1) - 1);
         gameObject.SetActive(true);
 
+        RebuildNavForReview();
         HijackBaseNav();
         RenderReview();
 
@@ -200,6 +201,8 @@ public class ExamResultReviewPanel : ExamQuestionManager
         // cập nhật trạng thái enable cho 2 nút (vẫn là nút của base)
         if (btnBack) btnBack.interactable = _idx > 0;
         if (btnNext) btnNext.interactable = _idx < _paper.questions.Count - 1;
+
+        ReviewHighlightNavIndex(_idx);
     }
 
     private void RenderChoicesReadOnly(ExamQuestion q,
@@ -272,15 +275,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         input.readOnly = true;
         input.text = "(Xem lại bài tự luận)";
     }
-
-    // -------- utils --------
-
-    /// <summary>
-    /// Chuyển tập chỉ số đúng (có thể 0/1-based) sang 0-based theo từng câu hỏi.
-    /// Heuristic:
-    /// - Nếu có phần tử == options.Count  (vượt quá index tối đa 0-based) -> coi là 1-based -> trừ 1.
-    /// - Ngược lại giữ nguyên.
-    /// </summary>
+    
     private static HashSet<int> NormalizeCorrectIndexSet(ExamQuestion q, HashSet<int> raw)
     {
         var result = new HashSet<int>();
@@ -299,13 +294,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
                 result.Add(idx);
         }
         return result;
-    }
-
-    private static bool SetsEqual(HashSet<int> a, HashSet<int> b)
-    {
-        if (a == null || b == null || a.Count != b.Count) return false;
-        foreach (var v in a) if (!b.Contains(v)) return false;
-        return true;
     }
 
     private static bool IsExactlyCorrect(ExamQuestion q,
@@ -368,4 +356,28 @@ public class ExamResultReviewPanel : ExamQuestionManager
         s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
         return s.ToLowerInvariant();
     }
+
+    private void RebuildNavForReview()
+    {
+
+        RebuildQuestionNavIfNeeded();
+
+        // Rebind click của từng “chấm” để nhảy trong review
+        for (int i = 0; i < _navItems.Count; i++)
+        {
+            int t = i;
+            var b = _navItems[i]?.GetButton();
+            if (b == null) continue;
+            b.onClick.RemoveAllListeners();
+            b.onClick.AddListener(() =>
+            {
+                _idx = t;
+                RenderReview();
+            });
+        }
+
+        // highlight lần đầu
+        ReviewHighlightNavIndex(_idx);
+    }
+
 }

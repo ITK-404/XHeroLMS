@@ -31,20 +31,19 @@ public class ExamAutoFindAndDump : MonoBehaviour
 
     IEnumerator Run()
     {
-        // 0) Token
+        // Token
         string token = GetToken();
         if (string.IsNullOrEmpty(token))
         {
-            Debug.LogError("[ExamAuto] Missing token. Hãy login hoặc dán tokenOverride.");
             yield break;
         }
         string bearer = "Bearer " + token;
         string api = baseUrl.TrimEnd('/');
 
-        // 1) Warmup LmsStore -> tải MyCourses + Private + Market (nếu cần)
+        // Warmup LmsStore -> tải MyCourses + Private + Market (nếu cần)
         yield return LmsStore.Instance.WarmupAll(0, 300, "", "", "", "");
 
-        // 2) Quét MyCourses để tìm course có finalExam (LmsStore đã normalize)
+        // Quét MyCourses để tìm course có finalExam (LmsStore đã normalize)
         string pickedCourseId = null;
         string pickedExamId = null;
         string pickedTitle = null;
@@ -78,7 +77,7 @@ public class ExamAutoFindAndDump : MonoBehaviour
 
         Debug.Log($"[ExamAuto] Picked course: {pickedTitle} ({pickedCourseId}), examId={pickedExamId}");
 
-        // 3) Gọi đúng API: /lms/exam/{examId}/course/{courseId}
+        // Gọi đúng API: /lms/exam/{examId}/course/{courseId}
         string url = $"{api}/lms/exam/{pickedExamId}/course/{pickedCourseId}";
         string body = null; long code = 0;
         yield return HttpGet(url, bearer, (b, c) => { body = b; code = c; });
@@ -89,14 +88,14 @@ public class ExamAutoFindAndDump : MonoBehaviour
             yield break;
         }
 
-        // 4) Dump full JSON
+        // Dump full JSON
         var dir = Application.persistentDataPath;
         var fullPath = Path.Combine(dir, $"exam_{pickedCourseId}_{pickedExamId}.json");
         var output = prettyPrint ? TryPretty(body) : body;
         try { File.WriteAllText(fullPath, output, Encoding.UTF8); } catch (Exception ex) { Debug.LogWarning(ex.Message); }
         Debug.Log($"[ExamAuto] Saved full JSON -> {fullPath}");
 
-        // 5) Tách questions (nếu có)
+        // Tách questions (nếu có)
         var q = ExtractArray(body, "questions");
         if (!string.IsNullOrEmpty(q))
         {

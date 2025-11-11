@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -12,6 +13,9 @@ public class ExamConfirmPanel : MonoBehaviour
     [SerializeField] private TMP_Text txtRequirement;
     [SerializeField] private TMP_Text txtDoneCount;
 
+    [Header("Timer Countdown (optional)")]
+    [SerializeField] private TMP_Text txtSpentTime;
+
     [Header("List of Questions")]
     [SerializeField] private Transform contentQuestions;
     [SerializeField] private ExamInfoElement prefabQuestionButton;
@@ -21,21 +25,19 @@ public class ExamConfirmPanel : MonoBehaviour
     [SerializeField] private Button btnSubmitFinal;
 
     [Header("Roots")]
-    //Panel confirm thật sự cần ẩn/hiện. Nếu rỗng sẽ dùng chính GameObject của script.
     [SerializeField] private GameObject confirmPanelRoot;
-    //Panel kết quả (ExamResultUI) sẽ được đẩy lên top và bật khi nộp.
     [SerializeField] private GameObject resultUIPanelRoot;
 
     [Header("Bring result panel to top")]
-    //Ép result panel có Canvas riêng và override sorting để luôn nằm trên cùng.
     [SerializeField] private bool forceTopCanvas = true;
     [SerializeField] private int resultSortingOrder = 5000;
 
-    // Truyền từ Manager
     [HideInInspector] public GameObject examPanelRoot;
 
     private ExamUIController _uiController;
     private ExamQuestionManager _manager;
+    
+    private Coroutine _countdownMirrorCo;
 
     public void Show(
         ExamUIController uiController,
@@ -56,20 +58,31 @@ public class ExamConfirmPanel : MonoBehaviour
         int total = paper.questions.Count;
         int doneCount = CountAnswered(paper, selectedMap, essayMap);
 
-        string examTitle      = uiController.examTitle;
+        string examTitle = uiController.examTitle;
+        string examName       = uiController.examName;
         int   durationSeconds = uiController.DurationScends;
         int   durationMinutes = Mathf.CeilToInt(durationSeconds / 60f);
         int   passPercent     = uiController.passPointPercent;
-
         int requiredCorrect = Mathf.CeilToInt(total * Mathf.Clamp(passPercent, 0, 100) / 100f);
 
-        txtExamTitle.text     = string.IsNullOrEmpty(examTitle) ? "(Không có tiêu đề)" : examTitle;
+        // txtExamTitle.text     = string.IsNullOrEmpty(examTitle) ? "(Không có tiêu đề)" : examTitle;
+        txtExamTitle.text = !string.IsNullOrWhiteSpace(examName) ? examName : "(Không có tên khóa học!)";
+
         txtTotalQuestion.text = $"{total} câu";
         txtTotalTime.text     = $"{durationMinutes} phút";
         txtRequirement.text   = $"{requiredCorrect}/{total}";
         txtDoneCount.text     = $"{doneCount}/{total}";
 
-        foreach (Transform child in contentQuestions) Destroy(child.gameObject);
+        // --- Bắt đầu đếm ngược ---
+        if (txtSpentTime)
+        {
+            if (_countdownMirrorCo != null) StopCoroutine(_countdownMirrorCo);
+            _countdownMirrorCo = StartCoroutine(MirrorCountdownText());
+        }
+
+        // === Danh sách câu hỏi ===
+        foreach (Transform child in contentQuestions)
+            Destroy(child.gameObject);
 
         for (int i = 0; i < total; i++)
         {
@@ -97,6 +110,7 @@ public class ExamConfirmPanel : MonoBehaviour
             }
         }
 
+        // --- Buttons ---
         btnBackToExam.onClick.RemoveAllListeners();
         btnBackToExam.onClick.AddListener(() =>
         {
@@ -108,32 +122,46 @@ public class ExamConfirmPanel : MonoBehaviour
         btnSubmitFinal.onClick.RemoveAllListeners();
         btnSubmitFinal.onClick.AddListener(() =>
         {
-            // Ẩn confirm
             HideConfirmOnly();
 
-            // ẩn panel làm bài để tránh che sau lưng
             if (examPanelRoot) examPanelRoot.SetActive(false);
 
-            // top + bật
             ShowResultPanelOnTop();
-
-            // PUT -> GET -> ExamQuestionManager
             _manager.SubmitExamNow();
         });
     }
 
-    // --- UI helpers ---
+    // textDemNguoc -> txtSpentTime trong khi panel đang mở
+    private IEnumerator MirrorCountdownText()
+    {
+        var titleMgr = _uiController ? _uiController.GetComponent<ExamTitleManager>() : null;
+        while (true)
+        {
+            // nếu panel bị ẩn đi, dừng mirror
+            var root = confirmPanelRoot ? confirmPanelRoot : gameObject;
+            if (!root.activeInHierarchy) break;
+
+            if (txtSpentTime && titleMgr && titleMgr.textDemNguoc)
+                txtSpentTime.text = titleMgr.textDemNguoc.text;
+                
+            yield return new WaitForSeconds(0.2f);
+        }
+        _countdownMirrorCo = null;
+    }
 
     private void HideConfirmOnly()
     {
         var go = confirmPanelRoot ? confirmPanelRoot : gameObject;
+
+        // dừng mirror khi đóng panel
+        if (_countdownMirrorCo != null) { StopCoroutine(_countdownMirrorCo); _countdownMirrorCo = null; }
+
         go.SetActive(false);
     }
 
     private void ShowResultPanelOnTop()
     {
         var result = resultUIPanelRoot ? resultUIPanelRoot : gameObject;
-        // Đẩy lên cuối cùng trong cùng parent 
         result.transform.SetAsLastSibling();
 
         if (forceTopCanvas)
@@ -143,7 +171,6 @@ public class ExamConfirmPanel : MonoBehaviour
             cv.overrideSorting = true;
             cv.sortingOrder = resultSortingOrder;
 
-            // đảm bảo nhận input và mờ nền
             if (!result.GetComponent<GraphicRaycaster>())
                 result.AddComponent<GraphicRaycaster>();
 
@@ -156,7 +183,7 @@ public class ExamConfirmPanel : MonoBehaviour
 
         result.SetActive(true);
     }
-    
+
     private int CountAnswered(ExamPaper paper,
         Dictionary<string, HashSet<int>> selectedMap,
         Dictionary<string, string> essayMap)

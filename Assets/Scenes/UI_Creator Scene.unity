@@ -185,6 +185,7 @@ MonoBehaviour:
   requestTimeout: 15
   debugVerbose: 1
   examTitle: 
+  courseTitle: 
   passPointPercent: 80
   examStarted: 0
   _elapsedSeconds: 0
@@ -247,9 +248,12 @@ MonoBehaviour:
   prefabCauHoi: {fileID: 2646153760338102216, guid: eb0440afa216efa4f9ed2f002f3c9c65, type: 3}
   prefabCauTraLoi: {fileID: 951643014819248543, guid: 0a6150a036e34574ca294f24fa896217, type: 3}
   prefabCauTraLoiTuLuan: {fileID: 0}
+  navRoot: {fileID: 1115616645}
+  navContent: {fileID: 892931554}
+  navItemPrefab: {fileID: 8670869896662926848, guid: 0862ff4078bf5d84aacbe1875673b830, type: 3}
   textQuestionCounter: {fileID: 3992860869501878561}
-  btnBack: {fileID: 1286995542}
-  btnNext: {fileID: 428301543}
+  btnBack: {fileID: 1094600981}
+  btnNext: {fileID: 1644624574}
   btnNopBai: {fileID: 743315975}
   multiple_hint: {fileID: 0}
   getWithCorrectAnswer: 1
@@ -260,6 +264,7 @@ MonoBehaviour:
   reviewPanel: {fileID: 156467859}
   flipCorrectFromServer: 0
   timerRoot: {fileID: 1991224476}
+  _examUIController: {fileID: 156467852}
 --- !u!114 &156467857
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,6 +284,8 @@ MonoBehaviour:
   textPassNeed: {fileID: 3992860869501878562}
   textDemNguoc: {fileID: 334375491}
   timeFormat: '{0:00}:{1:00}'
+  objectImage: {fileID: 1231554410}
+  warningColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &156467858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -296,6 +303,7 @@ MonoBehaviour:
   txtTotalTime: {fileID: 1898132471}
   txtRequirement: {fileID: 1898132470}
   txtDoneCount: {fileID: 1898132469}
+  txtSpentTime: {fileID: 2098998181}
   contentQuestions: {fileID: 1898132467}
   prefabQuestionButton: {fileID: 8670869896662926848, guid: 0862ff4078bf5d84aacbe1875673b830, type: 3}
   btnBackToExam: {fileID: 1898132466}
@@ -321,9 +329,12 @@ MonoBehaviour:
   prefabCauHoi: {fileID: 2646153760338102216, guid: eb0440afa216efa4f9ed2f002f3c9c65, type: 3}
   prefabCauTraLoi: {fileID: 951643014819248543, guid: 0a6150a036e34574ca294f24fa896217, type: 3}
   prefabCauTraLoiTuLuan: {fileID: 0}
+  navRoot: {fileID: 1115616645}
+  navContent: {fileID: 892931554}
+  navItemPrefab: {fileID: 8670869896662926848, guid: 0862ff4078bf5d84aacbe1875673b830, type: 3}
   textQuestionCounter: {fileID: 3992860869501878561}
-  btnBack: {fileID: 1286995542}
-  btnNext: {fileID: 428301543}
+  btnBack: {fileID: 1094600981}
+  btnNext: {fileID: 1644624574}
   btnNopBai: {fileID: 743315975}
   multiple_hint: {fileID: 0}
   getWithCorrectAnswer: 1
@@ -334,6 +345,7 @@ MonoBehaviour:
   reviewPanel: {fileID: 156467859}
   flipCorrectFromServer: 0
   timerRoot: {fileID: 1991224476}
+  _examUIController: {fileID: 0}
   titleTmp: {fileID: 0}
   counterTmp: {fileID: 0}
   correctStatusObj: {fileID: 233832652}
@@ -624,17 +636,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
---- !u!114 &428301543 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2933413480698492486, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
-  m_PrefabInstance: {fileID: 3992860869501878560}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &431961676 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1245192507730026949, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
@@ -651,14 +652,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!224 &892931554 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6608580023522796967, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+  m_PrefabInstance: {fileID: 3992860869501878560}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &907427769 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 856875745199748078, guid: 232479d6b77a36f4e839847ae67972dd, type: 3}
   m_PrefabInstance: {fileID: 1898132464}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1286995542 stripped
+--- !u!114 &1094600981 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6229418552671725027, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4878998122049245021, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
   m_PrefabInstance: {fileID: 3992860869501878560}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
@@ -667,6 +673,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &1115616645 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5422883153687178711, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+  m_PrefabInstance: {fileID: 3992860869501878560}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1231554410 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5323097023521467808, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+  m_PrefabInstance: {fileID: 3992860869501878560}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1437451011
 GameObject:
   m_ObjectHideFlags: 0
@@ -751,6 +767,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3537531303703812052, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
   m_PrefabInstance: {fileID: 3992860869501878560}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1644624574 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5612973702648345126, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+  m_PrefabInstance: {fileID: 3992860869501878560}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &1849449294
 GameObject:
   m_ObjectHideFlags: 0
@@ -849,6 +876,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 798031973498419988, guid: 232479d6b77a36f4e839847ae67972dd, type: 3}
+      propertyPath: m_Name
+      value: 'txtSpentTime '
+      objectReference: {fileID: 0}
     - target: {fileID: 856875745199748078, guid: 232479d6b77a36f4e839847ae67972dd, type: 3}
       propertyPath: m_Name
       value: Warning Submit Exam
@@ -1129,6 +1160,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 7202847134348904707, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
   m_PrefabInstance: {fileID: 3992860869501878560}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2098998181 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4164031716266836032, guid: 232479d6b77a36f4e839847ae67972dd, type: 3}
+  m_PrefabInstance: {fileID: 1898132464}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1001 &3992860869501878560
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1137,6 +1179,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 167655733678134327, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 301763980025155857, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -1273,6 +1319,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -210.47
       objectReference: {fileID: 0}
+    - target: {fileID: 3373916862062960364, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3537531303703812052, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_Name
       value: Exam Canvas
@@ -1284,6 +1334,14 @@ PrefabInstance:
     - target: {fileID: 3543352274584602174, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4629769603679569511, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5422883153687178711, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6399984421000212517, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchorMax.y
@@ -1307,6 +1365,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6399984421000212517, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6608580023522796967, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6744571917890441138, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
