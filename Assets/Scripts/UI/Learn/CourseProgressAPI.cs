@@ -12,25 +12,6 @@ public class CourseProgressAPI : MonoBehaviour
 
     private Dictionary<string, int> lessonProgressDictionary = new();
     private CustomPrivateData privateRoot;
-    private void Awake()
-    {
-        lessonUI.OnLoadCourseDone += OnLoadCourseDone;
-    }
-
-    private void OnDestroy()
-    {
-        lessonUI.OnLoadCourseDone -= OnLoadCourseDone;
-    }
-
-    private void OnLoadCourseDone(LmsCoursePrivate obj)
-    {
-        // update course ID
-        if (obj == null)
-        {
-            return;
-        }
-        courseID = obj._id;
-    }
 
     [ContextMenu("Try Get Course")]
     public void TryGetCourse()

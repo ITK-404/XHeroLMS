@@ -7,6 +7,8 @@ public class HouseHandler : MonoBehaviour
 
     [Header("Editor")]
     [SerializeField] private string sceneNameToLoad;
+
+    [SerializeField] private bool savePlayerPosition;
     private void Awake()
     {
         if (TokenStore.IsAuthenticated)
@@ -51,6 +53,9 @@ public class HouseHandler : MonoBehaviour
         foreach (var item in loadRoomTriggers)
         {
             item.sceneName = sceneNameToLoad;
+            item.savePlayerPosition = savePlayerPosition;
+            
         }
+        
     }
 }
