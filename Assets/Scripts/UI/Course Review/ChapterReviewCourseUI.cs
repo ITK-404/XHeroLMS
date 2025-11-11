@@ -8,6 +8,8 @@ public class ChapterReviewCourseUI : ChapterBaseUI
     public Button background;
     public CourseReviewUI courseReviewUI;
 
+    [SerializeField] private Image iconChapter;
+    [SerializeField] private Sprite finalExamSprite;
     protected override void Awake()
     {
         base.Awake();
@@ -55,5 +57,10 @@ public class ChapterReviewCourseUI : ChapterBaseUI
         {
             ToggleOn();
         }
+    }
+
+    public void ShowFinalExam()
+    {
+        iconChapter.sprite = finalExamSprite;
     }
 }

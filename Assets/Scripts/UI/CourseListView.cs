@@ -112,7 +112,7 @@ public class CourseListView : MonoBehaviour
             var headerFinal = Instantiate(headerPrefab, content);
             headerFinal.titleName.text = finalExamSectionTitle;
             headerFinal.chapterID = null; // không cần id chương
-            
+            headerFinal.SetFinalExam();
             ChapterUIManager.Instance.AddToList(headerFinal);
 
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
@@ -302,7 +302,7 @@ public class CourseListView : MonoBehaviour
     [SerializeField] bool debugFinalExam = true;
 
     // Chỉ trả ID khi THẬT SỰ có settings.finalExam
-    string TryGetFinalExamId(object courseLike)
+    public static string TryGetFinalExamId(object courseLike)
     {
         // Một số API trả { course: {...} }, số khác trả thẳng {...}
         var course = GetMemberValue(courseLike, "course") ?? courseLike;
@@ -318,14 +318,14 @@ public class CourseListView : MonoBehaviour
         // Không có finalExam => không có bài thi
         if (finalExam == null)
         {
-            if (debugFinalExam) Debug.Log("[CourseListView] finalExam: null -> no exam.");
+            // if (debugFinalExam) Debug.Log("[CourseListView] finalExam: null -> no exam.");
             return null;
         }
 
         // Nếu là string/id hoặc object chứa id
         string id = FindIdInObjectOnly(finalExam);
 
-        if (debugFinalExam)
+        // if (debugFinalExam)
         {
             var tFinal = finalExam.GetType().FullName;
             Debug.Log($"[CourseListView] finalExam type={tFinal}, parsedId={(id ?? "<null>")}");

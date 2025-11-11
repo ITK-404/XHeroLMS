@@ -13,20 +13,27 @@ public class LearnUI : MonoBehaviour
     public ToggleBaseUI toggleLessonScrollView;
     private void Awake()
     {
-        returnBtn.onClick.AddListener(ClickReturnBtn);
-        toggleLessonScrollView.btn.onClick.AddListener(toggleLessonScrollView.Toggle);
-        toggleLessonScrollView.OnToggleOff.AddListener(() =>{scrollView.gameObject.SetActive(false);});
-        toggleLessonScrollView.OnToggleOn.AddListener(() =>{scrollView.gameObject.SetActive(true);});
+        if (returnBtn != null)
+            returnBtn.onClick.AddListener(ClickReturnBtn);
+
+        if (toggleLessonScrollView != null)
+        {
+            toggleLessonScrollView.OnToggleOff.AddListener(OnToggleHide);
+            toggleLessonScrollView.OnToggleOn.AddListener(OnToggleShow);
+        }
         Hide();
     }
     
     private void OnDestroy()
     {
-        returnBtn.onClick.RemoveListener(ClickReturnBtn);
-        toggleLessonScrollView.btn.onClick.RemoveListener(toggleLessonScrollView.Toggle);
-        toggleLessonScrollView.OnToggleOff.RemoveListener(() =>{scrollView.gameObject.SetActive(false);});
-        toggleLessonScrollView.OnToggleOn.RemoveListener(() =>{scrollView.gameObject.SetActive(true);});
-        
+        if (returnBtn != null)
+            returnBtn.onClick.RemoveListener(ClickReturnBtn);
+
+        if (toggleLessonScrollView != null)
+        {
+            toggleLessonScrollView.OnToggleOff.RemoveListener(OnToggleHide);
+            toggleLessonScrollView.OnToggleOn.RemoveListener(OnToggleShow);
+        }
     }
 
     private void ClickReturnBtn()
@@ -34,6 +41,16 @@ public class LearnUI : MonoBehaviour
         OnClickReturnBtn?.Invoke();
     }
 
+    private void OnToggleShow()
+    {
+        if (scrollView != null) scrollView.SetActive(true);
+    }
+
+    private void OnToggleHide()
+    {
+        if (scrollView != null) scrollView.SetActive(false);
+    }
+    
     public void Show()
     {
         Debug.Log("Show Learn UI");
