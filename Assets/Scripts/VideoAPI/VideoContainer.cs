@@ -8,6 +8,7 @@ public class VideoContainer : MonoBehaviour
 
     public void Show()
     {
+        Debug.Log($"Object {gameObject.name}",gameObject);
         container.gameObject.SetActive(true);
     }
     

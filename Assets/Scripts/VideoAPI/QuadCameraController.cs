@@ -107,10 +107,6 @@ public class QuadCinemachineController : MonoBehaviour
                 quadCamManager.ChangeToSitdownCameraState();
                 playerStandUI.ShowStandUpButton();
                 SetQuadZ(originalQuadPos.z);
-                break;
-            case ViewState.Default:
-                // quadCamManager.ChangeToLocalRoomCamera();
-                // SetQuadZ(originalQuadPos.z);
                 videoPlayerController.EnterDefaultMode();
                 break;
             case ViewState.External:
@@ -121,6 +117,7 @@ public class QuadCinemachineController : MonoBehaviour
                 break;
             case ViewState.FullScreen:
                 videoPlayerController.EnterFullscreenUI();
+                videoPlayerController.EnterFullScreenMode();
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -141,6 +138,12 @@ public class QuadCinemachineController : MonoBehaviour
 
         if (currentState != ViewState.Player)
         {
+            Debug.Log("Hiện UI Canvas");
+            videoPlayerController.EnterFullscreenUI();
+        }
+        else
+        {
+            Debug.Log("Tắt UI Canvas");
             videoPlayerController.ExitFullscreenUI();
         }
 
