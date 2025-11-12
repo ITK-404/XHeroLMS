@@ -382,6 +382,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
         fullScreenContainer.Hide();
         Debug.Log("Enter Second Mode");
     }
+
+    public void EnterFullScreenMode()
+    {
+        defaultContainer.Hide();
+        secondContainer.Hide();
+        fullScreenContainer.Show();
+    }
     
     [ContextMenu("ExitFullscreenUI")]
     public void ExitFullscreenUI()
