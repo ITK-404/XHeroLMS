@@ -116,7 +116,6 @@ public class QuadCinemachineController : MonoBehaviour
                 
                 break;
             case ViewState.FullScreen:
-                videoPlayerController.EnterFullscreenUI();
                 videoPlayerController.EnterFullScreenMode();
                 break;
             default:
@@ -134,17 +133,6 @@ public class QuadCinemachineController : MonoBehaviour
         else
         {
             playerStandUI.HideButtons();
-        }
-
-        if (currentState != ViewState.Player)
-        {
-            Debug.Log("Hiện UI Canvas");
-            videoPlayerController.EnterFullscreenUI();
-        }
-        else
-        {
-            Debug.Log("Tắt UI Canvas");
-            videoPlayerController.ExitFullscreenUI();
         }
 
         ClearUISelection();
