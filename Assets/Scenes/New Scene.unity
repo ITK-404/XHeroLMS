@@ -889,45 +889,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 3484326191917971328, guid: 2614f054f5231cb4e9436978c919bde2, type: 3}
---- !u!1 &9371154 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 414360975}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &9371156
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9371154}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &9371157
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9371154}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -907598715137349967, guid: c9884495a98ede14dbc3a9eddfa35411, type: 3}
 --- !u!1 &10995216 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5569848958519599940, guid: 43b73e1953805574b901b4fa4f057c84, type: 3}
@@ -2264,45 +2225,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 750898357914864799, guid: 4ca62814a0aa4ee4ebe4333f95221277, type: 3}
---- !u!1 &31960486 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 541301922}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &31960488
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 31960486}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &31960489
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 31960486}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -907598715137349967, guid: c9884495a98ede14dbc3a9eddfa35411, type: 3}
 --- !u!1 &32149052 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 173814943807544503, guid: 43b73e1953805574b901b4fa4f057c84, type: 3}
@@ -38126,6 +38048,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TreeBig (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7438537389214686564, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
     - {fileID: 8609732588065359324, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
@@ -49273,6 +49199,10 @@ PrefabInstance:
       value: khu_trung_bay_vat_pham
       objectReference: {fileID: 0}
     - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -51140,18 +51070,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8592483914230597167, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 507563280}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 9371157}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 9371156}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2033617566}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2033617565}
     - targetCorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1099569313}
@@ -62293,6 +62211,10 @@ PrefabInstance:
       value: khu_trung_bay_vat_pham (1)
       objectReference: {fileID: 0}
     - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -64164,18 +64086,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8592483914230597167, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 127262831}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 31960489}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 31960488}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 900296395}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 900296394}
     - targetCorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1925349675}
@@ -102112,45 +102022,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8396764313708694800, guid: 2614f054f5231cb4e9436978c919bde2, type: 3}
---- !u!1 &900296392 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 541301922}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &900296394
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 900296392}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &900296395
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 900296392}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4502847301737881362, guid: e0eccbdedaf3f104b89556b9e4a1e837, type: 3}
 --- !u!1 &900503893 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7972541238819321857, guid: 43b73e1953805574b901b4fa4f057c84, type: 3}
@@ -104919,6 +104790,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TreeBig (5)
       objectReference: {fileID: 0}
+    - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8609732588065359324, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
     - {fileID: 4246651602984205270, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
@@ -105282,40 +105157,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8568539830326951217, guid: 2614f054f5231cb4e9436978c919bde2, type: 3}
---- !u!114 &931770272
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569005009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &931770273
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569005009}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4502847301737881362, guid: e0eccbdedaf3f104b89556b9e4a1e837, type: 3}
 --- !u!1 &932980454 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8748420780067428611, guid: 6be834408b638d54e9c3c490d55ce819, type: 3}
@@ -132196,40 +132037,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 2145544615515861783, guid: 2842814c4c5f1a945b938b5bba4f3937, type: 3}
---- !u!114 &1104452131
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569005010}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &1104452132
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569005010}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -907598715137349967, guid: c9884495a98ede14dbc3a9eddfa35411, type: 3}
 --- !u!114 &1105461187
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -133065,6 +132872,10 @@ PrefabInstance:
     - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
       propertyPath: m_Name
       value: TreeBig (6)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4246651602984205270, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
@@ -138210,6 +138021,10 @@ PrefabInstance:
       propertyPath: m_sharedMaterial
       value: 
       objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    - target: {fileID: 1581912741609956362, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: f6a61c670fe742e49b83cead56e4394e, type: 3}
     - target: {fileID: 3913888335802357397, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -138488,16 +138303,20 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8452712479999698884, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8452712479999698884, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8452712479999698884, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_AnchorMin.x
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8819484469932362173, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 87593e6f9119a5b439209c8a77972474, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -155501,40 +155320,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8543021938066247368, guid: 8944c60a01ebd1e4199dfe8b86167f32, type: 3}
---- !u!114 &1327776251
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345955217}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &1327776252
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345955217}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -907598715137349967, guid: c9884495a98ede14dbc3a9eddfa35411, type: 3}
 --- !u!1 &1327871071 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4519079682727337914, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -158400,6 +158185,10 @@ PrefabInstance:
       value: khu_trung_bay_vat_pham (3)
       objectReference: {fileID: 0}
     - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -160267,18 +160056,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8592483914230597167, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1290591831}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1327776252}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1327776251}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1546052090}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1546052089}
     - targetCorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 806901947}
@@ -160987,16 +160764,6 @@ GameObject:
 --- !u!1 &1345955215 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 1345955150}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1345955216 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 1345955150}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1345955217 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
   m_PrefabInstance: {fileID: 1345955150}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1345955218 stripped
@@ -186832,40 +186599,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: a07bcc265c2fefa41adab74d9ec6ed5a, type: 3}
---- !u!114 &1546052089
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345955216}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &1546052090
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345955216}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4502847301737881362, guid: e0eccbdedaf3f104b89556b9e4a1e837, type: 3}
 --- !u!1 &1546184610 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8440285276675880010, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -190805,6 +190538,10 @@ PrefabInstance:
       value: khu_trung_bay_vat_pham (2)
       objectReference: {fileID: 0}
     - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3067338365659107767, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -192672,18 +192409,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8592483914230597167, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 210223036}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1104452132}
-    - targetCorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1104452131}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 931770273}
-    - targetCorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 931770272}
     - targetCorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2143103264}
@@ -193392,16 +193117,6 @@ GameObject:
 --- !u!1 &1569005008 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3440844331491344504, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 1569004943}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1569005009 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 1569004943}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1569005010 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8495939059584109206, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
   m_PrefabInstance: {fileID: 1569004943}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1569005011 stripped
@@ -245715,45 +245430,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8217096888696830331, guid: 8944c60a01ebd1e4199dfe8b86167f32, type: 3}
---- !u!1 &2033617563 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7121116111034922030, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
-  m_PrefabInstance: {fileID: 414360975}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2033617565
-MonoBehaviour:
-  m_ObjectHideFlags: 2
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2033617563}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 303162219}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
---- !u!64 &2033617566
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2033617563}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4502847301737881362, guid: e0eccbdedaf3f104b89556b9e4a1e837, type: 3}
 --- !u!1 &2034147904 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2629882327115483977, guid: 59bd791e323431d43913ac576b91d27b, type: 3}
@@ -258394,6 +258070,10 @@ PrefabInstance:
     - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
       propertyPath: m_Name
       value: TreeBig (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7882708781211889618, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4246651602984205270, guid: ff3a431c400d04d4ba38288640ae64f4, type: 3}
