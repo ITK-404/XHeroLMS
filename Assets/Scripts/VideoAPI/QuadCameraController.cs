@@ -37,7 +37,7 @@ public class QuadCinemachineController : MonoBehaviour
 
     private bool targetWasEnabled;
     private float targetOriginalDepth;
-    private ViewState state = ViewState.Player;
+    private ViewState currentState = ViewState.Player;
 
     VideoPlayerControllerPro videoPlayerController;
     LearnUI learnUI;
@@ -78,44 +78,46 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-        state = ViewState.Player;
+        currentState = ViewState.Player;
     }
 
     public void ChangeState(ViewState newState)
     {
         
         Debug.Log("Thay đổi sang view state: " + newState);
-        if (newState == state)
+        if (newState == currentState)
         {
             // change to player camera
             // turn off all
-            state = ViewState.Sitdown;
+            currentState = ViewState.Sitdown;
         }
         else
         {
-            state = newState;
+            currentState = newState;
         }
 
 
-        switch (state)
+        switch (currentState)
         {
             case ViewState.Player:
                 quadCamManager.ChangeToPlayerCamera();
-                SetQuadZ(originalQuadPos.z);
-                break;
-            case ViewState.Default:
-                quadCamManager.ChangeToLocalRoomCamera();
                 SetQuadZ(originalQuadPos.z);
                 break;
             case ViewState.Sitdown:
                 quadCamManager.ChangeToSitdownCameraState();
                 playerStandUI.ShowStandUpButton();
                 SetQuadZ(originalQuadPos.z);
-
+                break;
+            case ViewState.Default:
+                // quadCamManager.ChangeToLocalRoomCamera();
+                // SetQuadZ(originalQuadPos.z);
+                videoPlayerController.EnterDefaultMode();
                 break;
             case ViewState.External:
-                quadCamManager.ChangeToLocalRoomCamera();
-                SetQuadZ(-1.2f);
+                // quadCamManager.ChangeToLocalRoomCamera();
+                // SetQuadZ(-1.2f);
+                videoPlayerController.EnterSecondMode();
+                
                 break;
             case ViewState.FullScreen:
                 videoPlayerController.EnterFullscreenUI();
@@ -124,11 +126,11 @@ public class QuadCinemachineController : MonoBehaviour
                 throw new ArgumentOutOfRangeException();
         }
 
-        if (state == ViewState.Player)
+        if (currentState == ViewState.Player)
         {
             playerStandUI.ShowSitdownButton();
         }
-        else if (state == ViewState.Sitdown)
+        else if (currentState == ViewState.Sitdown)
         {
             playerStandUI.ShowStandUpButton();
         }
@@ -137,7 +139,7 @@ public class QuadCinemachineController : MonoBehaviour
             playerStandUI.HideButtons();
         }
 
-        if (state != ViewState.FullScreen)
+        if (currentState != ViewState.Player)
         {
             videoPlayerController.ExitFullscreenUI();
         }
@@ -146,7 +148,7 @@ public class QuadCinemachineController : MonoBehaviour
         
         foreach (var item in toggleVideoList)
         {
-            item.ChangeState(item.watchVideoState == state
+            item.ChangeState(item.watchVideoState == currentState
                 ? ToggleBaseUI.State.Active
                 : ToggleBaseUI.State.DeActive);
         }
