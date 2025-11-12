@@ -372,7 +372,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
         defaultContainer.Show();
         secondContainer.Hide();
         fullScreenContainer.Hide();    
-        Debug.Log("Enter Default Mode");
     }
 
     public void EnterSecondMode()
@@ -380,7 +379,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
         defaultContainer.Hide();
         secondContainer.Show();
         fullScreenContainer.Hide();
-        Debug.Log("Enter Second Mode");
     }
 
     public void EnterFullScreenMode()

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using DG.Tweening;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class VideoContainer : MonoBehaviour
@@ -8,12 +9,13 @@ public class VideoContainer : MonoBehaviour
 
     public void Show()
     {
-        Debug.Log($"Object {gameObject.name}",gameObject);
+        Debug.Log($"Show {gameObject.name}",gameObject);
         container.gameObject.SetActive(true);
     }
     
     public void Hide()
     {
+        Debug.Log($"Hide {gameObject.name}",gameObject);
         container.gameObject.SetActive(false);
     }
 }
