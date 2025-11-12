@@ -382,6 +382,10 @@ public class MapColliderBuilderWindow : EditorWindow
         var allTransforms = root.GetComponentsInChildren<Transform>(true);
         foreach (var t in allTransforms)
         {
+            if (IsIgnored(t.gameObject))
+            {
+                continue;
+            }
             if (!t) continue;
 
             // Xóa tất cả collider (dù có marker hay không)
