@@ -128,6 +128,7 @@ public class PlayerChairManager : MonoBehaviour
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
                 playerStandUI.ShowWatchVideoUI();
                 playerStandUI.UILearnCanvas.Show();
+                videoPlayerControllerPro.EnterFullscreenUI();
             }));
         }
     }
