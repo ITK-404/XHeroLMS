@@ -9,7 +9,6 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-
 public partial class ExamUIController : MonoBehaviour
 {
     [Header("Auth")]
@@ -325,7 +324,7 @@ public partial class ExamUIController : MonoBehaviour
 
         if (debugVerbose)
             Debug.Log(
-                $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
+                $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}, name='{examName}'");
 
         // Cập nhật header (chưa bắt đầu thi)
         examStarted = false;
@@ -337,10 +336,71 @@ public partial class ExamUIController : MonoBehaviour
         ShowLoading(false);
     }
 
+    // ============== PATCH: class tạm để parse đúng data.title, data.description, v.v. ==============
+    [Serializable]
+    private class ApiResp
+    {
+        public bool status;
+        public DataObj data;
+    }
+
+    [Serializable]
+    private class DataObj
+    {
+        public ScheduleOpen scheduleOpen;
+        public string[] tag;
+        public int duration; 
+        public int pointPerQuestion;
+        public int passPointPercent;
+        public string status;
+        public int attemptCount;
+        public int showAnswerMode;
+        public int showQuestionMode;
+        public int showRecommendMode;
+        public bool isQuestionRandom;
+        public List<QuestionStub> questions; // chỉ để JsonUtility parse, không dùng ở đây
+        public string _id;
+        public string title;                // tên đề thi đúng nằm ở đây
+        public string description;          // HTML
+        public string passText;
+        public string failText;
+        public string createdAt;
+        public string updatedAt;
+        public string img;
+        public string createdBy;
+    }
+
+    [Serializable]
+    private class ScheduleOpen
+    {
+        public bool isEnable;
+        public long startTime;
+        public long endTime;
+    }
+
+    [Serializable]
+    private class QuestionStub
+    {
+        public List<string> answers;
+        public List<string> tag;
+        public string _id;
+        public string title;    // title của CÂU HỎI (không dùng để set examName)
+        public string keyword;
+        public string type;
+        public string explain;
+        public string createdBy;
+        public string createdAt;
+        public string updatedAt;
+        public int __v;
+    }
+    // ==============================================================================================
+
     private bool TryExtractExamInformation(string raw)
     {
+        // Lấy mảng câu hỏi như cũ
         string questionsJson = ExamFormat.ExtractQuestionsArray(raw);
-        durationSeconds = ExamFormat.ExtractExamDuration(raw);
+        // Lấy duration kiểu cũ (để fallback)
+        int extractedDuration = ExamFormat.ExtractExamDuration(raw);
 
         if (string.IsNullOrEmpty(questionsJson))
         {
@@ -350,13 +410,44 @@ public partial class ExamUIController : MonoBehaviour
             return true;
         }
 
+        // Parse paper như cũ
         paper = FallbackParseToPaper(questionsJson);
 
-        // Header info
-        string descHtml = ExamFormat.ExtractStringField(raw, "description") ?? "";
-        examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
-        examName = ExamFormat.ExtractStringField(raw, "title") ?? "";
-        passPointPercent = ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+        // ===== parse có cấu trúc để lấy đúng data.title / data.description / data.duration / passPointPercent =====
+        bool structuredOk = false;
+        try
+        {
+            var resp = JsonUtility.FromJson<ApiResp>(raw);
+            if (resp != null && resp.data != null)
+            {
+                // Name/Title của BÀI THI
+                examName = resp.data.title ?? "";
+
+                // Description HTML -> giữ pipeline vệ sinh HTML cũ
+                string descHtml = resp.data.description ?? "";
+                examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
+
+                // Ưu tiên duration/pass từ backend nếu hợp lệ; nếu không, dùng giá trị cũ
+                durationSeconds = resp.data.duration > 0 ? resp.data.duration : extractedDuration;
+                passPointPercent = resp.data.passPointPercent > 0 ? resp.data.passPointPercent : ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+
+                structuredOk = true;
+            }
+        }
+        catch (Exception e)
+        {
+            if (debugVerbose) Debug.LogWarning("[ExamUI] Parse structured fields failed, will fallback. " + e);
+        }
+
+        if (!structuredOk)
+        {
+            string descHtml = ExamFormat.ExtractStringField(raw, "description") ?? "";
+            examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
+            examName  = ExamFormat.ExtractStringField(raw, "title") ?? "";
+            durationSeconds = extractedDuration;
+            passPointPercent = ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+        }
+
         return false;
     }
 
