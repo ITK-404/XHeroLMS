@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using Unity.Cinemachine;
+
 
 public class CourseListView : MonoBehaviour
 {
@@ -11,6 +14,19 @@ public class CourseListView : MonoBehaviour
     public ChapterUI headerPrefab; // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
     public LessonUI itemPrefab;
     public VideoPlayer videoPlayer;
+
+    [Header("Exam Camera & Panel")]
+    [SerializeField] private Transform examCamera;      // gán Main Camera (hoặc camera bạn dùng)
+    [SerializeField] private GameObject examPanelRoot;  // panel bài kiểm tra (ẩn sẵn)
+    [SerializeField] private float examMoveDuration = 1.5f;
+    private Coroutine examCamRoutine;
+    private Vector3 defaultCameraPosition;
+    private Quaternion defaultCameraRotation;
+    private bool hasDefaultCameraTransform;
+
+    [SerializeField] private CinemachineHardLookAt examLookAt;
+    private Vector3 defaultLookAtOffset;
+    private bool hasDefaultOffset;
 
     [Tooltip("Chiều cao mặc định cho item nếu prefab không có LayoutElement.")]
     public float fallbackItemHeight = 120f;
@@ -28,7 +44,27 @@ public class CourseListView : MonoBehaviour
 
     private List<ChapterUI> chapterList = new();
 
+    private LearnUI learnUI;
+    private VideoPlayerControllerPro videoPlayerControllerPro;
+    private ExamResultReviewPanel examResultReviewPanel;
+    private PlayerStandUI playerStandUI;
+    void Awake()
+    {
+        learnUI = FindAnyObjectByType<LearnUI>();
+        videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
+        examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
+        playerStandUI = FindAnyObjectByType<PlayerStandUI>();
+    }
 
+    void Update()
+    {
+        if (ExamResultReviewPanel.FlagContinue)
+        {
+            // reset cờ NGAY ở đây để đảm bảo chỉ chạy một lần
+            ExamResultReviewPanel.FlagContinue = false;
+            ResetFromExam();
+        }
+    }
     public void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
@@ -333,18 +369,167 @@ public class CourseListView : MonoBehaviour
 
         return IsLikelyId(id) ? id : null;
     }
-
-    // ===== Click nút “Vào bài thi” =====
     private void OnClickFinalExam(LessonUI finalItem)
     {
-        // Lưu thông tin cần thiết cho scene thi
+        QuadCinemachineController.Instance.ChangeState(ViewState.Exam);
+
         PlayerPrefs.SetString("EXAM_CURRENT_ID", finalItem.lessonID);
         PlayerPrefs.SetString("EXAM_CURRENT_COURSE_ID", courseID);
         PlayerPrefs.Save();
 
         Debug.Log($"[CourseListView] Saved ExamID={finalItem.lessonID}, CourseID={courseID}");
 
-        // Chuyển sang scene thi
-        LoadingTransition.Load("UI_Creator Scene");
+        learnUI.Hide();
+        videoPlayerControllerPro.ExitFullscreenUI();
+        playerStandUI.HideWatchVideoUI();
+
+        if (examCamRoutine != null)
+            StopCoroutine(examCamRoutine);
+
+        examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
     }
+
+    private bool InitExamCamera()
+    {
+        if (examCamera == null || examPanelRoot == null)
+        {
+            Debug.LogWarning("[CourseListView] examCamera hoặc examPanelRoot chưa gán.");
+            return false;
+        }
+
+        if (examLookAt == null)
+            examLookAt = examCamera.GetComponent<CinemachineHardLookAt>();
+
+        if (examLookAt == null)
+        {
+            Debug.LogWarning("[CourseListView] Không tìm thấy CinemachineHardLookAt trên examCamera.");
+            return false;
+        }
+
+        if (!hasDefaultOffset)
+        {
+            defaultLookAtOffset = examLookAt.LookAtOffset;
+            hasDefaultOffset = true;
+        }
+
+        if (!hasDefaultCameraTransform)
+        {
+            defaultCameraPosition = examCamera.position;
+            defaultCameraRotation = examCamera.rotation;
+            hasDefaultCameraTransform = true;
+        }
+
+        return true;
+    }
+
+    private IEnumerator MoveCameraAndOpenExam()
+    {
+        if (!InitExamCamera())
+            yield break;
+
+        examPanelRoot.SetActive(false);
+
+        Vector3 startPos = examCamera.position;
+        Vector3 endPos = new Vector3(startPos.x, 0.3f, startPos.z + 0.5f);
+
+        float dur = Mathf.Max(0.01f, examMoveDuration);
+        float t = 0f;
+
+        // Tiến tới
+        while (t < 1f)
+        {
+            t += Time.deltaTime / dur;
+            float k = Mathf.SmoothStep(0f, 1f, t);
+            examCamera.position = Vector3.Lerp(startPos, endPos, k);
+            yield return null;
+        }
+        examCamera.position = endPos;
+
+        // Cúi đầu
+        Vector3 startOffset = examLookAt.LookAtOffset;
+        Vector3 endOffset = startOffset;
+        endOffset.y = -270f;
+
+        t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / dur;
+            float k = Mathf.SmoothStep(0f, 1f, t);
+            examLookAt.LookAtOffset = Vector3.Lerp(startOffset, endOffset, k);
+            yield return null;
+        }
+        examLookAt.LookAtOffset = endOffset;
+
+        examPanelRoot.SetActive(true);
+        Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
+    }
+
+    private void ResetFromExam()
+    {
+        QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+        if (examCamRoutine != null)
+        {
+            StopCoroutine(examCamRoutine);
+            examCamRoutine = null;
+        }
+
+        if (examPanelRoot != null)
+            examPanelRoot.SetActive(false);
+
+        examCamRoutine = StartCoroutine(ResetExamRoutine());
+    }
+
+    private IEnumerator MoveCameraBackFromExam()
+    {
+        if (!InitExamCamera())
+            yield break;
+
+        Vector3 startPos = examCamera.position;
+        Quaternion startRot = examCamera.rotation;
+        Vector3 startOffset = examLookAt.LookAtOffset;
+
+        Vector3 endPos = hasDefaultCameraTransform ? defaultCameraPosition : startPos;
+        Quaternion endRot = hasDefaultCameraTransform ? defaultCameraRotation : startRot;
+        Vector3 endOffset = hasDefaultOffset ? defaultLookAtOffset : startOffset;
+
+        float halfDur = Mathf.Max(0.01f, examMoveDuration) * 0.5f;
+        float t;
+
+        // Ngửa đầu
+        t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / halfDur;
+            float k = Mathf.SmoothStep(0f, 1f, t);
+            examLookAt.LookAtOffset = Vector3.Lerp(startOffset, endOffset, k);
+            yield return null;
+        }
+        examLookAt.LookAtOffset = endOffset;
+
+        // Lùi về vị trí/rotation ban đầu
+        t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / halfDur;
+            float k = Mathf.SmoothStep(0f, 1f, t);
+            examCamera.position = Vector3.Lerp(startPos, endPos, k);
+            examCamera.rotation = Quaternion.Slerp(startRot, endRot, k);
+            yield return null;
+        }
+
+        examCamera.position = endPos;
+        examCamera.rotation = endRot;
+    }
+
+    private IEnumerator ResetExamRoutine()
+    {
+        yield return MoveCameraBackFromExam();
+
+        learnUI.Show();
+        videoPlayerControllerPro.EnterFullscreenUI();
+        playerStandUI.ShowSitdownButton();
+
+        Debug.Log("[CourseListView] ResetFromExam -> quay lại chế độ học (camera đã lerp về chỗ cũ).");
+    }
+
 }
