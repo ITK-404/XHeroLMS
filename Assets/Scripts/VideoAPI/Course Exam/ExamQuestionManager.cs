@@ -33,6 +33,10 @@ public class ExamQuestionManager : MonoBehaviour
     public Image multiple_hint;
     public bool getWithCorrectAnswer = true;
 
+    [Header("Type Hint")]
+    [SerializeField] protected GameObject typeHintRoot;   
+    [SerializeField] private TMP_Text typeHintText; 
+
     [Header("Panels")]
     public ExamConfirmPanel confirmPanel;
     public GameObject mainConfirmPanel;
@@ -92,6 +96,8 @@ public class ExamQuestionManager : MonoBehaviour
         UpdateNavButtons();
         UpdateQuestionCounter();
         _examUIController?.UpdateHeaderInfo();
+
+        if (typeHintRoot) typeHintRoot.SetActive(false);
     }
 
     public void RenderCurrentQuestion()
@@ -112,6 +118,8 @@ public class ExamQuestionManager : MonoBehaviour
 
         ClearContent();
         SpawnQuestionText($"{_examUIController.currentIndex + 1}. {q.title}");
+
+        UpdateTypeHint(q.type);
 
         switch (q.type)
         {
@@ -835,5 +843,27 @@ public class ExamQuestionManager : MonoBehaviour
     {
         var url = BuildSubmitUrl(courseId);
         return string.IsNullOrEmpty(url) ? null : (withCorrect ? $"{url}?mode=show_correct_answer" : url);
+    }
+
+    private void UpdateTypeHint(ExamQuestionType type)
+    {
+        if (typeHintRoot == null || typeHintText == null) return;
+
+        switch (type)
+        {
+            case ExamQuestionType.SINGLE_CHOICE:
+                typeHintRoot.SetActive(true);
+                typeHintText.text = "Chỉ chọn 1 đáp án";
+                break;
+
+            case ExamQuestionType.MULTIPLE_CHOICE:
+                typeHintRoot.SetActive(true);
+                typeHintText.text = "Có thể chọn nhiều đáp án";
+                break;
+
+            default:
+                typeHintRoot.SetActive(false);
+                break;
+        }
     }
 }
