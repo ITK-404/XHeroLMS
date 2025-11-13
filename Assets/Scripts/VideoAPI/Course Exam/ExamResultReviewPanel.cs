@@ -16,12 +16,17 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [Header("Close")]
     [SerializeField] private Button closeBtn;
 
+    [Header("Root")]
+    [SerializeField] private GameObject reviewRoot;
+
     // ----- state review -----
     private ExamPaper _paper;
     private Dictionary<string, HashSet<int>> _userPicked;     // q.id -> indices user chọn (0-based)
     private Dictionary<string, HashSet<int>> _correctPicked;  // q.id -> indices đúng (có thể 0/1-based từ API, sẽ convert khi dùng)
     private Dictionary<string, HashSet<string>> _correctByText; // q.id -> normalized correct texts
     private int _idx;
+
+    public static bool FlagContinue { get; set; }
 
     // cờ đang override hành vi nút của base
     private bool _navHijacked;
@@ -72,7 +77,10 @@ public class ExamResultReviewPanel : ExamQuestionManager
         }
 
         _idx = Mathf.Clamp(startIndex, 0, (_paper?.questions?.Count ?? 1) - 1);
-        gameObject.SetActive(true);
+
+        var root = reviewRoot != null ? reviewRoot : gameObject;
+        root.SetActive(true);
+        // gameObject.SetActive(true);
 
         RebuildNavForReview();
         HijackBaseNav();
@@ -87,13 +95,30 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
     public void HideReview()
     {
+        // trả lại behavior cũ cho btn Back/Next
         RestoreBaseNav();
 
-        // TẮT review-mode: trả quyền điều hướng cho base
+        // tắt review mode -> trả lại UI làm bài
         SetReviewMode(false);
 
-        gameObject.SetActive(false);
+        // reset trạng thái review
+        _paper         = null;
+        _userPicked    = null;
+        _correctPicked = null;
+        _correctByText = null;
+        _idx           = 0;
+
+        if (correctStatusObj) correctStatusObj.SetActive(false);
+        if (wrongStatusObj)  wrongStatusObj.SetActive(false);
+
+        // xóa hết nội dung câu hỏi/đáp án đang spawn
         ClearContent();
+
+        // tắt toàn bộ panel review (root)
+        var root = reviewRoot != null ? reviewRoot : gameObject;
+        root.SetActive(false);
+
+        FlagContinue = true;
     }
 
     // ----------------- điều hướng dùng lại nút của base -----------------

@@ -149,7 +149,6 @@ public partial class ExamUIController : MonoBehaviour
         StartCoroutine(FetchAndSetup(finalUrl));
     }
 
-
     // ========== CHỈ build URL từ override/PlayerPrefs (KHÔNG fallback LmsStore) ==========
     string BuildApiUrlStrict()
     {
@@ -286,7 +285,7 @@ public partial class ExamUIController : MonoBehaviour
 #if UNITY_2020_2_OR_NEWER
             bool hasErr = req.result != UnityWebRequest.Result.Success;
 #else
-        bool hasErr = req.isNetworkError || req.isHttpError;
+            bool hasErr = req.isNetworkError || req.isHttpError;
 #endif
             if (hasErr)
             {
@@ -311,7 +310,6 @@ public partial class ExamUIController : MonoBehaviour
 
         string onlineText = req.downloadHandler?.text;
         string raw = !string.IsNullOrWhiteSpace(onlineText) ? onlineText : offlineContent;
-
 
         if (debugVerbose)
         {
@@ -349,7 +347,7 @@ public partial class ExamUIController : MonoBehaviour
     {
         public ScheduleOpen scheduleOpen;
         public string[] tag;
-        public int duration; 
+        public int duration;
         public int pointPerQuestion;
         public int passPointPercent;
         public string status;
@@ -494,5 +492,47 @@ public partial class ExamUIController : MonoBehaviour
     public IEnumerator SubmitExamCoroutine(bool timeUp)
     {
         yield return _examQuestionManager.SubmitExamCoroutine(timeUp);
+    }
+
+    // ============== RESTART EXAM (UPDATED) ==============
+    public void RestartExam()
+    {
+        // 1. Dừng timer cũ (nếu có)
+        if (timerCo != null)
+        {
+            StopCoroutine(timerCo);
+            timerCo = null;
+        }
+
+        // 2. Dọn UI + state bên QuestionManager
+        if (_examQuestionManager != null)
+        {
+            _examQuestionManager.HideReviewPanelIfAny();   // ẩn panel xem lại
+            _examQuestionManager.HideResultPanelIfAny();   // ẩn panel kết quả (SUCCESS/FAIL)
+            _examQuestionManager.ResetStateForNewAttempt();
+            _examQuestionManager.SetReviewMode(false);
+        }
+
+        // 3. Reset state controller
+        examStarted     = false;
+        currentIndex    = 0;
+        _elapsedSeconds = 0;
+
+        // 4. Cập nhật header/nav
+        UpdateHeaderInfo();
+        _examQuestionManager.UpdateNavButtons();
+        _examQuestionManager.UpdateQuestionCounter();
+
+        // 5. Bắt đầu lại bài thi
+        if (_examTitleManager != null)
+        {
+            _examTitleManager.BeginExam();   // bên trong nhớ set examStarted = true + RenderCurrentQuestion()
+        }
+        else if (_examQuestionManager != null)
+        {
+            // fallback nếu không có ExamTitleManager
+            examStarted = true;
+            _examQuestionManager.RenderCurrentQuestion();
+        }
     }
 }

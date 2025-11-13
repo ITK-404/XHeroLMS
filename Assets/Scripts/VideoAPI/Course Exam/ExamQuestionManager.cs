@@ -866,4 +866,51 @@ public class ExamQuestionManager : MonoBehaviour
                 break;
         }
     }
+
+    // ========== RESET STATE KHI THI LẠI (UPDATED) ==========
+    public void ResetStateForNewAttempt()
+    {
+        _isReviewMode = false;
+        _isSubmitting = false;
+        _lastQuestionIndexBeforeSubmit = -1;
+
+        selectedMap.Clear();
+        essayMap.Clear();
+        _qidToIndex.Clear();
+
+        // clear nav UI cũ
+        if (navContent != null)
+        {
+            for (int i = navContent.childCount - 1; i >= 0; i--)
+                Destroy(navContent.GetChild(i).gameObject);
+        }
+        _navItems.Clear();
+
+        // clear nội dung câu hỏi
+        ClearContent();
+
+        // ẩn nav cho tới khi RenderCurrentQuestion() + SetReviewMode(false) bật lại
+        if (navRoot) navRoot.SetActive(false);
+
+        // bật lại các nút điều hướng/submit cho lần làm bài mới
+        if (btnBack)   btnBack.gameObject.SetActive(true);
+        if (btnNext)   btnNext.gameObject.SetActive(true);
+        if (btnNopBai) btnNopBai.gameObject.SetActive(true);
+    }
+
+    public void HideReviewPanelIfAny()
+    {
+        if (reviewPanel != null)
+        {
+            reviewPanel.HideReview();
+        }
+    }
+
+    public void HideResultPanelIfAny()
+    {
+        if (resultUI != null && resultUI.gameObject != null)
+        {
+            resultUI.gameObject.SetActive(false);
+        }
+    }
 }

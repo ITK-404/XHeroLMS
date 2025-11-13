@@ -11,7 +11,8 @@ public enum ViewState
     Default,
     Sitdown,
     External,
-    FullScreen
+    FullScreen,
+    Exam
 }
 
 [DisallowMultipleComponent]
@@ -116,6 +117,9 @@ public class QuadCinemachineController : MonoBehaviour
                 
                 break;
             case ViewState.FullScreen:
+                videoPlayerController.EnterFullScreenMode();
+                break;
+            case ViewState.Exam:
                 videoPlayerController.EnterFullScreenMode();
                 break;
             default:
