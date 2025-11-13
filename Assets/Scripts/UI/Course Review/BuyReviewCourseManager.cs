@@ -15,7 +15,7 @@ public class BuyReviewCourseManager : MonoBehaviour
     private BookHandler currentBookSelect;
 
     private bool autoSkipVideo = false;
-
+    private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
     private void Awake()
     {
         Instance = this;
@@ -28,9 +28,23 @@ public class BuyReviewCourseManager : MonoBehaviour
             ShowBookPreviewUI(currentBookSelect);
         });
         enterCourseBtn.onClick.AddListener(EnterCourse);
-        
+
+        LoadKey();
         playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
-        playVideoHandleUI.autoSkipToggle.isOn = false;
+        playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
+    }
+
+    private void SaveKey()
+    {
+        PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY,autoSkipVideo ? 1 : 0);
+    }
+
+    private void LoadKey()
+    {
+        if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
+        {
+            autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
+        }
     }
 
 
@@ -44,6 +58,8 @@ public class BuyReviewCourseManager : MonoBehaviour
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
+        
+        SaveKey();
     }
 
     private void EnterCourse()
