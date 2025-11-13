@@ -7,14 +7,20 @@ using UnityEngine.UI;
 
 public class BookModel : MonoBehaviour
 {
+    private static float rotationSpeed = 4;
     [SerializeField] private Transform container;
     [SerializeField] private Renderer _renderer;
     private Tween tween;
-    private bool isTweenDone = false;
-    private float speed = 1;
-
-    public Action OnPlayerClickBook;
     
+    private float speed = 1;
+    private float rotationY = 0f;
+    private float defaultRotation;
+    
+    private bool isMouseDown;
+    private bool isTweenDone = false;
+    
+    public Action OnPlayerClickBook;
+
     private void Awake()
     {
         smoothCurve = AnimationUltis.CreateInOutBackCurve();
@@ -23,7 +29,7 @@ public class BookModel : MonoBehaviour
     public void SetColor(Color color)
     {
         // testing
-        _renderer.materials[1].SetColor("_BaseColor",color);
+        _renderer.materials[1].SetColor("_BaseColor", color);
     }
 
     public void SetBaseMap(Texture texture)
@@ -45,11 +51,12 @@ public class BookModel : MonoBehaviour
 
     public void SetGrayScale(float grayScale)
     {
-
     }
 
     private void OnMouseEnter()
     {
+        if (isDragging) return;
+        
         if (container == null)
         {
             Debug.LogError("Container is null");
@@ -61,12 +68,13 @@ public class BookModel : MonoBehaviour
         //container.DOKill();
         //container.DORotate(new Vector3(0, 360, 0), 2, RotateMode.FastBeyond360).SetEase(Ease.InOutBack);
         speed = 1;
-        container.transform.DOKill();
-        container.transform.DOScale(Vector3.one * 1.1f, 0.5f).SetEase(Ease.InSine);
+        // container.transform.DOKill();
+        // container.transform.DOScale(Vector3.one * 1.1f, 0.5f).SetEase(Ease.InSine);
         StopAllCoroutines();
         StartCoroutine(StartRotate());
     }
 
+    private static bool isDragging = false;
     private void OnMouseExit()
     {
         if (container == null)
@@ -74,23 +82,18 @@ public class BookModel : MonoBehaviour
             Debug.LogError("Container is null");
             return;
         }
-        container.transform.DOKill();
-        container.transform.DOScale(Vector3.one, .6f).SetEase(Ease.OutSine);
+
+        // container.transform.DOKill();
+        // container.transform.DOScale(Vector3.one, .6f).SetEase(Ease.OutSine);
 
         return;
         if (tween != null)
         {
             tween.Kill();
         }
-        tween = DOVirtual.Float(speed, 0.2f, 1, (x) =>
-        {
-            speed = x;
-        }).SetEase(Ease.OutBack).OnComplete(() =>
-        {
-            isTweenDone = true;
-            
-        });
-        
+
+        tween = DOVirtual.Float(speed, 0.2f, 1, (x) => { speed = x; }).SetEase(Ease.OutBack)
+            .OnComplete(() => { isTweenDone = true; });
     }
 
     private void OnMouseUpAsButton()
@@ -98,14 +101,49 @@ public class BookModel : MonoBehaviour
         OnPlayerClickBook?.Invoke();
     }
 
-    private void Update()
+
+    
+    private void OnMouseDrag()
     {
-        if (isTweenDone)
+        isDragging = true;
+        var horizontal = Input.GetAxisRaw("Mouse X");
+        rotationY += horizontal * rotationSpeed;
+        if (horizontal != 0)
         {
-            container.transform.rotation = Quaternion.Lerp(container.transform.rotation, Quaternion.Euler(0, 0, 0), Time.deltaTime * 5);
+            container.transform.rotation = Quaternion.Euler(0, rotationY, 0);
         }
+
+        Debug.Log("Horizontal: " + horizontal);
     }
 
+    private void OnMouseDown()
+    {
+        Debug.Log("On Mouse Down");
+        StopAllCoroutines();
+        isMouseDown = true;
+    }
+
+    private void OnMouseUp()
+    {
+        Debug.Log("On Mouse Up");
+        isMouseDown = false;
+        isDragging = false;
+    }
+
+    private void Update()
+    {
+        FallbackToOriginalRotation();
+    }
+
+    private void FallbackToOriginalRotation()
+    {
+        if (isTweenDone || isMouseDown == false)
+        {
+            container.transform.rotation = Quaternion.Lerp(container.transform.rotation, Quaternion.Euler(0, 0, 0),
+                Time.deltaTime * 5);
+            rotationY = container.transform.eulerAngles.y;
+        }
+    }
 
 
     public AnimationCurve smoothCurve = new AnimationCurve(
@@ -113,7 +151,7 @@ public class BookModel : MonoBehaviour
         new Keyframe(0.3f, -0.2f, 0f, 2f),
         new Keyframe(0.7f, 1.2f, 2f, 0f),
         new Keyframe(1f, 1f, 0f, 0f)
-        );
+    );
 
     private IEnumerator StartRotate()
     {
@@ -132,6 +170,7 @@ public class BookModel : MonoBehaviour
             {
                 break;
             }
+
             yield return null;
         }
 
