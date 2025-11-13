@@ -35,6 +35,9 @@ public class ExamResultReviewPanel : ExamQuestionManager
     {
         SetReviewMode(true);
 
+        if (typeHintRoot != null)
+            typeHintRoot.SetActive(false);
+
         _paper = paper;
         _userPicked = userPicked ?? new();
 
@@ -141,6 +144,9 @@ public class ExamResultReviewPanel : ExamQuestionManager
     // ----------------- render review (read-only) -----------------
     private void RenderReview()
     {
+        // if (typeHintRoot != null)
+        //     typeHintRoot.SetActive(false);
+        
         if (_paper == null || _paper.questions == null || _paper.questions.Count == 0)
             return;
 
@@ -177,6 +183,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         HashSet<string> correctTextSet = null;
         if (_correctByText != null) _correctByText.TryGetValue(q.id, out correctTextSet);
 
+        // Chỉ dùng để xét đúng/sai toàn câu (KHÔNG hiển thị chi tiết đáp án)
         bool exactlyCorrect = IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
         if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
         if (wrongStatusObj) wrongStatusObj.SetActive(!exactlyCorrect);
@@ -185,6 +192,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         {
             case ExamQuestionType.SINGLE_CHOICE:
             case ExamQuestionType.MULTIPLE_CHOICE:
+                // Truyền correctSet/correctTextSet vào cho đủ params, nhưng RenderChoicesReadOnly sẽ KHÔNG dùng
                 RenderChoicesReadOnly(q, userSet, correctSet, correctTextSet);
                 break;
 
@@ -217,20 +225,12 @@ public class ExamResultReviewPanel : ExamQuestionManager
             return;
         }
 
-        // Ghi chú hiển thị
-        var legend = Instantiate(prefabCauHoi, content);
-        legend.text = "<i>Ghi chú: <color=#49D17D>Đáp án đúng</color>; " +
-                      "<color=#FF6B6B>Bạn chọn (sai)</color>.</i>";
+        bool isSingle = q.type == ExamQuestionType.SINGLE_CHOICE;
 
-        bool isSingle = q.type == ExamQuestionType.SINGLE_CHOICE
-                     || (q.type != ExamQuestionType.MULTIPLE_CHOICE
-                         && ((correctSet?.Count ?? 0) + (correctTextSet?.Count ?? 0)) <= 1);
-
-        // Nếu user bỏ trống
         if (userSet == null || userSet.Count == 0)
         {
             var hint = Instantiate(prefabCauHoi, content);
-            hint.text = "<i>(Bạn không chọn đáp án nào -> câu này bị tính sai)</i>";
+            hint.text = "<i>(Bạn không chọn đáp án nào)</i>";
         }
 
         for (int i = 0; i < q.options.Count; i++)
@@ -238,7 +238,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
             var btn = Instantiate(prefabCauTraLoi, content);
             if (isSingle) btn.ActiveSingleChoice(); else btn.ActiveMultipleChoice();
 
-            string cleanShown = ExamFormat.CleanOptionText(q.options[i]) ?? string.Empty;
+            string cleanShown = ExamFormat.CleanOptionText(q.options[i]) ?? "";
             string normalized = NormalizeForCompare(cleanShown);
             btn.SetText(cleanShown);
 
@@ -248,23 +248,26 @@ public class ExamResultReviewPanel : ExamQuestionManager
             btn.OnSelectButton = null;
 
             bool pickedByUser = userSet != null && userSet.Contains(i);
-            bool isCorrect =
-                (correctSet != null && correctSet.Contains(i)) ||
-                (correctTextSet != null && correctTextSet.Contains(normalized));
 
-            btn.ActiveSelect(pickedByUser || isCorrect);
+            // user chọn đúng hay không?
+            bool userPickedCorrect =
+                pickedByUser &&
+                (
+                    (correctSet != null && correctSet.Contains(i)) ||
+                    (correctTextSet != null && correctTextSet.Contains(normalized))
+                );
 
-            // MÀU:
-            if (isCorrect) btn.SetCorrectColor();                     // luôn tô xanh đáp án đúng
-            if (pickedByUser && !isCorrect) btn.SetInCorrectColor();  // user chọn sai -> đỏ
+            // highlight user chọn
+            btn.ActiveSelect(pickedByUser);
 
-            // NHÃN:
-            if (isCorrect && pickedByUser)
-                btn.SetText($"{cleanShown}  <color=#49D17D><b> Bạn chọn (đúng)</b></color>");
-            else if (isCorrect && !pickedByUser)
-                btn.SetText($"{cleanShown}  <color=#49D17D> Đáp án đúng</color>");
-            else if (!isCorrect && pickedByUser)
-                btn.SetText($"{cleanShown}  <color=#FF6B6B> Bạn chọn (sai)</color>");
+            // tô màu CHỈ nếu user chọn
+            if (pickedByUser)
+            {
+                if (userPickedCorrect)
+                    btn.SetCorrectColor();      // user chọn đúng -> xanh
+                else
+                    btn.SetInCorrectColor();    // user chọn sai -> đỏ
+            }
         }
     }
 
@@ -275,7 +278,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         input.readOnly = true;
         input.text = "(Xem lại bài tự luận)";
     }
-    
+
     private static HashSet<int> NormalizeCorrectIndexSet(ExamQuestion q, HashSet<int> raw)
     {
         var result = new HashSet<int>();
@@ -351,7 +354,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         // Giữ Clean để an toàn khi caller chưa clean
         s = ExamFormat.CleanOptionText(s);
         // gom nhiều space thành 1, bỏ ký hiệu đầu dòng phổ biến
-        s = s.Replace('\u00A0', ' ');                  // nbsp
+        s = s.Replace('\u00A0', ' ');                 
         s = System.Text.RegularExpressions.Regex.Replace(s, @"^[\-\–\•\●]\s*", "");
         s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
         return s.ToLowerInvariant();
@@ -359,7 +362,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
     private void RebuildNavForReview()
     {
-
         RebuildQuestionNavIfNeeded();
 
         // Rebind click của từng “chấm” để nhảy trong review
@@ -379,5 +381,4 @@ public class ExamResultReviewPanel : ExamQuestionManager
         // highlight lần đầu
         ReviewHighlightNavIndex(_idx);
     }
-
 }
