@@ -1,19 +1,22 @@
-﻿using TMPro;
+﻿using System.Collections.Generic;
+using DG.Tweening;
+using TMPro;
+using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Button))]
-[RequireComponent(typeof(Image))]
+// [RequireComponent(typeof(Button))]
+// [RequireComponent(typeof(Image))]
 [ExecuteAlways] // để OnValidate chạy trong Editor
 public class ExamInfoElement : MonoBehaviour
 {
     public enum State { Unanswered, Answered, Selected }
 
     [Header("Sprites")]
-    [SerializeField] private Sprite sprUnanswered;
-    [SerializeField] private Sprite sprAnswered;
-    [SerializeField] private Sprite sprSelected;
+    [SerializeField] private Image sprUnanswered;
+    [SerializeField] private Image sprAnswered;
+    [SerializeField] private Image sprSelected;
 
     [Header("UI Refs")]
     [SerializeField] private Image  rootButtonImage;   // Image của Button
@@ -27,29 +30,40 @@ public class ExamInfoElement : MonoBehaviour
     {
         clickable       = GetComponent<Button>();
         rootButtonImage = GetComponent<Image>();
+        
+        
     }
 
 #if UNITY_EDITOR
-    private void OnValidate()
-    {
-        AutoWire();
-        EnsureRootImageSetup();
-        // nếu thiếu sprite nào đó, đỡ bị null-ref
-        if (!Application.isPlaying) ApplyState(State.Unanswered);
-    }
+    // private void OnValidate()
+    // {
+    //     AutoWire();
+    //     EnsureRootImageSetup();
+    //     // nếu thiếu sprite nào đó, đỡ bị null-ref
+    //     if (!Application.isPlaying) ApplyState(State.Unanswered);
+    // }
 #endif
 
     private void Awake()
     {
-        AutoWire();
-        EnsureRootImageSetup();
+        // AutoWire();
+        // EnsureRootImageSetup();
         ApplyState(State.Unanswered);
+        
+        activeList.Add(sprUnanswered);
+        activeList.Add(sprAnswered);
+        activeList.Add(sprSelected);
+
+        foreach (var item in activeList)
+        {
+            item.DOFade(0, 0);
+        }
     }
 
-    private void OnEnable()
-    {
-        EnsureRootImageSetup();
-    }
+    // private void OnEnable()
+    // {
+    //     EnsureRootImageSetup();
+    // }
 
     // ===== public API =====
     public Button GetButton() => clickable;
@@ -79,41 +93,58 @@ public class ExamInfoElement : MonoBehaviour
         switch (s)
         {
             case State.Unanswered:
-                if (sprUnanswered) rootButtonImage.sprite = sprUnanswered;
+                ActiveImage(sprUnanswered);
                 break;
             case State.Answered:
-                if (sprAnswered) rootButtonImage.sprite = sprAnswered;
+                ActiveImage(sprAnswered);
                 break;
             case State.Selected:
-                if (sprSelected) rootButtonImage.sprite = sprSelected;
+                ActiveImage(sprSelected);
                 break;
         }
     }
+
+    private List<Image> activeList = new();
+    private void ActiveImage(Image activeImage)
+    {
+        foreach (var item in activeList)
+        {
+            item.DOKill();
+            if (item == activeImage)
+            {
+                item.DOFade(1, 0.3f);
+            }
+            else
+            {
+                item.DOFade(0, 0.3f);
+            }
+        }
+    }
     
-    private void AutoWire()
-    {
-        if (!clickable)       clickable       = GetComponent<Button>();
-        if (!rootButtonImage) rootButtonImage = GetComponent<Image>();
-        if (clickable && clickable.targetGraphic != rootButtonImage)
-            clickable.targetGraphic = rootButtonImage;
-    }
+    // private void AutoWire()
+    // {
+    //     if (!clickable)       clickable       = GetComponent<Button>();
+    //     if (!rootButtonImage) rootButtonImage = GetComponent<Image>();
+    //     if (clickable && clickable.targetGraphic != rootButtonImage)
+    //         clickable.targetGraphic = rootButtonImage;
+    // }
 
-    private void EnsureRootImageSetup()
-    {
-        if (!rootButtonImage) return;
-
-        // đảm bảo nhìn thấy
-        var c = rootButtonImage.color; c.a = 1f; rootButtonImage.color = c;
-        rootButtonImage.enabled        = true;
-        rootButtonImage.raycastTarget = true;
-        
-        rootButtonImage.preserveAspect = false;
-
-        // chọn type hợp lý
-        var cur = rootButtonImage.sprite;
-        if (cur && cur.border.sqrMagnitude > 0f)
-            rootButtonImage.type = Image.Type.Sliced;
-        else
-            rootButtonImage.type = Image.Type.Simple;
-    }
+    // private void EnsureRootImageSetup()
+    // {
+    //     if (!rootButtonImage) return;
+    //
+    //     // đảm bảo nhìn thấy
+    //     var c = rootButtonImage.color; c.a = 1f; rootButtonImage.color = c;
+    //     rootButtonImage.enabled        = true;
+    //     rootButtonImage.raycastTarget = true;
+    //     
+    //     rootButtonImage.preserveAspect = false;
+    //
+    //     // chọn type hợp lý
+    //     var cur = rootButtonImage.sprite;
+    //     if (cur && cur.border.sqrMagnitude > 0f)
+    //         rootButtonImage.type = Image.Type.Sliced;
+    //     else
+    //         rootButtonImage.type = Image.Type.Simple;
+    // }
 }

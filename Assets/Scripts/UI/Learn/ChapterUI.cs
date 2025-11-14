@@ -131,6 +131,14 @@ public class ChapterUI : ChapterBaseUI
         LessonProgressTracker.Instance.UpdateLesson(lessonUI);
     }
 
+    public void ResetLessonState()
+    {
+        foreach (var item in lessonList)
+        {
+            item.SetActive(false);
+        }
+    }
+
     public void AddToList(LessonUI lessonUI)
     {
         lessonList.Add(lessonUI);
