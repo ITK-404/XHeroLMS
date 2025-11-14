@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,7 @@ public class ExamReturn: MonoBehaviour
     public GameObject ExamResult;
     public GameObject ExamCanvas;
     public GameObject SubmitExam;
-
+    public static Action ExamReturnAction;
     void Start()
     {
         btnReturn.onClick.AddListener(() =>
@@ -31,6 +32,8 @@ public class ExamReturn: MonoBehaviour
             ExamResult.SetActive(false);
             ExamCanvas.SetActive(true);
             SubmitExam.SetActive(false);
+            
+            ExamReturnAction?.Invoke();
         }
     }
 }
