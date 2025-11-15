@@ -287888,7 +287888,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2077084830}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 11e93b387b5742e48a28a0321a8794eb, type: 3}
   m_Name: 
@@ -287909,7 +287909,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2077084830}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b102360cbe6fa464d9e407d311c483ed, type: 3}
   m_Name: 
@@ -287927,6 +287927,24 @@ MonoBehaviour:
   order: 
   prettyPrintJson: 1
   outputFileName: courses_market.json
+--- !u!114 &2077084833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2077084830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2aba5dae6d2ac64c8ed7352278b8c9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateTest
+  autoCallOnStart: 1
+  path: /users/certificates
+  skip: 0
+  limit: 10
+  requestTimeout: 15
+  debugVerbose: 1
 --- !u!1 &2077232087 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7164199793909703856, guid: 6be834408b638d54e9c3c490d55ce819, type: 3}
@@ -298494,6 +298512,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1617684858498137793, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2763291023842120883, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -298552,6 +298574,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2923626319511774526, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2077084831}
+    - targetCorrespondingSourceObject: {fileID: 2923626319511774526, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2077084833}
   m_SourcePrefab: {fileID: 100100000, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
 --- !u!4 &3705668464690039549 stripped
 Transform:
