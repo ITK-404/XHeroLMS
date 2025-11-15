@@ -105,7 +105,7 @@ public partial class ExamUIController : MonoBehaviour
         if (autoStart) StartCoroutine(StartGate());
     }
 
-    IEnumerator StartGate()
+    public IEnumerator StartGate()
     {
         ShowLoading(true);
 
@@ -534,5 +534,11 @@ public partial class ExamUIController : MonoBehaviour
             examStarted = true;
             _examQuestionManager.RenderCurrentQuestion();
         }
+    }
+
+    public void HideAll()
+    {
+        _examQuestionManager.gameObject.SetActive(false);
+        _examTitleManager.gameObject.SetActive(false);
     }
 }
