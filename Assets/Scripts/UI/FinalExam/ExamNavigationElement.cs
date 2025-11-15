@@ -7,19 +7,11 @@ public class ExamNavigationElement : MonoBehaviour
 
     public ExamNavigation examNavigation;
     private RectTransform rectTransform;
-    private void Awake()
-    {
-        rectTransform = GetComponent<RectTransform>();
-        button.onClick.AddListener(OnSelectItem);
-    }
+ 
 
-    private void OnDestroy()
+    public void ActiveItemInNavigationBar()
     {
-        button.onClick.RemoveListener(OnSelectItem);
-    }
-
-    private void OnSelectItem()
-    {
+        Debug.Log("exam navigation active");
         if (examNavigation == null)
         {
             Debug.Log("Exam navigation is null");
