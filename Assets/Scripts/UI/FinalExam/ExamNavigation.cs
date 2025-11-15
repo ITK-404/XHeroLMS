@@ -8,29 +8,12 @@ public class ExamNavigation : MonoBehaviour
     [SerializeField] private Transform spawnContainer;
     [SerializeField] private Transform container;
     [SerializeField] private ExamNavigationElement examNavigationElementPrefab;
-
-    [Header("Testing")]
-    [SerializeField] private bool isTesting = false;
-    [SerializeField] private int testExamCount = 30;
     
     private Tween tween;
 
-    private void Start()
-    {
-        if (isTesting)
-        {
-            for (int i = 0; i < testExamCount; i++)
-            {
-                var item = Instantiate(examNavigationElementPrefab, spawnContainer);
-                var infoElement = item.GetComponent<ExamInfoElement>();
-                infoElement.SetQuestionIndexText(i + 1);
-                item.examNavigation = this;
-            }
-        }
-    }
-
     public void CenterOnItem(RectTransform target)
     {
+        Debug.Log("Set center of item");
         var content = scrollRect.content;
         var viewport = scrollRect.viewport;
 
