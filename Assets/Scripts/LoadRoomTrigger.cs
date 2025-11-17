@@ -58,6 +58,7 @@ public class LoadRoomTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (isLoading) return;
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
         if (!TokenStore.IsAuthenticated && savePlayerPosition)
@@ -83,8 +84,10 @@ public class LoadRoomTrigger : MonoBehaviour
         TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
     }
 
+    private bool isLoading = false;
     private IEnumerator TryEnterCourse()
     {
+        isLoading = true;
         LoadingUI.Show();
         SeoResolver.SetSeoCourse(sceneName);
         yield return new WaitForSecondsRealtime(1);
@@ -96,6 +99,8 @@ public class LoadRoomTrigger : MonoBehaviour
         {
             LoadingTransition.Load(SeoResolver.DefaultScene);
         }
+
+        isLoading = false;
     }
 
 

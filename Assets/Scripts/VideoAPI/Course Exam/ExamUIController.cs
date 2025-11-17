@@ -9,7 +9,6 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-
 public partial class ExamUIController : MonoBehaviour
 {
     [Header("Auth")]
@@ -55,6 +54,7 @@ public partial class ExamUIController : MonoBehaviour
     public Coroutine timerCo;
 
     public string examTitle = "";
+    public string examName  = "";
     public int passPointPercent = 80;
     public bool examStarted = false;
 
@@ -65,6 +65,8 @@ public partial class ExamUIController : MonoBehaviour
     private ExamTitleManager _examTitleManager;
     private ExamExportJson _examExportJson;
 
+    public ExamQuestionManager ExamQuestionManager => _examQuestionManager;
+    
     public void ShowLoading(bool show)
     {
         if (show)
@@ -105,7 +107,7 @@ public partial class ExamUIController : MonoBehaviour
         if (autoStart) StartCoroutine(StartGate());
     }
 
-    IEnumerator StartGate()
+    public IEnumerator StartGate()
     {
         ShowLoading(true);
 
@@ -148,7 +150,6 @@ public partial class ExamUIController : MonoBehaviour
 
         StartCoroutine(FetchAndSetup(finalUrl));
     }
-
 
     // ========== CHỈ build URL từ override/PlayerPrefs (KHÔNG fallback LmsStore) ==========
     string BuildApiUrlStrict()
@@ -215,11 +216,11 @@ public partial class ExamUIController : MonoBehaviour
         examId = "";
         courseId = "";
 
-        // 1) override (ưu tiên cao nhất)
+        // override (ưu tiên cao nhất)
         if (!string.IsNullOrEmpty(overrideExamId)) examId = overrideExamId;
         if (!string.IsNullOrEmpty(overrideCourseId)) courseId = overrideCourseId;
 
-        // 2) PlayerPrefs (được CourseListView set)
+        // PlayerPrefs (được CourseListView set)
         if (string.IsNullOrEmpty(examId))
             examId = PlayerPrefs.GetString(examIdPrefsKey, "");
         if (string.IsNullOrEmpty(courseId))
@@ -286,7 +287,7 @@ public partial class ExamUIController : MonoBehaviour
 #if UNITY_2020_2_OR_NEWER
             bool hasErr = req.result != UnityWebRequest.Result.Success;
 #else
-        bool hasErr = req.isNetworkError || req.isHttpError;
+            bool hasErr = req.isNetworkError || req.isHttpError;
 #endif
             if (hasErr)
             {
@@ -312,7 +313,6 @@ public partial class ExamUIController : MonoBehaviour
         string onlineText = req.downloadHandler?.text;
         string raw = !string.IsNullOrWhiteSpace(onlineText) ? onlineText : offlineContent;
 
-
         if (debugVerbose)
         {
             Debug.Log($"[ExamUI] Response length={raw.Length}");
@@ -324,9 +324,11 @@ public partial class ExamUIController : MonoBehaviour
 
         if (debugVerbose)
             Debug.Log(
-                $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}");
+                $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}, name='{examName}'");
 
         // Cập nhật header (chưa bắt đầu thi)
+        // bật exam canvas lên
+        
         examStarted = false;
         _examQuestionManager.ClearContent();
         UpdateHeaderInfo();
@@ -336,10 +338,71 @@ public partial class ExamUIController : MonoBehaviour
         ShowLoading(false);
     }
 
+    // ============== PATCH: class tạm để parse đúng data.title, data.description, v.v. ==============
+    [Serializable]
+    private class ApiResp
+    {
+        public bool status;
+        public DataObj data;
+    }
+
+    [Serializable]
+    private class DataObj
+    {
+        public ScheduleOpen scheduleOpen;
+        public string[] tag;
+        public int duration;
+        public int pointPerQuestion;
+        public int passPointPercent;
+        public string status;
+        public int attemptCount;
+        public int showAnswerMode;
+        public int showQuestionMode;
+        public int showRecommendMode;
+        public bool isQuestionRandom;
+        public List<QuestionStub> questions; // chỉ để JsonUtility parse, không dùng ở đây
+        public string _id;
+        public string title;                // tên đề thi đúng nằm ở đây
+        public string description;          // HTML
+        public string passText;
+        public string failText;
+        public string createdAt;
+        public string updatedAt;
+        public string img;
+        public string createdBy;
+    }
+
+    [Serializable]
+    private class ScheduleOpen
+    {
+        public bool isEnable;
+        public long startTime;
+        public long endTime;
+    }
+
+    [Serializable]
+    private class QuestionStub
+    {
+        public List<string> answers;
+        public List<string> tag;
+        public string _id;
+        public string title;    // title của CÂU HỎI (không dùng để set examName)
+        public string keyword;
+        public string type;
+        public string explain;
+        public string createdBy;
+        public string createdAt;
+        public string updatedAt;
+        public int __v;
+    }
+    // ==============================================================================================
+
     private bool TryExtractExamInformation(string raw)
     {
+        // Lấy mảng câu hỏi như cũ
         string questionsJson = ExamFormat.ExtractQuestionsArray(raw);
-        durationSeconds = ExamFormat.ExtractExamDuration(raw);
+        // Lấy duration kiểu cũ (để fallback)
+        int extractedDuration = ExamFormat.ExtractExamDuration(raw);
 
         if (string.IsNullOrEmpty(questionsJson))
         {
@@ -349,12 +412,44 @@ public partial class ExamUIController : MonoBehaviour
             return true;
         }
 
+        // Parse paper như cũ
         paper = FallbackParseToPaper(questionsJson);
 
-        // Header info
-        string descHtml = ExamFormat.ExtractStringField(raw, "description") ?? "";
-        examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
-        passPointPercent = ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+        // ===== parse có cấu trúc để lấy đúng data.title / data.description / data.duration / passPointPercent =====
+        bool structuredOk = false;
+        try
+        {
+            var resp = JsonUtility.FromJson<ApiResp>(raw);
+            if (resp != null && resp.data != null)
+            {
+                // Name/Title của BÀI THI
+                examName = resp.data.title ?? "";
+
+                // Description HTML -> giữ pipeline vệ sinh HTML cũ
+                string descHtml = resp.data.description ?? "";
+                examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
+
+                // Ưu tiên duration/pass từ backend nếu hợp lệ; nếu không, dùng giá trị cũ
+                durationSeconds = resp.data.duration > 0 ? resp.data.duration : extractedDuration;
+                passPointPercent = resp.data.passPointPercent > 0 ? resp.data.passPointPercent : ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+
+                structuredOk = true;
+            }
+        }
+        catch (Exception e)
+        {
+            if (debugVerbose) Debug.LogWarning("[ExamUI] Parse structured fields failed, will fallback. " + e);
+        }
+
+        if (!structuredOk)
+        {
+            string descHtml = ExamFormat.ExtractStringField(raw, "description") ?? "";
+            examTitle = ExamFormat.CleanHtmlToPlainText(descHtml);
+            examName  = ExamFormat.ExtractStringField(raw, "title") ?? "";
+            durationSeconds = extractedDuration;
+            passPointPercent = ExamFormat.ExtractIntField(raw, "passPointPercent", 80);
+        }
+
         return false;
     }
 
@@ -401,5 +496,53 @@ public partial class ExamUIController : MonoBehaviour
     public IEnumerator SubmitExamCoroutine(bool timeUp)
     {
         yield return _examQuestionManager.SubmitExamCoroutine(timeUp);
+    }
+
+    // ============== RESTART EXAM (UPDATED) ==============
+    public void RestartExam()
+    {
+        // 1. Dừng timer cũ (nếu có)
+        if (timerCo != null)
+        {
+            StopCoroutine(timerCo);
+            timerCo = null;
+        }
+
+        // 2. Dọn UI + state bên QuestionManager
+        if (_examQuestionManager != null)
+        {
+            _examQuestionManager.HideReviewPanelIfAny();   // ẩn panel xem lại
+            _examQuestionManager.HideResultPanelIfAny();   // ẩn panel kết quả (SUCCESS/FAIL)
+            _examQuestionManager.ResetStateForNewAttempt();
+            _examQuestionManager.SetReviewMode(false);
+        }
+
+        // 3. Reset state controller
+        examStarted     = false;
+        currentIndex    = 0;
+        _elapsedSeconds = 0;
+
+        // 4. Cập nhật header/nav
+        UpdateHeaderInfo();
+        _examQuestionManager.UpdateNavButtons();
+        _examQuestionManager.UpdateQuestionCounter();
+
+        // 5. Bắt đầu lại bài thi
+        if (_examTitleManager != null)
+        {
+            _examTitleManager.BeginExam();   // bên trong nhớ set examStarted = true + RenderCurrentQuestion()
+        }
+        else if (_examQuestionManager != null)
+        {
+            // fallback nếu không có ExamTitleManager
+            examStarted = true;
+            _examQuestionManager.RenderCurrentQuestion();
+        }
+    }
+
+    public void HideAll()
+    {
+        _examQuestionManager.gameObject.SetActive(false);
+        _examTitleManager.gameObject.SetActive(false);
     }
 }

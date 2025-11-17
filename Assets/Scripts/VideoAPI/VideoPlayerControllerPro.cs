@@ -55,7 +55,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     [Header("Fullscreen (UI RawImage)")]
     public Canvas fullscreenCanvas;          // có thể để trống, script sẽ tự tạo
-    public RawImage fullscreenRawImage;      // có thể để trống, script sẽ tự tạo
+    public RawImage fullscreenRawImage;   
+    // có thể để trống, script sẽ tự tạo
     public bool useAspectFitter = true;
 
     [Header("RenderTexture (optional fixed size)")]
@@ -75,6 +76,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public bool autoHideMenu = true;
     public float autoHideSeconds = 5f;
 
+    [Header("Watch Video Container")]
+    public VideoContainer defaultContainer;
+
+    public VideoContainer secondContainer;
+
+    public VideoContainer fullScreenContainer;
     // ==== INTERNAL ====
     int _currentQualityIndex = -1;
     bool _isSwitchingQuality;
@@ -90,7 +97,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
     RenderTexture _rt;
     Renderer _quadRenderer;
 
+    public Predicate<double> GetSkipVideoDuration;
 
+  
     // ---- Lifecycle ----
     void Reset()
     {
@@ -134,6 +143,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         ApplyVolume();
         ApplyPlaybackSpeed();
+        
+        defaultContainer.Hide();
+        secondContainer.Hide();
+        fullScreenContainer.Hide();
     }
 
     void Start()
@@ -353,6 +366,27 @@ public class VideoPlayerControllerPro : MonoBehaviour
         _isFullscreen = true;
         OnFullscreenChanged?.Invoke(true);
     }
+
+    public void EnterDefaultMode()
+    {
+        defaultContainer.Show();
+        secondContainer.Hide();
+        fullScreenContainer.Hide();    
+    }
+
+    public void EnterSecondMode()
+    {
+        defaultContainer.Hide();
+        secondContainer.Show();
+        fullScreenContainer.Hide();
+    }
+
+    public void EnterFullScreenMode()
+    {
+        defaultContainer.Hide();
+        secondContainer.Hide();
+        fullScreenContainer.Show();
+    }
     
     [ContextMenu("ExitFullscreenUI")]
     public void ExitFullscreenUI()
@@ -364,6 +398,11 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         _isFullscreen = false;
         OnFullscreenChanged?.Invoke(false);
+        
+        // new logic
+        defaultContainer.Hide();
+        secondContainer.Hide();
+        fullScreenContainer.Hide();
     }
     
     public void DefEx()
@@ -466,7 +505,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void SetTimeSafely(double t)
     {
         if (!videoPlayer) return;
-
+        if (GetSkipVideoDuration(t) == false)
+        {
+            Debug.Log("Cảnh báo, không thể skip video tới thời gian: "+t);
+            return;
+        }
+        
+        
         if (videoPlayer.frameRate > 0.01f && videoPlayer.frameCount > 0)
         {
             long frame = (long)Mathf.Clamp((float)(t * videoPlayer.frameRate), 0, (float)(videoPlayer.frameCount - 1));
@@ -669,6 +714,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (fullscreenRawImage && fullscreenRawImage.texture != _rt)
             fullscreenRawImage.texture = _rt;
 
+        defaultContainer.videoContainer.texture = _rt;
+        secondContainer.videoContainer.texture = _rt;
+        
         if (_quadRenderer && _quadRenderer.material && _quadRenderer.material.mainTexture != _rt)
             _quadRenderer.material.mainTexture = _rt;
 
@@ -721,4 +769,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
                 fitter.aspectRatio = Mathf.Max(0.01f, (float)videoPlayer.width / Mathf.Max(1, (float)videoPlayer.height));
         }
     }
+}
+
+public class VideoContainerManager : MonoBehaviour
+{
+    public RectTransform fullScreenRawImg;
+
+    public VideoContainer defaultContainer;
+    public VideoContainer secondContainer;
+    public VideoContainer fullScreenContainer;
 }

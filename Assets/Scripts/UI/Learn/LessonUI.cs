@@ -25,6 +25,10 @@ public class LessonUI : MonoBehaviour
     public bool isSelect = false;
     public string percent;
     public Action<string> OnClickPlayVideo;
+    [Header("Learning progress")]
+    public float duration;
+    public float progressTime;
+
     private void Awake()
     {
         btn.onClick.AddListener(OnClickBtn);
@@ -40,6 +44,9 @@ public class LessonUI : MonoBehaviour
     {
         chapterUI.SelectLesson(this);
         OnClickPlayVideo?.Invoke(linkVideo2);
+        // Gọi đến API để lưu tiến độ lesson trước
+        // Thay lesson đang học
+        
     }
 
     public void SetActive(bool active)
@@ -50,5 +57,10 @@ public class LessonUI : MonoBehaviour
         frameHighlight.gameObject.SetActive(active);
         
         iconImg.sprite = active ? onActiveIcon : onDeActiveIcon;
+    }
+
+    public void TryUpdateProgress(float newProgressTime)
+    {
+        progressTime = Mathf.Clamp(newProgressTime + 1, progressTime, duration);
     }
 }

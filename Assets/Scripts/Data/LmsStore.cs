@@ -25,7 +25,7 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
+    private string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
@@ -263,7 +263,7 @@ public class LmsStore : MonoBehaviour
 
     // hỗ trợ nhiều dạng root
     [System.Serializable]
-    class PrivateRoot
+    public class PrivateRoot
     {
         public bool status;
         public LmsCoursePrivate data;   // nhiều API dùng "data"
@@ -588,6 +588,7 @@ public class LmsPrivateLesson
     public string videoLink;   // có thể có
     public string videoLink2;  // có thể có
     public string duration;
+    public int progressTime = -1;
     public CompletionCondition completionCondition;
 }
 

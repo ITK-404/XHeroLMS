@@ -20,7 +20,7 @@ public class SceneLessonUI : MonoBehaviour
     private string _courseTitle = "(no course title)";
 
     public Action<LmsCoursePrivate> OnLoadCourseDone;
-
+    
     private void Awake()
     {
         _ = LmsStore.Instance; // đảm bảo singleton tồn tại

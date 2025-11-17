@@ -5,15 +5,16 @@ using UnityEngine.UI;
 
 public class CourseReviewUI : MonoBehaviour
 {
-    [SerializeField]  GameObject container;
+    [SerializeField] GameObject container;
     public Button returnBtn;
-    [SerializeField]  ChapterReviewCourseUI chapterUIPrefab;
-    [SerializeField]  LessonReviewUI lessonUIPrefab;
-    [SerializeField]  List<ChapterReviewCourseUI> chapterList = new();
+    [SerializeField] ChapterReviewCourseUI chapterUIPrefab;
+    [SerializeField] LessonReviewUI lessonUIPrefab;
+    [SerializeField] List<ChapterReviewCourseUI> chapterList = new();
     [SerializeField] PlayVideoOpenBook playVideoOpenBook;
     [SerializeField] private BookPageCreator bookPageCreator;
-    
+
     private ChapterReviewCourseUI chapterReviewCourseUI;
+
     public void Show()
     {
         container.gameObject.SetActive(true);
@@ -32,6 +33,7 @@ public class CourseReviewUI : MonoBehaviour
             Debug.LogError("course private is null");
             return;
         }
+
         BuildData(lmsCoursePrivate);
     }
 
@@ -49,18 +51,34 @@ public class CourseReviewUI : MonoBehaviour
         foreach (var ch in lmsCoursePrivate.chapters)
         {
             var page = bookPageCreator.TryGetOrCreatePageHolder();
-            var header = BuildChapter(ch,page);
-
+            var header = BuildChapter(ch, page);
             foreach (var lesson in ch.lessons)
             {
                 BuildLesson(header, lesson);
             }
         }
 
+        var finalExamId = CourseListView.TryGetFinalExamId(lmsCoursePrivate);
+
+        if (!string.IsNullOrEmpty(finalExamId))
+        {
+            TryHandleFinalExam(finalExamId);
+        }
+
         bookPageCreator.InitFirstPage();
     }
 
-    private ChapterReviewCourseUI BuildChapter(LmsChapter ch,Transform content)
+    private void TryHandleFinalExam(string finalExamId)
+    {
+        LmsChapter lmsChapter = new();
+        lmsChapter._id = finalExamId;
+        lmsChapter.chapterTitle = "Bài thi cuối khóa";
+        var page = bookPageCreator.TryGetOrCreatePageHolder();
+        var header = BuildChapter(lmsChapter, page);
+        header.ShowFinalExam();
+    }
+
+    private ChapterReviewCourseUI BuildChapter(LmsChapter ch, Transform content)
     {
         if (chapterUIPrefab == null || container == null) return null;
 
@@ -82,7 +100,7 @@ public class CourseReviewUI : MonoBehaviour
 
         string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
 
-        int.TryParse(lesson.duration,out int value);
+        int.TryParse(lesson.duration, out int value);
         string duration = FormatFromSeconds(value);
         if (string.IsNullOrEmpty(lessonTitle)) return; // skip unnamed lessons
 
@@ -103,6 +121,7 @@ public class CourseReviewUI : MonoBehaviour
             lessonUI.duration.text = duration;
         }
     }
+
     private string FormatFromSeconds(int totalSeconds)
     {
         totalSeconds = Math.Max(0, totalSeconds);
@@ -133,8 +152,8 @@ public class CourseReviewUI : MonoBehaviour
             this.chapterReviewCourseUI = null;
             return;
         }
-        
-        
+
+
         Debug.Log("Select Chapter: " + chapterList.Count);
         foreach (var chapter in chapterList)
         {
@@ -147,7 +166,8 @@ public class CourseReviewUI : MonoBehaviour
             {
                 chapter.UnHighlight();
                 chapter.ToggleOff();
-            }   
+            }
+
             chapter.ShowActiveUI(chapter == selectedChapter);
         }
 

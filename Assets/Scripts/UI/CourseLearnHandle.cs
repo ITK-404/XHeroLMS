@@ -1,0 +1,49 @@
+﻿using System.Collections;
+using UnityEngine;
+
+public class CourseLearnHandle : MonoBehaviour
+{
+    public SceneLessonUI sceneLessonUI;
+    private LmsCoursePrivate coursePrivate;
+    public CourseProgressAPI courseProgressAPI;
+    public CourseListView courseListView;
+    public FinalExamHandler finalExamHandler;
+    private void Awake()
+    {
+        sceneLessonUI.OnLoadCourseDone += OnGetData;
+        courseListView.OnClickFinalExamEvt += finalExamHandler.OnClickFinalExam;
+    }
+
+    private void OnDestroy()
+    {
+        sceneLessonUI.OnLoadCourseDone -= OnGetData;
+        courseListView.OnClickFinalExamEvt -= finalExamHandler.OnClickFinalExam;
+    }
+
+    private void OnGetData(LmsCoursePrivate coursePrivate)
+    {
+        this.coursePrivate = coursePrivate;
+        courseProgressAPI.courseID = coursePrivate._id;
+        finalExamHandler.SetCourseID(coursePrivate._id);
+        
+        StartCoroutine(WaitingForProgress());
+        // then waiting for fetch progress Data;
+    }
+
+    private IEnumerator WaitingForProgress()
+    {
+        yield return courseProgressAPI.GetProgressCourseCoroutine();
+
+        foreach (var chapter in coursePrivate.chapters)
+        {
+            foreach (var lesson in chapter.lessons)
+            {
+                lesson.progressTime = courseProgressAPI.GetLessonProgress(lesson._id);
+            }
+        }
+        
+        courseListView.BuildListUI(coursePrivate);
+    }
+
+  
+}
