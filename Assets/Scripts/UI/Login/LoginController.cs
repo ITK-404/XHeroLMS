@@ -148,7 +148,7 @@ public class LoginController : MonoBehaviour
         _isLoggingIn = true;
         if (buttonLogin) buttonLogin.interactable = false;
 
-        const string url = "https://apis-dev.xheroapp.com/users/authenticate";
+        string url = $"{LmsStore.Instance.baseUrl}/users/authenticate"; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
 
         string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);

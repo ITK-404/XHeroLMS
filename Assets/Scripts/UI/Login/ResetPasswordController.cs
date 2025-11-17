@@ -9,7 +9,7 @@ using System.Text;
 public class ResetPasswordController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
     // Đừng tin Inspector 100%. Route reset sẽ thử theo danh sách dưới:
     private static readonly string[] ResetPaths = new string[] {
         "/users/password-reset",                 // chuẩn theo swagger mới

@@ -11,7 +11,7 @@ using System.Linq;
 public class RegistrationController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
     private const string RegisterPath = "/users";
     private const string ProvincePath = "/api/v1/province/0"; // parentId = 0
 
