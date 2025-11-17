@@ -18,17 +18,15 @@ public class FinalExamHandler : MonoBehaviour
     private Vector3 defaultLookAtOffset;
     private bool hasDefaultOffset;
     
-    private LearnUI learnUI;
     private VideoPlayerControllerPro videoPlayerControllerPro;
-    private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
+    private LearnUI learnUI;
 
     private string courseID;
     void Awake()
     {
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
-        examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
     void Update()
@@ -49,11 +47,10 @@ public class FinalExamHandler : MonoBehaviour
         if (currentExam != null)
         {
             Destroy(currentExam.gameObject);
-
             currentExam = null;
         }
         currentExam = Instantiate(examPrefab);
-        currentExam.gameObject.SetActive(true);
+        examUIController = currentExam.GetComponentInChildren<ExamUIController>();
     }
     
     public void OnClickFinalExam(LessonUI finalItem)
@@ -72,7 +69,8 @@ public class FinalExamHandler : MonoBehaviour
 
         if (examCamRoutine != null)
             StopCoroutine(examCamRoutine);
-
+        
+        CreateExamPrefab();
         examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
     }
 
@@ -145,15 +143,29 @@ public class FinalExamHandler : MonoBehaviour
             examLookAt.LookAtOffset = Vector3.Lerp(startOffset, endOffset, k);
             yield return null;
         }
+        // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
         examLookAt.LookAtOffset = endOffset;
-        CreateExamPrefab();
-        currentExam.gameObject.SetActive(true);
-        examUIController = GetComponentInChildren<ExamUIController>();
+        yield return examUIController.StartGate();
+        yield return new WaitForSecondsRealtime(0.1f);
+        examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
         Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
     }
 
     private void ResetFromExam()
     {
+        Debug.Log($"ResetFromExam Started {examUIController.examStarted}");
+        Debug.Log($"ResetFromExam Submitted {examUIController.ExamQuestionManager.IsSubmitting}");
+
+        if (examUIController.examStarted)
+        {
+            if (!examUIController.ExamQuestionManager.IsSubmitting)
+            {
+                examUIController.ExamQuestionManager.OnSubmit();
+                // check right here
+                return;
+            }
+        }
+        
         QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
         if (examCamRoutine != null)
         {

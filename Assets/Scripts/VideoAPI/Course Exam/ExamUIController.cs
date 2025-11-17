@@ -65,6 +65,8 @@ public partial class ExamUIController : MonoBehaviour
     private ExamTitleManager _examTitleManager;
     private ExamExportJson _examExportJson;
 
+    public ExamQuestionManager ExamQuestionManager => _examQuestionManager;
+    
     public void ShowLoading(bool show)
     {
         if (show)
@@ -325,6 +327,8 @@ public partial class ExamUIController : MonoBehaviour
                 $"[ExamUI] Parsed: count={paper?.Count ?? 0}, duration={durationSeconds}s, title='{examTitle}', pass%={passPointPercent}, name='{examName}'");
 
         // Cập nhật header (chưa bắt đầu thi)
+        // bật exam canvas lên
+        
         examStarted = false;
         _examQuestionManager.ClearContent();
         UpdateHeaderInfo();
