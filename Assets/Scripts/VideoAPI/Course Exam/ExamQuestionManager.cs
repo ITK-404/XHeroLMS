@@ -65,6 +65,10 @@ public class ExamQuestionManager : MonoBehaviour
 
     private readonly Dictionary<string, int> _qidToIndex = new();
     public readonly List<ExamInfoElement> _navItems = new();
+    public bool IsSubmitting
+    {
+        get => _isSubmitting;
+    }
 
     // Regex parse JSON (compiled để giảm GC mỗi lần submit)
     private static readonly Regex ReInt = new Regex("\"(?<k>[^\"]+)\"\\s*:\\s*(-?\\d+)",

@@ -12,7 +12,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [Header("Badges (tuỳ chọn)")]
     [SerializeField] private GameObject correctStatusObj;
     [SerializeField] private GameObject wrongStatusObj;
-
+    [SerializeField] private GameObject informationPanel;
     [Header("Close")]
     [SerializeField] private Button closeBtn;
 
@@ -110,7 +110,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
         if (correctStatusObj) correctStatusObj.SetActive(false);
         if (wrongStatusObj)  wrongStatusObj.SetActive(false);
-
+        if(informationPanel) informationPanel.gameObject.SetActive(false);
         // xóa hết nội dung câu hỏi/đáp án đang spawn
         ClearContent();
 
@@ -212,7 +212,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         bool exactlyCorrect = IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
         if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
         if (wrongStatusObj) wrongStatusObj.SetActive(!exactlyCorrect);
-
+        if (informationPanel) informationPanel.SetActive(true);
         switch (q.type)
         {
             case ExamQuestionType.SINGLE_CHOICE:
