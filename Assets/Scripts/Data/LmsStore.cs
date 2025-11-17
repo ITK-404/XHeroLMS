@@ -25,7 +25,7 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
+    public string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
@@ -244,7 +244,7 @@ public class LmsStore : MonoBehaviour
                 return;
             }
 
-            // NEW: chuẩn hoá finalExam
+            // chuẩn hoá finalExam
             NormalizeFinalExam(p);
 
             // replace or add
@@ -437,7 +437,7 @@ public class LmsStore : MonoBehaviour
         }
         catch (Exception e) { Debug.LogWarning("[LMS] Load failed: " + e.Message); Data = new StoreData(); }
 
-        // NEW: normalize lại dữ liệu cũ để finalExam luôn non-null
+        // normalize lại dữ liệu cũ để finalExam luôn non-null
         if (Data.marketCourses != null)
             foreach (var c in Data.marketCourses) NormalizeFinalExam(c);
         if (Data.userCourses != null)
@@ -538,7 +538,7 @@ public class LmsCourse
     public SeoInfo seo;
     public string image;
 
-    // NEW
+    //
     public LmsSettings settings; // giữ nguyên cấu trúc gốc nếu có
     public string finalExam;     // tiện tra cứu nhanh; luôn != null ("" nếu không có)
 }
@@ -564,7 +564,7 @@ public class LmsCoursePrivate
     public SeoInfo seo;
     public string image;
 
-    // NEW
+    //
     public LmsSettings settings; // phòng khi BE trả trong private
     public string finalExam;     // luôn != null ("" nếu không có)
 }
