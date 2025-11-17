@@ -134,10 +134,10 @@ public class SceneLessonDump : MonoBehaviour
 
         if (string.IsNullOrEmpty(courseId))
         {
-            Debug.LogError($"[SceneLessonDump] Không resolve được courseId cho seo='{seo}'. Kiểm tra: " +
-                           $"1) SEO có tồn tại trên môi trường {LmsStore.Instance.baseUrl} không? " +
-                           $"2) Tài khoản đã có quyền/my-courses chưa? " +
-                           $"3) DEV/PROD mismatch?");
+            // Debug.LogError($"[SceneLessonDump] Không resolve được courseId cho seo='{seo}'. Kiểm tra: " +
+            //                $"1) SEO có tồn tại trên môi trường {LmsStore.Instance.baseUrl} không? " +
+            //                $"2) Tài khoản đã có quyền/my-courses chưa? " +
+            //                $"3) DEV/PROD mismatch?");
             yield break;
         }
 
@@ -150,8 +150,8 @@ public class SceneLessonDump : MonoBehaviour
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
         {
-            Debug.LogError($"[SceneLessonDump] courseId='{courseId}' tồn tại nhưng Private null. " +
-                           $"Có thể do quyền hoặc course không tồn tại trên môi trường {LmsStore.Instance.baseUrl}.");
+            // Debug.LogError($"[SceneLessonDump] courseId='{courseId}' tồn tại nhưng Private null. " +
+            //                $"Có thể do quyền hoặc course không tồn tại trên môi trường {LmsStore.Instance.baseUrl}.");
             yield break;
         }
         

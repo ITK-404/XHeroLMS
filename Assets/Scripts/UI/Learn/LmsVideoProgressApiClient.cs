@@ -11,7 +11,7 @@ public class LmsVideoProgressApiClient : MonoBehaviour
     private CourseListView courseListView;           // để lấy courseId và list LessonUI
 
     [Header("Progress API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
     public bool useTokenFromStore = true;           // lấy TokenStore.AccessToken nếu không override
     public string overrideAccessToken = "";         // KHÔNG cần kèm "Bearer "
 

@@ -10,7 +10,7 @@ using UnityEngine.Networking;
 public class LmsApiMinimalExporter : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     [Header("Auth")]
     [Tooltip("Dán token tại đây. Để trống nếu dùng TokenStore.AccessToken.")]
