@@ -219,6 +219,8 @@ public class FinalExamHandler : MonoBehaviour
 
         examCamera.position = endPos;
         examCamera.rotation = endRot;
+        
+        playerStandUI.ShowWatchVideoUI();
     }
 
     private IEnumerator ResetExamRoutine()
