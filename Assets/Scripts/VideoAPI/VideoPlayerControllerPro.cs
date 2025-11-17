@@ -399,7 +399,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
         _isFullscreen = false;
         OnFullscreenChanged?.Invoke(false);
         
-        // new logic
+        // logic
         defaultContainer.Hide();
         secondContainer.Hide();
         fullScreenContainer.Hide();
