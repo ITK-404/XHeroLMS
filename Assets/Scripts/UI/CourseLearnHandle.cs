@@ -7,20 +7,24 @@ public class CourseLearnHandle : MonoBehaviour
     private LmsCoursePrivate coursePrivate;
     public CourseProgressAPI courseProgressAPI;
     public CourseListView courseListView;
+    public FinalExamHandler finalExamHandler;
     private void Awake()
     {
         sceneLessonUI.OnLoadCourseDone += OnGetData;
+        courseListView.OnClickFinalExamEvt += finalExamHandler.OnClickFinalExam;
     }
 
     private void OnDestroy()
     {
         sceneLessonUI.OnLoadCourseDone -= OnGetData;
+        courseListView.OnClickFinalExamEvt -= finalExamHandler.OnClickFinalExam;
     }
 
     private void OnGetData(LmsCoursePrivate coursePrivate)
     {
         this.coursePrivate = coursePrivate;
         courseProgressAPI.courseID = coursePrivate._id;
+        finalExamHandler.SetCourseID(coursePrivate._id);
         
         StartCoroutine(WaitingForProgress());
         // then waiting for fetch progress Data;
@@ -37,7 +41,6 @@ public class CourseLearnHandle : MonoBehaviour
                 lesson.progressTime = courseProgressAPI.GetLessonProgress(lesson._id);
             }
         }
-        
         
         courseListView.BuildListUI(coursePrivate);
     }

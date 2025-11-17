@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 public class CourseListPageMyUI : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     [Header("Auth")]
     [Tooltip("Để trống nếu dùng TokenStore.AccessToken")]
