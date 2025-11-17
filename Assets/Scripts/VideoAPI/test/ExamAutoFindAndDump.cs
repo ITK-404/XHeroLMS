@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 public class ExamAutoFindAndDump : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
 
     [Header("Auth")]
     public bool useTokenFromStore = true;

@@ -8,7 +8,7 @@ using System.Collections;
 public class OtpVerificationController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
 
     private const string PREF_USERNAME84     = "REG_USERNAME_84";
     private const string PREF_OTP_BY         = "REG_OTP_BY";

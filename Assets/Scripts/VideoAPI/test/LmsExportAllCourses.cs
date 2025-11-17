@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class LmsExportAllCourses : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
 
     [Header("Auth")]
     [Tooltip("Dán token tại đây. Để trống nếu dùng TokenStore.AccessToken.")]

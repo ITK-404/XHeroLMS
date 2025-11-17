@@ -6,46 +6,107 @@ using UnityEngine.Networking;
 
 public class CourseProgressAPI : MonoBehaviour
 {
-    public string baseUrl;
+    [Header("Debug Only")]
+    public string baseUrl;   // chỉ để xem log, không set trong Inspector nữa
+
+    [Header("Course Info")]
     public string courseID;
     public SceneLessonUI lessonUI;
 
     private Dictionary<string, int> lessonProgressDictionary = new();
     private CustomPrivateData privateRoot;
 
+    private void Awake()
+    {
+        // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+        if (LmsStore.Instance != null)
+        {
+            baseUrl = LmsStore.Instance.baseUrl; 
+        }
+        else
+        {
+            Debug.LogError("[CourseProgressAPI] LmsStore.Instance is NULL! baseUrl cannot update.");
+        }
+    }
+
     [ContextMenu("Try Get Course")]
     public void TryGetCourse()
     {
         StartCoroutine(GetProgressCourseCoroutine());
     }
+
     public IEnumerator GetProgressCourseCoroutine()
     {
         var accessToken = TokenStore.AccessToken;
-        string url = $"{baseUrl}/users/lms/courses/get-progress-learn/{courseID}";
+
+        Debug.Log($"[CourseProgressAPI] baseUrl = {baseUrl}");
+        Debug.Log($"[CourseProgressAPI] token = {(string.IsNullOrEmpty(accessToken) ? "EMPTY" : accessToken.Substring(0, 20) + "...")}");
+
+        string url = $"{baseUrl.TrimEnd('/')}/users/lms/courses/get-progress-learn/{courseID}";
+        Debug.Log($"[CourseProgressAPI] URL = {url}");
 
         using var req = UnityWebRequest.Get(url);
+
         if (!string.IsNullOrEmpty(accessToken))
             req.SetRequestHeader("Authorization", "Bearer " + accessToken);
 
         req.SetRequestHeader("Accept", "application/json");
+
         yield return req.SendWebRequest();
+
 #if UNITY_2020_2_OR_NEWER
         bool error = req.result == UnityWebRequest.Result.ConnectionError ||
                      req.result == UnityWebRequest.Result.ProtocolError;
 #else
         bool error = req.isNetworkError || req.isHttpError;
 #endif
+
         string body = req.downloadHandler?.text;
-        Debug.Log($"Course Fetech data: \n {body}");
-        privateRoot = JsonUtility.FromJson<CustomPrivateData>(body);
-        lessonProgressDictionary.Clear();
-        foreach (var item in privateRoot.data.course.chapters)
+        Debug.Log($"[CourseProgressAPI] Response ({req.responseCode}):\n{body}");
+
+        if (error)
         {
-            foreach (var lesson in item.lessons)
+            Debug.LogError($"[CourseProgressAPI] ERROR {req.responseCode}: {req.error}\nBody: {body}");
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(body))
+        {
+            Debug.LogError("[CourseProgressAPI] Body rỗng.");
+            yield break;
+        }
+
+        CustomPrivateData root = null;
+        try
+        {
+            root = JsonUtility.FromJson<CustomPrivateData>(body);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[CourseProgressAPI] FromJson FAILED: " + e);
+            yield break;
+        }
+
+        if (root?.data?.course?.chapters == null)
+        {
+            Debug.LogError("[CourseProgressAPI] JSON không có data.course.chapters như model mong đợi.");
+            yield break;
+        }
+
+        // Parse lessons
+        lessonProgressDictionary.Clear();
+        foreach (var chapter in root.data.course.chapters)
+        {
+            if (chapter?.lessons == null) continue;
+
+            foreach (var lesson in chapter.lessons)
             {
-                lessonProgressDictionary.Add(lesson._id,lesson.progressTime);
+                if (lesson == null || string.IsNullOrEmpty(lesson._id)) continue;
+                lessonProgressDictionary[lesson._id] = lesson.progressTime;
             }
         }
+
+        Debug.Log($"[CourseProgressAPI] Loaded {lessonProgressDictionary.Count} lesson progress entries.");
     }
 
     public int GetLessonProgress(string lessonID)

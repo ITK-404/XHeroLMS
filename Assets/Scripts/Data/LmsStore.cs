@@ -25,7 +25,7 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
+    public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
