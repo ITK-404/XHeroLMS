@@ -11,7 +11,8 @@ using System.Linq;
 public class RegistrationController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
     private const string RegisterPath = "/users";
     private const string ProvincePath = "/api/v1/province/0"; // parentId = 0
 
@@ -71,6 +72,10 @@ public class RegistrationController : MonoBehaviour
 
     private bool confirmed = false;
 
+    private void Awake()
+    {
+        baseUrl = LmsStore.Instance.baseUrl;
+    }
     private void Start()
     {
         // Fill provinces
@@ -79,14 +84,14 @@ public class RegistrationController : MonoBehaviour
         InitToggles();
         ApplyPasswordMask(false);
 
-        if (btnTogglePassword)        btnTogglePassword.onClick.AddListener(TogglePassword);
+        if (btnTogglePassword) btnTogglePassword.onClick.AddListener(TogglePassword);
         if (btnToggleConfirmPassword) btnToggleConfirmPassword.onClick.AddListener(TogglePassword);
 
-        if (toggleMale)   toggleMale.onValueChanged.AddListener(v => { if (v && toggleFemale) toggleFemale.isOn = false; });
-        if (toggleFemale) toggleFemale.onValueChanged.AddListener(v => { if (v && toggleMale)   toggleMale.isOn   = false; });
+        if (toggleMale) toggleMale.onValueChanged.AddListener(v => { if (v && toggleFemale) toggleFemale.isOn = false; });
+        if (toggleFemale) toggleFemale.onValueChanged.AddListener(v => { if (v && toggleMale) toggleMale.isOn = false; });
 
-        if (toggleEmail)  toggleEmail.onValueChanged.AddListener(v => { if (v && toggleSms) toggleSms.isOn = false; });
-        if (toggleSms)    toggleSms.onValueChanged.AddListener(v => { if (v && toggleEmail) toggleEmail.isOn = false; });
+        if (toggleEmail) toggleEmail.onValueChanged.AddListener(v => { if (v && toggleSms) toggleSms.isOn = false; });
+        if (toggleSms) toggleSms.onValueChanged.AddListener(v => { if (v && toggleEmail) toggleEmail.isOn = false; });
 
         if (confirmToggle)
         {
@@ -94,13 +99,13 @@ public class RegistrationController : MonoBehaviour
             confirmToggle.onValueChanged.AddListener(isOn => { confirmed = isOn; ValidateAll(); });
         }
 
-        if (btnRegister)  btnRegister.onClick.AddListener(OnRegisterClick);
-        if (btnBack)      btnBack.onClick.AddListener(BackAndReset);
+        if (btnRegister) btnRegister.onClick.AddListener(OnRegisterClick);
+        if (btnBack) btnBack.onClick.AddListener(BackAndReset);
 
-        if (fullNameField)        fullNameField.onValueChanged.AddListener(_ => ValidateAll());
-        if (phoneField)           phoneField.onValueChanged.AddListener(_ => ValidateAll());
-        if (emailField)           emailField.onValueChanged.AddListener(_ => ValidateAll());
-        if (passwordField)        passwordField.onValueChanged.AddListener(_ => ValidateAll());
+        if (fullNameField) fullNameField.onValueChanged.AddListener(_ => ValidateAll());
+        if (phoneField) phoneField.onValueChanged.AddListener(_ => ValidateAll());
+        if (emailField) emailField.onValueChanged.AddListener(_ => ValidateAll());
+        if (passwordField) passwordField.onValueChanged.AddListener(_ => ValidateAll());
         if (confirmPasswordField) confirmPasswordField.onValueChanged.AddListener(_ => ValidateAll());
 
         ValidateAll();
