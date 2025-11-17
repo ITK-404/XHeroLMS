@@ -9,7 +9,7 @@ using System.Text;
 public class ForgotController : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     [Tooltip("Các endpoint ứng viên để yêu cầu gửi OTP quên mật khẩu (thử lần lượt cho tới khi thành công)")]
     public string[] otpRequestPathsToTry = new string[]
