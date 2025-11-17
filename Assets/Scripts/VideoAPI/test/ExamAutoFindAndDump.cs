@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 public class ExamAutoFindAndDump : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     [Header("Auth")]
     public bool useTokenFromStore = true;

@@ -11,7 +11,7 @@ using System.Linq;
 public class RegistrationController : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
     private const string RegisterPath = "/users";
     private const string ProvincePath = "/api/v1/province/0"; // parentId = 0
 

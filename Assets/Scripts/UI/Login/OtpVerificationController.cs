@@ -8,7 +8,7 @@ using System.Collections;
 public class OtpVerificationController : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     private const string PREF_USERNAME84     = "REG_USERNAME_84";
     private const string PREF_OTP_BY         = "REG_OTP_BY";

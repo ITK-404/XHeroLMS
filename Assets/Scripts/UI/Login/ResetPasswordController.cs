@@ -8,8 +8,8 @@ using System.Text;
 
 public class ResetPasswordController : MonoBehaviour
 {
-[Header("API")]
-public string baseUrl = "https://apis-dev.xheroapp.com";
+    [Header("API")]
+    private string baseUrl = "https://apis-dev.xheroapp.com";
     // Đừng tin Inspector 100%. Route reset sẽ thử theo danh sách dưới:
     private static readonly string[] ResetPaths = new string[] {
         "/users/password-reset",                 // chuẩn theo swagger mới

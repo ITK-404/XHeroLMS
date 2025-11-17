@@ -149,7 +149,6 @@ public class FinalExamHandler : MonoBehaviour
         CreateExamPrefab();
         currentExam.gameObject.SetActive(true);
         examUIController = GetComponentInChildren<ExamUIController>();
-        yield return examUIController.StartGate();
         Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
     }
 

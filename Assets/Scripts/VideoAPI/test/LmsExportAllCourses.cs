@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class LmsExportAllCourses : MonoBehaviour
 {
     [Header("API")]
-    public string baseUrl = "https://apis-dev.xheroapp.com";
+    private string baseUrl = "https://apis-dev.xheroapp.com";
 
     [Header("Auth")]
     [Tooltip("Dán token tại đây. Để trống nếu dùng TokenStore.AccessToken.")]
