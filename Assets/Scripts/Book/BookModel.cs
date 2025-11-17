@@ -26,15 +26,11 @@ public class BookModel : MonoBehaviour
         smoothCurve = AnimationUltis.CreateInOutBackCurve();
     }
 
-    public void SetColor(Color color)
-    {
-        // testing
-        _renderer.materials[1].SetColor("_BaseColor", color);
-    }
 
     public void SetBaseMap(Texture texture)
     {
-        _renderer.materials[1].SetTexture("_MainTex", texture);
+        if(texture)
+            _renderer.materials[1].SetTexture("_MainTex", texture);
     }
 
     [ContextMenu("De Active Grayscale")]
