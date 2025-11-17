@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class FinalExamHandler : MonoBehaviour
 {
@@ -40,16 +41,21 @@ public class FinalExamHandler : MonoBehaviour
     }
     
     public void SetCourseID(string newCourseID) => courseID = newCourseID;
-    private GameObject currentExam;
-    
+    private ExamUIMock currentExam;
+    public Camera playerCamera;
     public void CreateExamPrefab()
     {
-        if (currentExam != null)
-        {
-            Destroy(currentExam.gameObject);
-            currentExam = null;
-        }
-        currentExam = Instantiate(examPrefab);
+        // if (currentExam != null)
+        // {
+        //     Destroy(currentExam.gameObject);
+        //     currentExam = null;
+        // }
+        // currentExam = Instantiate(examPrefab);
+        currentExam = ExamUIMock.Instance;
+        var canvas = currentExam.GetComponent<Canvas>();
+        canvas.worldCamera = playerCamera;
+        canvas.planeDistance = 0.03f;
+        
         examUIController = currentExam.GetComponentInChildren<ExamUIController>();
     }
     
@@ -69,7 +75,13 @@ public class FinalExamHandler : MonoBehaviour
 
         if (examCamRoutine != null)
             StopCoroutine(examCamRoutine);
-        
+
+        var operation = SceneManager.LoadSceneAsync("UI_Creator Scene", LoadSceneMode.Additive);
+        operation.completed += OperationOncompleted;
+    }
+
+    private void OperationOncompleted(AsyncOperation obj)
+    {
         CreateExamPrefab();
         examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
     }
