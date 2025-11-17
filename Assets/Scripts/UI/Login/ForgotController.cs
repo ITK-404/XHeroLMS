@@ -9,7 +9,8 @@ using System.Text;
 public class ForgotController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
 
     [Tooltip("Các endpoint ứng viên để yêu cầu gửi OTP quên mật khẩu (thử lần lượt cho tới khi thành công)")]
     public string[] otpRequestPathsToTry = new string[]
@@ -50,6 +51,10 @@ public class ForgotController : MonoBehaviour
     [Header("UI Thông báo (optional)")]
     public TextMeshProUGUI errorText;
 
+    private void Awake()
+    {
+        baseUrl = LmsStore.Instance.baseUrl;
+    }
     private void Start()
     {
         if (toggleSms)   toggleSms.onValueChanged.AddListener(OnSmsToggleChanged);

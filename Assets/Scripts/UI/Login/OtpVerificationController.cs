@@ -8,7 +8,8 @@ using System.Collections;
 public class OtpVerificationController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
 
     private const string PREF_USERNAME84     = "REG_USERNAME_84";
     private const string PREF_OTP_BY         = "REG_OTP_BY";
@@ -60,15 +61,19 @@ public class OtpVerificationController : MonoBehaviour
     [SerializeField] private string otpByChannel      = ""; // "phone" | "email"
     [SerializeField] private string otpPurpose        = ""; // "forgot-password" | "register"
 
+    private void Awake()
+    {
+        baseUrl = LmsStore.Instance.baseUrl;
+    }
     /// <summary>Gọi khi chuyển từ Register/Forgot sang OTP</summary>
     public void SetContact(string identifier, string otpBy, string purpose = "")
     {
         contactIdentifier = (identifier ?? "").Trim();
-        otpByChannel      = (otpBy ?? "").Trim();
-        otpPurpose        = (purpose ?? "").Trim();
+        otpByChannel = (otpBy ?? "").Trim();
+        otpPurpose = (purpose ?? "").Trim();
 
         AuthFlowSession.LastOtpIdentifier = contactIdentifier;
-        AuthFlowSession.LastOtpBy         = otpByChannel;
+        AuthFlowSession.LastOtpBy = otpByChannel;
         if (!string.IsNullOrEmpty(otpPurpose)) AuthFlowSession.LastOtpPurpose = otpPurpose;
     }
 

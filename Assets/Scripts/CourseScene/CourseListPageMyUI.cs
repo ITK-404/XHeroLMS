@@ -9,7 +9,8 @@ using UnityEngine.Networking;
 public class CourseListPageMyUI : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
 
     [Header("Auth")]
     [Tooltip("Để trống nếu dùng TokenStore.AccessToken")]
@@ -87,6 +88,8 @@ public class CourseListPageMyUI : MonoBehaviour
 
     private void Awake()
     {
+        baseUrl = LmsStore.Instance.baseUrl;
+        
         // Ẩn tất cả root để ngăn các script con chạy khi inactive
         if (basicView?.root)     basicView.root.SetActive(false);
         if (advancedView?.root)  advancedView.root.SetActive(false);

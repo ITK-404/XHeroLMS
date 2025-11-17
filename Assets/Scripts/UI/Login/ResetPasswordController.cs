@@ -9,7 +9,8 @@ using System.Text;
 public class ResetPasswordController : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
     // Đừng tin Inspector 100%. Route reset sẽ thử theo danh sách dưới:
     private static readonly string[] ResetPaths = new string[] {
         "/users/password-reset",                 // chuẩn theo swagger mới
@@ -34,13 +35,18 @@ public class ResetPasswordController : MonoBehaviour
 
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
-
     [Header("Rules")]
     [Tooltip("Tối thiểu độ dài; 0 = không kiểm tra độ dài")]
     public int minLength = 0; // đặt 6/8 nếu muốn
 
     // username (email hoặc 84...) nhận từ OTP
     private string usernameForReset = "";
+
+    private void Awake()
+    {
+        // Lúc này Unity đã tạo xong object, gọi Instance an toàn hơn
+        baseUrl = LmsStore.Instance.baseUrl;
+    }
 
     public void SetUsername(string identifier)
     {
