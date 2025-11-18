@@ -2081,6 +2081,14 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.63
       objectReference: {fileID: 0}
+    - target: {fileID: 2927364886016186299, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: m_Cameras.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2927364886016186299, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: 'm_Cameras.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1528961268}
     - target: {fileID: 3338186989802664639, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
@@ -2188,10 +2196,6 @@ PrefabInstance:
     - target: {fileID: 6485851663770775489, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: autoRepath.maximumInterval
       value: 10
-      objectReference: {fileID: 0}
-    - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
-      propertyPath: field of view
-      value: 60.000004
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -25336,6 +25340,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+--- !u!114 &1114028878 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1093589083360247919, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+  m_PrefabInstance: {fileID: 1114028877}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79c7a216b0d163648a30fdbdc90be31a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInformationUI
 --- !u!114 &1115108245
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -30280,6 +30295,11 @@ MeshCollider:
 Transform:
   m_CorrespondingSourceObject: {fileID: 2473202118624275637, guid: 1e325ad39d9f3634685b83ecabb38d33, type: 3}
   m_PrefabInstance: {fileID: 776593026}
+  m_PrefabAsset: {fileID: 0}
+--- !u!20 &1528961268 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 6038048899354514683, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+  m_PrefabInstance: {fileID: 104197458}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1532498696
 GameObject:
@@ -37607,6 +37627,8 @@ MonoBehaviour:
   examUIController: {fileID: 0}
   examMoveDuration: 1.5
   examLookAt: {fileID: 1258957097}
+  UICamera: {fileID: 0}
+  playerPanelUI: {fileID: 1114028878}
 --- !u!1001 &4958568703526269618
 PrefabInstance:
   m_ObjectHideFlags: 0
