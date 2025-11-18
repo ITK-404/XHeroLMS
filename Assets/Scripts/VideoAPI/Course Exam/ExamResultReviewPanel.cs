@@ -18,7 +18,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
     [Header("Root")]
     [SerializeField] private GameObject reviewRoot;
-
+    [SerializeField] private CertificatesExamUI certificatesExamUI;
     // ----- state review -----
     private ExamPaper _paper;
     private Dictionary<string, HashSet<int>> _userPicked;     // q.id -> indices user chọn (0-based)
@@ -111,6 +111,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         if (correctStatusObj) correctStatusObj.SetActive(false);
         if (wrongStatusObj)  wrongStatusObj.SetActive(false);
         if(informationPanel) informationPanel.gameObject.SetActive(false);
+        certificatesExamUI.Hide();
         // xóa hết nội dung câu hỏi/đáp án đang spawn
         ClearContent();
 
@@ -213,6 +214,12 @@ public class ExamResultReviewPanel : ExamQuestionManager
         if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
         if (wrongStatusObj) wrongStatusObj.SetActive(!exactlyCorrect);
         if (informationPanel) informationPanel.SetActive(true);
+
+        if (certificatesExamUI && exactlyCorrect)
+        {
+            certificatesExamUI.Show();
+        }
+
         switch (q.type)
         {
             case ExamQuestionType.SINGLE_CHOICE:
