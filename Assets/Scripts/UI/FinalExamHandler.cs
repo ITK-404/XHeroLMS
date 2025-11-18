@@ -23,12 +23,19 @@ public class FinalExamHandler : MonoBehaviour
     private LearnUI learnUI;
 
     private string courseID;
+    public Camera UICamera;
+    public PlayerPanelUI playerPanelUI;
     void Awake()
     {
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
+    private void Start()
+    {
+        UICamera = PlayerCamera.Instance.playerUICamera;
+    }
+
     void Update()
     {
         if (ExamResultReviewPanel.FlagContinue)
@@ -41,7 +48,6 @@ public class FinalExamHandler : MonoBehaviour
     
     public void SetCourseID(string newCourseID) => courseID = newCourseID;
     private GameObject currentExam;
-    
     public void CreateExamPrefab()
     {
         if (currentExam != null)
@@ -50,6 +56,8 @@ public class FinalExamHandler : MonoBehaviour
             currentExam = null;
         }
         currentExam = Instantiate(examPrefab);
+        var canvas = currentExam.GetComponent<Canvas>();
+        canvas.worldCamera = UICamera;
         examUIController = currentExam.GetComponentInChildren<ExamUIController>();
     }
     
@@ -72,6 +80,7 @@ public class FinalExamHandler : MonoBehaviour
         
         CreateExamPrefab();
         examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
+        playerPanelUI.Hide();
     }
 
     private bool InitExamCamera()
@@ -221,6 +230,7 @@ public class FinalExamHandler : MonoBehaviour
         examCamera.rotation = endRot;
         
         playerStandUI.ShowWatchVideoUI();
+        playerPanelUI.Show();
     }
 
     private IEnumerator ResetExamRoutine()

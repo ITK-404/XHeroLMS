@@ -162,24 +162,24 @@ public class ExamConfirmPanel : MonoBehaviour
     private void ShowResultPanelOnTop()
     {
         var result = resultUIPanelRoot ? resultUIPanelRoot : gameObject;
-        result.transform.SetAsLastSibling();
+        //result.transform.SetAsLastSibling();
 
-        if (forceTopCanvas)
-        {
-            var cv = result.GetComponent<Canvas>();
-            if (!cv) cv = result.AddComponent<Canvas>();
-            cv.overrideSorting = true;
-            cv.sortingOrder = resultSortingOrder;
+        //if (forceTopCanvas)
+        //{
+        //    var cv = result.GetComponent<Canvas>();
+        //    if (!cv) cv = result.AddComponent<Canvas>();
+        //    cv.overrideSorting = true;
+        //    cv.sortingOrder = resultSortingOrder;
 
-            if (!result.GetComponent<GraphicRaycaster>())
-                result.AddComponent<GraphicRaycaster>();
+        //    if (!result.GetComponent<GraphicRaycaster>())
+        //        result.AddComponent<GraphicRaycaster>();
 
-            var cg = result.GetComponent<CanvasGroup>();
-            if (!cg) cg = result.AddComponent<CanvasGroup>();
-            cg.interactable = true;
-            cg.blocksRaycasts = true;
-            cg.ignoreParentGroups = false;
-        }
+        //    var cg = result.GetComponent<CanvasGroup>();
+        //    if (!cg) cg = result.AddComponent<CanvasGroup>();
+        //    cg.interactable = true;
+        //    cg.blocksRaycasts = true;
+        //    cg.ignoreParentGroups = false;
+        //}
 
         result.SetActive(true);
     }
