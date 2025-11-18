@@ -24,7 +24,7 @@ public class FinalExamHandler : MonoBehaviour
 
     private string courseID;
     public Camera UICamera;
-
+    public PlayerPanelUI playerPanelUI;
     void Awake()
     {
         learnUI = FindAnyObjectByType<LearnUI>();
@@ -80,6 +80,7 @@ public class FinalExamHandler : MonoBehaviour
         
         CreateExamPrefab();
         examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
+        playerPanelUI.Hide();
     }
 
     private bool InitExamCamera()
@@ -229,6 +230,7 @@ public class FinalExamHandler : MonoBehaviour
         examCamera.rotation = endRot;
         
         playerStandUI.ShowWatchVideoUI();
+        playerPanelUI.Show();
     }
 
     private IEnumerator ResetExamRoutine()
