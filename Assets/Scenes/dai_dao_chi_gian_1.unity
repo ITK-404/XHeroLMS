@@ -2081,6 +2081,14 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.63
       objectReference: {fileID: 0}
+    - target: {fileID: 2927364886016186299, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: m_Cameras.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2927364886016186299, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: 'm_Cameras.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1528961268}
     - target: {fileID: 3338186989802664639, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
@@ -2188,10 +2196,6 @@ PrefabInstance:
     - target: {fileID: 6485851663770775489, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: autoRepath.maximumInterval
       value: 10
-      objectReference: {fileID: 0}
-    - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
-      propertyPath: field of view
-      value: 60.000004
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -30281,6 +30285,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2473202118624275637, guid: 1e325ad39d9f3634685b83ecabb38d33, type: 3}
   m_PrefabInstance: {fileID: 776593026}
   m_PrefabAsset: {fileID: 0}
+--- !u!20 &1528961268 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 6038048899354514683, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+  m_PrefabInstance: {fileID: 104197458}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1532498696
 GameObject:
   m_ObjectHideFlags: 0
@@ -37607,6 +37616,7 @@ MonoBehaviour:
   examUIController: {fileID: 0}
   examMoveDuration: 1.5
   examLookAt: {fileID: 1258957097}
+  UICamera: {fileID: 0}
 --- !u!1001 &4958568703526269618
 PrefabInstance:
   m_ObjectHideFlags: 0
