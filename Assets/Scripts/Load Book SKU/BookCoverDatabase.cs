@@ -1,7 +1,9 @@
-using System.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [CreateAssetMenu(fileName = "Book Cover Info", menuName = "Book Cover Database")]
 public class BookCoverDatabase : ScriptableObject
@@ -24,7 +26,6 @@ public class BookCoverDatabase : ScriptableObject
     {
         var textures = Resources.LoadAll<Texture2D>(sourcePath) ?? new Texture2D[0];
 
-        // Fill BookReferences array with sku (texture name) and resource path
         bookCoverList = textures
             .Select(t => new BookReferences
             {
@@ -38,14 +39,28 @@ public class BookCoverDatabase : ScriptableObject
             paths.Add(br.bookPath);
     }
 
-    // Return resource path for given sku, or null if not found
     public string GetResourcePath(string sku)
     {
         if (string.IsNullOrEmpty(sku) || bookCoverList == null || bookCoverList.Length == 0)
             return null;
 
         var match = Array.Find(bookCoverList, b => string.Equals(b.book_sku, sku, StringComparison.OrdinalIgnoreCase));
-        return match.bookPath;
+        //return match.bookPath;
+        return Path.Combine(sourcePath, sku);
+    }
+    [ContextMenu("DebugLog")]
+    private void DebugLog()
+    {
+        foreach (var item in bookCoverList)
+        {
+            Debug.Log($"Path " + item.bookPath + " Valid " + IsValidResourcePath<Texture>(item.bookPath));
+        }
+    }
+
+    bool IsValidResourcePath<T>(string path) where T : UnityEngine.Object
+    {
+        var obj = Resources.Load<T>(path);
+        return obj != null;
     }
 
 #if UNITY_EDITOR
