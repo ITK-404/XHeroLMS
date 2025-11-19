@@ -374,12 +374,16 @@ public class LmsStore : MonoBehaviour
 
         using (var req = UnityWebRequest.Get(url))
         {
-            var token = TokenStore.AccessToken;
-            req.SetRequestHeader("authorization", token);
-            req.SetRequestHeader("Authorization", "Bearer " + token);
-            req.SetRequestHeader("Accept", "application/json");
+        var token = TokenStore.AccessToken;
 
-            Debug.Log("[HTTP GET] " + url);
+        Debug.Log($"[LMS] BaseUrl = {baseUrl}");
+        Debug.Log($"[LMS] Token (first 40 chars) = {token?.Substring(0, Mathf.Min(40, token.Length))}");
+        Debug.Log($"[LMS] Token length = {token?.Length}");
+
+        req.SetRequestHeader("Authorization", "Bearer " + token);
+        req.SetRequestHeader("Accept", "application/json");
+
+        Debug.Log("[HTTP GET] " + url);
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -404,7 +408,7 @@ public class LmsStore : MonoBehaviour
     {
         var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
         if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
+        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));  
         if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
