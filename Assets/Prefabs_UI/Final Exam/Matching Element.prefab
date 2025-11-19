@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1897903756093498272}
   - component: {fileID: 4431839363588100867}
   - component: {fileID: 4003982226641386990}
+  - component: {fileID: 3940431158282199265}
   m_Layer: 5
   m_Name: Matching Element
   m_TagString: Untagged
@@ -78,6 +79,22 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3940431158282199265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 789555356988233125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e34c212be6e634cb6c6e5a4f4d11d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExamMatchingElement
+  side: 0
+  topPoint: {fileID: 4826083963471021508}
+  lowerPoint: {fileID: 3265352496282611599}
+  matchingImg: {fileID: 4003982226641386990}
 --- !u!1 &2480772568341003922
 GameObject:
   m_ObjectHideFlags: 0
