@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -77,5 +78,26 @@ public class BookHandler : MonoBehaviour
     private bool AreUserBuyCourse()
     {
         return true;
+    }
+
+    public void RefreshBookCover()
+    {
+        if (!string.IsNullOrWhiteSpace(book_sku))
+        {
+            var tex = BookCoverLoader.Instance.LoadCover(book_sku);
+            if(tex != null)
+            {
+                Debug.Log("Đã tìm thấy book model");
+                bookModel.SetBaseMap(tex);
+            }
+            else
+            {
+                Debug.Log($"Không tìm thấy book cover {book_sku}");
+            }
+        }
+        else
+        {
+            Debug.Log("Book SKU bị rỗng");
+        }
     }
 }
