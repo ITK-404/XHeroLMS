@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,9 +18,7 @@ public class ExamTitleManager : MonoBehaviour
     public string timeFormat = "{0:00}:{1:00}";
 
     [Header("1-minute Warning")]
-    [Tooltip("Object sẽ hiện trong 5s khi còn 1 phút")]
     public GameObject objectImage;
-    [Tooltip("Màu cảnh báo khi còn <= 60s")]
     public Color warningColor = Color.red;
 
     private ExamUIController _examUIController;
@@ -32,43 +29,69 @@ public class ExamTitleManager : MonoBehaviour
     private void Awake()
     {
         _examUIController = GetComponent<ExamUIController>();
+        if (_examUIController == null)
+            Debug.LogError("[ExamTitleManager] Không tìm thấy ExamUIController.");
     }
 
     public void UpdateHeaderInfo()
     {
-        int total = _examUIController.Paper?.Count ?? 0;
+        if (_examUIController == null) return;
 
+        int total = _examUIController.Paper?.Count ?? 0;
+        int duration = Mathf.Max(0, _examUIController.DurationScends);
+        int mm = duration / 60;
+        int ss = duration % 60;
+        int passPercent = Mathf.Max(0, _examUIController.passPointPercent);
+
+        // ====== ALWAYS USE examName as the header title ======
         if (textExamTitle)
-            textExamTitle.text = string.IsNullOrEmpty(_examUIController.examTitle) ? "Bài thi" : _examUIController.examTitle;
+        {
+            string headerTitle =
+                !string.IsNullOrEmpty(_examUIController.examName)
+                    ? _examUIController.examName
+                    : "Bài thi";
+
+            textExamTitle.text = headerTitle;
+        }
 
         if (textTotalQuestions)
-            textTotalQuestions.text = $"{total}";
+            textTotalQuestions.text = total.ToString();
 
         if (textTotalDuration)
-        {
-            int mm = Mathf.Max(0, _examUIController.DurationScends) / 60;
-            int ss = Mathf.Max(0, _examUIController.DurationScends) % 60;
-            textTotalDuration.text = $"{string.Format(timeFormat, mm, ss)}";
-        }
+            textTotalDuration.text = duration > 0
+                ? string.Format(timeFormat, mm, ss)
+                : "--:--";
 
         if (textPassNeed)
         {
-            int need = Mathf.CeilToInt(total * (_examUIController.passPointPercent / 100f));
+            int need = Mathf.CeilToInt(total * (passPercent / 100f));
             textPassNeed.text = $"{need}/{total}";
         }
+
+        if (textDemNguoc)
+        {
+            textDemNguoc.text = duration > 0
+                ? string.Format(timeFormat, mm, ss)
+                : "--:--";
+
+            textDemNguoc.color = Color.white;
+        }
+
+        Debug.Log(
+            $"[TitleManager] Updated: total={total}, duration={duration}, pass={passPercent}, examName='{_examUIController.examName}'");
     }
 
-    // ===================== BẮT ĐẦU THI =====================
     public void BeginExam()
     {
+        if (_examUIController == null) return;
         if (_examUIController.examStarted) return;
+
         if (_examUIController.Paper == null || _examUIController.Paper.Count == 0)
         {
-            Debug.LogWarning("[ExamUI] Chưa có dữ liệu câu hỏi. Không thể bắt đầu.");
+            Debug.LogWarning("[ExamUI] Không có dữ liệu câu hỏi.");
             return;
         }
 
-        // Reset trạng thái cảnh báo
         _oneMinuteWarningTriggered = false;
         if (_warningCo != null) { StopCoroutine(_warningCo); _warningCo = null; }
         if (objectImage) objectImage.SetActive(false);
@@ -76,6 +99,7 @@ public class ExamTitleManager : MonoBehaviour
         _examUIController.examStarted = true;
         _examUIController.currentIndex = 0;
 
+        UpdateHeaderInfo();
         _examUIController.RenderCurrentQuestion();
 
         if (_examUIController.timerCo != null)
@@ -87,12 +111,10 @@ public class ExamTitleManager : MonoBehaviour
     public IEnumerator TimerCountdown()
     {
         int remain = _examUIController.DurationScends;
-        // int remain = 70;
         _examUIController._elapsedSeconds = 0;
 
         while (true)
         {
-            // Render đồng hồ
             if (textDemNguoc)
             {
                 int mm = Mathf.Max(0, remain) / 60;
@@ -100,14 +122,12 @@ public class ExamTitleManager : MonoBehaviour
                 textDemNguoc.text = string.Format(timeFormat, mm, ss);
             }
 
-            // Nếu có giới hạn: kiểm tra mốc 1 phút
             if (_examUIController.DurationScends > 0)
             {
                 TryTriggerOneMinuteWarning(remain);
 
                 if (remain <= 0)
                 {
-                    // Hết giờ -> cưỡng chế nộp
                     StartCoroutine(_examUIController.SubmitExamCoroutine(timeUp: true));
                     yield break;
                 }
@@ -115,23 +135,18 @@ public class ExamTitleManager : MonoBehaviour
 
             yield return new WaitForSeconds(1f);
             _examUIController._elapsedSeconds++;
-            if (_examUIController.DurationScends > 0) remain--;
+            remain--;
         }
     }
 
-    /// <summary>
-    /// Kích hoạt cảnh báo khi còn 1 phút.
-    /// </summary>
     private void TryTriggerOneMinuteWarning(int remainSeconds)
     {
         if (_oneMinuteWarningTriggered) return;
         if (remainSeconds > 60) return;
         if (remainSeconds < 0) return;
 
-        // Chỉ đổi màu khi còn 1p
         if (textDemNguoc) textDemNguoc.color = warningColor;
 
-        // Hiện objectImage 5s
         if (objectImage)
         {
             if (_warningCo != null) StopCoroutine(_warningCo);
