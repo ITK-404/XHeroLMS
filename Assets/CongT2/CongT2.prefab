@@ -79,8 +79,8 @@ MeshRenderer:
   - {fileID: 2100000, guid: cc223ea9dfb39bd409df1763a214d45f, type: 2}
   - {fileID: 2100000, guid: 0db796dae086e47428dbc9bec06e2a7e, type: 2}
   - {fileID: 2100000, guid: c0d8766f22b7cf4419b5c4d4c720fe07, type: 2}
-  - {fileID: 2100000, guid: a2c3409004a510c4a9035fb280720ce4, type: 2}
-  - {fileID: 2100000, guid: ca8e17a259916724a9e7fbf0c659a81f, type: 2}
+  - {fileID: -876546973899608171, guid: 77d73468647334148ad00c9732527494, type: 3}
+  - {fileID: 2100000, guid: 268f12703f2e218479960968309fc9f6, type: 2}
   - {fileID: 2100000, guid: 033e8efe5f20aaa41a04c54c4057d3a4, type: 2}
   - {fileID: 8368722655750445499, guid: 9db527ffa48fdf0409a3821e451ea5f3, type: 3}
   - {fileID: 2100000, guid: bb8dc5ef4b690f94482eb5217616c7f1, type: 2}
@@ -270,7 +270,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 714133b225128204a9637c7761f7d94f, type: 2}
-  - {fileID: 0}
+  - {fileID: 2100000, guid: fd902d2e798809a4591cfb4482443d6a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -366,6 +366,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8517066858602360704}
+  - component: {fileID: 8052947387489375266}
   m_Layer: 0
   m_Name: BonCay_8m
   m_TagString: Untagged
@@ -390,6 +391,29 @@ Transform:
   - {fileID: 8331299917906764835}
   m_Father: {fileID: 346942819621514786}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &8052947387489375266
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9041367137482880314}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: -27.891693, y: -2.0539663, z: 78.98378}
+  m_Size: 49.7
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.67508274
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 838718035153542559}
+  - screenRelativeHeight: 0.123
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 5229223564606380223}
+  m_Enabled: 1
 --- !u!1 &9198272592940314946
 GameObject:
   m_ObjectHideFlags: 0
@@ -401,7 +425,7 @@ GameObject:
   - component: {fileID: 346942819621514786}
   m_Layer: 0
   m_Name: CongT2
-  m_TagString: Untagged
+  m_TagString: Items
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
