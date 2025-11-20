@@ -141,7 +141,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BookHandle
   container: {fileID: 5590526560735954523}
-  _renderer: {fileID: 3443479703563900258}
+  _renderer: {fileID: 4812782886914034786}
   canHover: 1
   smoothCurve:
     serializedVersion: 2
@@ -219,6 +219,7 @@ GameObject:
   - component: {fileID: 7406978401249349582}
   - component: {fileID: 8340171539025278273}
   - component: {fileID: 3308649631016721923}
+  - component: {fileID: 386540258309523000}
   m_Layer: 5
   m_Name: Certificates
   m_TagString: Untagged
@@ -319,6 +320,23 @@ MonoBehaviour:
   rightColor: {r: 0.62352943, g: 0.21176471, b: 0.03529412, a: 1}
   priceText: {fileID: 0}
   fullPriceText: {fileID: 0}
+--- !u!114 &386540258309523000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5094259377705319190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 343813f413fa97945b68af247a4dd519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateItemUI
+  quadRenderer: {fileID: 4812782886914034786}
+  nameText: {fileID: 917755329334568263}
+  certNameText: {fileID: 0}
+  dateText: {fileID: 155014974897037301}
+  errorText: {fileID: 0}
 --- !u!1 &8919055302662369257
 GameObject:
   m_ObjectHideFlags: 0
@@ -360,6 +378,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5590526560735954523}
     m_Modifications:
+    - target: {fileID: 562318478002818262, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1334921579815346990, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -401,10 +423,6 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1513944831103233831, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
-      propertyPath: m_CastShadows
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1513944831103233831, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
       propertyPath: m_SortingLayer
       value: 0
       objectReference: {fileID: 0}
@@ -412,24 +430,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: giaykhen
       objectReference: {fileID: 0}
-    - target: {fileID: 1859222168724175252, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6156504461802483924, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7404350786719178250, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
-      propertyPath: m_CastShadows
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 7404350786719178250, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
       propertyPath: m_SortingLayer
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7696092866369131990, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
-      propertyPath: m_CastShadows
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7696092866369131990, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
@@ -441,9 +443,31 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
---- !u!23 &3443479703563900258 stripped
+--- !u!114 &155014974897037301 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5125387094129286977, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
+  m_PrefabInstance: {fileID: 4974139083651023028}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &917755329334568263 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5312898152236148211, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
+  m_PrefabInstance: {fileID: 4974139083651023028}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!23 &4812782886914034786 stripped
 MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 7696092866369131990, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
+  m_CorrespondingSourceObject: {fileID: 562318478002818262, guid: 8025b6814049a354f9a8203af0642bfd, type: 3}
   m_PrefabInstance: {fileID: 4974139083651023028}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &6305366303310717850 stripped

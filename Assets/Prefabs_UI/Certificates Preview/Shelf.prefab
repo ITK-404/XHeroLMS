@@ -196,6 +196,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8116483494747152007}
   - component: {fileID: 4081690906136146529}
+  - component: {fileID: 4127252730127680769}
   m_Layer: 5
   m_Name: Shelf
   m_TagString: Untagged
@@ -244,6 +245,22 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+--- !u!114 &4127252730127680769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4402724512262280233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 952b7516eb2279346ae56d5414a6fc26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateShelfUI
+  slots:
+  - {fileID: 7620688392221547402}
+  - {fileID: 4711076292246247484}
+  - {fileID: 6772349538990518980}
 --- !u!1001 &4916909056053435908
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -332,15 +349,46 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2577810422890487486, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3443479703563900258, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4209717189070847181, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5094259377705319190, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
       propertyPath: m_Name
       value: Certificates (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766065376720482195, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8370916480042578162, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+--- !u!114 &4711076292246247484 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 386540258309523000, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+  m_PrefabInstance: {fileID: 4916909056053435908}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 343813f413fa97945b68af247a4dd519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateItemUI
 --- !u!224 &5910375115521540843 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1601452318871461103, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
@@ -434,9 +482,29 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2577810422890487486, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3443479703563900258, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4209717189070847181, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5094259377705319190, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
       propertyPath: m_Name
       value: Certificates (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766065376720482195, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8370916480042578162, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -448,6 +516,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1601452318871461103, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
   m_PrefabInstance: {fileID: 6386522460055024892}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6772349538990518980 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 386540258309523000, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+  m_PrefabInstance: {fileID: 6386522460055024892}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 343813f413fa97945b68af247a4dd519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateItemUI
 --- !u!1001 &7827075722163494322
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -456,6 +535,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8116483494747152007}
     m_Modifications:
+    - target: {fileID: 1186695289305575520, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1601452318871461103, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -536,9 +619,53 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2311338546853794662, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2577810422890487486, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3171658417717251583, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3443479703563900258, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3443479703563900258, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4209717189070847181, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5094259377705319190, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
       propertyPath: m_Name
       value: Certificates
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766065376720482195, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6686431003407153440, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7406978401249349582, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7780599631179273141, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8370916480042578162, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -556,6 +683,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52f66b3f5634deb4591eb17a2092d052, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BookHandler
+--- !u!114 &7620688392221547402 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 386540258309523000, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
+  m_PrefabInstance: {fileID: 7827075722163494322}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 343813f413fa97945b68af247a4dd519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateItemUI
 --- !u!224 &8837992663688708445 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1601452318871461103, guid: 78b648eb6c67658459db49738f3bdb4e, type: 3}
