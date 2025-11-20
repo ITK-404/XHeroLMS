@@ -315,7 +315,7 @@ public class CourseListPageMyUI : MonoBehaviour
             slot.book_name = data.title ?? "(no title)";
             slot.book_sku  = data.sku ?? "";
             slot.book_seo  = data.seoUrl ?? "";
-            
+            slot.RefreshBookCover();
             if (slot.bookHandleUI != null)
             {
                 if (slot.bookHandleUI.priceText != null)
@@ -342,6 +342,7 @@ public class CourseListPageMyUI : MonoBehaviour
                     slot.bookHandleUI.RefreshColor();
             }
 
+            Debug.Log($"Đây là khóa học đã mua, hiển thị enter course {isMyCourse} {forceEnterForMyCourse}");
             if (isMyCourse && forceEnterForMyCourse)
             {
                 slot.SetBuyCourse(false); // My course: ẩn Buy, show Enter
