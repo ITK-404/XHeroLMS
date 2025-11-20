@@ -12,6 +12,8 @@ public class ModelRotator : MonoBehaviour
     Vector3 lastMousePos;
     bool dragging = false;
 
+    private Quaternion originalQuaternion;
+    
     void Start()
     {
         if (model)
@@ -19,6 +21,8 @@ public class ModelRotator : MonoBehaviour
             Vector3 e = model.rotation.eulerAngles;
             yaw = e.y;
             pitch = e.x;
+
+            originalQuaternion = model.rotation;
         }
     }
 
@@ -42,6 +46,10 @@ public class ModelRotator : MonoBehaviour
 
             model.rotation = Quaternion.Euler(pitch, yaw, 0f);
             lastMousePos = Input.mousePosition;
+        }
+        else
+        {
+            model.rotation = Quaternion.Lerp(model.rotation,originalQuaternion,Time.deltaTime * 5);
         }
     }
 }
