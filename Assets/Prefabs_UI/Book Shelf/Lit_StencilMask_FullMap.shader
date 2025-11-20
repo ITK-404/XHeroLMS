@@ -1,4 +1,4 @@
-﻿Shader "URP/Autodesk Interactive Full Maps + Stencil (Auto Skip Missing Maps)"
+﻿Shader "URP/Autodesk Interactive Full Maps + Stencil (No Parallax, No AlphaClip)"
 {
     Properties
     {
@@ -19,10 +19,6 @@
         [NoScaleOffset] _AOMap ("Ambient Occlusion (R/G) - Optional", 2D) = "white" {}
         _AOStrength ("AO Strength", Range(0,3)) = 1.0
 
-        [NoScaleOffset] _HeightMap ("Height (G) - Optional", 2D) = "black" {}
-        _HeightScale ("Parallax Scale", Range(-0.1,0.1)) = 0.02
-        [Toggle] _ParallaxOn ("Enable Parallax", Float) = 0
-
         [NoScaleOffset] _DetailAlbedoMap ("Detail Albedo - Optional", 2D) = "grey" {}
         [NoScaleOffset] _DetailNormalMap ("Detail Normal - Optional", 2D) = "bump" {}
         _DetailScale ("Detail Tiling", Float) = 4.0
@@ -32,8 +28,8 @@
         [HDR] _EmissiveColor ("Emissive HDR Color", Color) = (0,0,0,1)
         _EmissiveIntensity ("Emissive Intensity", Float) = 1.0
 
-        _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
-        [Toggle] _AlphaClip ("Enable Alpha Clip", Float) = 0
+        _Cutoff ("Unused Placeholder", Range(0,1)) = 0.5
+        // Không còn AlphaClip Toggle
     }
 
     SubShader
@@ -56,11 +52,10 @@
             #pragma vertex Vert
             #pragma fragment Frag
 
-            #pragma multi_compile_fog
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
-            #pragma shader_feature_local _PARALLAXON_ON
-            #pragma shader_feature_local _ALPHACLIP_ON
+
+            // Đã REMOVE:
+            // #pragma shader_feature_local _PARALLAXON_ON
+            // #pragma shader_feature_local _ALPHACLIP_ON
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -93,7 +88,6 @@
             TEXTURE2D(_RoughnessMap);      SAMPLER(sampler_RoughnessMap);
             TEXTURE2D(_NormalMap);         SAMPLER(sampler_NormalMap);
             TEXTURE2D(_AOMap);             SAMPLER(sampler_AOMap);
-            TEXTURE2D(_HeightMap);         SAMPLER(sampler_HeightMap);
             TEXTURE2D(_DetailAlbedoMap);   SAMPLER(sampler_DetailAlbedoMap);
             TEXTURE2D(_DetailNormalMap);   SAMPLER(sampler_DetailNormalMap);
             TEXTURE2D(_EmissiveMap);       SAMPLER(sampler_EmissiveMap);
@@ -106,12 +100,11 @@
                 float _RoughnessMult;
                 float _SmoothnessMult;
                 float _AOStrength;
-                float _HeightScale;
                 float _DetailScale;
                 float _DetailStrength;
                 float3 _EmissiveColor;
                 float _EmissiveIntensity;
-                float _Cutoff;
+                float _Cutoff; // now unused placeholder
             CBUFFER_END
 
             Varyings Vert(Attributes v)
@@ -140,83 +133,64 @@
 
             half4 Frag(Varyings i) : SV_Target
             {
-                // === Parallax (skip if no map or disabled) ===
-                #ifdef _PARALLAXON_ON
-                    half height = SAMPLE_TEXTURE2D(_HeightMap, sampler_HeightMap, i.uv).g;
-                    if (height > 0.01) // skip nếu map đen hoàn toàn
-                    {
-                        float2 offset = ParallaxOffset(height, _HeightScale, i.viewDirWS,
-                            i.tangentWS.xyz,
-                            cross(i.normalWS, i.tangentWS.xyz) * i.tangentWS.w,
-                            i.normalWS);
-                        i.uv += offset;
-                        i.detailUV += offset * _DetailScale;
-                    }
-                #endif
-
-                // === Base Color & Alpha ===
+                // === Base Color ===
                 half4 base = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 half3 albedo = base.rgb * _BaseColor.rgb;
                 half alpha = base.a * _BaseColor.a;
 
-                #ifdef _ALPHACLIP_ON
-                    clip(alpha - _Cutoff);
-                #endif
-
-                // === Normal Map (skip nếu là flat normal) ===
+                // === Normal Map ===
                 half3 normalTS = half3(0,0,1);
                 half4 normalSample = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.uv);
-                if (any(normalSample.rgb != half3(0.5, 0.5, 1.0))) // không phải bump mặc định
+                if (any(normalSample.rgb != half3(0.5, 0.5, 1.0)))
                 {
                     normalTS = UnpackNormalScale(normalSample, _NormalScale);
                 }
 
-                // Detail Normal (skip nếu không có hoặc là bump mặc định)
-                #ifdef _DetailNormalMap
-                    half4 detailN = SAMPLE_TEXTURE2D(_DetailNormalMap, sampler_DetailNormalMap, i.detailUV);
-                    if (any(detailN.rgb != half3(0.5, 0.5, 1.0)))
-                    {
-                        half3 detailTS = UnpackNormalScale(detailN, _DetailStrength);
-                        normalTS = normalize(half3(normalTS.xy + detailTS.xy, normalTS.z));
-                    }
-                #endif
+                // Detail Normal
+                half4 detailN = SAMPLE_TEXTURE2D(_DetailNormalMap, sampler_DetailNormalMap, i.detailUV);
+                if (any(detailN.rgb != half3(0.5, 0.5, 1.0)))
+                {
+                    half3 detailTS = UnpackNormalScale(detailN, _DetailStrength);
+                    normalTS = normalize(half3(normalTS.xy + detailTS.xy, normalTS.z));
+                }
 
-                half3x3 TBN = half3x3(i.tangentWS.xyz,
-                                      cross(i.normalWS, i.tangentWS.xyz) * i.tangentWS.w,
-                                      i.normalWS);
+                // TBN
+                half3x3 TBN = half3x3(
+                    i.tangentWS.xyz,
+                    cross(i.normalWS, i.tangentWS.xyz) * i.tangentWS.w,
+                    i.normalWS
+                );
                 half3 normalWS = normalize(TransformTangentToWorld(normalTS, TBN));
 
-                // === Metallic (skip nếu map trắng hoàn toàn) ===
+                // Metallic
                 half metallic = 0;
                 half4 metSample = SAMPLE_TEXTURE2D(_MetallicMap, sampler_MetallicMap, i.uv);
-                if (metSample.r < 0.99) // không phải trắng 100%
+                if (metSample.r < 0.99)
                     metallic = metSample.r * _MetallicMult;
 
-                // === Roughness → Smoothness (skip nếu map trắng hoàn toàn) ===
+                // Roughness → Smoothness
                 half roughness = 1.0;
                 half4 roughSample = SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, i.uv);
                 if (roughSample.r < 0.99)
                     roughness = roughSample.r * _RoughnessMult;
                 half smoothness = (1.0 - roughness) * _SmoothnessMult;
 
-                // === AO (skip nếu map trắng hoàn toàn) ===
+                // AO
                 half ao = 1.0;
                 half aoSample = SAMPLE_TEXTURE2D(_AOMap, sampler_AOMap, i.uv).g;
                 if (aoSample < 0.99)
                     ao = lerp(1.0, aoSample, _AOStrength);
 
-                // === Emissive (skip nếu map đen hoàn toàn) ===
+                // Emissive
                 half3 emissive = 0;
                 half3 emisSample = SAMPLE_TEXTURE2D(_EmissiveMap, sampler_EmissiveMap, i.uv).rgb;
                 if (any(emisSample > 0.01))
                     emissive = emisSample * _EmissiveColor * _EmissiveIntensity;
 
-                // === Detail Albedo (skip nếu grey 0.5) ===
-                #ifdef _DetailAlbedoMap
-                    half3 detailCol = SAMPLE_TEXTURE2D(_DetailAlbedoMap, sampler_DetailAlbedoMap, i.detailUV).rgb;
-                    if (any(abs(detailCol - 0.5) > 0.01))
-                        albedo *= lerp(half3(1,1,1), detailCol * 2.0, detailCol.r);
-                #endif
+                // Detail Albedo
+                half3 detailCol = SAMPLE_TEXTURE2D(_DetailAlbedoMap, sampler_DetailAlbedoMap, i.detailUV).rgb;
+                if (any(abs(detailCol - 0.5) > 0.01))
+                    albedo *= lerp(half3(1,1,1), detailCol * 2.0, detailCol.r);
 
                 // === Final PBR ===
                 SurfaceData surf = (SurfaceData)0;
