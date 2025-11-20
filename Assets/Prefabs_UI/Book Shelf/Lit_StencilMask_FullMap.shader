@@ -2,7 +2,6 @@
 {
     Properties
     {
-        [Header(Base)]
         _BaseColor ("Color Tint", Color) = (1,1,1,1)
         _MainTex ("Base Color (RGB) Opacity (A)", 2D) = "white" {}
 
@@ -19,17 +18,13 @@
         [NoScaleOffset] _AOMap ("Ambient Occlusion (R/G) - Optional", 2D) = "white" {}
         _AOStrength ("AO Strength", Range(0,3)) = 1.0
 
-        [NoScaleOffset] _DetailAlbedoMap ("Detail Albedo - Optional", 2D) = "grey" {}
-        [NoScaleOffset] _DetailNormalMap ("Detail Normal - Optional", 2D) = "bump" {}
-        _DetailScale ("Detail Tiling", Float) = 4.0
-        _DetailStrength ("Detail Normal Strength", Range(0,2)) = 1.0
-
         [NoScaleOffset] _EmissiveMap ("Emissive (RGB) - Optional", 2D) = "black" {}
         [HDR] _EmissiveColor ("Emissive HDR Color", Color) = (0,0,0,1)
         _EmissiveIntensity ("Emissive Intensity", Float) = 1.0
 
+        [Toggle(_ENVLIGHTING_ON)] _EnvLighting ("Enable Environment Lighting", Float) = 1
+
         _Cutoff ("Unused Placeholder", Range(0,1)) = 0.5
-        // Không còn AlphaClip Toggle
     }
 
     SubShader
@@ -52,10 +47,7 @@
             #pragma vertex Vert
             #pragma fragment Frag
 
-
-            // Đã REMOVE:
-            // #pragma shader_feature_local _PARALLAXON_ON
-            // #pragma shader_feature_local _ALPHACLIP_ON
+            #pragma shader_feature_local _ENVLIGHTING_ON
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -73,13 +65,12 @@
             {
                 float4 positionCS : SV_POSITION;
                 float2 uv         : TEXCOORD0;
-                float2 detailUV   : TEXCOORD8;
                 float3 posWS      : TEXCOORD1;
                 float3 normalWS   : TEXCOORD2;
                 float4 tangentWS  : TEXCOORD3;
                 float3 viewDirWS  : TEXCOORD4;
                 DECLARE_LIGHTMAP_OR_SH(lightmapUV, vertexSH, 5);
-                float4 fogVL      : TEXCOORD6;
+                float3 vertexLight: TEXCOORD6;
                 float4 shadowCoord: TEXCOORD7;
             };
 
@@ -88,8 +79,6 @@
             TEXTURE2D(_RoughnessMap);      SAMPLER(sampler_RoughnessMap);
             TEXTURE2D(_NormalMap);         SAMPLER(sampler_NormalMap);
             TEXTURE2D(_AOMap);             SAMPLER(sampler_AOMap);
-            TEXTURE2D(_DetailAlbedoMap);   SAMPLER(sampler_DetailAlbedoMap);
-            TEXTURE2D(_DetailNormalMap);   SAMPLER(sampler_DetailNormalMap);
             TEXTURE2D(_EmissiveMap);       SAMPLER(sampler_EmissiveMap);
 
             CBUFFER_START(UnityPerMaterial)
@@ -100,11 +89,9 @@
                 float _RoughnessMult;
                 float _SmoothnessMult;
                 float _AOStrength;
-                float _DetailScale;
-                float _DetailStrength;
                 float3 _EmissiveColor;
                 float _EmissiveIntensity;
-                float _Cutoff; // now unused placeholder
+                float _Cutoff;
             CBUFFER_END
 
             Varyings Vert(Attributes v)
@@ -116,7 +103,6 @@
                 o.positionCS   = pos.positionCS;
                 o.posWS        = pos.positionWS;
                 o.uv           = TRANSFORM_TEX(v.uv, _MainTex);
-                o.detailUV     = v.uv * _DetailScale;
                 o.normalWS     = norm.normalWS;
                 o.tangentWS    = float4(norm.tangentWS.xyz, v.tangentOS.w * unity_WorldTransformParams.w);
                 o.viewDirWS    = GetWorldSpaceViewDir(pos.positionWS);
@@ -124,10 +110,8 @@
                 OUTPUT_LIGHTMAP_UV(v.lightmapUV, unity_LightmapST, o.lightmapUV);
                 OUTPUT_SH(o.normalWS, o.vertexSH);
 
-                half3 vl = VertexLighting(pos.positionWS, norm.normalWS);
-                half fog = ComputeFogFactor(pos.positionCS.z);
-                o.fogVL = half4(fog, vl);
-                o.shadowCoord = GetShadowCoord(pos);
+                o.vertexLight  = VertexLighting(pos.positionWS, norm.normalWS);
+                o.shadowCoord  = GetShadowCoord(pos);
                 return o;
             }
 
@@ -144,14 +128,6 @@
                 if (any(normalSample.rgb != half3(0.5, 0.5, 1.0)))
                 {
                     normalTS = UnpackNormalScale(normalSample, _NormalScale);
-                }
-
-                // Detail Normal
-                half4 detailN = SAMPLE_TEXTURE2D(_DetailNormalMap, sampler_DetailNormalMap, i.detailUV);
-                if (any(detailN.rgb != half3(0.5, 0.5, 1.0)))
-                {
-                    half3 detailTS = UnpackNormalScale(detailN, _DetailStrength);
-                    normalTS = normalize(half3(normalTS.xy + detailTS.xy, normalTS.z));
                 }
 
                 // TBN
@@ -187,11 +163,6 @@
                 if (any(emisSample > 0.01))
                     emissive = emisSample * _EmissiveColor * _EmissiveIntensity;
 
-                // Detail Albedo
-                half3 detailCol = SAMPLE_TEXTURE2D(_DetailAlbedoMap, sampler_DetailAlbedoMap, i.detailUV).rgb;
-                if (any(abs(detailCol - 0.5) > 0.01))
-                    albedo *= lerp(half3(1,1,1), detailCol * 2.0, detailCol.r);
-
                 // === Final PBR ===
                 SurfaceData surf = (SurfaceData)0;
                 surf.albedo     = albedo;
@@ -207,14 +178,21 @@
                 inputData.normalWS        = normalWS;
                 inputData.viewDirectionWS = SafeNormalize(i.viewDirWS);
                 inputData.shadowCoord     = i.shadowCoord;
-                inputData.fogCoord        = i.fogVL.x;
-                inputData.vertexLighting  = i.fogVL.yzw;
-                inputData.bakedGI         = SAMPLE_GI(i.lightmapUV, i.vertexSH, inputData.normalWS);
+                inputData.fogCoord        = 0; // Fog disabled
+                inputData.vertexLighting  = i.vertexLight;
+                
+                // Toggle Environment Lighting (GI)
+                #if defined(_ENVLIGHTING_ON)
+                    inputData.bakedGI = SAMPLE_GI(i.lightmapUV, i.vertexSH, inputData.normalWS);
+                #else
+                    inputData.bakedGI = half3(0, 0, 0);
+                #endif
+                
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(i.positionCS);
                 inputData.shadowMask      = SAMPLE_SHADOWMASK(i.lightmapUV);
 
                 half4 color = UniversalFragmentPBR(inputData, surf);
-                color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                // No fog mixing
                 return color;
             }
             ENDHLSL
@@ -223,5 +201,4 @@
         UsePass "Universal Render Pipeline/Lit/ShadowCaster"
         UsePass "Universal Render Pipeline/Lit/DepthOnly"
     }
-    Fallback "Universal Render Pipeline/Lit"
 }
