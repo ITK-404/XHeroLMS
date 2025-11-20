@@ -71,8 +71,8 @@ public class BookHandler : MonoBehaviour
 
     public void SetBuyCourse(bool state)
     {
-        bookHandleUI.enterCourseBtn.gameObject.SetActive(state);
-        bookHandleUI.buyCourseBtn.gameObject.SetActive(!state);
+        bookHandleUI.enterCourseBtn.gameObject.SetActive(!state);
+        bookHandleUI.buyCourseBtn.gameObject.SetActive(state);
     }
 
     private bool AreUserBuyCourse()
@@ -92,12 +92,12 @@ public class BookHandler : MonoBehaviour
             }
             else
             {
-                Debug.Log($"Không tìm thấy book cover {book_sku}");
+                Debug.Log($"Không tìm thấy book cover {book_sku} {book_name}");
             }
         }
         else
         {
-            Debug.Log("Book SKU bị rỗng");
+            Debug.Log($"Book SKU {book_sku} bị rỗng");
         }
     }
 }

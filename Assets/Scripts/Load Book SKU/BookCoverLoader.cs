@@ -12,7 +12,7 @@ public class BookCoverLoader : MonoBehaviour
     {
         Instance = this;
     }
-
+    
     public Texture2D LoadCover(string sku)
     {
         if (database == null)
