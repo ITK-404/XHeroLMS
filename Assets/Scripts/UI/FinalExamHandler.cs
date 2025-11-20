@@ -154,9 +154,9 @@ public class FinalExamHandler : MonoBehaviour
         }
         // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
         examLookAt.LookAtOffset = endOffset;
+        examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
         yield return examUIController.StartGate();
         yield return new WaitForSecondsRealtime(0.1f);
-        examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
         Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
     }
 
