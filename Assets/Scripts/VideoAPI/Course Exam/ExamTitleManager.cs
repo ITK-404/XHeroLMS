@@ -47,9 +47,9 @@ public class ExamTitleManager : MonoBehaviour
         if (textExamTitle)
         {
             string headerTitle =
-                !string.IsNullOrEmpty(_examUIController.examName)
-                    ? _examUIController.examName
-                    : "Bài thi";
+                !string.IsNullOrEmpty(_examUIController.examTitle)
+                    ? _examUIController.examTitle
+                    : _examUIController.examName;
 
             textExamTitle.text = headerTitle;
         }
