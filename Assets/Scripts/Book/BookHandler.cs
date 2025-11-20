@@ -17,9 +17,11 @@ public class BookHandler : MonoBehaviour
     {
         bookModel = GetComponentInChildren<BookModel>();
         bookHandleUI = GetComponentInChildren<BookViewUI>();
-
-        bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
-        bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
+        if (bookHandleUI)
+        {
+            bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse); 
+            bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
+        }
 
         bookModel.OnPlayerClickBook += OnPlayerClickBook;
         
@@ -28,8 +30,12 @@ public class BookHandler : MonoBehaviour
 
     private void OnDestroy()
     {
-        bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
-        bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
+        if (bookHandleUI)
+        {
+            bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
+            bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
+        }
+        
         
         bookModel.OnPlayerClickBook -= OnPlayerClickBook;
     }
@@ -71,8 +77,11 @@ public class BookHandler : MonoBehaviour
 
     public void SetBuyCourse(bool state)
     {
-        bookHandleUI.enterCourseBtn.gameObject.SetActive(!state);
-        bookHandleUI.buyCourseBtn.gameObject.SetActive(state);
+        if (bookHandleUI)
+        {
+            bookHandleUI.enterCourseBtn.gameObject.SetActive(!state);
+            bookHandleUI.buyCourseBtn.gameObject.SetActive(state);
+        }
     }
 
     private bool AreUserBuyCourse()
