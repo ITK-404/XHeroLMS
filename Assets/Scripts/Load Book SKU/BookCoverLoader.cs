@@ -3,8 +3,16 @@ using UnityEngine;
 
 public class BookCoverLoader : MonoBehaviour
 {
+    public static BookCoverLoader Instance;
+
     private Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
     public BookCoverDatabase database;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+    
     public Texture2D LoadCover(string sku)
     {
         if (database == null)
@@ -18,6 +26,7 @@ public class BookCoverLoader : MonoBehaviour
             return tex;
 
         var loaded = Resources.Load<Texture2D>(path);
+
         cache.Add(sku, loaded);
         return loaded;
     }
