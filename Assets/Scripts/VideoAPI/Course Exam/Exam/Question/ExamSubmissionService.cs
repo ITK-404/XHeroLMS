@@ -14,12 +14,12 @@ using UnityEngine.UI;
 public class ExamSubmissionService
 {
     // refs
-    private readonly ExamUIController          _examUI;
-    private readonly ExamResultUI              _resultUI;
-    private readonly ExamResultReviewPanel     _reviewPanel;
-    private readonly Func<bool>                _getWithCorrectAnswerGetter;
+    private readonly ExamUIController _examUI;
+    private readonly ExamResultUI _resultUI;
+    private readonly ExamResultReviewPanel _reviewPanel;
+    private readonly Func<bool> _getWithCorrectAnswerGetter;
     private readonly Dictionary<string, HashSet<int>> _selectedMap;
-    private readonly Dictionary<string, string>        _essayMap;
+    private readonly Dictionary<string, string> _essayMap;
 
     // Regex parse JSON
     private static readonly Regex ReInt = new Regex("\"(?<k>[^\"]+)\"\\s*:\\s*(-?\\d+)",
@@ -36,12 +36,12 @@ public class ExamSubmissionService
         Dictionary<string, HashSet<int>> selectedMap,
         Dictionary<string, string> essayMap)
     {
-        _examUI                    = examUI;
-        _resultUI                  = resultUI;
-        _reviewPanel               = reviewPanel;
+        _examUI = examUI;
+        _resultUI = resultUI;
+        _reviewPanel = reviewPanel;
         _getWithCorrectAnswerGetter = getWithCorrectAnswerGetter;
-        _selectedMap               = selectedMap;
-        _essayMap                  = essayMap;
+        _selectedMap = selectedMap;
+        _essayMap = essayMap;
     }
 
     [Serializable] public class ResultItem { public string questionId; public List<string> result; }
@@ -77,14 +77,14 @@ public class ExamSubmissionService
             yield break;
         }
 
-        var json  = JsonUtility.ToJson(BuildSubmitBody(examId));
+        var json = JsonUtility.ToJson(BuildSubmitBody(examId));
         var token = _examUI.GetAccessToken();
-
+        Debug.Log("SUBMIT PAYLOAD: " + json);
         using (var req = new UnityWebRequest(submitUrl, "PUT"))
         {
-            req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
-            req.timeout         = Mathf.CeilToInt(Mathf.Max(1f, _examUI.requestTimeout));
+            req.timeout = Mathf.CeilToInt(Mathf.Max(1f, _examUI.requestTimeout));
             req.SetRequestHeader("Content-Type", "application/json");
             if (!string.IsNullOrEmpty(token)) req.SetRequestHeader("Authorization", "Bearer " + token);
 
@@ -104,7 +104,7 @@ public class ExamSubmissionService
 
         // GET result (optionally với đáp án đúng)
         bool withCorrect = _getWithCorrectAnswerGetter?.Invoke() ?? false;
-        var getUrl       = BuildGetResultUrl(courseId, withCorrect);
+        var getUrl = BuildGetResultUrl(courseId, withCorrect);
 
         if (!string.IsNullOrEmpty(getUrl))
         {
@@ -139,7 +139,7 @@ public class ExamSubmissionService
     {
         var body = new SubmitBody
         {
-            examId    = examId,
+            examId = examId,
             timeSpent = Mathf.Max(0, _examUI?._elapsedSeconds ?? 0)
         };
 
@@ -159,7 +159,10 @@ public class ExamSubmissionService
                         foreach (var idx in picked)
                         {
                             if (q.options != null && idx >= 0 && idx < q.options.Count)
-                                item.result.Add(q.options[idx] ?? "");
+                            {
+
+                                item.result.Add("<p>" + q.options[idx] + "</p>" ?? "");
+                            }
                         }
                     }
                     break;
@@ -188,21 +191,21 @@ public class ExamSubmissionService
         if (needFallbackCount && paper?.questions != null)
         {
             var correctIndexMap = ParseCorrectAnswerIndicesFromJson(json, paper);
-            var correctTextMap  = ParseCorrectAnswerTextsFromJson(json);
+            var correctTextMap = ParseCorrectAnswerTextsFromJson(json);
 
             (int corr, int wr, int skip) = ComputeSummaryFromDetails(
                 paper, _selectedMap, correctIndexMap, correctTextMap);
 
             sum.correct = corr;
-            sum.wrong   = wr;
+            sum.wrong = wr;
             sum.skipped = skip;
-            sum.total   = paper.Count;
+            sum.total = paper.Count;
         }
 
         if (sum.total <= 0) sum.total = _examUI?.Paper?.Count ?? 0;
         if (sum.skipped < 0) sum.skipped = Mathf.Max(0, sum.total - CountAnsweredLocal());
         if (sum.correct < 0) sum.correct = 0;
-        if (sum.wrong   < 0) sum.wrong   = Mathf.Max(0, sum.total - sum.correct - sum.skipped);
+        if (sum.wrong < 0) sum.wrong = Mathf.Max(0, sum.total - sum.correct - sum.skipped);
 
         if (!HasPassFlagInJson(json))
         {
@@ -212,12 +215,12 @@ public class ExamSubmissionService
             sum.passed = (sum.correct >= req);
         }
 
-        _resultUI.textCorrectAnswer.text   = $"<color=#49D17D>{sum.correct}</color> câu";
+        _resultUI.textCorrectAnswer.text = $"<color=#49D17D>{sum.correct}</color> câu";
         _resultUI.textInCorrectAnswer.text = $"<color=#FF6B6B>{sum.wrong}</color> câu";
-        _resultUI.skipAnswer.text          = $"<color=#F4A42B>{sum.skipped}</color> câu";
+        _resultUI.skipAnswer.text = $"<color=#F4A42B>{sum.skipped}</color> câu";
         _resultUI.SetTotalAnswerPass(sum.correct, sum.total);
         if (sum.passed) _resultUI.ShowSuccess();
-        else            _resultUI.ShowUnSuccess();
+        else _resultUI.ShowUnSuccess();
         _resultUI.Show();
     }
 
@@ -225,9 +228,9 @@ public class ExamSubmissionService
     {
         if (_reviewPanel == null || _examUI?.Paper == null) return;
 
-        var paper          = _examUI.Paper;
+        var paper = _examUI.Paper;
         var correctIndexMap = ParseCorrectAnswerIndicesFromJson(json, paper);
-        var correctTextMap  = ParseCorrectAnswerTextsFromJson(json);
+        var correctTextMap = ParseCorrectAnswerTextsFromJson(json);
 
         _reviewPanel.ShowReview(
             paper,
@@ -260,10 +263,10 @@ public class ExamSubmissionService
         var s = new ExamResultSummary
         {
             correct = TryInt(json, "score", "correct", "correctCount", "totalCorrect"),
-            wrong   = TryInt(json, "wrong", "incorrect", "incorrectCount", "totalWrong"),
+            wrong = TryInt(json, "wrong", "incorrect", "incorrectCount", "totalWrong"),
             skipped = TryInt(json, "skip", "skipped", "not_answer", "unanswered", "skipCount"),
-            total   = TryInt(json, "total", "totalQuestion", "questionCount", "totalQuestions"),
-            passed  = TryBool(json, "is_passed", "passed", "isPassed", "pass")
+            total = TryInt(json, "total", "totalQuestion", "questionCount", "totalQuestions"),
+            passed = TryBool(json, "is_passed", "passed", "isPassed", "pass")
         };
         return s;
     }
@@ -309,7 +312,7 @@ public class ExamSubmissionService
         try
         {
             var root = JsonUtility.FromJson<RootNode>(json);
-            var qs   = root?.data?.resultExam?.exam?.questions;
+            var qs = root?.data?.resultExam?.exam?.questions;
             if (qs == null) return map;
 
             foreach (var q in qs)
@@ -329,8 +332,8 @@ public class ExamSubmissionService
 
         try
         {
-            var root      = JsonUtility.FromJson<RootNode>(json);
-            var serverQs  = root?.data?.resultExam?.exam?.questions;
+            var root = JsonUtility.FromJson<RootNode>(json);
+            var serverQs = root?.data?.resultExam?.exam?.questions;
             if (serverQs == null) return map;
 
             foreach (var sq in serverQs)
@@ -350,7 +353,7 @@ public class ExamSubmissionService
                 for (int i = 0; i < clientQ.options.Count; i++)
                 {
                     string optClean = ExamFormat.CleanOptionText(clientQ.options[i]) ?? "";
-                    string optNorm  = ExamResultReviewPanel.NormalizeForCompare(optClean);
+                    string optNorm = ExamResultReviewPanel.NormalizeForCompare(optClean);
                     if (correctNorms.Contains(optNorm)) idxs.Add(i);
                 }
 
@@ -378,7 +381,7 @@ public class ExamSubmissionService
         {
             foreach (var kv in correctTextMap)
             {
-                var set  = new HashSet<string>();
+                var set = new HashSet<string>();
                 var list = kv.Value ?? new List<string>();
                 foreach (var t in list)
                 {
@@ -408,7 +411,7 @@ public class ExamSubmissionService
 
             bool isCorrect = IsExactlyCorrectLocal(q, uSet, corrIdx, corrTxt);
             if (isCorrect) c++;
-            else           w++;
+            else w++;
         }
 
         return (c, w, s);
@@ -433,7 +436,7 @@ public class ExamSubmissionService
             for (int i = 0; i < q.options.Count; i++)
             {
                 string optClean = ExamFormat.CleanOptionText(q.options[i]) ?? "";
-                string optNorm  = ExamResultReviewPanel.NormalizeForCompare(optClean);
+                string optNorm = ExamResultReviewPanel.NormalizeForCompare(optClean);
                 if (correctTextSet.Contains(optNorm)) combinedCorrect.Add(i);
             }
         }
