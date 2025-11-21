@@ -3,8 +3,31 @@ using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public class AudioManager : UnitySingleton<AudioManager>
+public class AudioManager : MonoBehaviour
 {
+    private static AudioManager instance;
+
+    public static AudioManager Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                var prefab = Resources.Load<AudioManager>("Manager/AudioManager");
+                var element = Instantiate(prefab);
+
+                instance = element;
+                
+                DontDestroyOnLoad(element);
+                return instance;
+            }
+
+            Debug.Log("Cannot load audio manager");
+            
+            return null;
+        }
+    }
+    
     [Header("Audio Sources")]
     [SerializeField] private AudioSource musicSource;
 
@@ -13,18 +36,17 @@ public class AudioManager : UnitySingleton<AudioManager>
 
     [SerializeField] private AudioMixerGroup musicMixerGroup;
     [SerializeField] private AudioMixerGroup sfxMixerGroup;
+    [SerializeField] private SoundBuilder soundBuilderPrefab;
 
     public AudioSettingsManager settings;
-    protected override void Awake()
+    protected virtual void Awake()
     {
-        base.Awake();
         ObjectPoolManager.GetObjectPool(soundBuilderPrefab, 15);
         settings = GetComponent<AudioSettingsManager>();
     }
 
     public void PlayMusic(SoundConfig soundConfig)
     {
-
         if (soundConfig == null)
         {
             Debug.Log("Sound Config is null music");
@@ -48,6 +70,12 @@ public class AudioManager : UnitySingleton<AudioManager>
         musicSource.Play();
     }
 
+    public void PlayMusic(AudioClip bgmClip)
+    {
+        musicSource.clip = bgmClip;
+        musicSource.Play();
+    }
+
     public void StopMusic(float duration, Action callback = null)
     {
         musicSource.DOFade(0, duration).SetUpdate(true).OnComplete(() =>
@@ -59,7 +87,6 @@ public class AudioManager : UnitySingleton<AudioManager>
     }
 
 
-    [SerializeField] private SoundBuilder soundBuilderPrefab;
 
     public SoundBuilder CreateSound(SoundConfig soundConfig, bool timeAffect = true)
     {
