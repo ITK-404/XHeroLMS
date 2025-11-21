@@ -9,6 +9,8 @@ public class ModelRotator : MonoBehaviour
 
     float yaw = 0f;
     float pitch = 0f;
+    float yawDefault = 0f;
+    float pitchDefault = 0f;
     Vector3 lastMousePos;
     bool dragging = false;
 
@@ -19,11 +21,14 @@ public class ModelRotator : MonoBehaviour
         if (model)
         {
             Vector3 e = model.rotation.eulerAngles;
-            yaw = e.y;
-            pitch = e.x;
+            yawDefault = e.y;
+            pitchDefault = e.x;
 
             originalQuaternion = model.rotation;
         }
+
+        yaw = yawDefault;
+        pitch = pitchDefault;
     }
 
     void Update()
@@ -50,6 +55,9 @@ public class ModelRotator : MonoBehaviour
         else
         {
             model.rotation = Quaternion.Lerp(model.rotation,originalQuaternion,Time.deltaTime * 5);
+
+            yaw = yawDefault;
+            pitch = pitchDefault;
         }
     }
 }
