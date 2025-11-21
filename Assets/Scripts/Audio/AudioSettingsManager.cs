@@ -7,9 +7,9 @@ public class AudioSettingsManager : MonoBehaviour
     [Header("Audio Mixer")]
     public AudioMixer audioMixer;
 
-    private const string MusicKey = "MusicVolume";
-    private const string SFXKey = "SFXVolume";
-
+    public const string MusicKey = "MusicVolume";
+    public const string SFXKey = "SFXVolume";
+    
     // Giá trị volume (0–1)
 
     private void Awake()

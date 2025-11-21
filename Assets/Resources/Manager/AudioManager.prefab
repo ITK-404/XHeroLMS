@@ -41,7 +41,7 @@ AudioSource:
   m_GameObject: {fileID: 716405043145763825}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: 2144495527896917471, guid: 13997e87922f8c24fb7339974c21f9b2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
@@ -139,6 +139,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1061690631967820980}
   - component: {fileID: 183877206505383037}
+  - component: {fileID: 1519400251706365394}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -178,5 +179,18 @@ MonoBehaviour:
   mainMixer: {fileID: 24100000, guid: 13997e87922f8c24fb7339974c21f9b2, type: 2}
   musicMixerGroup: {fileID: 2144495527896917471, guid: 13997e87922f8c24fb7339974c21f9b2, type: 2}
   sfxMixerGroup: {fileID: -3918883225824594084, guid: 13997e87922f8c24fb7339974c21f9b2, type: 2}
-  settings: {fileID: 0}
   soundBuilderPrefab: {fileID: 2828806634598562598, guid: e8374626a7b96d6478b200096a3fcc1b, type: 3}
+  settings: {fileID: 1519400251706365394}
+--- !u!114 &1519400251706365394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2698377928848479007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d67a9b9bbeb09d443bf7be38e30488ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioSettingsManager
+  audioMixer: {fileID: 24100000, guid: 13997e87922f8c24fb7339974c21f9b2, type: 2}
