@@ -380,7 +380,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
             textQuestionCounter.text = $"{current.ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
     }
 
-    internal static string NormalizeForCompare(string s)
+    public static string NormalizeForCompare(string s)
     {
         if (string.IsNullOrEmpty(s)) return "";
         // Giữ Clean để an toàn khi caller chưa clean
