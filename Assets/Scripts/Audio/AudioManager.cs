@@ -11,20 +11,19 @@ public class AudioManager : MonoBehaviour
     {
         get
         {
-            if (instance == null)
-            {
-                var prefab = Resources.Load<AudioManager>("Manager/AudioManager");
-                var element = Instantiate(prefab);
+            if (instance != null) return instance;
 
-                instance = element;
-                
-                DontDestroyOnLoad(element);
-                return instance;
+            var prefab = Resources.Load<AudioManager>("Manager/AudioManager");
+            if (prefab == null)
+            {
+                Debug.LogError("AudioManager prefab not found at Resources/Manager/AudioManager");
+                return null;
             }
 
-            Debug.Log("Cannot load audio manager");
-            
-            return null;
+            var element = Instantiate(prefab);
+            instance = element;
+            DontDestroyOnLoad(element.gameObject);
+            return instance;
         }
     }
     
@@ -86,7 +85,15 @@ public class AudioManager : MonoBehaviour
         });
     }
 
+    public void Resume()
+    {
+        settings.SetMusicVolume(1);
+    }
 
+    public void Pause()
+    {
+        settings.SetMusicVolume(0);
+    }
 
     public SoundBuilder CreateSound(SoundConfig soundConfig, bool timeAffect = true)
     {

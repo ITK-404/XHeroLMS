@@ -1,10 +1,13 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 public class AutoPlayBGM : MonoBehaviour
 {
     [SerializeField] private AudioClip backgroundMusic;
-    private void Start()
+    [SerializeField] private int delayTime;
+    private IEnumerator Start()
     {
+        yield return new WaitForSeconds(delayTime);
         AudioManager.Instance.PlayMusic(backgroundMusic);
     }
 
