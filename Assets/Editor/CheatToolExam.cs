@@ -7,30 +7,46 @@ using UnityEngine.Networking;
 
 /// <summary>
 /// Cửa sổ cheat: tự gọi API /lms/result-exam/... để lấy đáp án,
-/// sau đó hiển thị câu hiện tại + highlight đáp án đúng.
-/// Không cần TextAsset, không cần script khác.
+/// cache toàn bộ câu hỏi + correctAnswer vào RAM,
+/// hiển thị câu hiện tại + highlight đáp án đúng.
+/// Đã có nút Clear cache để giải phóng RAM.
 /// </summary>
 public class CheatToolExam : EditorWindow
 {
     // Auto find trong scene
     private ExamQuestionManager _manager;
-    private ExamUIController _ui;
+    private ExamUIController    _ui;
 
     // Cache đáp án: questionId -> normalized correct texts
     private readonly Dictionary<string, HashSet<string>> _correctTextMap =
         new Dictionary<string, HashSet<string>>();
 
-    private bool _answersLoaded;
-    private bool _fetchStarted;
-    private UnityWebRequest _req;
-    private string _status = "Chưa tải đáp án từ API.";
+    // Cache raw question
+    private List<QuestionNode> _cachedQuestions;
 
-    // DTO theo schema /lms/result-exam
-    [Serializable] private class QuestionNode { public string _id; public List<string> correctAnswer; }
-    [Serializable] private class ExamNode { public List<QuestionNode> questions; }
+    private bool            _answersLoaded;
+    private bool            _fetchStarted;
+    private UnityWebRequest _req;
+    private string          _status = "Chưa tải đáp án từ API.";
+
+    // =========== DTO theo các schema khác nhau ===========
+
+    [Serializable]
+    private class QuestionNode {
+        public string       _id;
+        public List<string> correctAnswer;
+    }
+
+    [Serializable] private class ExamNode       { public List<QuestionNode> questions; }
     [Serializable] private class ResultExamNode { public ExamNode exam; }
-    [Serializable] private class DataNode { public ResultExamNode resultExam; }
-    [Serializable] private class RootNode { public bool status; public DataNode data; }
+    [Serializable] private class DataNode       { public ResultExamNode resultExam; }
+    [Serializable] private class RootNode       { public bool status; public DataNode data; }
+
+    [Serializable] private class AltData1       { public ExamNode exam; }
+    [Serializable] private class AltRoot1       { public bool status; public AltData1 data; }
+
+    [Serializable] private class AltData2       { public List<QuestionNode> questions; }
+    [Serializable] private class AltRoot2       { public bool status; public AltData2 data; }
 
     [MenuItem("Window/Exam/Auto Cheat Tool (API)")]
     private static void Open()
@@ -41,13 +57,13 @@ public class CheatToolExam : EditorWindow
 
     private void OnEnable()
     {
-        // Auto repaint liên tục khi đang Play
         EditorApplication.update += Repaint;
     }
 
     private void OnDisable()
     {
         EditorApplication.update -= Repaint;
+        ClearCache(); // đóng cửa sổ là xóa cache để free RAM
     }
 
     private void OnGUI()
@@ -78,10 +94,21 @@ public class CheatToolExam : EditorWindow
         // Đảm bảo đã gọi API lấy đáp án (tự động, không cần input)
         EnsureAnswersLoaded();
 
-        // Status dòng trên
+        // Status
         EditorGUILayout.HelpBox(_status, _answersLoaded ? MessageType.None : MessageType.Info);
         EditorGUILayout.Space();
 
+        // Chỉ show nút clear khi đã có cache
+        using (new EditorGUI.DisabledScope(!_answersLoaded))
+        {
+            if (GUILayout.Button("Clear Cache (Free RAM)"))
+            {
+                ClearCache();
+                _status = "Đã xóa cache khỏi RAM.";
+            }
+        }
+
+        EditorGUILayout.Space();
         DrawCurrentQuestion();
     }
 
@@ -89,12 +116,37 @@ public class CheatToolExam : EditorWindow
     private void AutoFindManager()
     {
         if (_manager != null) return;
+#if UNITY_2023_1_OR_NEWER
         _manager = FindAnyObjectByType<ExamQuestionManager>();
+#else
+        _manager = FindObjectOfType<ExamQuestionManager>();
+#endif
+    }
+
+    /// <summary>
+    /// Xóa toàn bộ dữ liệu cache trong RAM,
+    /// dùng khi thi xong / đóng cửa sổ để tránh tích tụ memory.
+    /// </summary>
+    private void ClearCache()
+    {
+        _correctTextMap.Clear();
+        _cachedQuestions = null;
+        _answersLoaded   = false;
+        _fetchStarted    = false;
+
+        if (_req != null)
+        {
+            _req.Dispose();
+            _req = null;
+        }
+
+        // ép GC chạy (không bắt buộc, nhưng bạn muốn chủ động)
+        GC.Collect();
     }
 
     /// <summary>
     /// Tự động gọi /lms/result-exam/{courseId}?mode=show_correct_answer
-    /// một lần, sau đó cache vào _correctTextMap.
+    /// một lần, sau đó cache vào _correctTextMap + _cachedQuestions.
     /// </summary>
     private void EnsureAnswersLoaded()
     {
@@ -123,9 +175,9 @@ public class CheatToolExam : EditorWindow
             }
             if (!baseUrl.EndsWith("/")) baseUrl += "/";
 
+            // Nếu backend bạn dùng endpoint khác thì chỉnh ở đây
             string url = $"{baseUrl}lms/result-exam/{courseId}?mode=show_correct_answer";
-
-            var token = _ui.GetAccessToken();
+            var token  = _ui.GetAccessToken();
 
             _req = UnityWebRequest.Get(url);
             _req.timeout = Mathf.CeilToInt(Mathf.Max(1f, _ui.requestTimeout));
@@ -166,13 +218,46 @@ public class CheatToolExam : EditorWindow
         }
     }
 
+    private List<QuestionNode> TryExtractQuestions(string json)
+    {
+        // schema gốc: data.resultExam.exam.questions
+        try
+        {
+            var root = JsonUtility.FromJson<RootNode>(json);
+            var qs   = root?.data?.resultExam?.exam?.questions;
+            if (qs != null && qs.Count > 0) return qs;
+        }
+        catch { /* bỏ qua, thử schema khác */ }
+
+        // schema: data.exam.questions
+        try
+        {
+            var rootAlt1 = JsonUtility.FromJson<AltRoot1>(json);
+            var qs2      = rootAlt1?.data?.exam?.questions;
+            if (qs2 != null && qs2.Count > 0) return qs2;
+        }
+        catch { }
+
+        // schema: data.questions
+        try
+        {
+            var rootAlt2 = JsonUtility.FromJson<AltRoot2>(json);
+            var qs3      = rootAlt2?.data?.questions;
+            if (qs3 != null && qs3.Count > 0) return qs3;
+        }
+        catch { }
+
+        return null;
+    }
+
     /// <summary>
-    /// Parse JSON server trả về và lấp _correctTextMap.
+    /// Parse JSON server trả về, cache toàn bộ questions + map correctAnswer.
     /// </summary>
     private void ParseAnswerJsonFromApi(string json)
     {
         _correctTextMap.Clear();
-        _answersLoaded = false;
+        _cachedQuestions = null;
+        _answersLoaded   = false;
 
         if (string.IsNullOrEmpty(json))
         {
@@ -180,16 +265,23 @@ public class CheatToolExam : EditorWindow
             return;
         }
 
+        // Debug: in full JSON để check khi fail
+        Debug.Log($"[ExamCheatTool] Raw result-exam JSON:\n{json}");
+
+        List<QuestionNode> qs = TryExtractQuestions(json);
+        if (qs == null)
+        {
+            _status =
+                "JSON không có danh sách câu hỏi (questions).\n" +
+                "Có thể user này chưa có result hoặc backend đổi schema.\n" +
+                "Xem Console để xem JSON chi tiết.";
+            return;
+        }
+
+        _cachedQuestions = qs; // lưu toàn bộ vào RAM để xài lại
+
         try
         {
-            var root = JsonUtility.FromJson<RootNode>(json);
-            var qs   = root?.data?.resultExam?.exam?.questions;
-            if (qs == null)
-            {
-                _status = "JSON không có data.resultExam.exam.questions.";
-                return;
-            }
-
             foreach (var q in qs)
             {
                 if (q == null || string.IsNullOrEmpty(q._id)) continue;
@@ -212,8 +304,8 @@ public class CheatToolExam : EditorWindow
 
             _answersLoaded = _correctTextMap.Count > 0;
             _status = _answersLoaded
-                ? $"Đã tải {_correctTextMap.Count} câu có đáp án đúng từ API."
-                : "Không tìm thấy câu nào có correctAnswer trong JSON.";
+                ? $"Đã tải {_correctTextMap.Count} câu có đáp án đúng từ API (cache trong RAM)."
+                : "Không thấy correctAnswer trong JSON (questions có nhưng không có trường correctAnswer).";
         }
         catch (Exception e)
         {
@@ -249,8 +341,7 @@ public class CheatToolExam : EditorWindow
         }
 
         // Lấy set đáp án đúng cho câu này (nếu API đã trả)
-        HashSet<string> correctSet = null;
-        _correctTextMap.TryGetValue(q.id, out correctSet);
+        _correctTextMap.TryGetValue(q.id, out var correctSet);
         correctSet ??= new HashSet<string>();
 
         EditorGUILayout.LabelField("Đáp án:", EditorStyles.boldLabel);
@@ -275,8 +366,8 @@ public class CheatToolExam : EditorWindow
 
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
-            "Đáp án được lấy trực tiếp từ API /lms/result-exam/... (mode=show_correct_answer)\n" +
-            "Đề random / cắt câu vẫn ok vì map theo questionId + text normalize.",
+            "Đáp án được tải 1 lần rồi cache trong RAM từ API /lms/result-exam/... (mode=show_correct_answer).\n" +
+            "Nhấn \"Clear Cache\" để xóa khỏi RAM sau khi thi xong.",
             MessageType.None);
     }
 }
