@@ -53,7 +53,7 @@ public class ExamQuestionManager : MonoBehaviour
     [SerializeField] private bool randomizeQuestions = true;
 
     [Tooltip("Số câu cần dùng cho đề thi. Nếu <= 0 hoặc lớn hơn tổng câu thì sẽ dùng tất cả.")]
-    [SerializeField] private int numberOfQuestions = 30;
+    private int numberOfQuestions = 0;
     // ========================================
 
     // ===================== State =====================
@@ -94,6 +94,11 @@ public class ExamQuestionManager : MonoBehaviour
         );
 
         if (navRoot) navRoot.SetActive(false);
+    }
+
+    void Start()
+    {
+        numberOfQuestions= _examUIController?.Paper.Count ?? 0;
     }
 
     // ===================== Public (called outside) =====================
