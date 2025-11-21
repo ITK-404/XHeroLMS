@@ -14,13 +14,11 @@ public class AudioManager : UnitySingleton<AudioManager>
     [SerializeField] private AudioMixerGroup musicMixerGroup;
     [SerializeField] private AudioMixerGroup sfxMixerGroup;
 
-    public MusicSoundAsset MusicSoundAsset;
     public AudioSettingsManager settings;
     protected override void Awake()
     {
         base.Awake();
         ObjectPoolManager.GetObjectPool(soundBuilderPrefab, 15);
-        MusicSoundAsset = GetComponent<MusicSoundAsset>();
         settings = GetComponent<AudioSettingsManager>();
     }
 
