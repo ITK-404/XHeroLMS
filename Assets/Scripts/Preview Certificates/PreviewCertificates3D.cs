@@ -20,16 +20,26 @@ public class PreviewCertificates3D : MonoBehaviour
 
     private void Awake()
     {
-        previewButton.onClick.AddListener(ShowPreviewUI);
-        returnBtnWithFrame.onClick.AddListener(ShowMainPreview);
-        returnBtnNoFrame.onClick.AddListener(ShowMainPreview);
+        if (previewButton != null)
+            previewButton.onClick.AddListener(ShowPreviewUI);
+
+        if (returnBtnWithFrame != null)
+            returnBtnWithFrame.onClick.AddListener(ShowMainPreview);
+
+        if (returnBtnNoFrame != null)
+            returnBtnNoFrame.onClick.AddListener(ShowMainPreview);
     }
 
     private void OnDestroy()
     {
-        previewButton.onClick.RemoveListener(ShowPreviewUI);
-        returnBtnWithFrame.onClick.RemoveListener(ShowMainPreview);
-        returnBtnNoFrame.onClick.RemoveListener(ShowMainPreview);
+        if (previewButton != null)
+            previewButton.onClick.RemoveListener(ShowPreviewUI);
+
+        if (returnBtnWithFrame != null)
+            returnBtnWithFrame.onClick.RemoveListener(ShowMainPreview);
+
+        if (returnBtnNoFrame != null)
+            returnBtnNoFrame.onClick.RemoveListener(ShowMainPreview);
     }
 
     private void Start()
@@ -39,10 +49,17 @@ public class PreviewCertificates3D : MonoBehaviour
 
     public void ShowMainPreview()
     {
-        previewWithFrame.gameObject.SetActive(false);
-        previewNoneFrame.gameObject.SetActive(false);
-        mainContainer.gameObject.SetActive(true);
-        modelContainer.gameObject.SetActive(true);
+        if (previewWithFrame != null)
+            previewWithFrame.gameObject.SetActive(false);
+
+        if (previewNoneFrame != null)
+            previewNoneFrame.gameObject.SetActive(false);
+
+        if (mainContainer != null)
+            mainContainer.gameObject.SetActive(true);
+
+        if (modelContainer != null)
+            modelContainer.gameObject.SetActive(true);
     }
 
     private void ShowPreviewUI()
