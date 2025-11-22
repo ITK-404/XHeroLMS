@@ -10,7 +10,8 @@ using UnityEngine.Networking;
 public class LmsApiMinimalExporter : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com";
+    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+    private string baseUrl;
 
     [Header("Auth")]
     [Tooltip("Dán token tại đây. Để trống nếu dùng TokenStore.AccessToken.")]
@@ -29,7 +30,11 @@ public class LmsApiMinimalExporter : MonoBehaviour
     public bool prettyPrintJson = true;
 
     string SavedPath(string name) => Path.Combine(Application.persistentDataPath, name);
-
+    
+    private void Awake()
+    {
+        baseUrl = LmsStore.Instance.baseUrl;
+    }
     void Start()
     {
         StartCoroutine(RunThreeCalls());

@@ -41,4 +41,11 @@ public class MenuIconBtn : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         glowingImg.DOKill();
         glowingImg.DOFade(0, exitDuration).SetEase(exitEase);
     }
+
+    private void OnDestroy()
+    {
+        textColor.DOKill();
+        container.DOKill();
+        glowingImg.DOKill();
+    }
 }

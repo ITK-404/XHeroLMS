@@ -20,21 +20,17 @@ public class BookModel : MonoBehaviour
     private bool isTweenDone = false;
     
     public Action OnPlayerClickBook;
-
+    public bool canHover = true;
     private void Awake()
     {
         smoothCurve = AnimationUltis.CreateInOutBackCurve();
     }
 
-    public void SetColor(Color color)
-    {
-        // testing
-        _renderer.materials[1].SetColor("_BaseColor", color);
-    }
 
     public void SetBaseMap(Texture texture)
     {
-        _renderer.materials[1].SetTexture("_MainTex", texture);
+        if(texture)
+            _renderer.materials[1].SetTexture("_MainTex", texture);
     }
 
     [ContextMenu("De Active Grayscale")]
@@ -55,6 +51,7 @@ public class BookModel : MonoBehaviour
 
     private void OnMouseEnter()
     {
+        if (!canHover) return;
         if (isDragging) return;
         
         if (container == null)
@@ -77,6 +74,8 @@ public class BookModel : MonoBehaviour
     private static bool isDragging = false;
     private void OnMouseExit()
     {
+        if (!canHover) return;
+
         if (container == null)
         {
             Debug.LogError("Container is null");
@@ -105,6 +104,8 @@ public class BookModel : MonoBehaviour
     
     private void OnMouseDrag()
     {
+        if (!canHover) return;
+
         isDragging = true;
         var horizontal = Input.GetAxisRaw("Mouse X");
         rotationY += horizontal * rotationSpeed;

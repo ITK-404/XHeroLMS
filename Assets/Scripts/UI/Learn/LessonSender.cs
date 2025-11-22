@@ -24,7 +24,7 @@ public class LessonSender : MonoBehaviour
     public IEnumerator PostResultLesson(string courseId)
     {
         // URL endpoint (thay bằng API thật của bạn)
-        string url = $"https://apis-dev.xheroapp.com/lms/result-lesson/{courseId}";
+        string url = $"{LmsStore.Instance.baseUrl}/lms/result-lesson/{courseId}";   // LmsStore.Instance.baseUrl
 
         // Tạo dữ liệu cần gửi
         Payload data = new Payload

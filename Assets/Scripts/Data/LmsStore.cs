@@ -25,7 +25,7 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    private string baseUrl = "https://apis-dev.xheroapp.com"; // đổi sang PROD nếu cần
+    public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
@@ -244,7 +244,7 @@ public class LmsStore : MonoBehaviour
                 return;
             }
 
-            // NEW: chuẩn hoá finalExam
+            // chuẩn hoá finalExam
             NormalizeFinalExam(p);
 
             // replace or add
@@ -374,12 +374,16 @@ public class LmsStore : MonoBehaviour
 
         using (var req = UnityWebRequest.Get(url))
         {
-            var token = TokenStore.AccessToken;
-            req.SetRequestHeader("authorization", token);
-            req.SetRequestHeader("Authorization", "Bearer " + token);
-            req.SetRequestHeader("Accept", "application/json");
+        var token = TokenStore.AccessToken;
 
-            Debug.Log("[HTTP GET] " + url);
+        Debug.Log($"[LMS] BaseUrl = {baseUrl}");
+        Debug.Log($"[LMS] Token (first 40 chars) = {token?.Substring(0, Mathf.Min(40, token.Length))}");
+        Debug.Log($"[LMS] Token length = {token?.Length}");
+
+        req.SetRequestHeader("Authorization", "Bearer " + token);
+        req.SetRequestHeader("Accept", "application/json");
+
+        Debug.Log("[HTTP GET] " + url);
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -404,7 +408,7 @@ public class LmsStore : MonoBehaviour
     {
         var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
         if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
+        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));  
         if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
@@ -437,7 +441,7 @@ public class LmsStore : MonoBehaviour
         }
         catch (Exception e) { Debug.LogWarning("[LMS] Load failed: " + e.Message); Data = new StoreData(); }
 
-        // NEW: normalize lại dữ liệu cũ để finalExam luôn non-null
+        // normalize lại dữ liệu cũ để finalExam luôn non-null
         if (Data.marketCourses != null)
             foreach (var c in Data.marketCourses) NormalizeFinalExam(c);
         if (Data.userCourses != null)
@@ -538,7 +542,7 @@ public class LmsCourse
     public SeoInfo seo;
     public string image;
 
-    // NEW
+    //
     public LmsSettings settings; // giữ nguyên cấu trúc gốc nếu có
     public string finalExam;     // tiện tra cứu nhanh; luôn != null ("" nếu không có)
 }
@@ -564,7 +568,7 @@ public class LmsCoursePrivate
     public SeoInfo seo;
     public string image;
 
-    // NEW
+    //
     public LmsSettings settings; // phòng khi BE trả trong private
     public string finalExam;     // luôn != null ("" nếu không có)
 }

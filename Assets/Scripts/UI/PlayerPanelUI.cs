@@ -28,12 +28,12 @@ public class PlayerPanelUI : MonoBehaviour
         LoginController.OnLoginComplete -= Show;
     }
 
-    private void Show()
+    public void Show()
     {
         container.gameObject.SetActive(true);
     }
 
-    private void Hide()
+    public void Hide()
     {
         container.gameObject.SetActive(false);
     }
