@@ -37,7 +37,7 @@ public class PreviewCertificates3D : MonoBehaviour
         ShowMainPreview();
     }
 
-    private void ShowMainPreview()
+    public void ShowMainPreview()
     {
         previewWithFrame.gameObject.SetActive(false);
         previewNoneFrame.gameObject.SetActive(false);
@@ -47,15 +47,18 @@ public class PreviewCertificates3D : MonoBehaviour
 
     private void ShowPreviewUI()
     {
-        if (showFrameToggle)
-        {
-            previewWithFrame.gameObject.SetActive(true);
-        }
-        else
-        {
-            previewNoneFrame.gameObject.SetActive(true);
-        }
-        modelContainer.gameObject.SetActive(false);
+        if (mainContainer != null)
+            mainContainer.gameObject.SetActive(false);
+
+        if (modelContainer != null)
+            modelContainer.gameObject.SetActive(false);
+
+        bool hasFrame = showFrameToggle != null && showFrameToggle.isOn;
+
+        if (previewWithFrame != null)
+            previewWithFrame.gameObject.SetActive(hasFrame);
+
+        if (previewNoneFrame != null)
+            previewNoneFrame.gameObject.SetActive(!hasFrame);
     }
-    
 }

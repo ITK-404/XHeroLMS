@@ -8,30 +8,21 @@ using TMPro;
 public class CertificateItemUI : MonoBehaviour
 {
     [Header("Quad hiển thị ảnh chứng chỉ")]
-    [Tooltip("Renderer của tấm Quad (MeshRenderer trên giaykhen).")]
     public Renderer quadRenderer;
 
     [Header("Text Info")]
-    public TMP_Text nameText;       // tên học viên
-    public TMP_Text certNameText;   // tên chứng chỉ
-    public TMP_Text dateText;       // ngày cấp
+    public TMP_Text nameText;
+    public TMP_Text certNameText;
+    public TMP_Text dateText;
 
-    [Header("Optional")]
-    public TMP_Text errorText;      // lỗi load ảnh nếu có
+    // Texture đã tải về để preview dùng
+    [NonSerialized] public Texture2D loadedTexture;
 
-    /// <summary>
-    /// Hàm controller gọi để gán dữ liệu.
-    /// </summary>
     public void Setup(string fullName, string certName, string createdAt, string certImgUrl)
     {
-        // ------- TEXT -------
-        if (nameText != null)
-            nameText.text = fullName ?? "";
+        if (nameText != null)      nameText.text = fullName ?? "";
+        if (certNameText != null)  certNameText.text = certName ?? "";
 
-        if (certNameText != null)
-            certNameText.text = certName ?? "";
-
-        // ------- DATE -------
         if (TryParseIsoDate(createdAt, out var dtLocal))
         {
             if (dateText != null)
@@ -43,14 +34,22 @@ public class CertificateItemUI : MonoBehaviour
                 dateText.text = createdAt ?? "";
         }
 
-        // ------- IMAGE -> QUAD -------
+        // material riêng cho từng instance
+        if (quadRenderer != null)
+        {
+            var baseMat = quadRenderer.sharedMaterial != null
+                ? quadRenderer.sharedMaterial
+                : quadRenderer.material;
+
+            quadRenderer.material = new Material(baseMat);
+        }
+
         if (!string.IsNullOrEmpty(certImgUrl) && quadRenderer != null)
         {
             StartCoroutine(LoadImageIntoQuad(certImgUrl));
         }
     }
 
-    // ===================== LOAD IMAGE TO QUAD =====================
     private IEnumerator LoadImageIntoQuad(string imageUrl)
     {
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
@@ -65,34 +64,32 @@ public class CertificateItemUI : MonoBehaviour
 
             if (hasErr)
             {
-                LogError($"[CertificateItemUI] Load image FAIL: {req.responseCode} {req.error}");
+                Debug.Log($"[CertificateItemUI] Load image FAIL: {req.responseCode} {req.error}");
                 yield break;
             }
 
             Texture2D tex = DownloadHandlerTexture.GetContent(req);
             if (tex == null)
             {
-                LogError("[CertificateItemUI] Texture rỗng sau khi download.");
+                Debug.Log("[CertificateItemUI] Texture rỗng sau khi download.");
                 yield break;
             }
 
-            // Gán texture cho material của Quad
-            if (quadRenderer != null)
+            // cache texture cho preview dùng
+            loadedTexture = tex;
+
+            if (quadRenderer != null && quadRenderer.material != null)
             {
-                // .material tạo instance riêng, ổn nếu số lượng không quá lớn
-                var mat = quadRenderer.material;
-                mat.mainTexture = tex;
+                quadRenderer.material.mainTexture = tex;
             }
         }
     }
 
-    // ===================== DATE PARSER =====================
     private bool TryParseIsoDate(string isoString, out DateTime dtLocal)
     {
         dtLocal = default;
         if (string.IsNullOrEmpty(isoString)) return false;
 
-        // Ví dụ: "2025-11-17T07:11:02.153Z"
         if (DateTime.TryParse(isoString, null, DateTimeStyles.AdjustToUniversal, out var dt))
         {
             dtLocal = dt.ToLocalTime();
@@ -100,13 +97,5 @@ public class CertificateItemUI : MonoBehaviour
         }
 
         return false;
-    }
-
-    // ===================== ERROR HANDLER =====================
-    private void LogError(string msg)
-    {
-        Debug.LogError(msg);
-        if (errorText != null)
-            errorText.text = msg;
     }
 }

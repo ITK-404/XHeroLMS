@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
-using System.Globalization;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using TMPro;
+using UnityEngine.UI;
 
 public class CertificatesController : MonoBehaviour
 {
@@ -11,7 +11,6 @@ public class CertificatesController : MonoBehaviour
     public bool autoCallOnStart = true;
 
     [Header("Endpoint")]
-    [Tooltip("Relative path từ baseUrl của LMS")]
     public string path = "/users/certificates";
     public int skip = 0;
     public int limit = 10;
@@ -20,22 +19,29 @@ public class CertificatesController : MonoBehaviour
     public float requestTimeout = 15f;
     public bool debugVerbose = true;
 
-    [Header("UI - Shelf Layout (3 bằng / kệ)")]
-    [Tooltip("Nơi chứa các kệ (Shelf) – giống content của ScrollView nhưng cho 3D")]
-    public Transform shelfParent;              // content
+    [Header("UI - Single Item + Pager")]
+    public CertificateItemUI certificateUI;
 
-    [Tooltip("Prefab 1 kệ, trên đó có CertificateShelfUI + 3 CertificateItemUI")]
-    public CertificateShelfUI shelfPrefab;     // prefab kệ
+    [Header("Spawn Parent")]
+    public Transform spawnParent;
 
-    [Tooltip("Số bằng trên mỗi kệ (mặc định 3)")]
-    public int certificatesPerShelf = 3;
+    [Header("Navigation Buttons")]
+    public Button btnPrev;
+    public Button btnNext;
 
-    [Tooltip("Xoá hết kệ cũ trước khi load lại")]
-    public bool clearOldOnReload = true;
+    // ====== INTERNAL DATA ======
+    private readonly List<CertificateItem>   _certDataList = new List<CertificateItem>();
+    private readonly List<CertificateItemUI> _certUIList   = new List<CertificateItemUI>();
+    private int _currentIndex = 0;
 
-    [Header("UI - Optional")]
-    public TMP_Text emptyMessageText;  // thông báo khi không có chứng chỉ
-    public TMP_Text errorText;         // hiển thị lỗi nếu có
+    private void Awake()
+    {
+        if (btnPrev != null)
+            btnPrev.onClick.AddListener(OnClickPrev);
+
+        if (btnNext != null)
+            btnNext.onClick.AddListener(OnClickNext);
+    }
 
     private void Start()
     {
@@ -46,17 +52,19 @@ public class CertificatesController : MonoBehaviour
     [ContextMenu("Test /users/certificates")]
     public void RefreshCertificates()
     {
-        StartCoroutine(FetchAndSpawnCertificates());
+        StartCoroutine(FetchCertificates());
     }
 
-    private IEnumerator FetchAndSpawnCertificates()
+    private IEnumerator FetchCertificates()
     {
-        // ====== Validate Inspector ======
-        if (shelfParent == null || shelfPrefab == null)
+        if (certificateUI == null)
         {
-            LogError("[CertificatesController] Shelf mode nhưng chưa gán shelfParent hoặc shelfPrefab.");
+            LogError("[CertificatesController] Chưa gán certificateUI (Prefab / Object mẫu).");
             yield break;
         }
+
+        if (spawnParent == null)
+            spawnParent = this.transform;
 
         string baseUrl = GetBaseUrl();
         if (string.IsNullOrEmpty(baseUrl))
@@ -129,63 +137,121 @@ public class CertificatesController : MonoBehaviour
                 yield break;
             }
 
+            ClearSpawnedCertificates();
+            _certDataList.Clear();
+
             if (root?.data == null || root.data.data == null || root.data.data.Length == 0)
             {
-                if (clearOldOnReload)
-                    ClearContent();
-
-                if (emptyMessageText != null)
-                    emptyMessageText.text = "Bạn chưa có chứng chỉ nào.";
-
                 Debug.Log("[CertificatesController] Không có certificate nào trong data.");
+                UpdateNavButtons();
                 yield break;
             }
 
-            // Có dữ liệu -> clear text "empty" nếu có
-            if (emptyMessageText != null)
-                emptyMessageText.text = "";
+            _certDataList.AddRange(root.data.data);
 
-            if (clearOldOnReload)
-                ClearContent();
-
-            // ====== SPAWN THEO KỆ ======
-            CertificateShelfUI currentShelf = null;
-            int slotIndex = 0;
-
-            foreach (var cert in root.data.data)
+            for (int i = 0; i < _certDataList.Count; i++)
             {
-                // Nếu chưa có kệ, hoặc kệ hiện tại đã đầy -> tạo kệ mới
-                if (currentShelf == null || slotIndex >= certificatesPerShelf)
-                {
-                    currentShelf = Instantiate(shelfPrefab, shelfParent);
-                    currentShelf.ClearSlots();
-                    slotIndex = 0;
-                }
+                var cert = _certDataList[i];
 
-                currentShelf.SetupSlot(
-                    slotIndex,
+                CertificateItemUI clone = Instantiate(certificateUI, spawnParent);
+                clone.gameObject.name = $"Certificate_{i}_{cert.certName}";
+                clone.gameObject.SetActive(true);
+
+                clone.Setup(
                     cert.fullName,
                     cert.certName,
                     cert.createdAt,
                     cert.certImg
                 );
 
-                slotIndex++;
+                _certUIList.Add(clone);
+            }
+
+            _currentIndex = 0;
+            ShowIndex(_currentIndex);
+        }
+    }
+
+    // ====== HIỂN THỊ / NAVIGATION ======
+
+    private void OnClickNext()
+    {
+        Debug.Log($"[CertificatesController] Click NEXT. currentIndex={_currentIndex}, total={_certDataList.Count}");
+        if (_certDataList.Count <= 1) return;
+        if (_currentIndex >= _certDataList.Count - 1) return;
+        ShowIndex(_currentIndex + 1);
+    }
+
+    private void OnClickPrev()
+    {
+        Debug.Log($"[CertificatesController] Click PREV. currentIndex={_currentIndex}, total={_certDataList.Count}");
+        if (_certDataList.Count <= 1) return;
+        if (_currentIndex <= 0) return;
+        ShowIndex(_currentIndex - 1);
+    }
+
+    private void ShowIndex(int index)
+    {
+        if (_certDataList.Count == 0 || _certUIList.Count == 0)
+        {
+            Debug.Log("[CertificatesController] ShowIndex: EMPTY LIST");
+            _currentIndex = 0;
+            UpdateNavButtons();
+            return;
+        }
+
+        if (index < 0) index = 0;
+        if (index >= _certDataList.Count) index = _certDataList.Count - 1;
+
+        _currentIndex = index;
+        Debug.Log($"[CertificatesController] ShowIndex -> {_currentIndex}, uiCount={_certUIList.Count}, dataCount={_certDataList.Count}");
+
+        for (int i = 0; i < _certUIList.Count; i++)
+        {
+            var ui = _certUIList[i];
+            if (ui == null) continue;
+
+            bool active = i == _currentIndex;
+            ui.gameObject.SetActive(active);
+
+            if (active)
+            {
+                var cert = _certDataList[_currentIndex];
+                ui.Setup(
+                    cert.fullName,
+                    cert.certName,
+                    cert.createdAt,
+                    cert.certImg
+                );
             }
         }
+
+        UpdateNavButtons();
     }
 
-    private void ClearContent()
+    private void UpdateNavButtons()
     {
-        if (shelfParent == null) return;
+        bool hasAny = _certDataList.Count > 0;
 
-        for (int i = shelfParent.childCount - 1; i >= 0; i--)
-        {
-            Destroy(shelfParent.GetChild(i).gameObject);
-        }
+        if (btnPrev != null)
+            btnPrev.interactable = hasAny && _currentIndex > 0;
+
+        if (btnNext != null)
+            btnNext.interactable = hasAny && _currentIndex < _certDataList.Count - 1;
     }
 
-    // ===================== HELPERS =====================
+    private void ClearSpawnedCertificates()
+    {
+        if (_certUIList.Count == 0) return;
+
+        for (int i = 0; i < _certUIList.Count; i++)
+        {
+            if (_certUIList[i] != null)
+                Destroy(_certUIList[i].gameObject);
+        }
+
+        _certUIList.Clear();
+    }
 
     private string GetBaseUrl()
     {
@@ -231,8 +297,24 @@ public class CertificatesController : MonoBehaviour
     private void LogError(string msg)
     {
         Debug.LogError(msg);
-        if (errorText != null)
-            errorText.text = msg;
+    }
+
+    public CertificateItemUI GetCurrentCertificateUI()
+    {
+        if (_certUIList == null || _certUIList.Count == 0)
+            return null;
+
+        if (_currentIndex < 0 || _currentIndex >= _certUIList.Count)
+            return null;
+
+        return _certUIList[_currentIndex];
+    }
+
+    public void SetCurrentCertificateVisible(bool visible)
+    {
+        var ui = GetCurrentCertificateUI();
+        if (ui != null)
+            ui.gameObject.SetActive(visible);
     }
 
     // ===================== JSON MODELS =====================
