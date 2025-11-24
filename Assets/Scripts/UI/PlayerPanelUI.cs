@@ -4,6 +4,9 @@ using UnityEngine.UI;
 public class PlayerPanelUI : MonoBehaviour
 {
     public GameObject container;
+    public GameObject loginContainer;
+    public GameObject unLogginContainer;
+    public GameObject defaultContainer;
     public Button returnBtn;
     public PlayerInformationUI playerInformation;
     public GameObject iconGroup;
@@ -11,29 +14,34 @@ public class PlayerPanelUI : MonoBehaviour
 
     private void Awake()
     {
-        container.gameObject.SetActive(false);
+        defaultContainer.gameObject.SetActive(true);
+        unLogginContainer.gameObject.SetActive(true);
+        loginContainer.gameObject.SetActive(false);
+
         // LoginController.OnLoginComplete += Show;
         if (TokenStore.IsAuthenticated)
         {
-            Show();
+            ShowLoginUI();
         }
         else
         {
-            LoginController.OnLoginComplete += Show;
+            LoginController.OnLoginComplete += ShowLoginUI;
         }
     }
 
+
     private void OnDestroy()
     {
-        LoginController.OnLoginComplete -= Show;
+        LoginController.OnLoginComplete -= ShowLoginUI;
     }
 
-    public void Show()
+    public void ShowLoginUI()
     {
-        container.gameObject.SetActive(true);
+        loginContainer.gameObject.SetActive(true);
+        unLogginContainer.gameObject.SetActive(false);
     }
 
-    public void Hide()
+    public void HideAll()
     {
         container.gameObject.SetActive(false);
     }
