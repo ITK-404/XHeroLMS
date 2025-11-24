@@ -35,9 +35,14 @@ public class ResetPasswordController : MonoBehaviour
 
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
+
     [Header("Rules")]
     [Tooltip("Tối thiểu độ dài; 0 = không kiểm tra độ dài")]
     public int minLength = 0; // đặt 6/8 nếu muốn
+
+    [Header("Popup Warning (optional)")]
+    public LoginPopupUI warningPopupPrefab;   // prefab cảnh báo nhập sai
+    public Transform popupParent;             // Canvas/Panel để spawn popup
 
     // username (email hoặc 84...) nhận từ OTP
     private string usernameForReset = "";
@@ -53,6 +58,7 @@ public class ResetPasswordController : MonoBehaviour
         usernameForReset = (identifier ?? "").Trim();
         Debug.Log($"[ResetPassword] SetUsername = '{usernameForReset}'");
     }
+
     private void OnEnable()
     {
         if (string.IsNullOrEmpty(usernameForReset) && !string.IsNullOrEmpty(AuthFlowSession.LastOtpIdentifier))
@@ -61,77 +67,6 @@ public class ResetPasswordController : MonoBehaviour
         Debug.Log($"[ResetPassword] OnEnable usernameForReset = '{usernameForReset}'");
         Validate();
         if (errorText) errorText.text = "";
-    }
-
-    private IEnumerator DoResetPassword(string username, string pwd, string repwd)
-    {
-        username = (username ?? "").Trim();
-        if (string.IsNullOrEmpty(username))
-        {
-            if (errorText) errorText.text = "Thiếu username (email/số điện thoại).";
-            yield break;
-        }
-
-        string json = "{\"username\":\"" + EscapeJson(username) + "\"," +
-                      "\"password\":\"" + EscapeJson(pwd) + "\"," +
-                      "\"retypePassword\":\"" + EscapeJson(repwd) + "\"}";
-        if (btnEnter) btnEnter.interactable = false;
-
-        foreach (var raw in ResetPaths)
-        {
-            var path = (raw ?? "").Trim();
-            if (string.IsNullOrEmpty(path)) continue;
-
-            string url = baseUrl.TrimEnd('/') + path;
-            Debug.Log($"[ResetPassword] TRY PUT -> {url} body={json}");
-
-            using (var req = new UnityWebRequest(url, "PUT"))
-            {
-                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
-                req.downloadHandler = new DownloadHandlerBuffer();
-                req.SetRequestHeader("Content-Type", "application/json");
-
-                yield return req.SendWebRequest();
-
-#if UNITY_2020_2_OR_NEWER
-                bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
-#else
-            bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
-#endif
-                if (ok)
-                {
-                    Debug.Log("[ResetPassword] OK: " + req.downloadHandler.text);
-                    if (currentPanel) currentPanel.SetActive(false);
-                    if (successPanel)
-                    {
-                        successPanel.SetActive(true);
-                    }
-                    else if (backPanel) backPanel.SetActive(true);
-                    if (imageToShow) imageToShow.SetActive(true);
-                    if (btnEnter) btnEnter.interactable = true;
-                    yield break;
-                }
-
-                Debug.LogWarning($"[ResetPassword] FAIL {req.responseCode} at {path}: {req.error}\n{req.downloadHandler.text}");
-
-                if (req.responseCode == 404)
-                {
-                    // thử path tiếp theo
-                    continue;
-                }
-                // Lỗi khác -> báo luôn
-                if (errorText)
-                    errorText.text = string.IsNullOrEmpty(req.downloadHandler.text)
-                        ? "Đổi mật khẩu thất bại. Vui lòng thử lại."
-                        : req.downloadHandler.text;
-
-                if (btnEnter) btnEnter.interactable = true;
-                yield break;
-            }
-        }
-
-        if (errorText) errorText.text = "Không tìm thấy endpoint reset mật khẩu (404).";
-        if (btnEnter) btnEnter.interactable = true;
     }
 
     private void Start()
@@ -164,21 +99,118 @@ public class ResetPasswordController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(usernameForReset))
         {
-            if (errorText) errorText.text = "Thiếu username (email/số điện thoại).";
+            const string msg = "Thiếu username (email/số điện thoại).";
+            if (errorText) errorText.text = msg;
+            ShowWarningPopup(msg);
             return;
         }
 
         string p1 = passField ? passField.text : "";
         string p2 = confirmField ? confirmField.text : "";
 
-        if (!IsValidPassword(p1, minLength) || p1 != p2)
+        // ======= Kiểm tra 2 mật khẩu giống nhau + hợp lệ =======
+        string msgError = null;
+
+        if (p1 != p2)
         {
-            if (errorText) errorText.text = "Mật khẩu không hợp lệ hoặc không khớp.";
+            msgError = "Mật khẩu nhập lại không khớp.";
+        }
+        else if (!IsValidPassword(p1, minLength))
+        {
+            msgError = "Mật khẩu không hợp lệ. Mật khẩu phải gồm chữ cái, số và ký tự đặc biệt.";
+        }
+
+        if (msgError != null)
+        {
+            if (errorText) errorText.text = msgError;
+            ShowWarningPopup(msgError);   // POPUP CẢNH BÁO KHI LỖI (đặc biệt là 2 mật khẩu không giống nhau)
             return;
         }
 
         if (errorText) errorText.text = "";
         StartCoroutine(DoResetPassword(usernameForReset, p1, p2));
+    }
+
+    private IEnumerator DoResetPassword(string username, string pwd, string repwd)
+    {
+        username = (username ?? "").Trim();
+        if (string.IsNullOrEmpty(username))
+        {
+            const string msg = "Thiếu username (email/số điện thoại).";
+            if (errorText) errorText.text = msg;
+            ShowWarningPopup(msg);
+            yield break;
+        }
+
+        string json = "{\"username\":\"" + EscapeJson(username) + "\"," +
+                      "\"password\":\"" + EscapeJson(pwd) + "\"," +
+                      "\"retypePassword\":\"" + EscapeJson(repwd) + "\"}";
+
+        if (btnEnter) btnEnter.interactable = false;
+
+        foreach (var raw in ResetPaths)
+        {
+            var path = (raw ?? "").Trim();
+            if (string.IsNullOrEmpty(path)) continue;
+
+            string url = baseUrl.TrimEnd('/') + path;
+            Debug.Log($"[ResetPassword] TRY PUT -> {url} body={json}");
+
+            using (var req = new UnityWebRequest(url, "PUT"))
+            {
+                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/json");
+
+                yield return req.SendWebRequest();
+
+#if UNITY_2020_2_OR_NEWER
+                bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
+#else
+                bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
+#endif
+                if (ok)
+                {
+                    Debug.Log("[ResetPassword] OK: " + req.downloadHandler.text);
+                    if (currentPanel) currentPanel.SetActive(false);
+                    if (successPanel)
+                    {
+                        successPanel.SetActive(true);
+                    }
+                    else if (backPanel) backPanel.SetActive(true);
+                    if (imageToShow) imageToShow.SetActive(true);
+                    if (btnEnter) btnEnter.interactable = true;
+                    yield break;
+                }
+
+                Debug.LogWarning($"[ResetPassword] FAIL {req.responseCode} at {path}: {req.error}\n{req.downloadHandler.text}");
+
+                if (req.responseCode == 404)
+                {
+                    // thử path tiếp theo
+                    continue;
+                }
+
+                // Lỗi khác -> báo luôn
+                string serverMsg = string.IsNullOrEmpty(req.downloadHandler.text)
+                    ? "Đổi mật khẩu thất bại. Vui lòng thử lại."
+                    : req.downloadHandler.text;
+
+                if (errorText)
+                    errorText.text = serverMsg;
+
+                ShowWarningPopup(serverMsg);
+
+                if (btnEnter) btnEnter.interactable = true;
+                yield break;
+            }
+        }
+
+        const string notFoundMsg = "Không tìm thấy endpoint reset mật khẩu (404).";
+        if (errorText) errorText.text = notFoundMsg;
+        ShowWarningPopup(notFoundMsg);
+
+        if (btnEnter) btnEnter.interactable = true;
     }
 
     // ====== Validate ======
@@ -215,5 +247,21 @@ public class ResetPasswordController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(s)) return "";
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    // ====== Popup warning ======
+    private void ShowWarningPopup(string message)
+    {
+        if (warningPopupPrefab == null)
+        {
+            Debug.LogWarning("[ResetPassword] warningPopupPrefab chưa được gán. Message: " + message);
+            return;
+        }
+
+        Transform parent = popupParent != null ? popupParent : transform.root;
+        var popup = Instantiate(warningPopupPrefab, parent);
+
+        // Dùng Init để auto gán nút returnBtn tự đóng popup
+        popup.Init("Cảnh báo", message);
     }
 }

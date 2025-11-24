@@ -14,6 +14,11 @@ public class LoginController : MonoBehaviour
     public TMP_InputField inputPassword;
     public Button buttonLogin;
 
+    [Header("Popup Prefabs")]
+    public LoginPopupUI successPopupPrefab;
+    public LoginPopupUI failPopupPrefab;
+    public Transform popupParent;
+
     [Header("Options")]
     [Tooltip("Tự động focus vào ô username khi mở scene.")]
     public bool autoFocusUsername = true;
@@ -103,19 +108,28 @@ public class LoginController : MonoBehaviour
         // ======== Validate cơ bản ========
         if (string.IsNullOrEmpty(usernameRaw) || string.IsNullOrEmpty(password))
         {
-            Debug.LogWarning("Vui lòng nhập đủ username và password.");
+            ShowPopup(
+                failPopupPrefab,
+                "Cảnh báo",
+                "Vui lòng nhập đầy đủ tài khoản và mật khẩu."
+            );
             return;
         }
 
         // ======== Validate username (email hoặc số điện thoại) ========
         if (!IsValidEmail(usernameRaw) && !IsValidPhoneVN(usernameRaw))
         {
-            Debug.LogWarning("Tên đăng nhập không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ.");
+            ShowPopup(
+                failPopupPrefab,
+                "Cảnh báo",
+                "Tên đăng nhập không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
+            );
             return;
         }
 
         // ======== Nếu là số điện thoại thì convert 0 -> 84 ========
         string usernameForAPI = ConvertPhoneForAPI(usernameRaw);
+
         StartCoroutine(LoginRoutine(usernameForAPI, password));
     }
 
@@ -148,7 +162,7 @@ public class LoginController : MonoBehaviour
         _isLoggingIn = true;
         if (buttonLogin) buttonLogin.interactable = false;
 
-        string url = $"{LmsStore.Instance.baseUrl}/users/authenticate"; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
+        string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
         string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
@@ -167,27 +181,56 @@ public class LoginController : MonoBehaviour
             if (www.result == UnityWebRequest.Result.Success)
             {
                 string resp = www.downloadHandler.text;
-                Debug.Log($"Đăng nhập thành công: {resp}");
+                Debug.Log($"Đăng nhập thành công (raw): {resp}");
 
                 var auth = JsonUtility.FromJson<AuthResponseRoot>(resp);
                 if (auth != null && auth.data != null)
                 {
                     TokenStore.SetData(auth);
                     Debug.Log("Đăng nhập thành công, đóng panel login.");
-                    OnLoginComplete?.Invoke();
-                    if (openClosePanel != null)
-                        openClosePanel.CloseUI();  // Đóng UI login
-                    else
-                        Debug.LogWarning("Không tìm thấy OpenClosePanel để đóng login panel!");
+
+                    // POPUP THÀNH CÔNG
+                    ShowPopup(
+                        successPopupPrefab,
+                        "Thành công",
+                        "Đăng nhập thành công",
+                        () =>
+                        {
+                            // Sau khi bấm nút trong popup
+                            OnLoginComplete?.Invoke();
+
+                            if (openClosePanel != null)
+                                openClosePanel.CloseUI();
+                            else
+                                Debug.LogWarning("Không tìm thấy OpenClosePanel để đóng login panel!");
+                        });
+
                 }
                 else
                 {
                     Debug.LogWarning("Không thể parse dữ liệu đăng nhập hợp lệ!");
+
+                    // POPUP THẤT BẠI – lỗi parse dữ liệu
+                    ShowPopup(
+                        failPopupPrefab,
+                        "Cảnh báo",
+                        "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.");
                 }
             }
             else
             {
-                Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {www.downloadHandler.text}");
+                string serverText = www.downloadHandler != null
+                    ? www.downloadHandler.text
+                    : string.Empty;
+
+                Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {serverText}");
+
+                string errorMessage = ServerErrorConverter.Convert(serverText);
+
+                ShowPopup(
+                    failPopupPrefab,
+                    "Cảnh báo",
+                    errorMessage);
             }
         }
 
@@ -203,6 +246,24 @@ public class LoginController : MonoBehaviour
         inputPassword.selectionFocusPosition = pos;
     }
 
+        private void ShowPopup(LoginPopupUI prefab, string header, string message, Action onReturn = null)
+    {
+        if (prefab == null)
+        {
+            Debug.LogWarning("[LoginController] Chưa gán prefab popup.");
+            return;
+        }
+
+        Transform parent = popupParent != null ? popupParent : transform.root;
+        LoginPopupUI popupInstance = Instantiate(prefab, parent);
+
+        // Gọi Init để gán text + callback
+        popupInstance.Init(header, message, () =>
+        {
+            onReturn?.Invoke();
+        });
+    }
+
     // ================== DTOs (match JSON) ==================
     [System.Serializable]
     private class LoginRequest
@@ -210,6 +271,12 @@ public class LoginController : MonoBehaviour
         public string username;
         public string password;
     }
+        [Serializable]
+    private class ErrorResponse
+    {
+        public string message;
+    }
+
 }
 
 // ====== Models (đặt riêng file cũng được) ======
