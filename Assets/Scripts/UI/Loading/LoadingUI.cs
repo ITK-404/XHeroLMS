@@ -8,77 +8,40 @@ public static class LoadingUI
 {
     private const string DEFAULT_IMG1_PATH = "IMG_XHeroLMS/Img1";
     private const string DEFAULT_IMG2_PATH = "IMG_XHeroLMS/Img2";
-
-    private static RingFaderOverlay _overlay;
-
-    private static Canvas _canvas;       
-    private static GameObject _panel;
+    private const string DEFAULT_POPUP_PATH = "Login_Popup/Failed Login Popup UI Variant";
 
     private static Sprite _cachedCenter;
     private static Sprite _cachedSatellite;
 
-    /// <summary>Hiện overlay loading với nền đen mờ và cấu hình mặc định.</summary>
+    private static Canvas _canvas;
+    private static GameObject _panel;
+    private static RingFaderOverlay _overlay;
+
+    // =============================
+    // PUBLIC API
+    // =============================
     public static void Show()
     {
-        // Nếu đã tạo rồi: chỉ bật lại root Canvas
-        if (_canvas != null)
+        try
         {
-            _canvas.gameObject.SetActive(true);
-            if (_overlay != null) _overlay.Resume();
-            return;
+            InternalShow();
         }
-        
-        _canvas = EnsureOverlayCanvas();      
-        EnsureEventSystem();
-        
-        _panel = new GameObject("~LoadingPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)); // <--- lưu lại
-        var panelRT = _panel.GetComponent<RectTransform>();
-        var panelImg = _panel.GetComponent<Image>();
-        panelRT.SetParent(_canvas.transform, false);
-        panelRT.anchorMin = Vector2.zero;
-        panelRT.anchorMax = Vector2.one;
-        panelRT.offsetMin = Vector2.zero;
-        panelRT.offsetMax = Vector2.zero;
-        panelImg.color = new Color(0f, 0f, 0f, 240f / 255f);
-        panelImg.raycastTarget = true;
-        
-        var go = new GameObject("~RingFaderOverlay", typeof(RectTransform), typeof(RingFaderOverlay));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(panelRT, false);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = Vector2.zero;
-
-        _overlay = go.GetComponent<RingFaderOverlay>();
-
-        if (_cachedCenter == null) _cachedCenter = Resources.Load<Sprite>(DEFAULT_IMG1_PATH);
-        if (_cachedSatellite == null) _cachedSatellite = Resources.Load<Sprite>(DEFAULT_IMG2_PATH);
-
-        _overlay.centerSprite = _cachedCenter;
-        _overlay.satelliteSprite = _cachedSatellite;
-        
-        _overlay.satelliteCount = 16;
-        _overlay.radius = 140f;
-        _overlay.faceInward = false;
-        _overlay.cycleSeconds = 1.2f;
-        _overlay.minAlpha = 0.15f;
-        _overlay.maxAlpha = 1f;
-        _overlay.phaseStep = 1f / 16f;
-
-        _overlay.BuildAndPlay();
-
-        Object.DontDestroyOnLoad(_canvas.gameObject);
+        catch (System.Exception ex)
+        {
+            Debug.LogError("LoadingUI.Show() ERROR: " + ex.Message);
+            Debug.LogException(ex);
+            // ShowErrorPopup("Có lỗi khi khởi tạo LoadingUI.\n" + ex.Message);
+            ShowErrorPopup("Có lỗi khi khởi tạo LoadingUI.\n" + ex.Message, "Lỗi hệ thống");
+            Hide();
+        }
     }
 
-    /// <summary>Ẩn overlay (panel vẫn tồn tại để bật lại nhanh).</summary>
     public static void Hide()
     {
-        // if (_overlay != null) _overlay.gameObject.SetActive(false);
         if (_canvas != null)
             _canvas.gameObject.SetActive(false);
     }
 
-    /// <summary>Huỷ hoàn toàn overlay + panel + canvas.</summary>
     public static void Destroy()
     {
         if (_overlay != null)
@@ -97,23 +60,166 @@ public static class LoadingUI
             _canvas = null;
         }
     }
-    
+
+    // =============================
+    // INTERNAL BUILD
+    // =============================
+
+    private static void InternalShow()
+{
+    try
+    {
+        InternalShowUnsafe();
+    }
+    catch (System.Exception ex)
+        {
+        // ShowErrorPopup("Không thể hiển thị LoadingUI.\n" + ex.Message);
+        ShowErrorPopup("Thiếu resource IMG_XHeroLMS/Img1 hoặc Img2.\nKhông thể tạo loading animation.", "Lỗi giao diện");
+        Hide();
+    }
+}
+
+    private static void InternalShowUnsafe()
+    {
+        // Canvas đã có thì bật lại
+        if (_canvas != null)
+        {
+            _canvas.gameObject.SetActive(true);
+            if (_overlay != null) _overlay.Resume();
+            return;
+        }
+
+        _canvas = EnsureOverlayCanvas();
+        EnsureEventSystem();
+
+        // ========= Panel nền đen =========
+        _panel = new GameObject("~LoadingPanel",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image));
+
+        var panelRT = _panel.GetComponent<RectTransform>();
+        var panelImg = _panel.GetComponent<Image>();
+
+        panelRT.SetParent(_canvas.transform, false);
+        panelRT.anchorMin = Vector2.zero;
+        panelRT.anchorMax = Vector2.one;
+        panelRT.offsetMin = Vector2.zero;
+        panelRT.offsetMax = Vector2.zero;
+
+        panelImg.color = new Color(0, 0, 0, 240f / 255f);
+        panelImg.raycastTarget = true;
+
+        // ========= Overlay =========
+        var go = new GameObject("~RingFaderOverlay",
+            typeof(RectTransform), typeof(RingFaderOverlay));
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(panelRT, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+
+        _overlay = go.GetComponent<RingFaderOverlay>();
+
+        // Load sprite
+        if (_cachedCenter == null)
+            _cachedCenter = Resources.Load<Sprite>(DEFAULT_IMG1_PATH);
+        if (_cachedSatellite == null)
+            _cachedSatellite = Resources.Load<Sprite>(DEFAULT_IMG2_PATH);
+
+        if (_cachedCenter == null || _cachedSatellite == null)
+        {
+            ShowErrorPopup("Thiếu resource IMG_XHeroLMS/Img1 hoặc Img2.\nKhông thể tạo loading animation.");
+            Hide();
+            return;
+        }
+
+        // Setup overlay
+        _overlay.centerSprite = _cachedCenter;
+        _overlay.satelliteSprite = _cachedSatellite;
+        _overlay.satelliteCount = 16;
+        _overlay.radius = 140;
+        _overlay.faceInward = false;
+        _overlay.cycleSeconds = 1.2f;
+        _overlay.minAlpha = 0.15f;
+        _overlay.maxAlpha = 1f;
+        _overlay.phaseStep = 1f / 16f;
+
+        _overlay.BuildAndPlay();
+
+        Object.DontDestroyOnLoad(_canvas.gameObject);
+    }
+
+    // =============================
+    // POPUP ERROR
+    // =============================
+    // =============================
+    // POPUP ERROR
+    // =============================
+    // Đổi từ private -> public và thêm header optional
+    public static void ShowErrorPopup(string message, string header = "Lỗi hệ thống")
+    {
+        GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
+        if (prefab == null)
+        {
+            Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
+            return;
+        }
+
+        // Canvas riêng cho popup
+        var popupCanvasGO = new GameObject("~LoadingErrorCanvas",
+            typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+
+        var canvas = popupCanvasGO.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 32761;
+
+        var scaler = popupCanvasGO.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        // Instantiate popup
+        GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
+        var ui = popup.GetComponent<LoginPopupUI>();
+
+        if (ui == null)
+        {
+            Debug.LogError("Prefab popup không chứa LoginPopupUI!");
+            return;
+        }
+
+        ui.Init(header, message,
+            () =>
+            {
+                Hide();                      // tắt loading overlay nếu đang bật
+                Object.Destroy(popupCanvasGO);
+            });
+    }
+    // =============================
+    // HELPER
+    // =============================
     private static Canvas EnsureOverlayCanvas()
     {
         var existing = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+
         foreach (var c in existing)
         {
-            if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.name == "~LoadingCanvas")
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay &&
+                c.name == "~LoadingCanvas")
                 return c;
         }
 
-        var goCanvas = new GameObject("~LoadingCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var goCanvas = new GameObject("~LoadingCanvas",
+            typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+
         var canvas = goCanvas.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 32760;
+
         var scaler = goCanvas.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
+
         return canvas;
     }
 
@@ -121,12 +227,14 @@ public static class LoadingUI
     {
         if (Object.FindFirstObjectByType<EventSystem>() == null)
         {
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var es = new GameObject("EventSystem",
+                typeof(EventSystem),
+                typeof(StandaloneInputModule));
+
             Object.DontDestroyOnLoad(es);
         }
     }
 }
-
 public class RingFaderOverlay : MonoBehaviour
 {
     [Header("Sprites")]
@@ -163,31 +271,28 @@ public class RingFaderOverlay : MonoBehaviour
 
     void OnEnable()
     {
-        // Khi canvas/GO được bật lại, nếu đã build trước đó thì khởi động lại fades
         if (_built)
         {
             StartFades();
         }
         else
         {
-            // phòng trường hợp lần đầu bật mà chưa build
             if (centerSprite || satelliteSprite) BuildAndPlay();
         }
     }
 
     void OnDisable() => StopFades();
 
-    public void Resume()                     // <--- NEW
+    public void Resume()
     {
         if (!_built || _cgs.Count == 0 || transform.childCount == 0)
-            Rebuild();                       // nếu chưa có child/CG thì rebuild
+            Rebuild();
         StartFades();
         _built = true;
     }
 
     public void Rebuild()
     {
-        // clear
         var trash = new List<GameObject>();
         for (int i = 0; i < transform.childCount; i++)
             trash.Add(transform.GetChild(i).gameObject);
@@ -195,7 +300,7 @@ public class RingFaderOverlay : MonoBehaviour
 
         _cgs.Clear();
 
-        // center
+        // Center icon
         if (centerSprite)
         {
             var go = new GameObject("center", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -210,7 +315,7 @@ public class RingFaderOverlay : MonoBehaviour
             rt.sizeDelta = centerSize;
         }
 
-        // satellites
+        // Satellite dots
         if (satelliteSprite)
         {
             float step = 360f / Mathf.Max(1, satelliteCount);
