@@ -149,14 +149,7 @@ public static class LoadingUI
 
         Object.DontDestroyOnLoad(_canvas.gameObject);
     }
-
-    // =============================
-    // POPUP ERROR
-    // =============================
-    // =============================
-    // POPUP ERROR
-    // =============================
-    // Đổi từ private -> public và thêm header optional
+    
     public static void ShowErrorPopup(string message, string header = "Lỗi hệ thống")
     {
         GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
@@ -191,13 +184,11 @@ public static class LoadingUI
         ui.Init(header, message,
             () =>
             {
-                Hide();                      // tắt loading overlay nếu đang bật
+                Hide();                     
                 Object.Destroy(popupCanvasGO);
             });
     }
-    // =============================
-    // HELPER
-    // =============================
+    
     private static Canvas EnsureOverlayCanvas()
     {
         var existing = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);

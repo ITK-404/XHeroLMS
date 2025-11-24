@@ -38,7 +38,11 @@ public class LoginPopupUI : PopupBaseUI
 
             returnBtn.onClick.AddListener(() =>
             {
+                // Tắt popup trước
                 Destroy(gameObject);
+
+                // Tắt loading UI nếu đang mở
+                LoadingUI.Hide();
             });
         }
     }
