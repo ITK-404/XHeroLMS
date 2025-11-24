@@ -50,6 +50,10 @@ public class OtpVerificationController : MonoBehaviour
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
 
+    [Header("Popup Warning (optional)")]
+    public LoginPopupUI warningPopupPrefab;
+    public Transform popupParent;
+
     // ========= State =========
     private int  remainingSeconds;
     private bool isRunning       = false;
@@ -197,7 +201,9 @@ public class OtpVerificationController : MonoBehaviour
 
         if (string.IsNullOrEmpty(contactIdentifier))
         {
-            if (errorText) errorText.text = "Thiếu thông tin liên hệ (email/số điện thoại).";
+            const string msg = "Thiếu thông tin liên hệ (email/số điện thoại).";
+            if (errorText) errorText.text = msg;
+            ShowWarningPopup(msg);
             Debug.LogWarning("[OTP] contactIdentifier rỗng.");
             return;
         }
@@ -205,6 +211,7 @@ public class OtpVerificationController : MonoBehaviour
         if (otpCode.Length != 6)
         {
             if (errorText) errorText.text = "OTP phải gồm 6 chữ số.";
+            ShowWarningPopup("OTP phải gồm 6 chữ số.");
             return;
         }
 
@@ -291,15 +298,23 @@ public class OtpVerificationController : MonoBehaviour
                 if (req.responseCode == 400 && (req.downloadHandler.text ?? "").Contains("wrong_otp"))
                 {
                     ClearOtpInputs();
-                    if (errorText) errorText.text = "Mã OTP không đúng hoặc đã hết hạn. Hãy nhập lại hoặc bấm Gửi lại OTP.";
+                    string msg = "Mã OTP không đúng hoặc đã hết hạn. Hãy nhập lại hoặc bấm Gửi lại OTP.";
+                    if (errorText) errorText.text = msg;
+                    ShowWarningPopup(msg);
                 }
                 else
                 {
-                    if (errorText)
-                        errorText.text = string.IsNullOrEmpty(req.downloadHandler.text)
-                            ? "Xác thực OTP thất bại. Vui lòng thử lại."
-                            : req.downloadHandler.text;
+                    string bodyMsg = string.IsNullOrEmpty(req.downloadHandler.text)
+                        ? "Xác thực OTP thất bại. Vui lòng thử lại."
+                        : req.downloadHandler.text;
+
+                    if (errorText) errorText.text = bodyMsg;
+                    ShowWarningPopup(bodyMsg);
                 }
+
+                const string msg404 = "Không tìm thấy endpoint OTP verify (404).";
+                ShowWarningPopup(msg404);
+                if (errorText) errorText.text = msg404;
 
                 isSubmitting = false;
                 if (btnEnter) btnEnter.interactable = true;
@@ -363,7 +378,10 @@ public class OtpVerificationController : MonoBehaviour
             {
                 var body = req.downloadHandler.text;
                 Debug.LogWarning($"[OTP] Resend FAIL {req.responseCode}: {req.error}\n{body}");
-                if (errorText) errorText.text = string.IsNullOrEmpty(body) ? "Gửi lại OTP thất bại." : body;
+            string msg = string.IsNullOrEmpty(body) ? "Gửi lại OTP thất bại." : body;
+
+            if (errorText) errorText.text = msg;
+            ShowWarningPopup(msg);
             }
         }
 
@@ -450,5 +468,19 @@ public class OtpVerificationController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(s)) return "";
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    private void ShowWarningPopup(string message)
+    {
+        if (warningPopupPrefab == null)
+        {
+            Debug.LogWarning("[OTP] warningPopupPrefab chưa được gán. Msg: " + message);
+            return;
+        }
+
+        Transform parent = popupParent != null ? popupParent : transform.root;
+        var popup = Instantiate(warningPopupPrefab, parent);
+
+        popup.Init("Cảnh báo", message);
     }
 }

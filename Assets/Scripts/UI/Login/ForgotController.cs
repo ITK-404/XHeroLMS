@@ -51,10 +51,15 @@ public class ForgotController : MonoBehaviour
     [Header("UI Thông báo (optional)")]
     public TextMeshProUGUI errorText;
 
+    [Header("Popup Warning (optional)")]
+    public LoginPopupUI warningPopupPrefab;   // prefab cảnh báo nhập sai
+    public Transform popupParent;             // Canvas/Panel để spawn popup
+
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
     }
+
     private void Start()
     {
         if (toggleSms)   toggleSms.onValueChanged.AddListener(OnSmsToggleChanged);
@@ -120,7 +125,9 @@ public class ForgotController : MonoBehaviour
             string digits = Regex.Replace(raw, @"\D", "");
             if (!IsValidPhone(digits))
             {
-                if (errorText) errorText.text = "Số điện thoại không hợp lệ.";
+                const string msg = "Số điện thoại không hợp lệ.";
+                if (errorText) errorText.text = msg;
+                ShowWarningPopup(msg);
                 return;
             }
             identifier = ConvertPhoneTo84(digits);   // đổi về 84xxxx
@@ -129,7 +136,9 @@ public class ForgotController : MonoBehaviour
         {
             if (!IsValidEmail(raw))
             {
-                if (errorText) errorText.text = "Email không hợp lệ.";
+                const string msg = "Email không hợp lệ.";
+                if (errorText) errorText.text = msg;
+                ShowWarningPopup(msg);
                 return;
             }
             identifier = raw;
@@ -170,7 +179,7 @@ public class ForgotController : MonoBehaviour
 #if UNITY_2020_2_OR_NEWER
                 bool ok = req.result == UnityWebRequest.Result.Success || (req.responseCode >= 200 && req.responseCode < 300);
 #else
-            bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
+                bool ok = !req.isNetworkError && !req.isHttpError && (req.responseCode >= 200 && req.responseCode < 300);
 #endif
                 if (ok)
                 {
@@ -232,14 +241,13 @@ public class ForgotController : MonoBehaviour
     }
 
     // ======= Validators =======
-    // public static bool IsValidPhone(string phoneDigits) => Regex.IsMatch(phoneDigits ?? "", @"^(0?\d{9,10})$");
     public static bool IsValidPhone(string phoneDigits)
     {
         // Cho phép: 84xxxxxxxxx (11 số), 0xxxxxxxxx (10/11), xxxxxxxxx (9/10)
         return Regex.IsMatch(phoneDigits ?? "", @"^(84\d{9}|0?\d{9,10})$");
     }
 
-    public static bool IsValidEmail(string email)       => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    public static bool IsValidEmail(string email) => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
     public static string ConvertPhoneTo84(string phone)
     {
@@ -256,4 +264,21 @@ public class ForgotController : MonoBehaviour
         if (string.IsNullOrEmpty(s)) return "";
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
+
+    // ======= Popup =======
+    private void ShowWarningPopup(string message)
+    {
+        if (warningPopupPrefab == null)
+        {
+            Debug.LogWarning("[Forgot] warningPopupPrefab chưa được gán. Message: " + message);
+            return;
+        }
+
+        Transform parent = popupParent != null ? popupParent : transform.root;
+        var popup = Instantiate(warningPopupPrefab, parent);
+
+        // Dùng Init để auto gán onClick + Destroy
+        popup.Init("Cảnh báo", message);
+    }
+
 }

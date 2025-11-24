@@ -69,6 +69,10 @@ public class RegistrationController : MonoBehaviour
 
     [Header("Refs (optional)")]
     public OtpVerificationController otpController;
+    [Header("Popup Warning (optional)")]
+    public LoginPopupUI warningPopupPrefab;
+    public Transform popupParent;
+
 
     private bool confirmed = false;
 
@@ -298,7 +302,10 @@ public class RegistrationController : MonoBehaviour
 
         if (!(nameOk && phoneOk && emailOk && passOk && matchOk))
         {
-            if (errorText) errorText.text = "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
+            if (errorText)
+                errorText.text = "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
+
+            ShowWarningPopup(errorText.text);
             return;
         }
 
@@ -443,13 +450,40 @@ public class RegistrationController : MonoBehaviour
 
         if (errorText)
         {
-            if (!nameOk) errorText.text = "Vui lòng nhập Họ và tên.";
-            else if (!phoneOk) errorText.text = "Số điện thoại không hợp lệ.";
-            else if (!emailOk) errorText.text = "Email không hợp lệ.";
-            else if (!passOk) errorText.text = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
-            else if (!matchOk) errorText.text = "Mật khẩu nhập lại không khớp.";
-            else if (!confirmed) errorText.text = "Hãy đồng ý điều khoản để tiếp tục.";
-            else errorText.text = "";
+            if (!nameOk)
+            {
+                errorText.text = "Vui lòng nhập Họ và tên.";
+                ShowWarningPopup(errorText.text);
+            }
+            else if (!phoneOk)
+            {
+                errorText.text = "Số điện thoại không hợp lệ.";
+                ShowWarningPopup(errorText.text);
+            }
+            else if (!emailOk)
+            {
+                errorText.text = "Email không hợp lệ.";
+                ShowWarningPopup(errorText.text);
+            }
+            else if (!passOk)
+            {
+                errorText.text = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
+                ShowWarningPopup(errorText.text);
+            }
+            else if (!matchOk)
+            {
+                errorText.text = "Mật khẩu nhập lại không khớp.";
+                ShowWarningPopup(errorText.text);
+            }
+            else if (!confirmed)
+            {
+                errorText.text = "Hãy đồng ý điều khoản để tiếp tục.";
+                ShowWarningPopup(errorText.text);
+            }
+            else
+            {
+                errorText.text = "";
+            }
         }
     }
     
@@ -474,6 +508,18 @@ public class RegistrationController : MonoBehaviour
         return p;
     }
 
+    private void ShowWarningPopup(string message)
+    {
+        if (warningPopupPrefab == null)
+        {
+            Debug.LogWarning("[Register] warningPopupPrefab chưa được gán. Msg: " + message);
+            return;
+        }
+
+        Transform parent = popupParent != null ? popupParent : transform.root;
+        var popup = Instantiate(warningPopupPrefab, parent);
+        popup.Init("Cảnh báo", message);
+    }
     // ---------- Payload ----------
     [Serializable]
     private class RegisterPayload
