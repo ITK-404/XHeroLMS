@@ -23,7 +23,6 @@ public class PointClickSystem : MonoBehaviour
     private ChairCheckPoint currentCheckPoint;
 
     private PlayerCamera playerCamera;
-    
     private void Awake()
     {
         playerCamera = GetComponent<PlayerCamera>();
@@ -88,8 +87,9 @@ public class PointClickSystem : MonoBehaviour
 
         if (!TeleMapController._mapActive)
         {
-           MoveByClick();
+            MoveByClick();
         }
+
     }
 
     private void StopWaitToMoveChair()
@@ -106,13 +106,13 @@ public class PointClickSystem : MonoBehaviour
     private void MoveByClick()
     {
 
-        
+
         if (playerCamera == null)
         {
             Debug.LogError("Player camera is null");
             return;
         }
-        
+
         if (Input.GetMouseButtonDown(0))
         {
             if (EventSystem.current.IsPointerOverGameObject())
@@ -120,12 +120,12 @@ public class PointClickSystem : MonoBehaviour
                 Debug.Log("Chặn bởi UI");
                 return;
             }
-            
+
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
             if (PlayerChairManager.Instance)
             {
-                if(MoveToChairHandle(ray))
+                if (MoveToChairHandle(ray))
                     return;
             }
 
@@ -134,7 +134,7 @@ public class PointClickSystem : MonoBehaviour
                 Debug.Log("bắn dính mặt đất, bắt đầu di chuyển");
                 ai.destination = groundHit.point;
                 lastPickPosition = groundHit.point;
-                
+
                 ai.isStopped = false;
                 ai.canMove = true;
             }
