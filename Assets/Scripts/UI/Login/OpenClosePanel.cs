@@ -7,14 +7,11 @@ public class OpenClosePanel : MonoBehaviour
 {
     [Header("UI References")]
     public Button buttonOpen;
+    public Button buttonLogout;
+
     public Button buttonClose;
     public Image  targetImage;          // nền mờ (optional)
     public GameObject targetPanel;      // panel đăng nhập
-
-    [Header("Texts")]
-    public TextMeshProUGUI openButtonText;
-    public string labelLogin  = "ĐĂNG NHẬP";
-    public string labelLogout = "ĐĂNG XUẤT";
 
     public GameObject[] showWhenLoggedIn;
     
@@ -43,6 +40,10 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
+        if (buttonLogout)
+        {
+            buttonLogout.onClick.AddListener(DoLogout);
+        }
 
         UpdateVisualState();
     }
@@ -53,6 +54,10 @@ public class OpenClosePanel : MonoBehaviour
 
         if (buttonOpen != null)  buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
+        if (buttonLogout)
+        {
+            buttonLogout.onClick.RemoveListener(DoLogout);
+        }
     }
 
     void Start()
@@ -71,11 +76,6 @@ public class OpenClosePanel : MonoBehaviour
         return TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken);
     }
 
-    void UpdateOpenButtonLabel()
-    {
-        if (!openButtonText) return;
-        openButtonText.text = IsLoggedIn() ? labelLogout : labelLogin;
-    }
 
     void ToggleGroup(GameObject[] objs, bool on)
     {
@@ -87,7 +87,6 @@ public class OpenClosePanel : MonoBehaviour
     void UpdateVisualState()
     {
         bool loggedIn = IsLoggedIn();
-        UpdateOpenButtonLabel();
 
         // Tự ẩn/hiện các nhóm UI nếu có cấu hình
         ToggleGroup(showWhenLoggedIn, loggedIn);
@@ -106,11 +105,7 @@ public class OpenClosePanel : MonoBehaviour
 
     void OnOpenButtonClicked()
     {
-        if (IsLoggedIn())
-        {
-            DoLogout();
-        }
-        else
+        if (!IsLoggedIn())
         {
             OpenUI();
         }
