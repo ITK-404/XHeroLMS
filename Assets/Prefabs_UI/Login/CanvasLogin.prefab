@@ -16332,6 +16332,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OpenClosePanel
   buttonOpen: {fileID: 0}
   buttonLogout: {fileID: 0}
+  buttonTryLogout: {fileID: 0}
+  buttonCloseWarning: {fileID: 0}
   buttonClose: {fileID: 4523702202601084997}
   targetImage: {fileID: 7165490593655577323}
   targetPanel: {fileID: 2518810218876088319}
@@ -16340,6 +16342,7 @@ MonoBehaviour:
   reloadSceneOnLogout: 1
   sceneNameAfterLogout: New Scene
   loadDelay: 0
+  warningPopup: {fileID: 0}
 --- !u!114 &6913738588593151359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16355,6 +16358,9 @@ MonoBehaviour:
   inputUsername: {fileID: 3356509657559557003}
   inputPassword: {fileID: 8871046507188282930}
   buttonLogin: {fileID: 4125913502679485929}
+  successPopupPrefab: {fileID: 9004701177802258429, guid: 6d0b19bd3b4ef244d802e729cbd6ff7d, type: 3}
+  failPopupPrefab: {fileID: 8635697060180763229, guid: 64d5553ad586b0f4b9f7694ab567ffcc, type: 3}
+  popupParent: {fileID: 1603635343364897431}
   autoFocusUsername: 1
 --- !u!114 &138435921837431523
 MonoBehaviour:
@@ -16404,6 +16410,8 @@ MonoBehaviour:
   otpPanel: {fileID: 8839454253847284660}
   otpController: {fileID: 307381725577811179}
   errorText: {fileID: 0}
+  warningPopupPrefab: {fileID: 6461238521431750916, guid: 758c4e29e2a4c6e44bd2d561ead95928, type: 3}
+  popupParent: {fileID: 1603635343364897431}
 --- !u!114 &8383946904143220256
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16426,6 +16434,8 @@ MonoBehaviour:
   imageToShow: {fileID: 980710778488350784}
   errorText: {fileID: 2932093268623957479}
   minLength: 0
+  warningPopupPrefab: {fileID: 6461238521431750916, guid: 758c4e29e2a4c6e44bd2d561ead95928, type: 3}
+  popupParent: {fileID: 1603635343364897431}
 --- !u!114 &5872474929785326867
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16463,6 +16473,8 @@ MonoBehaviour:
   errorText: {fileID: 0}
   passwordMinLen: 0
   otpController: {fileID: 0}
+  warningPopupPrefab: {fileID: 6461238521431750916, guid: 758c4e29e2a4c6e44bd2d561ead95928, type: 3}
+  popupParent: {fileID: 1603635343364897431}
 --- !u!114 &307381725577811179
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16498,6 +16510,8 @@ MonoBehaviour:
   resendButton: {fileID: 8646404993393755807}
   resendCooldownSeconds: 60
   errorText: {fileID: 0}
+  warningPopupPrefab: {fileID: 6461238521431750916, guid: 758c4e29e2a4c6e44bd2d561ead95928, type: 3}
+  popupParent: {fileID: 1603635343364897431}
   contactIdentifier: 
   otpByChannel: 
   otpPurpose: 
