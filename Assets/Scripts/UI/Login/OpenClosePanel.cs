@@ -9,6 +9,9 @@ public class OpenClosePanel : MonoBehaviour
     public Button buttonOpen;
     public Button buttonLogout;
 
+    public Button buttonTryLogout;
+    public Button buttonCloseWarning;
+    
     public Button buttonClose;
     public Image  targetImage;          // nền mờ (optional)
     public GameObject targetPanel;      // panel đăng nhập
@@ -21,7 +24,7 @@ public class OpenClosePanel : MonoBehaviour
     public bool reloadSceneOnLogout = true;
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
-
+    public Transform warningPopup;
     CursorGameManager cursorMgr;
 
     void OnEnable()
@@ -40,12 +43,22 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
-        if (buttonLogout)
-        {
-            buttonLogout.onClick.AddListener(DoLogout);
-        }
+        buttonLogout.onClick.AddListener(DoLogout);
 
+        buttonTryLogout.onClick.AddListener(OnShowWarning);
+        buttonCloseWarning.onClick.AddListener(HideWarning);
+        
         UpdateVisualState();
+    }
+
+    private void OnShowWarning()
+    {
+        warningPopup.gameObject.SetActive(true);
+    }
+
+    private void HideWarning()
+    {
+        warningPopup.gameObject.SetActive(false);
     }
 
     void OnDisable()
@@ -54,10 +67,12 @@ public class OpenClosePanel : MonoBehaviour
 
         if (buttonOpen != null)  buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
-        if (buttonLogout)
-        {
-            buttonLogout.onClick.RemoveListener(DoLogout);
-        }
+
+        buttonLogout.onClick.RemoveListener(DoLogout);
+
+        buttonTryLogout.onClick.RemoveListener(OnShowWarning);
+        buttonCloseWarning.onClick.RemoveListener(HideWarning);
+
     }
 
     void Start()
