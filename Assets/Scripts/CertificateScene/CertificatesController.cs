@@ -59,7 +59,7 @@ public class CertificatesController : MonoBehaviour
     {
         if (certificateUI == null)
         {
-            LogError("[CertificatesController] Chưa gán certificateUI (Prefab / Object mẫu).");
+            Debug.Log("[CertificatesController] Chưa gán certificateUI (Prefab / Object mẫu).");
             yield break;
         }
 
@@ -69,7 +69,7 @@ public class CertificatesController : MonoBehaviour
         string baseUrl = GetBaseUrl();
         if (string.IsNullOrEmpty(baseUrl))
         {
-            LogError("[CertificatesController] baseUrl rỗng. Kiểm tra LmsStore.Instance.baseUrl.");
+            Debug.Log("[CertificatesController] baseUrl rỗng. Kiểm tra LmsStore.Instance.baseUrl.");
             yield break;
         }
 
@@ -82,7 +82,7 @@ public class CertificatesController : MonoBehaviour
         string token = GetAccessToken();
         if (string.IsNullOrEmpty(token))
         {
-            LogError("[CertificatesController] Token rỗng, không gọi API.");
+            Debug.Log("[CertificatesController] Token rỗng, không gọi API.");
             yield break;
         }
 
@@ -113,13 +113,13 @@ public class CertificatesController : MonoBehaviour
 
             if (hasErr)
             {
-                LogError($"[CertificatesController] ERROR: {req.responseCode} {req.error}\nBody: {raw}");
+                Debug.Log($"[CertificatesController] ERROR: {req.responseCode} {req.error}\nBody: {raw}");
                 yield break;
             }
 
             if (string.IsNullOrEmpty(raw))
             {
-                LogError("[CertificatesController] Response rỗng.");
+                Debug.Log("[CertificatesController] Response rỗng.");
                 yield break;
             }
 
@@ -133,7 +133,7 @@ public class CertificatesController : MonoBehaviour
             }
             catch (Exception e)
             {
-                LogError("[CertificatesController] FromJson FAILED: " + e);
+                Debug.Log("[CertificatesController] FromJson FAILED: " + e);
                 yield break;
             }
 
@@ -292,11 +292,6 @@ public class CertificatesController : MonoBehaviour
         catch { }
 
         return null;
-    }
-
-    private void LogError(string msg)
-    {
-        Debug.LogError(msg);
     }
 
     public CertificateItemUI GetCurrentCertificateUI()

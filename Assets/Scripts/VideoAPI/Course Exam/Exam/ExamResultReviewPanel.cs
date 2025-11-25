@@ -19,6 +19,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [Header("Root")]
     [SerializeField] private GameObject reviewRoot;
     [SerializeField] private CertificatesExamUI certificatesExamUI;
+    
     // ----- state review -----
     private ExamPaper _paper;
     private Dictionary<string, HashSet<int>> _userPicked;     // q.id -> indices user chọn (0-based)
@@ -215,10 +216,10 @@ public class ExamResultReviewPanel : ExamQuestionManager
         if (wrongStatusObj) wrongStatusObj.SetActive(!exactlyCorrect);
         if (informationPanel) informationPanel.SetActive(true);
 
-        if (certificatesExamUI && exactlyCorrect)
-        {
-            certificatesExamUI.Show();
-        }
+        // if (certificatesExamUI && exactlyCorrect)
+        // {
+        //     certificatesExamUI.Show();
+        // }
 
         switch (q.type)
         {

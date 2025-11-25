@@ -7,8 +7,12 @@ public class CertificatesExamUI : MonoBehaviour
     [SerializeField] private Transform containter;
     [SerializeField] private Transform certificatesFrame;
     [SerializeField] private Button closeButton;
+
+    private Certificate2DPreviewUI _certificate2DPreviewUI;
+
     private void Awake()
     {
+        _certificate2DPreviewUI= GetComponent<Certificate2DPreviewUI>();
         toggle.onValueChanged.AddListener(OnValueChanged);
         closeButton.onClick.AddListener(Hide);
     }
@@ -26,7 +30,12 @@ public class CertificatesExamUI : MonoBehaviour
 
     public void Show()
     {
+        // Bật container + bật luôn toggle để khung hiện ra
         containter.gameObject.SetActive(true);
+        if (toggle != null)
+            toggle.isOn = true;
+        
+        _certificate2DPreviewUI?.OnClickPreviewButton();
     }
 
     public void Hide()

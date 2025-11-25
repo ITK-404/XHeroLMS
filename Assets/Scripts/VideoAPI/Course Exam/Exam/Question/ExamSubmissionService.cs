@@ -21,6 +21,8 @@ public class ExamSubmissionService
     private readonly Dictionary<string, HashSet<int>> _selectedMap;
     private readonly Dictionary<string, string> _essayMap;
 
+    private readonly CertificatesExamUI _certificatesExamUI;
+
     // Regex parse JSON
     private static readonly Regex ReInt = new Regex("\"(?<k>[^\"]+)\"\\s*:\\s*(-?\\d+)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -34,7 +36,8 @@ public class ExamSubmissionService
         ExamResultReviewPanel reviewPanel,
         Func<bool> getWithCorrectAnswerGetter,
         Dictionary<string, HashSet<int>> selectedMap,
-        Dictionary<string, string> essayMap)
+        Dictionary<string, string> essayMap,
+        CertificatesExamUI certificatesExamUI)
     {
         _examUI = examUI;
         _resultUI = resultUI;
@@ -42,6 +45,8 @@ public class ExamSubmissionService
         _getWithCorrectAnswerGetter = getWithCorrectAnswerGetter;
         _selectedMap = selectedMap;
         _essayMap = essayMap;
+
+        _certificatesExamUI = certificatesExamUI;
     }
 
     [Serializable] public class ResultItem { public string questionId; public List<string> result; }
@@ -219,8 +224,22 @@ public class ExamSubmissionService
         _resultUI.textInCorrectAnswer.text = $"<color=#FF6B6B>{sum.wrong}</color> câu";
         _resultUI.skipAnswer.text = $"<color=#F4A42B>{sum.skipped}</color> câu";
         _resultUI.SetTotalAnswerPass(sum.correct, sum.total);
-        if (sum.passed) _resultUI.ShowSuccess();
-        else _resultUI.ShowUnSuccess();
+        if (sum.passed)
+        {
+            _resultUI.ShowSuccess();
+
+            if (_certificatesExamUI != null)
+            {
+                _certificatesExamUI.Show();
+            }
+        }
+        else
+        {
+            _resultUI.ShowUnSuccess();
+
+            if (_certificatesExamUI != null)
+                _certificatesExamUI.Hide();
+        }
         _resultUI.Show();
     }
 
