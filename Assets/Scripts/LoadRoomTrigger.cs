@@ -88,7 +88,11 @@ public class LoadRoomTrigger : MonoBehaviour
     private IEnumerator TryEnterCourse()
     {
         isLoading = true;
-        LoadingUI.Show();
+        LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
         SeoResolver.SetSeoCourse(sceneName);
         yield return new WaitForSecondsRealtime(1);
         yield return SeoResolver.LoadPrivateAndFillData();

@@ -14,6 +14,8 @@ public class VideoLoadingHandler : MonoBehaviour
 
     private long _lastFrame = -1;
     private float _stallTimer;
+    private Coroutine _prepareRoutine;
+    private bool _cancelled;
 
     void Awake()
     {
@@ -46,7 +48,12 @@ public class VideoLoadingHandler : MonoBehaviour
         if (_vp.clip != null || !string.IsNullOrEmpty(_vp.url))
         {
             _waitingFirstFrame = true;
-            LoadingUI.Show();
+            LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
+            
         }
     }
 
@@ -86,7 +93,11 @@ public class VideoLoadingHandler : MonoBehaviour
         bool noTexture = !_vp.isPrepared || _vp.texture == null;
         bool shouldShow = noTexture || _waitingFirstFrame || stalled;
 
-        if (shouldShow) LoadingUI.Show();
+        if (shouldShow) LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
         else            LoadingUI.Hide();
     }
 
@@ -99,6 +110,7 @@ public class VideoLoadingHandler : MonoBehaviour
             return;
         }
 
+        _cancelled = false;
         _vp.url = url;
 
         _waitingFirstFrame = true;
@@ -106,10 +118,16 @@ public class VideoLoadingHandler : MonoBehaviour
         _stallTimer = 0f;
         _lastFrame = -1;
 
-        LoadingUI.Show();
+        LoadingUI.Show(
+            timeoutSeconds: 15f,
+            timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+            timeoutHeader: "Lỗi Mạng"
+        );
+
         _vp.Prepare();
 
-        StartCoroutine(PrepareTimeout(10f, autoplay));
+        // LƯU lại coroutine để còn Stop
+        _prepareRoutine = StartCoroutine(PrepareTimeout(10f, autoplay));
     }
 
     public void Seek(double time)
@@ -121,7 +139,11 @@ public class VideoLoadingHandler : MonoBehaviour
         _stallTimer = 0f;
         _lastFrame  = -1;
 
-        LoadingUI.Show();
+        LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
         _vp.time = time;
         _vp.Play();
     }
@@ -158,27 +180,64 @@ public class VideoLoadingHandler : MonoBehaviour
         _waitingFirstFrame = true;
         _stallTimer = 0f;
         _lastFrame  = -1;
-        LoadingUI.Show();
+        LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
     }
 
     private void OnError(VideoPlayer source, string message)
     {
         Debug.LogError($"[VideoLoadingHandler] Video error: {message}");
         _waitingFirstFrame = false;
-        LoadingUI.Hide();
+
+        LoadingUI.ShowErrorPopup(
+            "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+            "Lỗi Mạng",
+            onReturn: () => { CancelLoadingAndStop(); }
+        );
     }
 
     private IEnumerator PrepareTimeout(float seconds, bool autoplay)
     {
         float t = 0f;
-        while (_isPreparing && !_vp.isPrepared && t < seconds)
+        while (!_cancelled && _isPreparing && !_vp.isPrepared && t < seconds)
         {
             t += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        if (_vp.isPrepared && autoplay)
+        _prepareRoutine = null;
+
+        if (!_cancelled && _vp.isPrepared && autoplay)
             _vp.Play();
+    }
+    public void CancelLoadingAndStop()
+    {
+        _cancelled = true;
+
+        // Dừng coroutine chuẩn bị nếu còn
+        if (_prepareRoutine != null)
+        {
+            StopCoroutine(_prepareRoutine);
+            _prepareRoutine = null;
+        }
+
+        // Dừng video
+        if (_vp != null)
+            _vp.Stop();
+
+        // Reset state + tắt loading
+        _waitingFirstFrame = false;
+        _isPreparing = false;
+        _stallTimer = 0f;
+        _lastFrame = -1;
+
+        LoadingUI.Hide();
+
+        // Optional: tắt luôn handler để nó không chạy Update nữa
+        this.enabled = false;
     }
 }
 
