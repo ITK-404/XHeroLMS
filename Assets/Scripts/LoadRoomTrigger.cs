@@ -97,7 +97,12 @@ public class LoadRoomTrigger : MonoBehaviour
 
         if (SeoResolver.IsContainData())
         {
-            LoadingTransition.Load(SeoResolver.DefaultScene);
+            Debug.Log("Đã tìm thấy seo URL để load");
+            LoadingTransition.Load(sceneName);
+        }
+        else
+        {
+            Debug.Log("Không tìm thấy seo URL để load");
         }
 
         isLoading = false;
