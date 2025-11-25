@@ -29,21 +29,18 @@ public class LoginPopupUI : PopupBaseUI
         SetHeader(header);
         SetTextDescription(description);
 
-        if (returnBtn != null)
+        if (returnBtn == null) return;
+
+        returnBtn.onClick.RemoveAllListeners();
+
+        // Callback bên ngoài (hủy API, stop coroutine, v.v.)
+        if (onReturn != null)
+            returnBtn.onClick.AddListener(onReturn);
+
+        // Mặc định: chỉ tự destroy chính nó
+        returnBtn.onClick.AddListener(() =>
         {
-            returnBtn.onClick.RemoveAllListeners();
-
-            if (onReturn != null)
-                returnBtn.onClick.AddListener(onReturn);
-
-            returnBtn.onClick.AddListener(() =>
-            {
-                // Tắt popup trước
-                Destroy(gameObject);
-
-                // Tắt loading UI nếu đang mở
-                LoadingUI.Hide();
-            });
-        }
+            Destroy(gameObject);
+        });
     }
 }
