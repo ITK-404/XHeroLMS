@@ -23,8 +23,8 @@ public class PlayerChairManager : MonoBehaviour
     [Header("UI")]
 
     VideoPlayerControllerPro videoPlayerControllerPro;
-    public PlayerStandUI playerStandUI;
-    public ChairCheckPoint currentCheckPoint;
+    [SerializeField]  PlayerStandUI playerStandUI;
+    [HideInInspector] public ChairCheckPoint currentCheckPoint;
     
     private void Awake()
     {
@@ -35,6 +35,7 @@ public class PlayerChairManager : MonoBehaviour
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+        playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
     }
 
     private IEnumerator WaitForBlendDone(Action action)
