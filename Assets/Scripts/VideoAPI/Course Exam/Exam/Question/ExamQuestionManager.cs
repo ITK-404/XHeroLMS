@@ -54,6 +54,8 @@ public class ExamQuestionManager : MonoBehaviour
 
     [Tooltip("Số câu cần dùng cho đề thi. Nếu <= 0 hoặc lớn hơn tổng câu thì sẽ dùng tất cả.")]
     private int numberOfQuestions = 0;
+
+    private CertificatesExamUI _certificatesExamUI;
     // ========================================
 
     // ===================== State =====================
@@ -80,6 +82,7 @@ public class ExamQuestionManager : MonoBehaviour
     // ===================== Lifecycle =====================
     private void Awake()
     {
+        _certificatesExamUI = FindAnyObjectByType<CertificatesExamUI>();
         _examUIController = GetComponent<ExamUIController>();
 
         // init randomizer & submission service
@@ -90,7 +93,8 @@ public class ExamQuestionManager : MonoBehaviour
             reviewPanel,
             () => getWithCorrectAnswer,
             selectedMap,
-            essayMap
+            essayMap,
+            _certificatesExamUI
         );
 
         if (navRoot) navRoot.SetActive(false);
