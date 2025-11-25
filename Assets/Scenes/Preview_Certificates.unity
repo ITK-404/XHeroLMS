@@ -240,6 +240,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: afb09f10722e0604aa4bffa0fdde74b2, type: 3}
+--- !u!114 &450926197 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6745174313827799050, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+  m_PrefabInstance: {fileID: 4294245593945574732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!4 &594191598 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1951814485915899225, guid: 6232a29a0e5e312469c6e4a0494dc538, type: 3}
@@ -286,6 +297,7 @@ GameObject:
   - component: {fileID: 1004457872}
   - component: {fileID: 1004457873}
   - component: {fileID: 1004457874}
+  - component: {fileID: 1004457875}
   m_Layer: 0
   m_Name: ObjectManager
   m_TagString: Untagged
@@ -345,9 +357,30 @@ MonoBehaviour:
   certificatesController: {fileID: 1004457873}
   toggleWithFrame: {fileID: 4294245593945574737}
   toggleWithoutFrame: {fileID: 4294245593945574736}
-  previewPrefab: {fileID: 3680376692382761247, guid: aba667d37eb3f474ea91f0b0cb079488, type: 3}
+  prefabWithFrame: {fileID: 0}
+  prefabWithoutFrame: {fileID: 0}
   previewParent: {fileID: 4294245593945574735}
+  captureCanvas: {fileID: 0}
   btnPreview: {fileID: 4294245593945574734}
+--- !u!114 &1004457875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1004457871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dbe267dd5f1fd840983f8c2bb2f9eca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CertificateDownloadCapture
+  downloadButton: {fileID: 450926197}
+  captureRect: {fileID: 0}
+  captureCanvas: {fileID: 0}
+  nameText: {fileID: 0}
+  fileNamePrefix: certificate_
+  objectsToHide:
+  - {fileID: 914766869}
 --- !u!1 &1116501098
 GameObject:
   m_ObjectHideFlags: 0
@@ -1005,6 +1038,22 @@ PrefabInstance:
       propertyPath: modelContainer
       value: 
       objectReference: {fileID: 271127996}
+    - target: {fileID: 2271900456654704178, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: previewNoneFrame
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2271900456654704178, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: previewWithFrame
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2271900456654704178, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: returnBtnNoFrame
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2271900456654704178, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: returnBtnWithFrame
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 2658146915020958210, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: -266
