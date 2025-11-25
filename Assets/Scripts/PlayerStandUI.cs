@@ -10,7 +10,7 @@ public class PlayerStandUI : MonoBehaviour
     public PlayerChairManager playerChairManager;
     private void Awake()
     {
-        playerChairManager = GetComponent<PlayerChairManager>();
+        playerChairManager = FindAnyObjectByType<PlayerChairManager>();
         if (playerChairManager != null)
         {
             standupButton.onClick.AddListener(playerChairManager.PlayerStandup);

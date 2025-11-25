@@ -32,7 +32,7 @@ public class SceneLessonUI : MonoBehaviour
         {
             yield break;
         }
-        Debug.Log("Bắt đầu load data");
+        Debug.Log($"Bắt đầu load data {overrideSeo}");
         if (!string.IsNullOrEmpty(overrideSeo))
         {
             SeoResolver.seoCourse = overrideSeo;
