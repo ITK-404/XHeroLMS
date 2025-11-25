@@ -11,10 +11,14 @@ public class CertificatePreviewButton : MonoBehaviour
     public Toggle toggleWithoutFrame;
 
     [Header("Prefab preview 2D")]
-    public CertificatePreviewWidget previewPrefab;
+    public CertificatePreviewWidget prefabWithFrame;
+    public CertificatePreviewWidget prefabWithoutFrame;
     public Transform previewParent;
 
-    [Header("Button xem trước")]
+    [Header("Canvas cần chụp")]
+    public Canvas captureCanvas;
+
+    [Header("Button xem trước + chụp")]
     public Button btnPreview;
 
     private CertificatePreviewWidget _currentPreview;
@@ -34,24 +38,53 @@ public class CertificatePreviewButton : MonoBehaviour
     private void OnClickPreview()
     {
         var src = GetSourceItem();
-        if (src == null) return;
+        if (src == null)
+        {
+            Debug.LogWarning("[CertificatePreviewButton] Không có certificate hiện tại.");
+            return;
+        }
+
+        if (captureCanvas == null)
+        {
+            Debug.LogWarning("[CertificatePreviewButton] Chưa gán captureCanvas.");
+            return;
+        }
 
         // Ẩn 3D (KHÔNG destroy)
         certificatesController.SetCurrentCertificateVisible(false);
 
         Transform parent = previewParent != null ? previewParent : transform.parent;
 
-        // Nếu đã có instance → reuse
-        if (_currentPreview == null)
+        // Chọn prefab theo toggle
+        CertificatePreviewWidget prefab = null;
+
+        bool withFrameOn  = (toggleWithFrame != null && toggleWithFrame.isOn);
+        bool noFrameOn    = (toggleWithoutFrame != null && toggleWithoutFrame.isOn);
+
+        if (withFrameOn && prefabWithFrame != null)
+            prefab = prefabWithFrame;
+        else if (noFrameOn && prefabWithoutFrame != null)
+            prefab = prefabWithoutFrame;
+        else if (prefabWithFrame != null)
+            prefab = prefabWithFrame; // fallback
+
+        if (prefab == null)
         {
-            _currentPreview = Instantiate(previewPrefab, parent);
-            _currentPreview.certificatesController = certificatesController;
+            Debug.LogError("[CertificatePreviewButton] Chưa gán prefab preview (with/without frame).");
+            return;
         }
 
-        _currentPreview.gameObject.SetActive(true);
+        // Nếu đã có instance → xoá, mình luôn tạo mới để layout chuẩn trước khi chụp
+        if (_currentPreview != null)
+        {
+            Destroy(_currentPreview.gameObject);
+            _currentPreview = null;
+        }
 
-        bool showFrame = toggleWithFrame != null && toggleWithFrame.isOn;
+        _currentPreview = Instantiate(prefab, parent);
+        _currentPreview.certificatesController = certificatesController;
 
-        _currentPreview.SetupFromItem(src, showFrame);
+        // Setup + tự chụp theo canvas
+        _currentPreview.SetupAndCapture(src, captureCanvas);
     }
 }
