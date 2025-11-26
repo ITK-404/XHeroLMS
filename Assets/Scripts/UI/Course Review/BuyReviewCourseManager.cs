@@ -16,6 +16,7 @@ public class BuyReviewCourseManager : MonoBehaviour
 
     private bool autoSkipVideo = false;
     private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
+    public AutomaticTextPreview automaticTextPreview;
     private void Awake()
     {
         Instance = this;
@@ -87,6 +88,9 @@ public class BuyReviewCourseManager : MonoBehaviour
             Debug.LogError("Sách bị null không thể load");
             return;
         }
+        automaticTextPreview.seoUrl = currentBookSelect.book_seo;
+        
+
         StopCoroutine(ShowPreviewCoroutine());
         StartCoroutine(ShowPreviewCoroutine());
     }
@@ -125,7 +129,6 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         Debug.Log("Có data hiển thị đi");
         courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
-
         if (!autoSkipVideo)
         {
             Debug.Log("Skip Video");
