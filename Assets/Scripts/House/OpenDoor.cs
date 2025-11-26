@@ -5,6 +5,7 @@ public class OpenDoor : MonoBehaviour
     private static readonly int IsOpen = Animator.StringToHash("IsOpen");
     public Animator doorAnimator;
     public Collider TriggerDoorCol;
+
     private void OnTriggerEnter(Collider other)
     {
         if (IsPlayer(other))
@@ -27,6 +28,6 @@ public class OpenDoor : MonoBehaviour
 
     private bool IsPlayer(Collider other)
     {
-        return other.CompareTag("Player");
+        return other.CompareTag("Player") && TokenStore.IsAuthenticated;
     }
 }
