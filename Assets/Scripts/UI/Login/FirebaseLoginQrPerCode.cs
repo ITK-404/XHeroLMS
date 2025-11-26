@@ -67,12 +67,38 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 }
 
                 var db = FirebaseDatabase.GetInstance(app);
+                Debug.Log("[FirebaseLoginQrPerCode] Using DB URL = " + db.App.Options.DatabaseUrl);
 
                 // login-qr/<code>
                 _currentRef = db.RootReference.Child("login-qr").Child(code);
                 _currentRef.ValueChanged += OnQrNodeChanged;
 
                 Debug.Log("[FirebaseLoginQrPerCode] Listening at /login-qr/" + code);
+
+                // ===== TEST GetValueAsync để xem node có tồn tại không =====
+                _currentRef.GetValueAsync().ContinueWithOnMainThread(t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        Debug.LogError("[FirebaseLoginQrPerCode] GetValueAsync lỗi: " + t.Exception);
+                    }
+                    else if (t.IsCanceled)
+                    {
+                        Debug.LogWarning("[FirebaseLoginQrPerCode] GetValueAsync bị cancel.");
+                    }
+                    else if (t.IsCompleted)
+                    {
+                        var s = t.Result;
+                        if (!s.Exists)
+                        {
+                            Debug.LogWarning("[FirebaseLoginQrPerCode] GetValueAsync: node /login-qr/" + code + " hiện KHÔNG tồn tại.");
+                        }
+                        else
+                        {
+                            Debug.Log("[FirebaseLoginQrPerCode] GetValueAsync snapshot: " + s.GetRawJsonValue());
+                        }
+                    }
+                });
             });
     }
 
@@ -100,7 +126,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             // ignore, sẽ tạo mới
         }
 
-        // ====== CONFIG LẤY TỪ firebaseConfig BÊN WEB ======
+        // ====== CONFIG LẤY TỪ firebaseConfig BÊN WEB (xhero-dev) ======
         // const firebaseConfig = {
         //   apiKey: "AIzaSyBxffhvcu1CFrusqiI1nWv2axHd7vuVkNo",
         //   authDomain: "xhero-dev.firebaseapp.com",
@@ -114,10 +140,10 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
 
         var options = new AppOptions
         {
-            ApiKey        = "AIzaSyBxffhvcu1CFrusqiI1nWv2axHd7vuVkNo",
-            AppId         = "1:175094863110:web:aa802adb6857f4469efa87",
-            ProjectId     = "xhero-dev",
-            DatabaseUrl   = new Uri("https://xhero-lms-default-rtdb.firebaseio.com"),
+            ApiKey          = "AIzaSyBxffhvcu1CFrusqiI1nWv2axHd7vuVkNo",
+            AppId           = "1:175094863110:web:aa802adb6857f4469efa87",
+            ProjectId       = "xhero-dev",
+            DatabaseUrl     = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),
             MessageSenderId = "175094863110",
             StorageBucket   = "xhero-dev.firebasestorage.app"
         };
@@ -205,7 +231,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         sb.AppendLine("login-qr");
         sb.AppendLine($"  {snap.Key}");
 
-        // browser: có thể là string hoặc object
         if (!string.IsNullOrEmpty(browserSimple))
             sb.AppendLine($"    browser: \"{browserSimple}\"");
         if (!string.IsNullOrEmpty(browserObjName) ||
@@ -248,8 +273,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
 
         if (string.IsNullOrEmpty(finalToken))
         {
-            // Trường hợp này: backend có thể mới chỉ ghi info browser / handshake
-            // → chỉ log, tiếp tục listen chờ lần update sau có token/accessToken.
             Debug.Log("[FirebaseLoginQrPerCode] Chưa có token/accessToken, mới chỉ nhận info browser/handshake. Tiếp tục listen.");
             return;
         }
