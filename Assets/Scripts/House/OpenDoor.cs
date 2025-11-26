@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class OpenDoor : MonoBehaviour
 {
@@ -6,8 +7,11 @@ public class OpenDoor : MonoBehaviour
     public Animator doorAnimator;
     public Collider TriggerDoorCol;
 
+    private bool isOpenDoor = false;    
     private void OnTriggerEnter(Collider other)
     {
+        if (isOpenDoor == false) return;
+
         if (IsPlayer(other))
         {
             // open
@@ -18,6 +22,8 @@ public class OpenDoor : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (isOpenDoor == false) return;
+
         if (IsPlayer(other))
         {
             // close
