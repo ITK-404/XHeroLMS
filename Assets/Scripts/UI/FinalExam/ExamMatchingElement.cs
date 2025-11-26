@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -17,6 +18,12 @@ public class ExamMatchingElement : MonoBehaviour, IPointerDownHandler, IDragHand
     [SerializeField] private Transform topPoint;    // dùng cho Side B
     [SerializeField] private Transform lowerPoint;  // dùng cho Side A
     [SerializeField] private Image matchingImg;
+    [SerializeField] private Sprite normalMatching;
+    [SerializeField] private Sprite correctMatching;
+
+    [SerializeField] private Color normalPointColor;
+    [SerializeField] private Color correctPointColor;
+
     public ExamMatchingElement ConnectedElement { get; private set; }
 
     private LineRenderer currentLine;
@@ -131,6 +138,24 @@ public class ExamMatchingElement : MonoBehaviour, IPointerDownHandler, IDragHand
         {
             UpdateLinePosition();
         }
+    }
+
+    public void SetNormalMatching()
+    {
+        matchingImg.sprite = normalMatching;
+        UpdateColorPoint(false);
+    }
+
+    public void SetCorrectMatching()
+    {
+        matchingImg.sprite = correctMatching;
+        UpdateColorPoint(true);
+    }
+
+    private void UpdateColorPoint(bool isCorrect)
+    {
+        topPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
+        lowerPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
     }
 
     #endregion
