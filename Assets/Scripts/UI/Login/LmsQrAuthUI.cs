@@ -91,51 +91,50 @@ public class LmsQrAuthUI : MonoBehaviour
 
     // Callback khi Firebase gửi accessToken về
     private void OnFirebaseAccessToken(string accessToken)
-{
-    if (string.IsNullOrEmpty(accessToken))
     {
-        Debug.LogWarning("[LmsQrAuthUI] OnFirebaseAccessToken nhận token rỗng.");
-        return;
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            Debug.LogWarning("[LmsQrAuthUI] OnFirebaseAccessToken nhận token rỗng.");
+            return;
+        }
+
+        if (_loggedIn)
+            return;
+
+        _loggedIn = true;
+        Debug.Log("[LmsQrAuthUI] Login success from Firebase, token = " + accessToken);
+
+        if (_countdownCo != null)
+        {
+            StopCoroutine(_countdownCo);
+            _countdownCo = null;
+        }
+
+        if (_pollCo != null)
+        {
+            StopCoroutine(_pollCo);
+            _pollCo = null;
+        }
+
+        if (countdownText != null)
+            countdownText.text = "Đã đăng nhập";
+
+        // ====== LƯU TOKEN VÀ ĐÓNG LOGIN ======
+        try
+        {
+            TokenStore.SetTokenFromQr(accessToken);
+
+            // Cho các nơi khác biết login đã xong (giống login thường)
+            LoginController.OnLoginComplete?.Invoke();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[LmsQrAuthUI] Lỗi khi xử lý token từ QR: " + e);
+        }
+
+        // Vẫn giữ UnityEvent nếu bạn hook ở Inspector
+        onLoginSuccess?.Invoke(accessToken);
     }
-
-    if (_loggedIn)
-        return;
-
-    _loggedIn = true;
-    Debug.Log("[LmsQrAuthUI] Login success from Firebase, token = " + accessToken);
-
-    if (_countdownCo != null)
-    {
-        StopCoroutine(_countdownCo);
-        _countdownCo = null;
-    }
-
-    if (_pollCo != null)
-    {
-        StopCoroutine(_pollCo);
-        _pollCo = null;
-    }
-
-    if (countdownText != null)
-        countdownText.text = "Đã đăng nhập";
-
-    // ====== LƯU TOKEN VÀ ĐÓNG LOGIN ======
-    try
-    {
-        // TODO: Viết hàm này trong TokenStore cho đẹp
-        TokenStore.SetTokenFromQr(accessToken);
-
-        // Báo cho các nơi khác giống login thường
-        LoginController.OnLoginComplete?.Invoke();
-    }
-    catch (Exception e)
-    {
-        Debug.LogError("[LmsQrAuthUI] Lỗi khi xử lý token từ QR: " + e);
-    }
-
-    // Nếu bạn muốn đóng UI QR tại đây, có thể bắn event hoặc tìm OpenClosePanel rồi CloseUI()
-    onLoginSuccess?.Invoke(accessToken); // vẫn giữ UnityEvent nếu bạn đang dùng
-}
 
     // ===================== UI EVENT =====================
     private void OnClickRefresh()
@@ -233,11 +232,8 @@ public class LmsQrAuthUI : MonoBehaviour
             }
 
             // Nội dung encode vào QR (tuỳ backend có cần timestamp hay không)
-            // string qrContent = _currentCode;
             string qrContent =
                 $"{{\"code\":\"{_currentCode}\",\"timestamp\":\"{_currentTimestamp}\",\"function\":\"auth-for-lms\"}}";
-
-            // string qrContent = $"{_currentCode}|{_currentTimestamp}";
 
             GenerateQrToImage(qrContent);
         }
@@ -299,7 +295,8 @@ public class LmsQrAuthUI : MonoBehaviour
     // ===================== POLL STEP=2 (OPTIONAL) =====================
     private IEnumerator CoPollLoginResult(string code, string timestamp)
     {
-        yield break; // Không dùng nữa
+        // Bạn đang dùng Firebase, nên tạm thời không poll nữa.
+        yield break;
     }
 
     // ===================== COUNTDOWN =====================
