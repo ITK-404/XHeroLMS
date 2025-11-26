@@ -6,6 +6,7 @@ public class PlayVideoOpenBook : MonoBehaviour
 {
     public VideoPlayer videoPlayer;
     public AudioSource audioSource;
+    public AutomaticTextPreview automaticTextPreview;
 
     private void Awake()
     {
@@ -33,7 +34,9 @@ public class PlayVideoOpenBook : MonoBehaviour
         videoPlayer.Play();
         audioSource.Play();
         
-        while (videoPlayer.isPlaying)
+        automaticTextPreview.CreateText();
+
+        while (videoPlayer.isPlaying && automaticTextPreview.IsTextPlayDone() == false)
             yield return null;
     }
     [ContextMenu("Play Test")]
@@ -46,6 +49,7 @@ public class PlayVideoOpenBook : MonoBehaviour
     {
         videoPlayer.Stop();
         audioSource.Stop();
+        automaticTextPreview.StopText();
     }
 
     public void Show()
