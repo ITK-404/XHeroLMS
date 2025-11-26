@@ -23,8 +23,10 @@ public class PointClickSystem : MonoBehaviour
     private ChairCheckPoint currentCheckPoint;
 
     private PlayerCamera playerCamera;
+    private RotateLeftRightCamera rotateLeftRightCamera;
     private void Awake()
     {
+        rotateLeftRightCamera = GetComponent<RotateLeftRightCamera>();
         playerCamera = GetComponent<PlayerCamera>();
     }
 
@@ -50,7 +52,7 @@ public class PointClickSystem : MonoBehaviour
             verticalVelocity += gravity * gravityMultiplier * Time.deltaTime;
         }
 
-        float h = Input.GetAxisRaw("Horizontal"); // A/D
+        float h = Input.GetAxisRaw("Horizontal") + rotateLeftRightCamera.vertical; // A/D
         float v = Input.GetAxisRaw("Vertical"); // W/S
 
         // Forward/backward movement
