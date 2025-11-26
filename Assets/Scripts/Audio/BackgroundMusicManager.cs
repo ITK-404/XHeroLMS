@@ -20,9 +20,11 @@ public class BackgroundMusicManager : MonoBehaviour
     public float fadeDuration = 1f;
 
     // track intended volume for current clip so Resume can fade back to it
-    private float targetVolume = 1f;
+    public float targetVolume = 1f;
     private Coroutine fadeCoroutine;
-
+    [Header("Main Audio")]
+    public bool isRandom = false;
+    public AudioClip audioClip;
     private void Awake()
     {
         if (musicSource == null)
@@ -30,7 +32,16 @@ public class BackgroundMusicManager : MonoBehaviour
 
         if (SceneManager.GetActiveScene().name == originalScene)
         {
-            PlayRandomMusic();
+            if (isRandom)
+            {
+                PlayRandomMusic();
+            }
+            else
+            {
+                musicSource.clip = audioClip;
+                musicSource.volume = targetVolume;
+                musicSource.Play();
+            }
         }
     }
 
