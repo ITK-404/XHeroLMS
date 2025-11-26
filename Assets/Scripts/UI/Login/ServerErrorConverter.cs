@@ -30,7 +30,7 @@ public static class ServerErrorConverter
             }
         }
 
-        // Lúc này raw là message “thô” → xử lý code
+        // Lúc này raw là message “thô” -> xử lý code
         var lower = raw.ToLower();
 
         switch (lower)

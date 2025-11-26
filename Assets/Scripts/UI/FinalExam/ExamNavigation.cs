@@ -117,7 +117,7 @@ public class ExamNavigation : MonoBehaviour
         }
         else
         {
-            // Item đã nằm trong viewport → không cần scroll
+            // Item đã nằm trong viewport -> không cần scroll
             return;
         }
 

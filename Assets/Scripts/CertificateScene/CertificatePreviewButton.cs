@@ -74,7 +74,7 @@ public class CertificatePreviewButton : MonoBehaviour
             return;
         }
 
-        // Nếu đã có instance → xoá, mình luôn tạo mới để layout chuẩn trước khi chụp
+        // Nếu đã có instance -> xoá, mình luôn tạo mới để layout chuẩn trước khi chụp
         if (_currentPreview != null)
         {
             Destroy(_currentPreview.gameObject);

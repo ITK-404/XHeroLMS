@@ -7,10 +7,6 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-/// <summary>
-/// Xử lý submit bài thi + đọc kết quả + mở review.
-/// Không phải MonoBehaviour – được ExamQuestionManager gọi và StartCoroutine.
-/// </summary>
 public class ExamSubmissionService
 {
     // refs
@@ -165,7 +161,6 @@ public class ExamSubmissionService
                         {
                             if (q.options != null && idx >= 0 && idx < q.options.Count)
                             {
-
                                 item.result.Add("<p>" + q.options[idx] + "</p>" ?? "");
                             }
                         }
@@ -220,9 +215,9 @@ public class ExamSubmissionService
             sum.passed = (sum.correct >= req);
         }
 
-        _resultUI.textCorrectAnswer.text = $"<color=#49D17D>{sum.correct}</color> câu";
+        _resultUI.textCorrectAnswer.text   = $"<color=#49D17D>{sum.correct}</color> câu";
         _resultUI.textInCorrectAnswer.text = $"<color=#FF6B6B>{sum.wrong}</color> câu";
-        _resultUI.skipAnswer.text = $"<color=#F4A42B>{sum.skipped}</color> câu";
+        _resultUI.skipAnswer.text          = $"<color=#F4A42B>{sum.skipped}</color> câu";
         _resultUI.SetTotalAnswerPass(sum.correct, sum.total);
         if (sum.passed)
         {
@@ -249,14 +244,15 @@ public class ExamSubmissionService
 
         var paper = _examUI.Paper;
         var correctIndexMap = ParseCorrectAnswerIndicesFromJson(json, paper);
-        var correctTextMap = ParseCorrectAnswerTextsFromJson(json);
+        var correctTextMap  = ParseCorrectAnswerTextsFromJson(json);
 
         _reviewPanel.ShowReview(
             paper,
             CloneUserPicked(),
             correctIndexMap,
             0,
-            correctTextMap
+            correctTextMap,
+            _essayMap        // truyền luôn bài tự luận sang review
         );
     }
 
@@ -416,6 +412,24 @@ public class ExamSubmissionService
         foreach (var q in paper.questions)
         {
             userPicked.TryGetValue(q.id, out var uSet);
+
+            bool hasEssayAnswer =
+                _essayMap != null &&
+                _essayMap.TryGetValue(q.id, out var essayTxt) &&
+                !string.IsNullOrWhiteSpace(essayTxt);
+
+            bool isEssayLike = (q.type == ExamQuestionType.ESSAY) || hasEssayAnswer;
+
+            if (isEssayLike)
+            {
+                // CÂU TỰ LUẬN / CHO ĐIỂM:
+                // Có text => đúng; bỏ trống => bỏ qua (skipped)
+                if (hasEssayAnswer) c++;
+                else s++;
+                continue;
+            }
+
+            // Các loại trắc nghiệm
             if (uSet == null || uSet.Count == 0)
             {
                 s++;
@@ -455,7 +469,7 @@ public class ExamSubmissionService
             for (int i = 0; i < q.options.Count; i++)
             {
                 string optClean = ExamFormat.CleanOptionText(q.options[i]) ?? "";
-                string optNorm = ExamResultReviewPanel.NormalizeForCompare(optClean);
+                string optNorm  = ExamResultReviewPanel.NormalizeForCompare(optClean);
                 if (correctTextSet.Contains(optNorm)) combinedCorrect.Add(i);
             }
         }
@@ -486,12 +500,18 @@ public class ExamSubmissionService
 
     private bool IsAnsweredLocal(string qid, ExamQuestionType type)
     {
+        // Nếu có bài tự luận cho câu này thì coi như đã trả lời (kể cả type server bị set sai)
+        if (_essayMap != null &&
+            _essayMap.TryGetValue(qid, out var txt) &&
+            !string.IsNullOrWhiteSpace(txt))
+            return true;
+
         return type switch
         {
             ExamQuestionType.SINGLE_CHOICE or ExamQuestionType.MULTIPLE_CHOICE
                 => _selectedMap.TryGetValue(qid, out var set) && set != null && set.Count > 0,
             ExamQuestionType.ESSAY
-                => _essayMap.TryGetValue(qid, out var txt) && !string.IsNullOrWhiteSpace(txt),
+                => _essayMap.TryGetValue(qid, out var txt2) && !string.IsNullOrWhiteSpace(txt2),
             _ => false
         };
     }
