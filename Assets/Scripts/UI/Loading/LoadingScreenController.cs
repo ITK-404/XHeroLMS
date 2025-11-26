@@ -16,7 +16,7 @@ public class LoadingScreenController : MonoBehaviour
 
     [Header("Loading Text Animation")]
     public float dotSpeed = 0.5f;
-    string baseText = "Loading";
+    string baseText = "Đang tải";
     float imageSwitchInterval = 1f;
 
     [Header("Display Timing")]
