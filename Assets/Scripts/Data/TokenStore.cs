@@ -75,6 +75,11 @@ public static class TokenStore
 
         Debug.Log("[TokenStore] Dữ liệu TokenStore đã được xóa.");
     }
+        public static void SetTokenFromQr(string token)
+    {
+        AccessToken = token;
+        Debug.Log("[TokenStore] SetTokenFromQr: " + token);
+    }
     /// <summary>
     /// cách dùng:
     /*
