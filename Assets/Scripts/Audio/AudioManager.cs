@@ -1,5 +1,4 @@
 ﻿using DG.Tweening;
-using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -42,47 +41,6 @@ public class AudioManager : MonoBehaviour
     {
         ObjectPoolManager.GetObjectPool(soundBuilderPrefab, 15);
         settings = GetComponent<AudioSettingsManager>();
-    }
-
-    public void PlayMusic(SoundConfig soundConfig)
-    {
-        if (soundConfig == null)
-        {
-            Debug.Log("Sound Config is null music");
-            StopMusic(0.2f);
-            return;
-        }
-       
-        if (musicSource.isPlaying)
-        {
-            StopMusic(0.2f, () =>
-            {
-                musicSource.volume = soundConfig.volume;
-                musicSource.clip = soundConfig.AudioClip;
-                musicSource.Play();
-            });
-            return;
-        }
-
-        musicSource.volume = soundConfig.volume;
-        musicSource.clip = soundConfig.AudioClip;
-        musicSource.Play();
-    }
-
-    public void PlayMusic(AudioClip bgmClip)
-    {
-        musicSource.clip = bgmClip;
-        musicSource.Play();
-    }
-
-    public void StopMusic(float duration, Action callback = null)
-    {
-        musicSource.DOFade(0, duration).SetUpdate(true).OnComplete(() =>
-        {
-            musicSource.DOKill(); 
-            musicSource.Stop();
-            callback?.Invoke();
-        });
     }
 
     public void Resume()
