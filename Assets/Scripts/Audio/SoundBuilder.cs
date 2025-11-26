@@ -20,6 +20,10 @@ public class SoundBuilder : PoolableObject
     {
         source = GetComponent<AudioSource>();
     }
+    private void OnEnable()
+    {
+        ResetAudioSource();
+    }
 
     public void Init(SoundConfig soundConfig)
     {
