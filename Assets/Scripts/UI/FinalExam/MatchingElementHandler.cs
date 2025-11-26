@@ -11,7 +11,7 @@ public class MatchingElementHandler : MonoBehaviour
 
     // Lưu tất cả các cặp đã kết nối để quản lý dễ dàng
     private readonly Dictionary<ExamMatchingElement, ExamMatchingElement> connections = new();
-
+    [SerializeField] private Color correctLineColor;
     private void Awake()
     {
         if (Instance != null && Instance != this)
