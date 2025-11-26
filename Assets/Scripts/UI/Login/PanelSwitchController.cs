@@ -6,11 +6,13 @@ public class PanelSwitchController : MonoBehaviour
     [Header("Buttons")]
     public Button btnForgot;
     public Button btnRegister;
+    public Button btnLoginQR;
 
     [Header("Panels")]
     public GameObject forgotPanel;
     public GameObject registerPanel;
     public GameObject currentPanel;
+    public GameObject loginQrPanel;
 
     private void Start()
     {
@@ -19,6 +21,9 @@ public class PanelSwitchController : MonoBehaviour
 
         if (btnRegister != null)
             btnRegister.onClick.AddListener(ShowRegister);
+
+        if (btnLoginQR != null)
+            btnLoginQR.onClick.AddListener(ShowLoginQr);
     }
 
     private void OnDestroy()
@@ -42,5 +47,13 @@ public class PanelSwitchController : MonoBehaviour
         if (currentPanel != null) currentPanel.SetActive(false);
         if (forgotPanel != null) forgotPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(true);
+    }
+
+    private void ShowLoginQr()
+    {
+        if (currentPanel != null) currentPanel.SetActive(false);
+        if (forgotPanel != null) forgotPanel.SetActive(false);
+        if (registerPanel != null) registerPanel.SetActive(false);
+        if (loginQrPanel != null) loginQrPanel.SetActive(true);
     }
 }
