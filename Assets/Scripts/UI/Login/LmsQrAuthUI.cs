@@ -25,7 +25,6 @@ public class LmsQrAuthUI : MonoBehaviour
     public bool  autoPollResult = false;   // mặc định TẮT, vì hiện tại dùng Firebase
     public float pollInterval   = 1.0f;
 
-    // Khi đăng nhập thành công sẽ trả accessToken
     [Serializable]
     public class StringEvent : UnityEvent<string> { }
     public StringEvent onLoginSuccess;
@@ -36,6 +35,13 @@ public class LmsQrAuthUI : MonoBehaviour
     private string _currentCode;
     private string _currentTimestamp;
     private bool   _loggedIn;
+    
+    public Button btnBack;
+    public GameObject currentPanel;
+    public GameObject backPanel;
+
+    // flag để không subscribe trùng
+    private bool _subscribedFirebase = false;
 
     private void Awake()
     {
@@ -43,10 +49,23 @@ public class LmsQrAuthUI : MonoBehaviour
             refreshButton.onClick.AddListener(OnClickRefresh);
     }
 
+    void Start()
+    {
+        if (btnBack) btnBack.onClick.AddListener(BackAndReset);
+    }
+
+    private void BackAndReset()
+    {
+        if (currentPanel) currentPanel.SetActive(false);
+        if (backPanel)    backPanel.SetActive(true);
+    }
+
     private void OnEnable()
     {
-        // Đăng ký lắng nghe event từ Firebase singleton (nếu đã có trong scene)
-        SubscribeFirebase();
+        _loggedIn = false;
+        _subscribedFirebase = false;      // cho phép subscribe lại nếu panel bật/tắt nhiều lần
+
+        TrySubscribeFirebase();           // thử 1 lần
         RequestNewQr();
     }
 
@@ -67,31 +86,52 @@ public class LmsQrAuthUI : MonoBehaviour
         UnsubscribeFirebase();
     }
 
-    // ===================== SUBSCRIBE FIREBASE =====================
-    private void SubscribeFirebase()
+    private void Update()
     {
+        // Nếu lúc OnEnable chưa có Instance thì ở Update sẽ retry cho đến khi được
+        if (!_subscribedFirebase)
+        {
+            TrySubscribeFirebase();
+        }
+    }
+
+    // ===================== SUBSCRIBE FIREBASE =====================
+    private void TrySubscribeFirebase()
+    {
+        if (_subscribedFirebase) return;
+
         if (FirebaseLoginQrPerCode.Instance != null)
         {
-            FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived -= OnFirebaseAccessToken; // tránh double
+            FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived -= OnFirebaseAccessToken;
             FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived += OnFirebaseAccessToken;
+            _subscribedFirebase = true;
+            Debug.Log("[LmsQrAuthUI] Subscribed to FirebaseLoginQrPerCode.OnAccessTokenReceived");
         }
         else
         {
-            Debug.LogWarning("[LmsQrAuthUI] FirebaseLoginQrPerCode.Instance == null (chưa có object trong scene?)");
+            // chỉ log 1 lần đầu OnEnable, các frame sau im lặng để đỡ spam
+            Debug.Log("[LmsQrAuthUI] TrySubscribeFirebase: FirebaseLoginQrPerCode.Instance == null, sẽ retry ở Update.");
         }
     }
 
     private void UnsubscribeFirebase()
     {
+        if (!_subscribedFirebase) return;
+
         if (FirebaseLoginQrPerCode.Instance != null)
         {
             FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived -= OnFirebaseAccessToken;
+            Debug.Log("[LmsQrAuthUI] Unsubscribed FirebaseLoginQrPerCode.OnAccessTokenReceived");
         }
+
+        _subscribedFirebase = false;
     }
 
-    // Callback khi Firebase gửi accessToken về
+    // ===================== CALLBACK TỪ FIREBASE =====================
     private void OnFirebaseAccessToken(string accessToken)
     {
+        Debug.Log("[LmsQrAuthUI] OnFirebaseAccessToken CALLED, token = " + accessToken);
+
         if (string.IsNullOrEmpty(accessToken))
         {
             Debug.LogWarning("[LmsQrAuthUI] OnFirebaseAccessToken nhận token rỗng.");
@@ -119,21 +159,18 @@ public class LmsQrAuthUI : MonoBehaviour
         if (countdownText != null)
             countdownText.text = "Đã đăng nhập";
 
-        // ====== LƯU TOKEN VÀ ĐÓNG LOGIN ======
-        try
-        {
-            TokenStore.SetTokenFromQr(accessToken);
-
-            // Cho các nơi khác biết login đã xong (giống login thường)
-            LoginController.OnLoginComplete?.Invoke();
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[LmsQrAuthUI] Lỗi khi xử lý token từ QR: " + e);
-        }
-
-        // Vẫn giữ UnityEvent nếu bạn hook ở Inspector
+        // ===== GIAO CHO LOGINCONTROLLER XỬ LÝ =====
+        LoginController.LoginWithQrToken(accessToken);
         onLoginSuccess?.Invoke(accessToken);
+
+        // Tắt panel QR sau khi login xong
+        gameObject.SetActive(false);
+
+        // Clear cache QR nếu muốn
+        if (LmsStore.Instance != null)
+        {
+            LmsStore.Instance.ClearQrLoginCache();
+        }
     }
 
     // ===================== UI EVENT =====================
@@ -159,6 +196,11 @@ public class LmsQrAuthUI : MonoBehaviour
         {
             StopCoroutine(_pollCo);
             _pollCo = null;
+        }
+
+        if (LmsStore.Instance != null)
+        {
+            LmsStore.Instance.ClearQrLoginCache();
         }
 
         StartCoroutine(CoRequestQrFromApi());
@@ -221,17 +263,26 @@ public class LmsQrAuthUI : MonoBehaviour
             _currentCode      = resp.data.code;
             _currentTimestamp = resp.data.timestamp;
 
-            // GỌI FIREBASE LISTEN Ở ĐÂY
+            Debug.Log($"[LmsQrAuthUI] step=1 OK, code = {_currentCode}, timestamp = {_currentTimestamp}");
+
+            if (LmsStore.Instance != null)
+            {
+                LmsStore.Instance.lastLoginQrCode      = _currentCode;
+                LmsStore.Instance.lastLoginQrTimestamp = _currentTimestamp;
+                Debug.Log("[LmsQrAuthUI] Saved to LmsStore: lastLoginQrCode + lastLoginQrTimestamp");
+            }
+
+            Debug.Log("[LmsQrAuthUI] Start Firebase listen with code = " + _currentCode);
+
             if (FirebaseLoginQrPerCode.Instance != null)
             {
                 FirebaseLoginQrPerCode.Instance.StartListen(_currentCode);
             }
             else
             {
-                Debug.LogWarning("[LmsQrAuthUI] FirebaseLoginQrPerCode.Instance == null");
+                Debug.LogWarning("[LmsQrAuthUI] FirebaseLoginQrPerCode.Instance == null khi gọi StartListen (nhưng Update vẫn retry subscribe).");
             }
 
-            // Nội dung encode vào QR (tuỳ backend có cần timestamp hay không)
             string qrContent =
                 $"{{\"code\":\"{_currentCode}\",\"timestamp\":\"{_currentTimestamp}\",\"function\":\"auth-for-lms\"}}";
 
@@ -246,7 +297,7 @@ public class LmsQrAuthUI : MonoBehaviour
         }
     }
 
-    // ===================== QR GENERATION (WEB) =====================
+    // ===================== QR GENERATION =====================
     private void GenerateQrToImage(string content)
     {
         StartCoroutine(CoDownloadQrImage(content));
@@ -295,7 +346,6 @@ public class LmsQrAuthUI : MonoBehaviour
     // ===================== POLL STEP=2 (OPTIONAL) =====================
     private IEnumerator CoPollLoginResult(string code, string timestamp)
     {
-        // Bạn đang dùng Firebase, nên tạm thời không poll nữa.
         yield break;
     }
 
@@ -329,7 +379,7 @@ public class LmsQrAuthUI : MonoBehaviour
     [Serializable]
     private class LmsAuthResponse
     {
-        public bool       status;
+        public bool        status;
         public LmsAuthData data;
     }
 
