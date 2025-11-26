@@ -327,6 +327,7 @@ public class ExamQuestionManager : MonoBehaviour
         if (idx == _examUIController.currentIndex) return;
 
         _examUIController.currentIndex = idx;
+        EventHub.RaiseExamClampItem(idx);
         RenderCurrentQuestion();
         RefreshAllNavStates();
     }
@@ -416,6 +417,8 @@ public class ExamQuestionManager : MonoBehaviour
         if (idx == _examUIController.currentIndex) el.ShowSelectedAnswerButton();
         else if (IsAnswered(qid, qs[idx].type))    el.SetAnsweredButton();
         else                                       el.SetUnansweredButton();
+
+        EventHub.RaiseExamCenterItem(idx);
     }
 
     // ===================== Utils =====================
