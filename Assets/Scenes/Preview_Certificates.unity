@@ -119,6 +119,28 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &10577563 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 64269472936800423, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+  m_PrefabInstance: {fileID: 4294245593945574732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &10577564 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 79759611442438375, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+  m_PrefabInstance: {fileID: 4294245593945574732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &158082494 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6747267750212267177, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
@@ -430,7 +452,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1004457872
 Transform:
@@ -501,8 +523,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CertificateDownloadCapture
   downloadButton: {fileID: 450926197}
-  nameText: {fileID: 0}
-  fileNamePrefix: certificate_
+  shareFacebookButton: {fileID: 10577564}
+  shareZaloButton: {fileID: 10577563}
   objectsToHide:
   - {fileID: 914766869}
   - {fileID: 1634584849}
@@ -512,6 +534,8 @@ MonoBehaviour:
   - {fileID: 1816477300}
   - {fileID: 1816477299}
   - {fileID: 1753416357}
+  fileNamePrefix: certificate_
+  shareMessage: "Ch\xFAc m\u1EEBng \u0111\xE3 nh\u1EADn b\u1EB1ng t\u1ED1t nghi\u1EC7p!"
 --- !u!1 &1116501098
 GameObject:
   m_ObjectHideFlags: 0
@@ -1180,6 +1204,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1043942501312453194, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: m_Name
+      value: btnZalo
+      objectReference: {fileID: 0}
+    - target: {fileID: 1043942501312453194, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1265106037498499399, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1460,6 +1492,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 178.5
       objectReference: {fileID: 0}
+    - target: {fileID: 7706895337323091646, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: m_Name
+      value: btnFB
+      objectReference: {fileID: 0}
     - target: {fileID: 7767581342276448556, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -1490,23 +1526,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8329191392494779765, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_fontColorGradient.topRight.b
-      value: 0.25471687
+      value: 0.72156864
       objectReference: {fileID: 0}
     - target: {fileID: 8329191392494779765, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_fontColorGradient.topRight.g
-      value: 0.81932527
+      value: 0.91764706
       objectReference: {fileID: 0}
     - target: {fileID: 8329191392494779765, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_fontColorGradient.topRight.r
-      value: 1
+      value: 0.98039216
       objectReference: {fileID: 0}
     - target: {fileID: 8329191392494779765, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_fontColorGradient.bottomRight.b
-      value: 0.015686275
+      value: 0.33773577
       objectReference: {fileID: 0}
     - target: {fileID: 8329191392494779765, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_fontColorGradient.bottomRight.g
-      value: 0.75686276
+      value: 0.83641285
       objectReference: {fileID: 0}
     - target: {fileID: 8950562433979881423, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_IsActive
