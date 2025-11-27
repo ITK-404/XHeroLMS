@@ -70,7 +70,15 @@ public class BookHandler : MonoBehaviour
 
         if (SeoResolver.IsContainData())
         {
-            LoadingTransition.Load(SeoResolver.DefaultScene);
+            if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+            {
+                LoadingTransition.Load("dai_dao_chi_gian_2");
+
+            }else
+            {
+                LoadingTransition.Load(SeoResolver.DefaultScene);
+            }
+            // LoadingTransition.Load(SeoResolver.DefaultScene);
         }
     }
 
