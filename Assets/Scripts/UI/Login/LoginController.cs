@@ -90,9 +90,6 @@ public class LoginController : MonoBehaviour
     // ============================================================
     //  HÀM DÙNG CHUNG KHI LOGIN THÀNH CÔNG (PASSWORD HOẶC QR)
     // ============================================================
-    /// <summary>
-    /// Xử lý chung khi đã có AuthResponseRoot hợp lệ.
-    /// </summary>
     private void HandleLoginSuccess(AuthResponseRoot auth, string successMessage = "Đăng nhập thành công")
     {
         if (auth == null || auth.data == null || string.IsNullOrEmpty(auth.data.token))
