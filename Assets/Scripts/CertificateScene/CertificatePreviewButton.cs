@@ -22,7 +22,7 @@ public class CertificatePreviewButton : MonoBehaviour
     public CertificateDownloadCapture downloadCapture;
 
     private CertificatePreviewWidget _currentPreview;
-    private CertificateItemUI        _currentSource;   // nhớ lại certificate hiện tại
+    private CertificateItemUI        _currentSource;
 
     private void Awake()
     {
@@ -42,7 +42,6 @@ public class CertificatePreviewButton : MonoBehaviour
         return certificatesController.GetCurrentCertificateUI();
     }
 
-    // CHỈ gọi khi bấm nút "Xem trước"
     private void ShowPreview(bool showFrame)
     {
         var src = GetSourceItem();
@@ -54,12 +53,16 @@ public class CertificatePreviewButton : MonoBehaviour
 
         _currentSource = src;
 
-        // Nếu muốn giữ 3D (đế + khung) để chụp full scene thì KHÔNG ẩn:
-        // certificatesController.SetCurrentCertificateVisible(false);
+        // ẨN certificate 3D hiện tại để không bị chồng
+        if (certificatesController != null)
+        {
+            certificatesController.SetCurrentCertificateVisible(false);
+        }
 
-        // Cập nhật đế + khung 3D theo toggle
+        //    còn đã ẩn 3D rồi thì có thể bỏ dòng này cũng được)
         _currentSource.SetBaseAndFrameVisible(showFrame);
 
+        // Hiện preview 2D
         Transform parent = previewParent != null ? previewParent : transform.parent;
 
         if (_currentPreview == null)
@@ -70,11 +73,6 @@ public class CertificatePreviewButton : MonoBehaviour
 
         _currentPreview.gameObject.SetActive(true);
         _currentPreview.SetupFromItem(_currentSource, showFrame);
-
-        if (downloadCapture != null && _currentPreview.nameText != null)
-        {
-            downloadCapture.nameText = _currentPreview.nameText;
-        }
     }
 
     // CHỈ đổi khung trên preview đã mở + 3D base/frame, KHÔNG tạo mới preview
