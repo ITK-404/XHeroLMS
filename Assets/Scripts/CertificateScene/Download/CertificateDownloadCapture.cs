@@ -13,13 +13,8 @@ public class CertificateDownloadCapture : MonoBehaviour
     [Header("Button tải về")]
     public Button downloadButton;
 
-    [Header("Vùng cần chụp (UI)")]
-    [Tooltip("RawImage hoặc panel gốc chứa cả phôi + text tên, ngày, v.v.")]
-    public RectTransform captureRect;      // nên là RectTransform root của preview widget
-    public Canvas captureCanvas;           // Canvas chứa preview (để lấy scaleFactor)
-
     [Header("Thông tin đặt tên file")]
-    public TMP_Text nameText;              // để dùng làm tên file
+    public TMP_Text nameText;              // để dùng làm tên file (vd: tên học viên)
     public string fileNamePrefix = "certificate_";
 
     [Header("Các object cần ẩn khi chụp")]
@@ -33,9 +28,24 @@ public class CertificateDownloadCapture : MonoBehaviour
 
     private void OnClickDownload()
     {
-        if (captureRect == null)
+        if (!gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("[CertificateDownloadCapture] Chưa gán captureRect.");
+            Debug.LogWarning("[CertificateDownloadCapture] GameObject chưa active, không thể chụp.");
+            return;
+        }
+
+        StartCoroutine(CaptureAndSaveCoroutine());
+    }
+
+    /// <summary>
+    /// Cho phép script khác (vd: CertificatePreviewButton) gọi capture trực tiếp,
+    /// không cần bấm nút download.
+    /// </summary>
+    public void CaptureNow()
+    {
+        if (!gameObject.activeInHierarchy)
+        {
+            Debug.LogWarning("[CertificateDownloadCapture] GameObject chưa active, không thể chụp.");
             return;
         }
 
@@ -62,62 +72,44 @@ public class CertificateDownloadCapture : MonoBehaviour
         // 2) Chờ đến cuối frame để UI render xong
         yield return new WaitForEndOfFrame();
 
-        // 3) Lấy scaleFactor của canvas
-        float scaleFactor = 1f;
-        if (captureCanvas == null)
-            captureCanvas = captureRect.GetComponentInParent<Canvas>();
-
-        if (captureCanvas != null)
-            scaleFactor = captureCanvas.scaleFactor;
-
-        // 4) Lấy toạ độ màn hình của vùng cần chụp
-        Vector3[] corners = new Vector3[4];
-        captureRect.GetWorldCorners(corners);
-
-        float x = corners[0].x;
-        float y = corners[0].y;
-        float width = corners[2].x - corners[0].x;
-        float height = corners[2].y - corners[0].y;
-
-        int texWidth  = Mathf.RoundToInt(width  * scaleFactor);
-        int texHeight = Mathf.RoundToInt(height * scaleFactor);
+        // 3) Kích thước màn hình hiện tại (Game View / Build)
+        int texWidth  = Screen.width;
+        int texHeight = Screen.height;
 
         if (texWidth <= 0 || texHeight <= 0)
         {
-            Debug.LogWarning("[CertificateDownloadCapture] Kích thước capture không hợp lệ.");
-            // Restore lại object rồi thoát
+            Debug.LogWarning("[CertificateDownloadCapture] Screen size không hợp lệ.");
             RestoreObjects(states);
             yield break;
         }
 
-        // 5) Chụp màn hình vùng đó
+        // 4) Chụp toàn bộ màn hình
         Texture2D tex = new Texture2D(texWidth, texHeight, TextureFormat.RGB24, false);
-        Rect readRect = new Rect(x, y, width, height); // gốc (0,0) là bottom-left màn hình
+        Rect readRect = new Rect(0, 0, texWidth, texHeight);
         tex.ReadPixels(readRect, 0, 0);
         tex.Apply();
 
-        // 6) Restore lại các object đã ẩn
+        // 5) Restore lại các object đã ẩn
         RestoreObjects(states);
 
-        // 7) Encode PNG
+        // 6) Encode PNG
         byte[] pngBytes = tex.EncodeToPNG();
-        Destroy(tex);
+        UnityEngine.Object.Destroy(tex);
 
-        // 8) Đặt tên file mặc định: certificate_TenHocVien.png
+        // 7) Đặt tên file mặc định: certificate_TenHocVien.png
         string baseName = nameText != null ? nameText.text : "certificate";
         string safeName = MakeSafeFileName(baseName);
         string defaultFileName = $"{fileNamePrefix}{safeName}.png";
 
-        // 9) Lấy Desktop làm folder mặc định
+        // 8) Lấy Desktop làm folder mặc định
         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
-        // 10) Hiện cửa sổ Save As cho user chọn nơi lưu
+        // 9) Hiện cửa sổ Save As cho user chọn nơi lưu
         var extensions = new[]
         {
             new ExtensionFilter("PNG Image", "png")
         };
 
-        // Chỉ hoạt động trên Standalone (Windows/Mac/Linux)
 #if !UNITY_WEBGL
         string path = StandaloneFileBrowser.SaveFilePanel(
             "Lưu chứng chỉ",
