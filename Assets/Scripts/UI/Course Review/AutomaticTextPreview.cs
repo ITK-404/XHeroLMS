@@ -14,9 +14,19 @@ public class AutomaticTextPreview : MonoBehaviour
     [SerializeField] private SRTCourseData[] sourcesData;
     [SerializeField] private AudioSource audioSource;
     private Coroutine playCoroutine;
+    private Coroutine currentWordCoroutine;
 
     private SRTCourseData currentSourceData;
     public string seoUrl;
+
+    // Track whether any word has been spawned
+    private bool hasSpawned = false;
+
+    // Timer fields
+    private Coroutine timerCoroutine;
+    private bool timerCompleted = false;
+    private float timerElapsed = 0f;
+
     private void Start()
     {
         audioSource = GetComponent<AudioSource>();
@@ -25,13 +35,16 @@ public class AutomaticTextPreview : MonoBehaviour
     [ContextMenu("Create Text")]
     public void CreateText()
     {
+        hasSpawned = false; // reset when creating
+        StopTimer();
+
         if (string.IsNullOrEmpty(seoUrl))
         {
             Debug.Log("Không có seo url");
             return;
         }
 
-        foreach(var item in sourcesData)
+        foreach (var item in sourcesData)
         {
             if (item.seoUrl == seoUrl)
             {
@@ -44,11 +57,18 @@ public class AutomaticTextPreview : MonoBehaviour
         if (currentSourceData == null) return;
 
         scrollRect.gameObject.SetActive(true);
-        // stop any running playback
+
+        // Stop any running playback
         if (playCoroutine != null)
         {
             StopCoroutine(playCoroutine);
             playCoroutine = null;
+        }
+
+        if (currentWordCoroutine != null)
+        {
+            StopCoroutine(currentWordCoroutine);
+            currentWordCoroutine = null;
         }
 
         // Clear previous items
@@ -58,105 +78,198 @@ public class AutomaticTextPreview : MonoBehaviour
                 Destroy(container.GetChild(i).gameObject);
         }
 
+        isShowTextDone = false;
         playCoroutine = StartCoroutine(PlaySubtitlesCoroutine());
     }
 
     public void StopText()
     {
-        if(playCoroutine != null)
+        if (playCoroutine != null)
         {
             StopCoroutine(playCoroutine);
+            playCoroutine = null;
         }
+
+        if (currentWordCoroutine != null)
+        {
+            StopCoroutine(currentWordCoroutine);
+            currentWordCoroutine = null;
+        }
+        StopAllCoroutines();
         scrollRect.gameObject.SetActive(false);
         audioSource.Stop();
         isShowTextDone = true;
+        hasSpawned = false;
+        StopTimer();
+        timerCompleted = false;
     }
 
     private IEnumerator PlaySubtitlesCoroutine()
     {
+        yield return new WaitForSeconds(6);
+
         if (textPrefab == null || container == null)
             yield break;
-
-        // Collect entries from provided sources
 
         SRTCourseData sourceData = currentSourceData;
 
         var entries = new List<SrtEntry>();
         entries = sourceData.srtEntries;
+        
+        if (entries.Count == 0)
+        {
+            Debug.Log($"No entries found: {entries.Count}");
+            yield break;
+        }
         audioSource.clip = sourceData.voiceClip;
         audioSource.Play();
-
-        if (sourcesData != null && sourcesData.Length > 0)
-        {
-            foreach (var src in sourcesData)
-            {
-                if (src == null) continue;
-                if (src.srtEntries != null && src.srtEntries.Count > 0)
-                    entries.AddRange(src.srtEntries);
-                else if (src.srtAsset != null)
-                    entries.AddRange(SrtReader.Parse(src.srtAsset));
-            }
-        }
-
-        if (entries.Count == 0)
-            yield break;
 
         // Sort by start time
         entries.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        float currentTime = 0f;
+        int currentIndex = 0;
 
-        foreach (var entry in entries)
+        while (audioSource.isPlaying && currentIndex < entries.Count)
         {
-            // wait until the entry.Start relative to previous played time
-            var waitBefore = Mathf.Max(0f, entry.Start - currentTime);
-            if (waitBefore > 0f)
-                yield return new WaitForSeconds(waitBefore);
+            float audioTime = audioSource.time;
 
-            // Clear previous subtitle(s)
-            for (int i = container.childCount - 1; i >= 0; i--)
-                Destroy(container.GetChild(i).gameObject);
-
-            // Instantiate and set text (preserve multi-line text)
-            var textInstance = Instantiate(textPrefab, container);
-            textInstance.text = entry.Text ?? string.Empty;
-
-            // Optionally ensure container/viewport scroll to start
-            if (scrollRect != null)
+            // Check if we need to display the current entry
+            if (audioTime >= entries[currentIndex].Start)
             {
-                // Small animation to ensure content is visible (if content wider than viewport)
-                float contentWidth = container.rect.width;
-                float viewportWidth = scrollRect.viewport.rect.width;
-                if (contentWidth > viewportWidth)
-                    scrollRect.horizontalNormalizedPosition = 0f;
-                else
-                    scrollRect.horizontalNormalizedPosition = 0f;
+                // Stop previous word spawn if any
+                if (currentWordCoroutine != null)
+                {
+                    StopCoroutine(currentWordCoroutine);
+                }
+
+                // Start spawning words for this entry
+                currentWordCoroutine = StartCoroutine(SpawnWordsForEntry(entries[currentIndex]));
+                currentIndex++;
             }
 
-            // Show for duration (end - start). Minimum small duration to avoid zero-wait.
-            var duration = Mathf.Max(0.05f, entry.End - entry.Start);
-            yield return new WaitForSeconds(duration);
-
-            currentTime = entry.End;
+            yield return null;
         }
 
-        yield return new WaitForSeconds(0.25f);
+        // Wait for the last word coroutine to finish
+        if (currentWordCoroutine != null)
+        {
+            yield return currentWordCoroutine;
+        }
+
+        yield return new WaitForSeconds(1);
+
+        // Clear all text
         for (int i = container.childCount - 1; i >= 0; i--)
             Destroy(container.GetChild(i).gameObject);
 
         playCoroutine = null;
-
         isShowTextDone = true;
+        hasSpawned = false;
+        // Note: timerCompleted is not modified here; timer lifecycle handled by StartTimer/StopTimer
+    }
+
+    private IEnumerator SpawnWordsForEntry(SrtEntry entry)
+    {
+        var description = entry.Text;
+        var duration = entry.End - entry.Start;
+        var words = description.Split(new[] { ' ', '\t', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        if (words.Length == 0)
+            yield break;
+
+        float totalSeconds = Mathf.Max(0, duration);
+        float timePerWord = totalSeconds / words.Length;
+
+        // Mark that spawning has begun for this entry
+        hasSpawned = true;
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            var textInstance = Instantiate(textPrefab, container);
+            textInstance.text = words[i];
+            textInstance.alpha = 0;
+            textInstance.DOFade(1, 0.1f);
+            // Force layout rebuild to get correct width
+            LayoutRebuilder.ForceRebuildLayoutImmediate(container);
+
+            float contentWidth = container.rect.width;
+            float viewportWidth = scrollRect.viewport.rect.width;
+
+            // Auto scroll to the right if content exceeds viewport
+            if (contentWidth > viewportWidth)
+            {
+                scrollRect.DOHorizontalNormalizedPos(1, 0.1f);
+            }
+
+            yield return new WaitForSeconds(timePerWord);
+        }
+
+        currentWordCoroutine = null;
     }
 
     private bool isShowTextDone = false;
 
-    public bool IsTextPlayDone()
+    public bool IsPlaying()
     {
-        if(currentSourceData == null)
+        if (currentSourceData == null)
         {
-            return true;
+            return false;
         }
-        return isShowTextDone;
+        if(audioSource.clip == null)
+        {
+            return false;
+        }
+        return isShowTextDone == false;
+    }
+
+    // Public accessor to check if any word has been spawned
+    public bool HasSpawned()
+    {
+        return hasSpawned;
+    }
+
+    public float GetPlayTime() { return currentSourceData ? currentSourceData.time : 0; }
+
+    // Timer API
+    public void StartTimer()
+    {
+        StopTimer();
+        timerCompleted = false;
+        timerElapsed = 0f;
+        timerCoroutine = StartCoroutine(TimerCoroutine());
+    }
+
+    public void StopTimer()
+    {
+        if (timerCoroutine != null)
+        {
+            StopCoroutine(timerCoroutine);
+            timerCoroutine = null;
+        }
+        timerElapsed = 0f;
+    }
+
+    private IEnumerator TimerCoroutine()
+    {
+        float required = GetPlayTime();
+        if (required <= 0f)
+        {
+            timerCompleted = true;
+            yield break;
+        }
+
+        while (timerElapsed < required)
+        {
+            timerElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        timerCompleted = true;
+        timerCoroutine = null;
+    }
+
+    public bool IsTimerCompleted()
+    {
+        return timerCompleted;
     }
 }

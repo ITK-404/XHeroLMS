@@ -8,6 +8,9 @@ public class SRTCourseData : ScriptableObject
     public List<SrtEntry> srtEntries = new();
     public TextAsset srtAsset;
     public AudioClip voiceClip;
+    [Header("Raw Data")]
+    [TextArea] public string Description;
+    public float time = 30;
 
     [ContextMenu("Convert Data")]
     private void CreateData()
