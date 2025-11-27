@@ -25,7 +25,9 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
+    // public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
+    // public string baseUrl = SecurityConfig.GetBaseUrl();
+    [NonSerialized] public string baseUrl;
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
@@ -79,6 +81,9 @@ public class LmsStore : MonoBehaviour
     {
         if (_instance && _instance != this) { Destroy(gameObject); return; }
         _instance = this; DontDestroyOnLoad(gameObject);
+
+        baseUrl = SecurityConfig.GetBaseUrl();
+        
         if (autoLoadOnAwake) LoadFromDisk();
         RebuildIndexes();
     }
