@@ -43,6 +43,19 @@ public class BackgroundMusicManager : MonoBehaviour
                 musicSource.Play();
             }
         }
+        SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
+    }
+
+    private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
+    {
+        if(arg1.name == "New Scene")
+        {
+            ResumeWithFade();
+        }
+        else
+        {
+            PauseWithFade();
+        }
     }
 
     private void PlayMusic(AudioClip clip, float volume)
