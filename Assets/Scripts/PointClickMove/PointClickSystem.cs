@@ -35,6 +35,7 @@ public class PointClickSystem : MonoBehaviour
 
     private bool isClickMoving = false;
     private Vector3 lookTargetWorldPos;
+    private float defaultSpeed;
 
     // ===== VFX move indicator =====
     [Header("Move VFX")]
@@ -51,6 +52,9 @@ public class PointClickSystem : MonoBehaviour
     {
         ai = GetComponent<IAstarAI>();
         characterController = GetComponent<CharacterController>();
+
+        if (ai != null)
+            defaultSpeed = ai.maxSpeed;
     }
 
     void Update()
@@ -302,6 +306,8 @@ public class PointClickSystem : MonoBehaviour
                 {
                     ai.isStopped = false;
                     ai.canMove = true;
+
+                    ai.maxSpeed = defaultSpeed * 2f;
                     ai.destination = groundPos;
                    
                 }
@@ -394,6 +400,8 @@ public class PointClickSystem : MonoBehaviour
             RotateToVelocity();
             yield return null;
         }
+
+        ai.maxSpeed = defaultSpeed;
 
         Debug.Log("Đã tới vị trí ngồi");
         callback?.Invoke();
