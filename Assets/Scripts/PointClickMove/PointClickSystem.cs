@@ -1,4 +1,6 @@
-﻿using Pathfinding;
+﻿using DG.Tweening;
+using Pathfinding;
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -116,6 +118,22 @@ public class PointClickSystem : MonoBehaviour
 
         // Vừa đi vừa xoay mượt về phía điểm đã click
         HandleClickMoveRotation();
+    }
+
+    private void RotationByVelocity()
+    {
+        Vector3 moveDir = ai.velocity;
+        moveDir.y = 0f; // Ignore vertical component for rotation
+
+        if (moveDir.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRot,
+                rotationLerpSpeed * Time.deltaTime
+            );
+        }
     }
 
     // ===== vừa move vừa xoay mượt về lookTargetWorldPos =====
@@ -291,14 +309,19 @@ public class PointClickSystem : MonoBehaviour
                 isClickMoving = false;
                 HideMoveVfx(); // VFX
                 Debug.Log($"House hit box ?");
-
+                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+                {
+                    transform.DORotateQuaternion(hitTransform.rotation, 1);
+                }));
                 return true;
             }
         }
 
         return false;
     }
-    
+
+
+
     private bool MoveToChairHandle(Ray ray)
     {
         if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
@@ -326,7 +349,10 @@ public class PointClickSystem : MonoBehaviour
 
                 currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                 if (currentCheckPoint != null)
-                    waitMoveToChair = StartCoroutine(WaitForRechPos());
+                    waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+                    {
+                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
+                    }));
 
                 // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
                 isClickMoving = false;
@@ -339,18 +365,38 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    private IEnumerator WaitForRechPos()
+    private void RotateToVelocity()
+    {
+        if (ai != null && ai.canMove && !ai.isStopped)
+        {
+            Vector3 moveDir = ai.velocity;
+            moveDir.y = 0f; // Ignore vertical component for rotation
+
+            if (moveDir.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    targetRot,
+                    rotationLerpSpeed * Time.deltaTime
+                );
+            }
+        }
+    }
+
+    private IEnumerator WaitForRechPos(Action callback)
     {
         if (ai == null)
             yield break;
 
         while (!ai.reachedDestination)
         {
+            RotateToVelocity();
             yield return null;
         }
 
         Debug.Log("Đã tới vị trí ngồi");
-        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
+        callback?.Invoke();
     }
 
     private void OnDrawGizmos()
