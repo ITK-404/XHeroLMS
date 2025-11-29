@@ -363367,6 +363367,28 @@ MonoBehaviour:
   limit: 10
   requestTimeout: 15
   debugVerbose: 1
+--- !u!114 &2077084839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2077084830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cdbf472d2ac8f44eb2c33b9ee765c91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RuntimePerfSampler
+  autoStartOnPlay: 0
+  sampleDuration: 20
+  <IsRunning>k__BackingField: 0
+  <HasResult>k__BackingField: 0
+  <AvgFps>k__BackingField: 0
+  <MinFps>k__BackingField: 0
+  <MaxFps>k__BackingField: 0
+  <Elapsed>k__BackingField: 0
+  _frameCount: 0
+  _sumFps: 0
 --- !u!1 &2077232087 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7164199793909703856, guid: 6be834408b638d54e9c3c490d55ce819, type: 3}
@@ -374051,6 +374073,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2923626319511774526, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2077084833}
+    - targetCorrespondingSourceObject: {fileID: 2923626319511774526, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2077084839}
   m_SourcePrefab: {fileID: 100100000, guid: 3a79348c9e014f8489b04ba784b172ab, type: 3}
 --- !u!4 &3705668464690039549 stripped
 Transform:
