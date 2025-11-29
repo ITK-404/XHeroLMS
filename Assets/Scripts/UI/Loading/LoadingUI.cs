@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -8,77 +9,86 @@ public static class LoadingUI
 {
     private const string DEFAULT_IMG1_PATH = "IMG_XHeroLMS/Img1";
     private const string DEFAULT_IMG2_PATH = "IMG_XHeroLMS/Img2";
-
-    private static RingFaderOverlay _overlay;
-
-    private static Canvas _canvas;       
-    private static GameObject _panel;
+    private const string DEFAULT_POPUP_PATH = "Login_Popup/Failed Login Popup UI Variant";
 
     private static Sprite _cachedCenter;
     private static Sprite _cachedSatellite;
 
-    /// <summary>Hiện overlay loading với nền đen mờ và cấu hình mặc định.</summary>
-    public static void Show()
+    private static Canvas _canvas;
+    private static GameObject _panel;
+    private static RingFaderOverlay _overlay;
+
+    private static LoadingUICoroutineHost _host;
+    private static Coroutine _timeoutRoutine;
+    private static string _timeoutMessage;
+    private static string _timeoutHeader;
+
+public static void Show(float timeoutSeconds = 0f,
+                        string timeoutMessage = "Hệ thống đang xử lý quá lâu.\nVui lòng kiểm tra kết nối mạng hoặc thử lại sau.",
+                        string timeoutHeader  = "Timeout")
+{
+    try
     {
-        // Nếu đã tạo rồi: chỉ bật lại root Canvas
-        if (_canvas != null)
+        InternalShow();
+
+        // CHỈ start timeout nếu chưa có
+        if (_timeoutRoutine == null && timeoutSeconds > 0f)
         {
-            _canvas.gameObject.SetActive(true);
-            if (_overlay != null) _overlay.Resume();
-            return;
+            StartTimeout(timeoutSeconds, timeoutMessage, timeoutHeader);
         }
-        
-        _canvas = EnsureOverlayCanvas();      
-        EnsureEventSystem();
-        
-        _panel = new GameObject("~LoadingPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)); // <--- lưu lại
-        var panelRT = _panel.GetComponent<RectTransform>();
-        var panelImg = _panel.GetComponent<Image>();
-        panelRT.SetParent(_canvas.transform, false);
-        panelRT.anchorMin = Vector2.zero;
-        panelRT.anchorMax = Vector2.one;
-        panelRT.offsetMin = Vector2.zero;
-        panelRT.offsetMax = Vector2.zero;
-        panelImg.color = new Color(0f, 0f, 0f, 240f / 255f);
-        panelImg.raycastTarget = true;
-        
-        var go = new GameObject("~RingFaderOverlay", typeof(RectTransform), typeof(RingFaderOverlay));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(panelRT, false);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = Vector2.zero;
+    }
+    catch (System.Exception ex)
+    {
+        Debug.LogError("LoadingUI.Show() ERROR: " + ex.Message);
+        Debug.LogException(ex);
+        ShowErrorPopup("Có lỗi khi khởi tạo LoadingUI.\n" + ex.Message, "Lỗi hệ thống");
+        Hide();
+    }
+}
 
-        _overlay = go.GetComponent<RingFaderOverlay>();
+private static void StartTimeout(float timeoutSeconds, string message, string header)
+{
+    if (timeoutSeconds <= 0f) return;
 
-        if (_cachedCenter == null) _cachedCenter = Resources.Load<Sprite>(DEFAULT_IMG1_PATH);
-        if (_cachedSatellite == null) _cachedSatellite = Resources.Load<Sprite>(DEFAULT_IMG2_PATH);
+    var host = EnsureHost();
+    _timeoutMessage = message;
+    _timeoutHeader  = header;
 
-        _overlay.centerSprite = _cachedCenter;
-        _overlay.satelliteSprite = _cachedSatellite;
-        
-        _overlay.satelliteCount = 16;
-        _overlay.radius = 140f;
-        _overlay.faceInward = false;
-        _overlay.cycleSeconds = 1.2f;
-        _overlay.minAlpha = 0.15f;
-        _overlay.maxAlpha = 1f;
-        _overlay.phaseStep = 1f / 16f;
+    // KHÔNG cần stop cũ nữa vì đã check _timeoutRoutine == null ở Show()
+    _timeoutRoutine = host.StartCoroutine(TimeoutRoutine(timeoutSeconds));
+}
 
-        _overlay.BuildAndPlay();
+private static IEnumerator TimeoutRoutine(float seconds)
+{
+    Debug.Log($"[LoadingUI] TimeoutRoutine started: {seconds}s (realtime)");
+    yield return new WaitForSecondsRealtime(seconds);
 
-        Object.DontDestroyOnLoad(_canvas.gameObject);
+    if (_canvas != null && _canvas.gameObject.activeSelf)
+    {
+        Debug.LogWarning("[LoadingUI] Timeout, auto hide + show popup.");
+
+        Hide();
+
+        if (!string.IsNullOrEmpty(_timeoutMessage))
+            ShowErrorPopup(_timeoutMessage, _timeoutHeader);
     }
 
-    /// <summary>Ẩn overlay (panel vẫn tồn tại để bật lại nhanh).</summary>
+    _timeoutRoutine = null;
+}
+
     public static void Hide()
     {
-        // if (_overlay != null) _overlay.gameObject.SetActive(false);
         if (_canvas != null)
             _canvas.gameObject.SetActive(false);
+
+        if (_host != null && _timeoutRoutine != null)
+        {
+            _host.StopCoroutine(_timeoutRoutine);
+            _timeoutRoutine = null;
+        }
     }
 
-    /// <summary>Huỷ hoàn toàn overlay + panel + canvas.</summary>
+
     public static void Destroy()
     {
         if (_overlay != null)
@@ -97,23 +107,165 @@ public static class LoadingUI
             _canvas = null;
         }
     }
+
+    // =============================
+    // INTERNAL BUILD
+    // =============================
+
+    private static void InternalShow()
+{
+    try
+    {
+        InternalShowUnsafe();
+    }
+    catch (System.Exception ex)
+        {
+        // ShowErrorPopup("Không thể hiển thị LoadingUI.\n" + ex.Message);
+        ShowErrorPopup("Thiếu resource IMG_XHeroLMS/Img1 hoặc Img2.\nKhông thể tạo loading animation.", "Lỗi giao diện");
+        Hide();
+    }
+}
+
+    private static void InternalShowUnsafe()
+    {
+        // Canvas đã có thì bật lại
+        if (_canvas != null)
+        {
+            _canvas.gameObject.SetActive(true);
+            if (_overlay != null) _overlay.Resume();
+            return;
+        }
+
+        _canvas = EnsureOverlayCanvas();
+        EnsureEventSystem();
+
+        // ========= Panel nền đen =========
+        _panel = new GameObject("~LoadingPanel",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image));
+
+        var panelRT = _panel.GetComponent<RectTransform>();
+        var panelImg = _panel.GetComponent<Image>();
+
+        panelRT.SetParent(_canvas.transform, false);
+        panelRT.anchorMin = Vector2.zero;
+        panelRT.anchorMax = Vector2.one;
+        panelRT.offsetMin = Vector2.zero;
+        panelRT.offsetMax = Vector2.zero;
+
+        panelImg.color = new Color(0, 0, 0, 240f / 255f);
+        panelImg.raycastTarget = true;
+
+        // ========= Overlay =========
+        var go = new GameObject("~RingFaderOverlay",
+            typeof(RectTransform), typeof(RingFaderOverlay));
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(panelRT, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+
+        _overlay = go.GetComponent<RingFaderOverlay>();
+
+        // Load sprite
+        if (_cachedCenter == null)
+            _cachedCenter = Resources.Load<Sprite>(DEFAULT_IMG1_PATH);
+        if (_cachedSatellite == null)
+            _cachedSatellite = Resources.Load<Sprite>(DEFAULT_IMG2_PATH);
+
+        if (_cachedCenter == null || _cachedSatellite == null)
+        {
+            ShowErrorPopup("Thiếu resource IMG_XHeroLMS/Img1 hoặc Img2.\nKhông thể tạo loading animation.");
+            Hide();
+            return;
+        }
+
+        // Setup overlay
+        _overlay.centerSprite = _cachedCenter;
+        _overlay.satelliteSprite = _cachedSatellite;
+        _overlay.satelliteCount = 16;
+        _overlay.radius = 140;
+        _overlay.faceInward = false;
+        _overlay.cycleSeconds = 1.2f;
+        _overlay.minAlpha = 0.15f;
+        _overlay.maxAlpha = 1f;
+        _overlay.phaseStep = 1f / 16f;
+
+        _overlay.BuildAndPlay();
+
+        Object.DontDestroyOnLoad(_canvas.gameObject);
+    }
+    
+public static void ShowErrorPopup(string message,
+                                  string header = "Lỗi hệ thống",
+                                  UnityAction onReturn = null)
+{
+    GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
+    if (prefab == null)
+    {
+        Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
+        return;
+    }
+
+    // Canvas riêng cho popup
+    var popupCanvasGO = new GameObject("~LoadingErrorCanvas",
+        typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+
+    var canvas = popupCanvasGO.GetComponent<Canvas>();
+    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+    canvas.sortingOrder = 32761;
+
+    var scaler = popupCanvasGO.GetComponent<CanvasScaler>();
+    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+    scaler.referenceResolution = new Vector2(1920, 1080);
+
+    // Instantiate popup
+    GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
+    var ui = popup.GetComponent<LoginPopupUI>();
+
+    if (ui == null)
+    {
+        Debug.LogError("Prefab popup không chứa LoginPopupUI!");
+        return;
+    }
+
+    // Gộp callback hủy + đóng UI
+    UnityAction combined = () =>
+    {
+        // 1. Cho caller hủy API / video / coroutine
+        onReturn?.Invoke();
+
+        // 2. Tắt loading + popup canvas
+        Hide();
+        Object.Destroy(popupCanvasGO);
+    };
+
+    ui.Init(header, message, combined);
+}
     
     private static Canvas EnsureOverlayCanvas()
     {
         var existing = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+
         foreach (var c in existing)
         {
-            if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.name == "~LoadingCanvas")
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay &&
+                c.name == "~LoadingCanvas")
                 return c;
         }
 
-        var goCanvas = new GameObject("~LoadingCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var goCanvas = new GameObject("~LoadingCanvas",
+            typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+
         var canvas = goCanvas.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 32760;
+
         var scaler = goCanvas.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
+
         return canvas;
     }
 
@@ -121,163 +273,20 @@ public static class LoadingUI
     {
         if (Object.FindFirstObjectByType<EventSystem>() == null)
         {
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var es = new GameObject("EventSystem",
+                typeof(EventSystem),
+                typeof(StandaloneInputModule));
+
             Object.DontDestroyOnLoad(es);
         }
     }
-}
-
-public class RingFaderOverlay : MonoBehaviour
-{
-    [Header("Sprites")]
-    public Sprite centerSprite;
-    public Sprite satelliteSprite;
-
-    [Header("Layout")]
-    public Vector2 centerSize = new Vector2(160, 160);
-    public int satelliteCount = 16;
-    public float radius = 140f;
-    public Vector2 satelliteSize = new Vector2(48, 48);
-    public float startAngleDeg = 90f;
-    public bool faceInward = false;
-
-    [Header("Fade")]
-    public float cycleSeconds = 1.2f;
-    [Range(0f, 1f)] public float minAlpha = 0.15f;
-    [Range(0f, 1f)] public float maxAlpha = 1f;
-    [Range(0f, 1f)] public float phaseStep = 1f / 16f;
-
-    private readonly List<CanvasGroup> _cgs = new();
-    private readonly List<Coroutine> _running = new();
-    private bool _built;
-
-    Image _centerImage;
-
-    public void BuildAndPlay()
+    private static LoadingUICoroutineHost EnsureHost()
     {
-        StopFades();
-        Rebuild();
-        StartFades();
-        _built = true;
-    }
+        if (_host != null) return _host;
 
-    void OnEnable()
-    {
-        // Khi canvas/GO được bật lại, nếu đã build trước đó thì khởi động lại fades
-        if (_built)
-        {
-            StartFades();
-        }
-        else
-        {
-            // phòng trường hợp lần đầu bật mà chưa build
-            if (centerSprite || satelliteSprite) BuildAndPlay();
-        }
-    }
-
-    void OnDisable() => StopFades();
-
-    public void Resume()                     // <--- NEW
-    {
-        if (!_built || _cgs.Count == 0 || transform.childCount == 0)
-            Rebuild();                       // nếu chưa có child/CG thì rebuild
-        StartFades();
-        _built = true;
-    }
-
-    public void Rebuild()
-    {
-        // clear
-        var trash = new List<GameObject>();
-        for (int i = 0; i < transform.childCount; i++)
-            trash.Add(transform.GetChild(i).gameObject);
-        foreach (var t in trash) Destroy(t);
-
-        _cgs.Clear();
-
-        // center
-        if (centerSprite)
-        {
-            var go = new GameObject("center", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            var rt = go.GetComponent<RectTransform>();
-            _centerImage = go.GetComponent<Image>();
-            _centerImage.sprite = centerSprite;
-            _centerImage.preserveAspect = true;
-
-            rt.SetParent(transform, false);
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = centerSize;
-        }
-
-        // satellites
-        if (satelliteSprite)
-        {
-            float step = 360f / Mathf.Max(1, satelliteCount);
-            for (int i = 0; i < satelliteCount; i++)
-            {
-                var go = new GameObject($"satellite_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup));
-                var rt = go.GetComponent<RectTransform>();
-                var img = go.GetComponent<Image>();
-                var cg = go.GetComponent<CanvasGroup>();
-
-                go.transform.SetParent(transform, false);
-
-                img.sprite = satelliteSprite;
-                img.preserveAspect = true;
-                rt.sizeDelta = satelliteSize;
-
-                float angle = startAngleDeg + i * step;
-                float rad = angle * Mathf.Deg2Rad;
-                Vector2 pos = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * radius;
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = pos;
-
-                if (faceInward)
-                {
-                    Vector2 dirToCenter = -pos.normalized;
-                    float ang = Mathf.Atan2(dirToCenter.y, dirToCenter.x) * Mathf.Rad2Deg;
-                    rt.localRotation = Quaternion.Euler(0, 0, ang + 90f);
-                }
-                else
-                {
-                    Vector2 lookOut = pos.normalized;
-                    float ang = Mathf.Atan2(lookOut.y, lookOut.x) * Mathf.Rad2Deg;
-                    rt.localRotation = Quaternion.Euler(0, 0, ang - 90f);
-                }
-
-                cg.alpha = minAlpha;
-                _cgs.Add(cg);
-            }
-        }
-    }
-
-    public void StartFades()
-    {
-        StopFades();
-        for (int i = 0; i < _cgs.Count; i++)
-        {
-            float phase = i * phaseStep;
-            _running.Add(StartCoroutine(FadeLoop(_cgs[i], phase)));
-        }
-    }
-
-    public void StopFades()
-    {
-        foreach (var c in _running) if (c != null) StopCoroutine(c);
-        _running.Clear();
-    }
-
-    IEnumerator FadeLoop(CanvasGroup cg, float phase01)
-    {
-        float twoPi = Mathf.PI * 2f;
-        while (true)
-        {
-            if (!cg) yield break;
-            float t = (Time.time / cycleSeconds + phase01) % 1f;
-            float s = (Mathf.Sin(t * twoPi) + 1f) * 0.5f;
-            cg.alpha = Mathf.Lerp(minAlpha, maxAlpha, s);
-            yield return null;
-        }
+        var go = new GameObject("~LoadingUICoroutineHost");
+        Object.DontDestroyOnLoad(go);
+        _host = go.AddComponent<LoadingUICoroutineHost>();
+        return _host;
     }
 }

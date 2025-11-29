@@ -1,12 +1,17 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class OpenDoor : MonoBehaviour
 {
     private static readonly int IsOpen = Animator.StringToHash("IsOpen");
     public Animator doorAnimator;
     public Collider TriggerDoorCol;
+
+    private bool isOpenDoor = false;    
     private void OnTriggerEnter(Collider other)
     {
+        if (isOpenDoor == false) return;
+
         if (IsPlayer(other))
         {
             // open
@@ -17,6 +22,8 @@ public class OpenDoor : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (isOpenDoor == false) return;
+
         if (IsPlayer(other))
         {
             // close
@@ -27,6 +34,6 @@ public class OpenDoor : MonoBehaviour
 
     private bool IsPlayer(Collider other)
     {
-        return other.CompareTag("Player");
+        return other.CompareTag("Player") && TokenStore.IsAuthenticated;
     }
 }

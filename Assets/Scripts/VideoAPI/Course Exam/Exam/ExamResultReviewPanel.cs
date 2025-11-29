@@ -13,17 +13,23 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [SerializeField] private GameObject correctStatusObj;
     [SerializeField] private GameObject wrongStatusObj;
     [SerializeField] private GameObject informationPanel;
+
     [Header("Close")]
     [SerializeField] private Button closeBtn;
 
     [Header("Root")]
     [SerializeField] private GameObject reviewRoot;
     [SerializeField] private CertificatesExamUI certificatesExamUI;
+
     // ----- state review -----
     private ExamPaper _paper;
-    private Dictionary<string, HashSet<int>> _userPicked;     // q.id -> indices user chọn (0-based)
-    private Dictionary<string, HashSet<int>> _correctPicked;  // q.id -> indices đúng (có thể 0/1-based từ API, sẽ convert khi dùng)
-    private Dictionary<string, HashSet<string>> _correctByText; // q.id -> normalized correct texts
+    private Dictionary<string, HashSet<int>> _userPicked;        // q.id -> indices user chọn (0-based)
+    private Dictionary<string, HashSet<int>> _correctPicked;     // q.id -> indices đúng (có thể 0/1-based từ API)
+    private Dictionary<string, HashSet<string>> _correctByText;  // q.id -> normalized correct texts
+
+    // Lưu lại bài tự luận người dùng đã nhập: q.id -> text
+    private Dictionary<string, string> _essayMapReview = new();
+
     private int _idx;
 
     public static bool FlagContinue { get; set; }
@@ -36,14 +42,23 @@ public class ExamResultReviewPanel : ExamQuestionManager
         Dictionary<string, HashSet<int>> userPicked,
         Dictionary<string, List<int>> correctAnswers,
         int startIndex = 0,
-        Dictionary<string, List<string>> correctAnswerTexts = null)
+        Dictionary<string, List<string>> correctAnswerTexts = null,
+        Dictionary<string, string> essayMapFromExam = null)
     {
         SetReviewMode(true);
 
         if (typeHintRoot != null)
             typeHintRoot.SetActive(false);
 
-        _paper = paper;
+        // copy bài tự luận từ ExamQuestionManager
+        _essayMapReview = new Dictionary<string, string>();
+        if (essayMapFromExam != null)
+        {
+            foreach (var kv in essayMapFromExam)
+                _essayMapReview[kv.Key] = kv.Value;
+        }
+
+        _paper      = paper;
         _userPicked = userPicked ?? new();
 
         // Lưu tạm set đáp án đúng dạng raw index (có thể 0-based hoặc 1-based tuỳ API)
@@ -63,7 +78,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
         {
             foreach (var kv in correctAnswerTexts)
             {
-                var set = new HashSet<string>();
+                var set  = new HashSet<string>();
                 var list = kv.Value ?? new List<string>();
                 for (int i = 0; i < list.Count; i++)
                 {
@@ -80,7 +95,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
         var root = reviewRoot != null ? reviewRoot : gameObject;
         root.SetActive(true);
-        // gameObject.SetActive(true);
 
         RebuildNavForReview();
         HijackBaseNav();
@@ -102,16 +116,18 @@ public class ExamResultReviewPanel : ExamQuestionManager
         SetReviewMode(false);
 
         // reset trạng thái review
-        _paper         = null;
-        _userPicked    = null;
-        _correctPicked = null;
-        _correctByText = null;
-        _idx           = 0;
+        _paper          = null;
+        _userPicked     = null;
+        _correctPicked  = null;
+        _correctByText  = null;
+        _essayMapReview = new Dictionary<string, string>();
+        _idx            = 0;
 
         if (correctStatusObj) correctStatusObj.SetActive(false);
         if (wrongStatusObj)  wrongStatusObj.SetActive(false);
-        if(informationPanel) informationPanel.gameObject.SetActive(false);
+        if (informationPanel) informationPanel.gameObject.SetActive(false);
         certificatesExamUI.Hide();
+
         // xóa hết nội dung câu hỏi/đáp án đang spawn
         ClearContent();
 
@@ -170,9 +186,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
     // ----------------- render review (read-only) -----------------
     private void RenderReview()
     {
-        // if (typeHintRoot != null)
-        //     typeHintRoot.SetActive(false);
-        
         if (_paper == null || _paper.questions == null || _paper.questions.Count == 0)
             return;
 
@@ -197,6 +210,14 @@ public class ExamResultReviewPanel : ExamQuestionManager
         var head = Instantiate(prefabCauHoi, content);
         head.text = $"{_idx + 1}. {q.title}";
 
+        // ==== xác định loại câu hỏi hiệu dụng ====
+        var effectiveType = q.type;
+        if (_essayMapReview != null && _essayMapReview.ContainsKey(q.id))
+        {
+            // nếu có lưu bài tự luận cho câu này thì coi nó là ESSAY
+            effectiveType = ExamQuestionType.ESSAY;
+        }
+
         // map chọn/đúng
         _userPicked.TryGetValue(q.id, out var userSet);
         userSet ??= new HashSet<int>();
@@ -209,22 +230,37 @@ public class ExamResultReviewPanel : ExamQuestionManager
         HashSet<string> correctTextSet = null;
         if (_correctByText != null) _correctByText.TryGetValue(q.id, out correctTextSet);
 
-        // Chỉ dùng để xét đúng/sai toàn câu (KHÔNG hiển thị chi tiết đáp án)
-        bool exactlyCorrect = IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
-        if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
-        if (wrongStatusObj) wrongStatusObj.SetActive(!exactlyCorrect);
-        if (informationPanel) informationPanel.SetActive(true);
+        bool exactlyCorrect;
 
-        if (certificatesExamUI && exactlyCorrect)
+        if (effectiveType == ExamQuestionType.ESSAY)
         {
-            certificatesExamUI.Show();
+            // ESSAY: chỉ cần có text là ĐÚNG, bỏ trắng là SAI
+            if (_essayMapReview != null &&
+                _essayMapReview.TryGetValue(q.id, out var txt) &&
+                !string.IsNullOrWhiteSpace(txt))
+            {
+                exactlyCorrect = true;
+            }
+            else
+            {
+                exactlyCorrect = false;
+            }
+        }
+        else
+        {
+            // SINGLE / MULTIPLE / MATCHING dùng chung logic
+            exactlyCorrect = IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
         }
 
-        switch (q.type)
+        if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
+        if (wrongStatusObj)   wrongStatusObj.SetActive(!exactlyCorrect);
+        if (informationPanel) informationPanel.SetActive(true);
+
+        switch (effectiveType)
         {
             case ExamQuestionType.SINGLE_CHOICE:
             case ExamQuestionType.MULTIPLE_CHOICE:
-                // Truyền correctSet/correctTextSet vào cho đủ params, nhưng RenderChoicesReadOnly sẽ KHÔNG dùng
+            case ExamQuestionType.MATCHING:   // MATCHING chấm giống multi-choices
                 RenderChoicesReadOnly(q, userSet, correctSet, correctTextSet);
                 break;
 
@@ -234,11 +270,11 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
             default:
                 var note = Instantiate(prefabCauHoi, content);
-                note.text = $"(Type {q.type} chưa hỗ trợ review)";
+                note.text = $"(Type {effectiveType} chưa hỗ trợ review)";
                 break;
         }
 
-        // cập nhật trạng thái enable cho 2 nút (vẫn là nút của base)
+        // cập nhật trạng thái enable cho 2 nút
         if (btnBack) btnBack.interactable = _idx > 0;
         if (btnNext) btnNext.interactable = _idx < _paper.questions.Count - 1;
 
@@ -303,12 +339,38 @@ public class ExamResultReviewPanel : ExamQuestionManager
         }
     }
 
+    // ESSAY: dùng prefab GameObject chứa TMP_InputField để xem lại bài làm
     private void RenderEssayReadOnly(ExamQuestion q)
     {
-        var input = Instantiate(prefabCauTraLoiTuLuan, content);
+        if (!prefabCauTraLoiTuLuan)
+        {
+            var t = Instantiate(prefabCauHoi, content);
+            t.text = "(Thiếu prefabCauTraLoiTuLuan cho review)";
+            return;
+        }
+
+        var go = Instantiate(prefabCauTraLoiTuLuan, content);
+        var input = go.GetComponentInChildren<TMP_InputField>();
+
+        if (input == null)
+        {
+            var t = Instantiate(prefabCauHoi, content);
+            t.text = "(Prefab essay không có TMP_InputField)";
+            return;
+        }
+
         input.interactable = false;
-        input.readOnly = true;
-        input.text = "(Xem lại bài tự luận)";
+        input.readOnly     = true;
+
+        // Lấy text người dùng đã nhập
+        string saved = null;
+        if (_essayMapReview != null)
+            _essayMapReview.TryGetValue(q.id, out saved);
+
+        if (!string.IsNullOrWhiteSpace(saved))
+            input.text = saved;
+        else
+            input.text = "(Bạn chưa nhập câu trả lời)";
     }
 
     private static HashSet<int> NormalizeCorrectIndexSet(ExamQuestion q, HashSet<int> raw)
@@ -367,15 +429,15 @@ public class ExamResultReviewPanel : ExamQuestionManager
     {
         if (_paper == null || _paper.questions == null) return;
 
-        int total = _paper.questions.Count;
+        int total   = _paper.questions.Count;
         int current = Mathf.Clamp(_idx + 1, 1, total);
-        int width = total.ToString().Length;
+        int width   = total.ToString().Length;
 
         // Header counter: "01/40"
         if (counterTmp)
             counterTmp.text = $"{current.ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
 
-        // Counter của base ở dưới khung (khi review, base không tự update nên ta set tay)
+        // Counter của base ở dưới khung
         if (textQuestionCounter)
             textQuestionCounter.text = $"{current.ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
     }
@@ -383,10 +445,8 @@ public class ExamResultReviewPanel : ExamQuestionManager
     public static string NormalizeForCompare(string s)
     {
         if (string.IsNullOrEmpty(s)) return "";
-        // Giữ Clean để an toàn khi caller chưa clean
         s = ExamFormat.CleanOptionText(s);
-        // gom nhiều space thành 1, bỏ ký hiệu đầu dòng phổ biến
-        s = s.Replace('\u00A0', ' ');                 
+        s = s.Replace('\u00A0', ' ');
         s = System.Text.RegularExpressions.Regex.Replace(s, @"^[\-\–\•\●]\s*", "");
         s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
         return s.ToLowerInvariant();

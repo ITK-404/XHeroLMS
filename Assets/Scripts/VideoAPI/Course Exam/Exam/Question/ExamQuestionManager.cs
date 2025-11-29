@@ -14,7 +14,10 @@ public class ExamQuestionManager : MonoBehaviour
     [Header("Prefabs")]
     public TMP_Text prefabCauHoi;
     public AnswerButton prefabCauTraLoi;
-    public TMP_InputField prefabCauTraLoiTuLuan;
+    public GameObject prefabCauTraLoiTuLuan;
+
+    [Tooltip("Prefab cho câu hỏi MATCHING (chứa UI + ExamMatchingElement, v.v.)")]
+    public GameObject prefabMatching;
 
     [Header("Question Nav")]
     [SerializeField] private GameObject navRoot;
@@ -54,6 +57,8 @@ public class ExamQuestionManager : MonoBehaviour
 
     [Tooltip("Số câu cần dùng cho đề thi. Nếu <= 0 hoặc lớn hơn tổng câu thì sẽ dùng tất cả.")]
     private int numberOfQuestions = 0;
+
+    private CertificatesExamUI _certificatesExamUI;
     // ========================================
 
     // ===================== State =====================
@@ -65,7 +70,7 @@ public class ExamQuestionManager : MonoBehaviour
 
     // user state
     private readonly Dictionary<string, HashSet<int>> selectedMap = new();
-    private readonly Dictionary<string, string>        essayMap    = new();
+    public readonly Dictionary<string, string>        essayMap    = new();
     private readonly List<AnswerButton>               spawnedOptions = new();
 
     private readonly Dictionary<string, int> _qidToIndex = new();
@@ -80,6 +85,7 @@ public class ExamQuestionManager : MonoBehaviour
     // ===================== Lifecycle =====================
     private void Awake()
     {
+        _certificatesExamUI = FindAnyObjectByType<CertificatesExamUI>();
         _examUIController = GetComponent<ExamUIController>();
 
         // init randomizer & submission service
@@ -90,7 +96,8 @@ public class ExamQuestionManager : MonoBehaviour
             reviewPanel,
             () => getWithCorrectAnswer,
             selectedMap,
-            essayMap
+            essayMap,
+            _certificatesExamUI
         );
 
         if (navRoot) navRoot.SetActive(false);
@@ -98,7 +105,7 @@ public class ExamQuestionManager : MonoBehaviour
 
     void Start()
     {
-        numberOfQuestions= _examUIController?.Paper.Count ?? 0;
+        numberOfQuestions = _examUIController?.Paper.Count ?? 0;
     }
 
     // ===================== Public (called outside) =====================
@@ -162,11 +169,25 @@ public class ExamQuestionManager : MonoBehaviour
         {
             case ExamQuestionType.SINGLE_CHOICE:
             case ExamQuestionType.MULTIPLE_CHOICE:
-                RenderOptions(q);
+                // Nếu không có đáp án trắc nghiệm -> xem như câu tự luận
+                if (q.options == null || q.options.Count == 0)
+                {
+                    RenderEssay(q);
+                }
+                else
+                {
+                    RenderOptions(q);
+                }
                 break;
+
             case ExamQuestionType.ESSAY:
                 RenderEssay(q);
                 break;
+
+            case ExamQuestionType.MATCHING:
+                RenderMatching(q);
+                break;
+
             default:
                 SpawnQuestionText($"(Type {q.type} chưa hỗ trợ UI)");
                 break;
@@ -301,14 +322,45 @@ public class ExamQuestionManager : MonoBehaviour
             return;
         }
 
-        var input = Instantiate(prefabCauTraLoiTuLuan, content);
+        // Instantiate prefab (GameObject) chứa TMP_InputField
+        var go = Instantiate(prefabCauTraLoiTuLuan, content);
+
+        // Tìm TMP_InputField trong chính nó hoặc con của nó
+        var input = go.GetComponentInChildren<TMP_InputField>();
+        if (input == null)
+        {
+            SpawnQuestionText("(Prefab câu trả lời tự luận không có TMP_InputField)");
+            return;
+        }
+
+        // Set lại text từ essayMap nếu có
         input.text = essayMap.TryGetValue(q.id, out var saved) ? saved : "";
+
+        // Gán listener để lưu lại câu trả lời
         input.onValueChanged.RemoveAllListeners();
         input.onValueChanged.AddListener(val =>
         {
             essayMap[q.id] = val ?? "";
             RefreshSingleNavStateByQuestionId(q.id);
         });
+    }
+
+    /// <summary>
+    /// Render câu hỏi MATCHING bằng prefab riêng.
+    /// Prefab này nên chứa các ExamMatchingElement (Left/Right) + MatchingElementHandler.
+    /// </summary>
+    private void RenderMatching(ExamQuestion q)
+    {
+        if (!prefabMatching)
+        {
+            SpawnQuestionText("(Thiếu prefabMatching cho câu MATCHING)");
+            return;
+        }
+
+        // Tạo UI matching
+        var go = Instantiate(prefabMatching, content);
+
+        go.SendMessage("SetupQuestion", q, SendMessageOptions.DontRequireReceiver);
     }
 
     // ===================== Nav =====================
@@ -323,6 +375,7 @@ public class ExamQuestionManager : MonoBehaviour
         if (idx == _examUIController.currentIndex) return;
 
         _examUIController.currentIndex = idx;
+        EventHub.RaiseExamClampItem(idx);
         RenderCurrentQuestion();
         RefreshAllNavStates();
     }
@@ -412,6 +465,8 @@ public class ExamQuestionManager : MonoBehaviour
         if (idx == _examUIController.currentIndex) el.ShowSelectedAnswerButton();
         else if (IsAnswered(qid, qs[idx].type))    el.SetAnsweredButton();
         else                                       el.SetUnansweredButton();
+
+        EventHub.RaiseExamCenterItem(idx);
     }
 
     // ===================== Utils =====================
@@ -484,6 +539,8 @@ public class ExamQuestionManager : MonoBehaviour
                 => selectedMap.TryGetValue(qid, out var set) && set != null && set.Count > 0,
             ExamQuestionType.ESSAY
                 => essayMap.TryGetValue(qid, out var txt) && !string.IsNullOrWhiteSpace(txt),
+            // Hiện tại MATCHING chưa nối vào selectedMap.
+            // Khi bạn có format lưu đáp án MATCHING, có thể thêm case ở đây.
             _ => false
         };
     }
@@ -539,6 +596,7 @@ public class ExamQuestionManager : MonoBehaviour
             resultUI.gameObject.SetActive(false);
         }
     }
+
     private void UpdateTypeHint(ExamQuestionType type)
     {
         if (typeHintRoot == null || typeHintText == null) return;
@@ -555,11 +613,17 @@ public class ExamQuestionManager : MonoBehaviour
                 typeHintText.text = "Có thể chọn nhiều đáp án";
                 break;
 
+            case ExamQuestionType.MATCHING: // <-- THÊM HINT MỚI
+                typeHintRoot.SetActive(true);
+                typeHintText.text = "Nối các cặp tương ứng";
+                break;
+
             default:
                 typeHintRoot.SetActive(false);
                 break;
         }
     }
+
     public IEnumerator SubmitExamCoroutine(bool timeUp)
     {
         yield return _submissionService.SubmitExamCoroutine(timeUp);

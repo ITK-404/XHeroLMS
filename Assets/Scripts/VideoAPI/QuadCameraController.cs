@@ -50,14 +50,25 @@ public class QuadCinemachineController : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerController = FindAnyObjectByType<VideoPlayerControllerPro>();
+        playerStandUI = FindAnyObjectByType<PlayerStandUI>();
+
         if (!mainRenderCamera) mainRenderCamera = Camera.main;
         if (quad) originalQuadPos = quad.transform.position;
-
+        // assign event
         foreach (var item in toggleVideoList)
         {
             item.OnClickVideoAction += ChangeState;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        foreach (var item in toggleVideoList)
+        {
+            item.OnClickVideoAction -= ChangeState;
         }
     }
 

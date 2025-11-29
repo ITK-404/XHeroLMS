@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public class MapColliderBuilderWindow : EditorWindow
+public partial class MapColliderBuilderWindow : EditorWindow
 {
     public enum BuildMode
     {
@@ -473,8 +473,5 @@ public class MapColliderBuilderWindow : EditorWindow
         // NavigationStatic và OffMeshLinkGeneration đã bị loại bỏ trong Unity mới
         return (flags & mask) != 0;
     }
-    // Dummy type to mark generated colliders
-    [AddComponentMenu("")]
-    public class GeneratedColliderMarker : MonoBehaviour { }
 }
 #endif

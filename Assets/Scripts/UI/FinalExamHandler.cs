@@ -80,7 +80,7 @@ public class FinalExamHandler : MonoBehaviour
         
         CreateExamPrefab();
         examCamRoutine = StartCoroutine(MoveCameraAndOpenExam());
-        playerPanelUI.Hide();
+        playerPanelUI.HideAll();
     }
 
     private bool InitExamCamera()
@@ -230,7 +230,7 @@ public class FinalExamHandler : MonoBehaviour
         examCamera.rotation = endRot;
         
         playerStandUI.ShowWatchVideoUI();
-        playerPanelUI.Show();
+        playerPanelUI.ShowLoginUI();
     }
 
     private IEnumerator ResetExamRoutine()

@@ -1,3 +1,7 @@
+using UnityEditor;
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement;
+#endif
 using UnityEngine;
 
 public class HouseHandler : MonoBehaviour
@@ -50,12 +54,20 @@ public class HouseHandler : MonoBehaviour
     [ContextMenu("SetSceneToRoom")]
     private void SetSceneToRoom()
     {
+#if UNITY_EDITOR
         foreach (var item in loadRoomTriggers)
         {
+            // Record for Undo so user can revert
+            Undo.RecordObject(item, "Set Scene To Room");
             item.sceneName = sceneNameToLoad;
             item.savePlayerPosition = savePlayerPosition;
-            
+            // Mark the component dirty so Unity serializes the change
+            EditorUtility.SetDirty(item);
         }
-        
+
+        // Mark scene dirty so the Editor knows it needs saving
+        EditorSceneManager.MarkSceneDirty(gameObject.scene);
+
+#endif
     }
 }

@@ -15,6 +15,10 @@ public class CertificateItemUI : MonoBehaviour
     public TMP_Text certNameText;
     public TMP_Text dateText;
 
+    [Header("Đế + Khung 3D")]
+    public GameObject baseObject;   // đế
+    public GameObject frameObject;  // khung
+
     // Texture đã tải về để preview dùng
     [NonSerialized] public Texture2D loadedTexture;
 
@@ -48,6 +52,15 @@ public class CertificateItemUI : MonoBehaviour
         {
             StartCoroutine(LoadImageIntoQuad(certImgUrl));
         }
+    }
+
+    /// <summary>
+    /// Bật/tắt đế + khung 3D khi capture có khung / không khung.
+    /// </summary>
+    public void SetBaseAndFrameVisible(bool visible)
+    {
+        if (baseObject != null)   baseObject.SetActive(visible);
+        if (frameObject != null)  frameObject.SetActive(visible);
     }
 
     private IEnumerator LoadImageIntoQuad(string imageUrl)

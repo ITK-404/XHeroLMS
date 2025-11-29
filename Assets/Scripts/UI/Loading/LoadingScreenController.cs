@@ -16,24 +16,23 @@ public class LoadingScreenController : MonoBehaviour
 
     [Header("Loading Text Animation")]
     public float dotSpeed = 0.5f;
-    string baseText = "Loading";
+    string baseText = "Đang tải";
     float imageSwitchInterval = 1f;
 
     [Header("Display Timing")]
-    [Tooltip("Thời gian hiển thị loading tối thiểu (giây).")]
+    // Thời gian hiển thị loading tối thiểu (giây).
     public float minDisplaySeconds = 3f;
 
     [Header("Visual Progress Settings")]
-    [Tooltip("Cho phép % hiển thị đi trước tiến trình thật một chút để đỡ đứng hình.")]
+    // Cho phép % hiển thị đi trước tiến trình thật một chút để đỡ đứng hình.
     public float headroom = 0.06f; // 6%
 
-    [Tooltip("Danh sách mốc phần trăm trước khi vào 90% (0..1).")]
+    // Danh sách mốc phần trăm trước khi vào 90% (0..1).
     public float[] milestonePercents = new float[] { 0.30f, 0.50f, 0.60f, 0.70f, 0.80f, 0.90f };
 
-    [Tooltip("Thời gian cho từng mốc ở trên (giây). Nếu để trống hoặc khác độ dài sẽ dùng giá trị mặc định.")]
+    // Thời gian cho từng mốc ở trên (giây). Nếu để trống hoặc khác độ dài sẽ dùng giá trị mặc định.
     public float[] milestoneDurations = new float[] { 0.35f, 0.45f, 0.30f, 0.30f, 0.35f, 0.50f };
-
-    [Tooltip("Thời gian mượt từ 90% -> 100%")]
+    
     public float fakeFillDuration = 3f;
 
     // --- private ---
@@ -42,7 +41,7 @@ public class LoadingScreenController : MonoBehaviour
     private float _dotTimer;
     private int _dotCount;
     private float _currentProgress; // lưu giá trị hiện tại
-    private List<Image> _images = new();
+    private readonly List<Image> _images = new();
     private int _currentImageIndex = -1;
 
     // post-activate syncing
@@ -53,7 +52,8 @@ public class LoadingScreenController : MonoBehaviour
     void Awake()
     {
         if (imageScene1) _images.Add(imageScene1);
-        foreach (var img in _images) if (img) img.gameObject.SetActive(false);
+        foreach (var img in _images)
+            if (img) img.gameObject.SetActive(false);
 
         if (progressRing) progressRing.fillAmount = 0f;
         if (sliderUI) sliderUI.value = 0f;
@@ -90,7 +90,7 @@ public class LoadingScreenController : MonoBehaviour
         // bắt đầu đổi ảnh
         StartCoroutine(CycleRandomImages());
 
-        // chạy qua các mốc 30-50-60-70-80-90
+        // === Phase 0 -> ~90%: chạy qua các mốc 30-50-60-70-80-90, clamp theo op.progress ===
         float visual = 0f;
         for (int i = 0; i < milestonePercents.Length; i++)
         {
@@ -109,8 +109,8 @@ public class LoadingScreenController : MonoBehaviour
                 float allowed = Mathf.Min(planned, realCap + headroom);
 
                 visual = Mathf.Clamp01(allowed);
-
                 SetProgress(visual);
+
                 yield return null;
             }
 
@@ -121,7 +121,7 @@ public class LoadingScreenController : MonoBehaviour
             if (op.progress >= 0.9f) break;
         }
 
-        // đảm bảo không vượt 90% khi load thật còn <0.9
+        // Nếu load thật còn <0.9, tiếp tục đẩy visual lên gần 0.9 nhưng không vượt
         while (op.progress < 0.9f)
         {
             float allowed = Mathf.Min(0.90f, op.progress + headroom);
@@ -130,45 +130,60 @@ public class LoadingScreenController : MonoBehaviour
             yield return null;
         }
 
-        // Đảm bảo thời gian hiển thị tối thiểu trước khi bước vào 90->100
-        float remainMin = Mathf.Max(0f, minDisplaySeconds - (Time.unscaledTime - _displayStartTime));
-        if (remainMin > 0f)
-            yield return new WaitForSecondsRealtime(remainMin * 0.3f); // chia bớt, phần còn lại ghép vào fake fill
+        // đảm bảo visual ít nhất 90%
+        visual = Mathf.Max(visual, 0.90f);
+        SetProgress(visual);
 
-        // 90% -> 100% mượt trong fakeFillDuration
-        float elapsed = 0f;
-        while (elapsed < fakeFillDuration)
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        DontDestroyOnLoad(gameObject);
+
+        float fakeStartTime = Time.unscaledTime;
+        float targetVisualBeforeDone = 0.98f; // không chạm 1.0 cho đến khi chắc chắn xong
+
+        op.allowSceneActivation = true;
+
+        while (true)
         {
-            elapsed += Time.unscaledDeltaTime;
-            float s = Mathf.Clamp01(elapsed / fakeFillDuration);
-            float planned = Mathf.Lerp(0.90f, 1f, s);
+            // thời gian đã ở phase 90-100
+            float fakeElapsed = Time.unscaledTime - fakeStartTime;
+            float t01 = Mathf.Clamp01(fakeElapsed / fakeFillDuration);
 
+            // trong mọi trường hợp, visual sẽ tăng dần lên tối đa ~98%
+            float planned = Mathf.Lerp(visual, targetVisualBeforeDone, t01);
+            SetProgress(planned);
+
+            // Điều kiện thoát:
+            //  - Scene đích đã load xong (OnSceneLoaded bắn)
+            //  - và đã qua fakeFillDuration (đảm bảo tối thiểu ~3s cho phase 90-100)
+            if (_sceneLoadedFired && fakeElapsed >= fakeFillDuration)
+                break;
+
+            yield return null;
+        }
+
+        // Từ đây mới cho thanh chạy lên 100%
+        float endLerpTime = 0.3f; // thời gian kéo 98% -> 100% cho đẹp
+        float endElapsed = 0f;
+        float startValue = _currentProgress;
+
+        while (endElapsed < endLerpTime)
+        {
+            endElapsed += Time.unscaledDeltaTime;
+            float s = Mathf.Clamp01(endElapsed / endLerpTime);
+            float planned = Mathf.Lerp(startValue, 1f, s);
             SetProgress(planned);
             yield return null;
         }
 
         SetProgress(1f);
 
-        // Đảm bảo tổng thời gian >= minDisplaySeconds
-        float remain = Mathf.Max(0f, minDisplaySeconds - (Time.unscaledTime - _displayStartTime));
+        // Đảm bảo tổng thời gian hiển thị >= minDisplaySeconds
+        float totalDisplayTime = Time.unscaledTime - _displayStartTime;
+        float remain = Mathf.Max(0f, minDisplaySeconds - totalDisplayTime);
         if (remain > 0f)
             yield return new WaitForSecondsRealtime(remain);
-        
-        // Đăng ký lắng nghe sceneLoaded và giữ Overlay sống sang scene mới.
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        DontDestroyOnLoad(gameObject);
 
-        // Cho phép kích hoạt scene đích
-        _isLoading = false; // dừng vòng ảnh & dot trong Update
-        op.allowSceneActivation = true;
-
-        // Chờ callback sceneLoaded
-        yield return new WaitUntil(() => _sceneLoadedFired);
-
-        // Đợi qua ít nhất 1 frame của scene đích để model/material bắt đầu render
-        yield return new WaitForEndOfFrame();
-        
-        // yield return new WaitForEndOfFrame();
+        _isLoading = false; // dừng dots + đổi ảnh
 
         // Xoá overlay loading
         SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -208,6 +223,7 @@ public class LoadingScreenController : MonoBehaviour
     IEnumerator CycleRandomImages()
     {
         if (_images.Count == 0) yield break;
+
         while (_isLoading)
         {
             if (_currentImageIndex >= 0 && _currentImageIndex < _images.Count)
@@ -223,7 +239,8 @@ public class LoadingScreenController : MonoBehaviour
             yield return new WaitForSecondsRealtime(imageSwitchInterval);
         }
 
-        foreach (var img in _images) img.gameObject.SetActive(false);
+        foreach (var img in _images)
+            if (img) img.gameObject.SetActive(false);
     }
 
     void Update()

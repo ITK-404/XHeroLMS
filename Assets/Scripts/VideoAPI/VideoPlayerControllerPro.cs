@@ -566,6 +566,15 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void OnVideoError(VideoPlayer vp, string msg)
     {
         Debug.LogError("[VideoPlayer] Error: " + msg);
+
+        LoadingUI.Hide();
+
+        // Show popup cảnh báo - thường là lỗi API nên thông báo User là lỗi mạng
+        // LoadingUI.ShowErrorPopup(
+        //     "Chúng tôi đang cố kết nối lại.\n" +
+        //     "Bạn vui lòng đợi trong giây lát hoặc thử lại.",
+        //     "Mạng yếu"
+        // );
     }
 
     // ---- Utils ----

@@ -25,7 +25,9 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
+    // public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
+    // public string baseUrl = SecurityConfig.GetBaseUrl();
+    [NonSerialized] public string baseUrl;
 
     [Header("Caching")]
     public bool autoLoadOnAwake = true;
@@ -38,6 +40,20 @@ public class LmsStore : MonoBehaviour
     [Tooltip("TTL cho /lms/courses/{id}/private (giây)")]
     public int ttlPrivateSeconds = 300;
 
+    // ====== THÊM 2 FIELD NÀY ĐỂ LƯU QR STEP1 ======
+    [Header("QR Login (step1 cache)")]
+    [Tooltip("Code từ /auth-for-lms/request step=1")]
+    public string lastLoginQrCode;
+
+    [Tooltip("Timestamp từ /auth-for-lms/request step=1")]
+    public string lastLoginQrTimestamp;
+
+    public void ClearQrLoginCache()
+    {
+        lastLoginQrCode = null;
+        lastLoginQrTimestamp = null;
+    }
+    
     [Serializable] public class StoreData
     {
         public string tokenUserId;
@@ -65,6 +81,9 @@ public class LmsStore : MonoBehaviour
     {
         if (_instance && _instance != this) { Destroy(gameObject); return; }
         _instance = this; DontDestroyOnLoad(gameObject);
+
+        baseUrl = SecurityConfig.GetBaseUrl();
+        
         if (autoLoadOnAwake) LoadFromDisk();
         RebuildIndexes();
     }

@@ -7,14 +7,14 @@ public class OpenClosePanel : MonoBehaviour
 {
     [Header("UI References")]
     public Button buttonOpen;
+    public Button buttonLogout;
+
+    public Button buttonTryLogout;
+    public Button buttonCloseWarning;
+    
     public Button buttonClose;
     public Image  targetImage;          // nền mờ (optional)
     public GameObject targetPanel;      // panel đăng nhập
-
-    [Header("Texts")]
-    public TextMeshProUGUI openButtonText;
-    public string labelLogin  = "ĐĂNG NHẬP";
-    public string labelLogout = "ĐĂNG XUẤT";
 
     public GameObject[] showWhenLoggedIn;
     
@@ -24,7 +24,7 @@ public class OpenClosePanel : MonoBehaviour
     public bool reloadSceneOnLogout = true;
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
-
+    public Transform warningPopup;
     CursorGameManager cursorMgr;
 
     void OnEnable()
@@ -43,8 +43,22 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
+        buttonLogout.onClick.AddListener(DoLogout);
 
+        buttonTryLogout.onClick.AddListener(OnShowWarning);
+        buttonCloseWarning.onClick.AddListener(HideWarning);
+        
         UpdateVisualState();
+    }
+
+    private void OnShowWarning()
+    {
+        warningPopup.gameObject.SetActive(true);
+    }
+
+    private void HideWarning()
+    {
+        warningPopup.gameObject.SetActive(false);
     }
 
     void OnDisable()
@@ -53,6 +67,12 @@ public class OpenClosePanel : MonoBehaviour
 
         if (buttonOpen != null)  buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
+
+        buttonLogout.onClick.RemoveListener(DoLogout);
+
+        buttonTryLogout.onClick.RemoveListener(OnShowWarning);
+        buttonCloseWarning.onClick.RemoveListener(HideWarning);
+
     }
 
     void Start()
@@ -71,11 +91,6 @@ public class OpenClosePanel : MonoBehaviour
         return TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken);
     }
 
-    void UpdateOpenButtonLabel()
-    {
-        if (!openButtonText) return;
-        openButtonText.text = IsLoggedIn() ? labelLogout : labelLogin;
-    }
 
     void ToggleGroup(GameObject[] objs, bool on)
     {
@@ -87,7 +102,6 @@ public class OpenClosePanel : MonoBehaviour
     void UpdateVisualState()
     {
         bool loggedIn = IsLoggedIn();
-        UpdateOpenButtonLabel();
 
         // Tự ẩn/hiện các nhóm UI nếu có cấu hình
         ToggleGroup(showWhenLoggedIn, loggedIn);
@@ -106,11 +120,7 @@ public class OpenClosePanel : MonoBehaviour
 
     void OnOpenButtonClicked()
     {
-        if (IsLoggedIn())
-        {
-            DoLogout();
-        }
-        else
+        if (!IsLoggedIn())
         {
             OpenUI();
         }
@@ -160,6 +170,10 @@ public class OpenClosePanel : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(loadDelay);
         SceneManager.LoadScene(sceneNameAfterLogout);
-        LoadingUI.Show();
+        LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
     }
 }

@@ -72,7 +72,11 @@ public partial class ExamUIController : MonoBehaviour
         if (show)
         {
             if (_loadingShown) return;
-            LoadingUI.Show();
+            LoadingUI.Show(
+                timeoutSeconds: 15f,
+                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+                timeoutHeader:  "Lỗi Mạng"
+            );
             _loadingShown = true;
         }
         else
