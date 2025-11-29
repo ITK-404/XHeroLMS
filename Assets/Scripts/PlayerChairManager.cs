@@ -38,6 +38,11 @@ public class PlayerChairManager : MonoBehaviour
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
     }
 
+    private void OnDestroy()
+    {
+        Instance = null;
+    }
+
     private IEnumerator WaitForBlendDone(Action action)
     {
         yield return new WaitForSeconds(2);
