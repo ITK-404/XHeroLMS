@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
@@ -101,8 +102,9 @@ public class PointClickSystem : MonoBehaviour
         }
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
-        if (Mathf.Abs(h) > 0.1f)
+        if (Mathf.Abs(h) > 0.1f && ai.isStopped && ai.canMove == false)
         {
+            Debug.Log("Đang xoay");
             float rotationAmount = h * rotationSpeed * Time.deltaTime;
             transform.Rotate(0, rotationAmount, 0);
         }
@@ -192,6 +194,11 @@ public class PointClickSystem : MonoBehaviour
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
 
+            if (TryHandleMoveToHouse(ray))
+            {
+                return;
+            }
+            
             // Case click vào checkpoint ghế: giữ nguyên behavior cũ
             if (PlayerChairManager.Instance)
             {
@@ -261,6 +268,37 @@ public class PointClickSystem : MonoBehaviour
         }
     }
 
+    private bool TryHandleMoveToHouse(Ray ray)
+    {
+        if (Physics.Raycast(ray, out var checkPointHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        {
+            if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
+            {
+                Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
+                var hitTransform = interactable.GetStandTransform();
+                var position = hitTransform.position;
+                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+                Vector3 groundPos = (Vector3)node.position;
+                if (ai != null)
+                {
+                    ai.isStopped = false;
+                    ai.canMove = true;
+                    ai.destination = groundPos;
+                   
+                }
+                lastPickPosition = groundPos;
+                isClickMoving = false;
+                HideMoveVfx(); // VFX
+                Debug.Log($"House hit box ?");
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
     private bool MoveToChairHandle(Ray ray)
     {
         if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
