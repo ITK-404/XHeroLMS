@@ -292,7 +292,7 @@ public class PointClickSystem : MonoBehaviour
 
     private bool TryHandleMoveToHouse(Ray ray)
     {
-        if (Physics.Raycast(ray, out var checkPointHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        if (Physics.Raycast(ray, out var checkPointHit, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide))
         {
             if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
