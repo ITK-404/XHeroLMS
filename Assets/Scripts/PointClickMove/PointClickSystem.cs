@@ -2,12 +2,13 @@
 using Pathfinding;
 using System;
 using System.Collections;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
+    public CinemachineBrain brain;
     IAstarAI ai;
     private Vector3 lastPickPosition;
     public float debugRadius = 1;
@@ -56,10 +57,13 @@ public class PointClickSystem : MonoBehaviour
         if (ai != null)
             defaultSpeed = ai.maxSpeed;
     }
-
+    private bool IsBlendingCamera()
+    {
+        return brain != null && brain.IsBlending;
+    }
     void Update()
     {
-        if (InputBlocker.IsBlocked())
+        if (InputBlocker.IsBlocked() || IsBlendingCamera())
             return;
 
         // Gravity update
@@ -220,7 +224,7 @@ public class PointClickSystem : MonoBehaviour
             {
                 return;
             }
-            
+
             // Case click vào checkpoint ghế: giữ nguyên behavior cũ
             if (PlayerChairManager.Instance)
             {
@@ -296,37 +300,43 @@ public class PointClickSystem : MonoBehaviour
         {
             if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
+                BuildingCameraManager.Instance.FocusOnBuilding(interactable);
                 Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
-                var hitTransform = interactable.GetStandTransform();
-                var position = hitTransform.position;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
 
-                Vector3 groundPos = (Vector3)node.position;
-                if (ai != null)
-                {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-
-                    ai.maxSpeed = defaultSpeed * 2f;
-                    ai.destination = groundPos;
-                   
-                }
-                lastPickPosition = groundPos;
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
-                Debug.Log($"House hit box ?");
-                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                {
-                    transform.DORotateQuaternion(hitTransform.rotation, 1);
-                }));
                 return true;
             }
         }
-
         return false;
     }
 
+    public void TeleportDelay(Transform hitTransform)
+    {
+        var position = hitTransform.position;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+        characterController.enabled = false;
 
+        Vector3 groundPos = (Vector3)node.position;
+        if (ai != null)
+        {
+            ai.isStopped = false;
+            ai.canMove = true;
+
+            ai.maxSpeed = defaultSpeed * 2f;
+            ai.Teleport(groundPos);
+            ai.rotation = hitTransform.rotation;
+        }
+
+        lastPickPosition = groundPos;
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
+
+        transform.DORotateQuaternion(hitTransform.rotation, 1);
+
+        characterController.enabled = true;
+
+
+    }
 
     private bool MoveToChairHandle(Ray ray)
     {
