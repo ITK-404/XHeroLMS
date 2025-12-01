@@ -379,16 +379,23 @@ public class RegistrationController : MonoBehaviour
 
                 // (tuỳ chọn) lưu session để các panel khác dùng
                 AuthFlowSession.LastOtpIdentifier = (payload.otpBy == "email") ? payload.email : username84;
-                AuthFlowSession.LastOtpBy         = payload.otpBy;
-                AuthFlowSession.LastOtpPurpose    = "register";
+                AuthFlowSession.LastOtpBy = payload.otpBy;
+                AuthFlowSession.LastOtpPurpose = "register";
 
             }
             else
             {
-                string msg = $"Register FAIL ({req.responseCode}): {req.error}\n{req.downloadHandler.text}";
-                Debug.LogWarning(msg);
-                if (errorText) errorText.text = "Đăng ký thất bại. " +
-                                                (string.IsNullOrEmpty(req.downloadHandler.text) ? "Vui lòng thử lại." : req.downloadHandler.text);
+                string raw = req.downloadHandler.text;
+                string msgLog = $"Register FAIL ({req.responseCode}): {req.error}\n{raw}";
+                Debug.LogWarning(msgLog);
+
+                // ---- parse message từ BE (tuỳ chọn) ----
+                string friendly = BuildFriendlyErrorMessage(req, raw);
+
+                if (errorText) errorText.text = friendly;
+
+                // Gọi popup luôn
+                ShowWarningPopup(friendly);
             }
         }
 
@@ -525,13 +532,13 @@ public class RegistrationController : MonoBehaviour
     private class RegisterPayload
     {
         public string username;
-        public bool   isApp;
+        public bool isApp;
         public string password;
         public string retypePassword;
         public string otpBy;               // "phone" | "email"
         public string registerPlatform;
-        public bool   isFromGame;
-        public bool   isUsernameEmail;
+        public bool isFromGame;
+        public bool isUsernameEmail;
 
         // bổ sung
         public string fullName;
@@ -539,4 +546,70 @@ public class RegistrationController : MonoBehaviour
         public string province;           // id tỉnh (hoặc đổi sang name nếu backend yêu cầu)
         public string gender;
     }
+
+    [Serializable]
+    private class ErrorResponse
+    {
+        public bool status;
+        public string message;
+        public int remaining;
+        public int statusCode;
+    }
+
+    private string BuildFriendlyErrorMessage(UnityWebRequest req, string raw)
+    {
+        // 1) Lỗi mạng
+#if UNITY_2020_2_OR_NEWER
+        if (req.result == UnityWebRequest.Result.ConnectionError)
+#else
+    if (req.isNetworkError)
+#endif
+        {
+            return "Lỗi mạng, bạn vui lòng kiểm tra kết nối và thử lại sau giây lát.";
+        }
+
+        // 2) Thử parse JSON từ BE
+        if (!string.IsNullOrEmpty(raw))
+        {
+            try
+            {
+                var err = JsonUtility.FromJson<ErrorResponse>(raw);
+                if (err != null && !string.IsNullOrEmpty(err.message))
+                {
+                    // Nếu có map -> trả message đẹp
+                    if (ErrorMessageMap.TryGetValue(err.message, out var friendly))
+                    {
+                        return friendly;
+                    }
+
+                    // Không có map -> generic, không quăng code thô vào mặt user
+                    Debug.LogWarning("[Register] Unmapped error message code: " + err.message);
+                    return "Đăng ký thất bại. Bạn vui lòng thử lại sau giây lát.";
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Register] Parse error: " + e.Message + "\nRaw: " + raw);
+            }
+        }
+
+        // 3) Fallback cuối cùng
+        return "Đăng ký thất bại. Bạn vui lòng thử lại sau giây lát.";
+    }
+
+    // Map mã lỗi backend -> message hiển thị
+    private static readonly Dictionary<string, string> ErrorMessageMap = new Dictionary<string, string>
+    {
+        // Đăng ký
+        { "username_is_existed", "Tài khoản này đã được đăng ký. Bạn hãy dùng số điện thoại / email khác hoặc đăng nhập." },
+        { "email_is_existed",    "Email này đã được sử dụng. Bạn hãy dùng email khác hoặc đăng nhập." },
+        { "phone_is_existed",    "Số điện thoại này đã được sử dụng. Bạn hãy dùng số khác hoặc đăng nhập." },
+
+        // OTP
+        { "please_wait_a_moment_to_get_new_otp", "Bạn vừa yêu cầu OTP, vui lòng chờ một lúc rồi thử lại." },
+        { "otp_incorrect",  "Mã OTP không đúng. Bạn hãy kiểm tra lại." },
+        { "otp_expired",    "Mã OTP đã hết hạn, bạn hãy yêu cầu mã mới." },
+
+        // Thêm tiếp các mã BE hay trả về...
+    };
 }
