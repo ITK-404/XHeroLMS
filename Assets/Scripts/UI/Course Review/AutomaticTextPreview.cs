@@ -84,6 +84,7 @@ public class AutomaticTextPreview : MonoBehaviour
 
     public void StopText()
     {
+        // Stop known coroutines only
         if (playCoroutine != null)
         {
             StopCoroutine(playCoroutine);
@@ -95,13 +96,62 @@ public class AutomaticTextPreview : MonoBehaviour
             StopCoroutine(currentWordCoroutine);
             currentWordCoroutine = null;
         }
-        StopAllCoroutines();
-        scrollRect.gameObject.SetActive(false);
-        audioSource.Stop();
+
+        if (timerCoroutine != null)
+        {
+            StopCoroutine(timerCoroutine);
+            timerCoroutine = null;
+        }
+
+        // Kill DOTween tweens that may target the UI elements
+        // This prevents tweens from accessing destroyed/disabled objects
+        try
+        {
+            if (scrollRect != null)
+                DOTween.Kill(scrollRect);
+
+            if (container != null)
+                DOTween.Kill(container);
+
+            // Also kill tweens on children before destroying them
+            if (container != null)
+            {
+                for (int i = container.childCount - 1; i >= 0; i--)
+                {
+                    var child = container.GetChild(i);
+                    if (child != null)
+                        DOTween.Kill(child);
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"DOTween.Kill encountered an exception: {ex}");
+        }
+
+        // Destroy child items safely
+        if (container != null)
+        {
+            for (int i = container.childCount - 1; i >= 0; i--)
+            {
+                var childGo = container.GetChild(i)?.gameObject;
+                if (childGo != null)
+                    Destroy(childGo);
+            }
+        }
+
+        // Deactivate UI and stop audio
+        if (scrollRect != null && scrollRect.gameObject != null)
+            scrollRect.gameObject.SetActive(false);
+
+        if (audioSource != null)
+            audioSource.Stop();
+
+        // Reset flags and timer state
         isShowTextDone = true;
         hasSpawned = false;
-        StopTimer();
         timerCompleted = false;
+        timerElapsed = 0f;
     }
 
     private IEnumerator PlaySubtitlesCoroutine()
