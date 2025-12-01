@@ -123,7 +123,7 @@ public class PlayerChairManager : MonoBehaviour
 
             QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
 
-            // ẩn tất cả icon của item
+            // ẩn tất cả icon của ghế
             foreach (var item in allCheckPoints)
             {
                 item.Show(false);

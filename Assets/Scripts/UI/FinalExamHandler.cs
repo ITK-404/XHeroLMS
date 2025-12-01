@@ -64,11 +64,12 @@ public class FinalExamHandler : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log($"[CourseListView] Saved ExamID={finalItem.lessonID}, CourseID={courseID}");
-
+        // ẩn UI học tập
         learnUI.Hide();
         videoPlayerControllerPro.ExitFullscreenUI();
         playerStandUI.HideWatchVideoUI();
 
+        // hiện UI làm bài
         if (examCamRoutine != null)
             StopCoroutine(examCamRoutine);
         
@@ -80,10 +81,10 @@ public class FinalExamHandler : MonoBehaviour
     private IEnumerator MoveCameraAndOpenExam()
     {
         // examUIController.HideAll();
-
+        // đi tới camera và ngồi
         ChangeToExamCamera();
         yield return new WaitForSecondsRealtime(2);
-
+        
         // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
         examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
         yield return examUIController.StartGate();
@@ -91,7 +92,7 @@ public class FinalExamHandler : MonoBehaviour
         Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
     }
 
-    public void ChangeToExamCamera()
+    private void ChangeToExamCamera()
     {
         var currentCheckPoint = PlayerChairManager.Instance.currentCheckPoint;
 
@@ -101,7 +102,7 @@ public class FinalExamHandler : MonoBehaviour
         }
     }
 
-    public void ResetExamCamera()
+    private void ResetExamCamera()
     {
         var currentCheckPoint = PlayerChairManager.Instance.currentCheckPoint;
 
@@ -111,14 +112,11 @@ public class FinalExamHandler : MonoBehaviour
         }
     }
 
- 
-
-
     private void ResetFromExam()
     {
         Debug.Log($"ResetFromExam Started {examUIController.examStarted}");
         Debug.Log($"ResetFromExam Submitted {examUIController.ExamQuestionManager.IsSubmitting}");
-
+        // nếu đang làm bài và chưa submit thì hiện popup xác nhận
         if (examUIController.examStarted)
         {
             if (!examUIController.ExamQuestionManager.IsSubmitting)
