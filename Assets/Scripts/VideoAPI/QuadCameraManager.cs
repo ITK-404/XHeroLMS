@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DG.Tweening;
+using System;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -14,11 +15,11 @@ public class QuadCameraManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-        
+
         cameraList.Add(playerCamera);
         cameraList.Add(localRoomCamera);
         cameraList.Add(sitdownCamera);
-        
+
         ChangeToPlayerCamera();
     }
 
@@ -44,12 +45,27 @@ public class QuadCameraManager : MonoBehaviour
     }
 
 
+    public void SetupSitdownCameraByCheckPoint(Transform checkPoint)
+    {
+        Debug.Log($"Change to checkpoint: {checkPoint.transform.position} {checkPoint.transform.rotation}", checkPoint.gameObject);
+        ChangeToSitdownCameraState(checkPoint.transform.position);
+        Debug.Log($"{checkPoint.transform.rotation}");
+        sitdownCamera.transform.DORotateQuaternion(checkPoint.transform.rotation, 1f);
+    }
+
     public void ChangeToSitdownCameraState(Vector3 cameraPosition)
     {
         SetPriorityToCamera(sitdownCamera);
-        sitdownCamera.transform.position = cameraPosition;
+        if(sitdownCamera.Priority == 10)
+        {
+            sitdownCamera.transform.DOMove(cameraPosition, 1f);
+        }
+        else
+        {
+            sitdownCamera.transform.position = cameraPosition;
+        }
     }
-    
+
     public void ChangeToSitdownCameraState()
     {
         SetPriorityToCamera(sitdownCamera);
@@ -64,5 +80,7 @@ public class QuadCameraManager : MonoBehaviour
     {
         SetPriorityToCamera(localRoomCamera);
     }
-    
+
+
+
 }

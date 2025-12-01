@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using DG.Tweening;
+using JetBrains.Annotations;
 using NUnit.Framework;
 using System;
 using System.Collections;
@@ -23,9 +24,9 @@ public class PlayerChairManager : MonoBehaviour
     [Header("UI")]
 
     VideoPlayerControllerPro videoPlayerControllerPro;
-    [SerializeField]  PlayerStandUI playerStandUI;
+    [SerializeField] PlayerStandUI playerStandUI;
     [HideInInspector] public ChairCheckPoint currentCheckPoint;
-    
+
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
@@ -72,7 +73,7 @@ public class PlayerChairManager : MonoBehaviour
         {
             Debug.Log("bật lại input");
             InputBlocker.SetBlocked(false);
-            
+
         }));
     }
 
@@ -105,21 +106,23 @@ public class PlayerChairManager : MonoBehaviour
         currentCheckPoint = temp;
 
     }
-    
+
     public void PlayerSitdown()
     {
-    
+
         // sit down logic
-        
+
         ChairCheckPoint temp = currentCheckPoint;
-     
+
         if (temp != null)
         {
             playerState = PlayerState.Sitdown;
             Debug.Log("Sit down");
-            QuadCameraManager.Instance.ChangeToSitdownCameraState(temp.checkPoint.transform.position);
-            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
             
+            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
+
+            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+
             // ẩn tất cả icon của item
             foreach (var item in allCheckPoints)
             {
@@ -128,7 +131,7 @@ public class PlayerChairManager : MonoBehaviour
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
-            
+
             StartCoroutine(WaitForBlendDone(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
@@ -139,6 +142,7 @@ public class PlayerChairManager : MonoBehaviour
         }
     }
 
+    
     public void TrySetChair(ChairCheckPoint currentChair)
     {
         if (!chairList.Contains(currentChair))

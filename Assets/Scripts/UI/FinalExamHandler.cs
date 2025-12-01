@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using DG.Tweening;
+using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -10,14 +11,7 @@ public class FinalExamHandler : MonoBehaviour
     [SerializeField] private ExamUIController examUIController;  // panel bài kiểm tra (ẩn sẵn)
     [SerializeField] private float examMoveDuration = 1.5f;
     private Coroutine examCamRoutine;
-    private Vector3 defaultCameraPosition;
-    private Quaternion defaultCameraRotation;
-    private bool hasDefaultCameraTransform;
 
-    [SerializeField] private CinemachineHardLookAt examLookAt;
-    private Vector3 defaultLookAtOffset;
-    private bool hasDefaultOffset;
-    
     private VideoPlayerControllerPro videoPlayerControllerPro;
     private PlayerStandUI playerStandUI;
     private LearnUI learnUI;
@@ -83,82 +77,42 @@ public class FinalExamHandler : MonoBehaviour
         playerPanelUI.HideAll();
     }
 
-    private bool InitExamCamera()
-    {
-        // if (examCamera == null || examUIController == null)
-        // {
-        //     Debug.LogWarning("[CourseListView] examCamera hoặc examPanelRoot chưa gán.");
-        //     return false;
-        // }
-
-        if (examLookAt == null)
-            examLookAt = examCamera.GetComponent<CinemachineHardLookAt>();
-
-        if (examLookAt == null)
-        {
-            Debug.LogWarning("[CourseListView] Không tìm thấy CinemachineHardLookAt trên examCamera.");
-            return false;
-        }
-
-        if (!hasDefaultOffset)
-        {
-            defaultLookAtOffset = examLookAt.LookAtOffset;
-            hasDefaultOffset = true;
-        }
-
-        if (!hasDefaultCameraTransform)
-        {
-            defaultCameraPosition = examCamera.position;
-            defaultCameraRotation = examCamera.rotation;
-            hasDefaultCameraTransform = true;
-        }
-
-        return true;
-    }
-
     private IEnumerator MoveCameraAndOpenExam()
     {
-        if (!InitExamCamera())
-            yield break;
-
         // examUIController.HideAll();
-        
-        Vector3 startPos = examCamera.position;
-        Vector3 endPos = new Vector3(startPos.x, 0.3f, startPos.z + 0.5f);
 
-        float dur = Mathf.Max(0.01f, examMoveDuration);
-        float t = 0f;
+        ChangeToExamCamera();
+        yield return new WaitForSecondsRealtime(2);
 
-        // Tiến tới
-        while (t < 1f)
-        {
-            t += Time.deltaTime / dur;
-            float k = Mathf.SmoothStep(0f, 1f, t);
-            examCamera.position = Vector3.Lerp(startPos, endPos, k);
-            yield return null;
-        }
-        examCamera.position = endPos;
-
-        // Cúi đầu
-        Vector3 startOffset = examLookAt.LookAtOffset;
-        Vector3 endOffset = startOffset;
-        endOffset.y = -270f;
-
-        t = 0f;
-        while (t < 1f)
-        {
-            t += Time.deltaTime / dur;
-            float k = Mathf.SmoothStep(0f, 1f, t);
-            examLookAt.LookAtOffset = Vector3.Lerp(startOffset, endOffset, k);
-            yield return null;
-        }
         // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
-        examLookAt.LookAtOffset = endOffset;
         examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
         yield return examUIController.StartGate();
         yield return new WaitForSecondsRealtime(0.1f);
         Debug.Log("[CourseListView] Camera đã tiến tới và cúi đầu, mở panel exam.");
     }
+
+    public void ChangeToExamCamera()
+    {
+        var currentCheckPoint = PlayerChairManager.Instance.currentCheckPoint;
+
+        if (currentCheckPoint != null)
+        {
+            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(currentCheckPoint.examCheckPoint.transform);
+        }
+    }
+
+    public void ResetExamCamera()
+    {
+        var currentCheckPoint = PlayerChairManager.Instance.currentCheckPoint;
+
+        if (currentCheckPoint != null)
+        {
+            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(currentCheckPoint.checkPoint.transform);
+        }
+    }
+
+ 
+
 
     private void ResetFromExam()
     {
@@ -190,45 +144,9 @@ public class FinalExamHandler : MonoBehaviour
 
     private IEnumerator MoveCameraBackFromExam()
     {
-        if (!InitExamCamera())
-            yield break;
+        ResetExamCamera();
+        yield return new WaitForSecondsRealtime(2);
 
-        Vector3 startPos = examCamera.position;
-        Quaternion startRot = examCamera.rotation;
-        Vector3 startOffset = examLookAt.LookAtOffset;
-
-        Vector3 endPos = hasDefaultCameraTransform ? defaultCameraPosition : startPos;
-        Quaternion endRot = hasDefaultCameraTransform ? defaultCameraRotation : startRot;
-        Vector3 endOffset = hasDefaultOffset ? defaultLookAtOffset : startOffset;
-
-        float halfDur = Mathf.Max(0.01f, examMoveDuration) * 0.5f;
-        float t;
-
-        // Ngửa đầu
-        t = 0f;
-        while (t < 1f)
-        {
-            t += Time.deltaTime / halfDur;
-            float k = Mathf.SmoothStep(0f, 1f, t);
-            examLookAt.LookAtOffset = Vector3.Lerp(startOffset, endOffset, k);
-            yield return null;
-        }
-        examLookAt.LookAtOffset = endOffset;
-
-        // Lùi về vị trí/rotation ban đầu
-        t = 0f;
-        while (t < 1f)
-        {
-            t += Time.deltaTime / halfDur;
-            float k = Mathf.SmoothStep(0f, 1f, t);
-            examCamera.position = Vector3.Lerp(startPos, endPos, k);
-            examCamera.rotation = Quaternion.Slerp(startRot, endRot, k);
-            yield return null;
-        }
-
-        examCamera.position = endPos;
-        examCamera.rotation = endRot;
-        
         playerStandUI.ShowWatchVideoUI();
         playerPanelUI.ShowLoginUI();
     }
@@ -238,7 +156,7 @@ public class FinalExamHandler : MonoBehaviour
         //reset data và ui
         currentExam.gameObject.SetActive(false);
         // examUIController.RestartExam();
-        
+        playerStandUI.HideButtons();
         yield return MoveCameraBackFromExam();
 
         learnUI.Show();
