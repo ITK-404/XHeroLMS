@@ -93,8 +93,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 686075605066708800}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.99970555, z: 0, w: 0.024269335}
-  m_LocalPosition: {x: -12.57608, y: 1.2485715, z: 21.907661}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.00000011920929, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -111,7 +111,7 @@ Camera:
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
-  m_projectionMatrixMode: 2
+  m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
   m_Iso: 200
@@ -1407,7 +1407,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2521306473263781045}
-  - component: {fileID: 5031960781564390500}
   m_Layer: 6
   m_Name: YawPivot
   m_TagString: Untagged
@@ -1432,65 +1431,3 @@ Transform:
   - {fileID: 4846738663281154144}
   m_Father: {fileID: 4545511139101917060}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5031960781564390500
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9081502722193083015}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 529c91c1fe3b6e7459d9bdc8f608f59a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FPSLookController
-  pitchPivot: {fileID: 160303302665092014}
-  cam: {fileID: 6976434781779265749}
-  cc: {fileID: 0}
-  rb: {fileID: 0}
-  sensX: 200
-  sensY: 200
-  pitchMin: -89
-  pitchMax: 89
-  invertX: 0
-  invertY: 0
-  smooth: 1
-  yawLerp: 18
-  pitchLerp: 18
-  baseFov: 75
-  sprintFov: 82
-  adsFov: 62
-  fovLerp: 10
-  sprintFovKick: 2
-  fovKickLerp: 12
-  eyeY: 1.62
-  crouchEyeY: 1.1
-  adsEyeYOffset: 0
-  eyeLerp: 10
-  adsStabilize: 0.8
-  swayYawDeg: 1.2
-  swayPitchDeg: 0.6
-  swayLerp: 12
-  maxRollDeg: 4.5
-  rollFromVel: 0.05
-  rollFromAccel: 0.1
-  rollLerp: 10
-  posLagMax: 0.06
-  posStiffness: 22
-  posDamping: 10
-  velOffsetScale: 0.01
-  accelOffsetScale: 0.0035
-  bobFreqWalk: 1.8
-  bobFreqSprint: 2.6
-  bobAmpYWalk: 0.015
-  bobAmpYSprint: 0.025
-  bobAmpXWalk: 0.008
-  bobAmpXSprint: 0.012
-  bobFadeLerp: 10
-  landPitchKickDeg: 6
-  landRiseTime: 0.06
-  landFallTime: 0.12
-  landMinImpactSpeed: 2.5
-  IsSprinting: 0
-  IsCrouching: 0
-  IsADS: 0

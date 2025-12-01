@@ -1100,6 +1100,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4102229551178867166}
     m_Modifications:
+    - target: {fileID: 1121832967315571452, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1121832967315571452, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 1335079468525278336, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: Priority.Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1335079468525278336, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2709250211678003297, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1140,6 +1156,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5746109236194964647, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_Size.x
+      value: 4.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 5746109236194964647, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_Size.z
+      value: 8.74
+      objectReference: {fileID: 0}
+    - target: {fileID: 6286945051487307915, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: virtualCamera
+      value: 
+      objectReference: {fileID: 7660542932692155681}
     - target: {fileID: 8166162016612983387, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
       propertyPath: m_Name
       value: Building Interact
@@ -1154,3 +1182,14 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2709250211678003297, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
   m_PrefabInstance: {fileID: 8703365186131814817}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7660542932692155681 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1335079468525278336, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+  m_PrefabInstance: {fileID: 8703365186131814817}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
