@@ -6,6 +6,7 @@ public class PlayVideoOpenBook : MonoBehaviour
 {
     public VideoPlayer videoPlayer;
     public AudioSource audioSource;
+    public AutomaticTextPreview automaticTextPreview;
 
     private void Awake()
     {
@@ -33,8 +34,38 @@ public class PlayVideoOpenBook : MonoBehaviour
         videoPlayer.Play();
         audioSource.Play();
         
-        while (videoPlayer.isPlaying)
+        // Start creating text (if assigned)
+        if (automaticTextPreview != null)
+        {
+            automaticTextPreview.CreateText();
+            automaticTextPreview.StartTimer();
+        }
+
+        // Wait until both conditions are met:
+        // - the video finished playing, AND
+        // - the configured timer has elapsed
+        while (true)
+        {
+            bool videoFinished = (videoPlayer != null) && !videoPlayer.isPlaying;
+
+            bool timerCompleted = true;
+            if (automaticTextPreview != null)
+                timerCompleted = automaticTextPreview.IsTimerCompleted();
+
+            if (videoFinished && timerCompleted)
+                break;
+
             yield return null;
+        }
+
+        // Stop everything
+        if (videoPlayer != null)
+            videoPlayer.Stop();
+        if (audioSource != null)
+            audioSource.Stop();
+        if (automaticTextPreview != null)
+            automaticTextPreview.StopText();
+
     }
     [ContextMenu("Play Test")]
     public void PlayTest()
@@ -46,6 +77,7 @@ public class PlayVideoOpenBook : MonoBehaviour
     {
         videoPlayer.Stop();
         audioSource.Stop();
+        automaticTextPreview.StopText();
     }
 
     public void Show()

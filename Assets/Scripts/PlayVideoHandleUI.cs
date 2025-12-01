@@ -11,12 +11,18 @@ public class PlayVideoHandleUI : MonoBehaviour
     private void Awake()
     {   
         container.gameObject.SetActive(false);
-        skipButton.onClick.AddListener(playVideoOpenBook.Stop);   
+        skipButton.onClick.AddListener(HideVideo);   
     }
 
     private void OnDestroy()
     {
-        skipButton.onClick.RemoveListener(playVideoOpenBook.Stop);   
+        skipButton.onClick.RemoveListener(HideVideo);   
+    }
+
+    private void HideVideo()
+    {
+        playVideoOpenBook.Stop();
+        Hide();
     }
 
     public void Show()
