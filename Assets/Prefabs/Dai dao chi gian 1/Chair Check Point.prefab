@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 4705736909734194234}
   - component: {fileID: 2581383251912833953}
   m_Layer: 0
-  m_Name: Cube (1)
+  m_Name: Sitdown Hitbox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -155,7 +155,7 @@ GameObject:
   - component: {fileID: 2356700248759600106}
   - component: {fileID: 657728481921083867}
   m_Layer: 0
-  m_Name: Sphere
+  m_Name: Hitbox
   m_TagString: CheckPoint
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -253,6 +253,37 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &3537884280681186145
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2748877041410677876}
+  m_Layer: 0
+  m_Name: Exam Check Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2748877041410677876
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3537884280681186145}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.332, z: 1.24}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 564451522121711361}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6658514529274931579
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,7 +297,7 @@ GameObject:
   - component: {fileID: 2635576206633729617}
   - component: {fileID: 211606458966557901}
   m_Layer: 8
-  m_Name: Cube
+  m_Name: Block
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -400,6 +431,7 @@ Transform:
   - {fileID: 1108039174002496312}
   - {fileID: 6905494483520266375}
   - {fileID: 2643783329889247338}
+  - {fileID: 2748877041410677876}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8857333227310738393
@@ -455,7 +487,7 @@ GameObject:
   - component: {fileID: 1281391772754254532}
   - component: {fileID: 1723065605118288037}
   m_Layer: 0
-  m_Name: Sprirte
+  m_Name: Check Point Sprite
   m_TagString: CheckPoint
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
