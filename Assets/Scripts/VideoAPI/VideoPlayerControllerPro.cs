@@ -312,6 +312,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
         { videoPlayer.Play(); OnPlayStateChanged?.Invoke(true); }
     }
 
+    public void TryToPauseVideo()
+    {
+        if (videoPlayer.isPlaying)
+        { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
+    }
+
     public void SeekRelativeLeft()
     {
         SeekRelative(-seekStepSeconds);
