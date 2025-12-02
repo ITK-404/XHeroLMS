@@ -1,4 +1,5 @@
 using Pathfinding;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -9,7 +10,7 @@ public class TeleMapController : MonoBehaviour
     public Camera mapCamera;        // camera bản đồ (top-down)
     public Camera playerCamera;     // camera người chơi (optional)
     public Transform player;        // transform người chơi
-
+    private CinemachineBrain brain;
     [Header("Raycast")]
     public LayerMask raycastMask = ~0;
 
@@ -26,14 +27,24 @@ public class TeleMapController : MonoBehaviour
 
     void Awake()
     {
+        brain = playerCamera ? playerCamera.GetComponent<CinemachineBrain>() : null;
         if (playerCamera) _playerCamDepth = playerCamera.depth;
         if (mapCamera) mapCamera.gameObject.SetActive(false);
         
         cursorMgr = FindAnyObjectByType<CursorGameManager>();
     }
 
+    private bool IsBlendingCamera()
+    {
+        return brain != null && brain.IsBlending;
+    }
+
     void Update()
     {
+        if (IsBlendingCamera())
+        {
+            return;
+        }
         if (InputBlocker.IsBlocked())
         return;
         // Nhấn phím M để bật/tắt map
