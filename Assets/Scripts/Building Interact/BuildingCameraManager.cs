@@ -25,10 +25,15 @@ public class BuildingCameraManager : MonoBehaviour
 
         if (buildingInteractable != null && Input.anyKeyDown && isTeleport)
         {
-            buildingInteractable.virtualCamera.Priority = 0;
-            buildingInteractable.DeSelect();
-            buildingInteractable = null;
+            ResetInteract();
         }
+    }
+
+    private void ResetInteract()
+    {
+        buildingInteractable.virtualCamera.Priority = 0;
+        buildingInteractable.DeSelect();
+        buildingInteractable = null;
     }
 
     public bool IsSameTarget(BuildingInteractable buildingInteractable)
@@ -51,6 +56,13 @@ public class BuildingCameraManager : MonoBehaviour
 
     public void FocusOnBuilding(BuildingInteractable interactable)
     {
+        
+        Debug.Log("Assign interactable");
+        if(buildingInteractable != null && buildingInteractable != interactable)
+        {
+            ResetInteract();
+            return;
+        }
         if (interactable == null)
         {
             Debug.Log("Interact building is null");
