@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class TutorialHandler : MonoBehaviour
@@ -12,27 +13,29 @@ public class TutorialHandler : MonoBehaviour
     private bool isPlayedBefore = false;
     public void Save()
     {
-        //string key = $"{TokenStore.UserID}" + keyPlayedBefore;
-        //if(!PlayerPrefs.HasKey(key))
-        //{
-        //    PlayerPrefs.SetInt(key, 1);
-        //    return;
-        //}
+        string key = $"{TokenStore.UserID}" + keyPlayedBefore;
 
-        worldTutorialStep.gameObject.SetActive(false);
-        standupUI.gameObject.SetActive(false);
+        Debug.Log("Save key");
+        PlayerPrefs.SetInt(key, 1);
     }
-    
+
     private void Load()
     {
+        if (PlayerPrefs.HasKey($"{TokenStore.UserID}" + keyPlayedBefore))
+        {
+            isPlayedBefore = false;
+            return;
+        }
         isPlayedBefore = PlayerPrefs.GetInt($"{TokenStore.UserID}" + keyPlayedBefore, 0) == 1;
     }
 
     private void Awake()
     {
         Instance = this;
-        ShowStep(0);
+        worldTutorialStep.gameObject.SetActive(false);
+        standupUI.gameObject.SetActive(false);
         Load();
+        ShowStep(0);
     }
 
     public void IncreaseStep()
@@ -47,7 +50,6 @@ public class TutorialHandler : MonoBehaviour
 
     public void ShowStep(int index)
     {
-        return;
         switch (index)
         {
             case 0:
@@ -59,11 +61,17 @@ public class TutorialHandler : MonoBehaviour
                 // Show world tutorial
                 standupUI.gameObject.SetActive(true);
                 worldTutorialStep.gameObject.SetActive(false);
+                standupUI.GetComponentInChildren<TextMeshProUGUI>().text = "Click để ngồi";
+
                 break;
             case 2:
                 // Show world tutorial
                 standupUI.gameObject.SetActive(true);
+                standupUI.GetComponentInChildren<TextMeshProUGUI>().text = "Click để đứng";
                 worldTutorialStep.gameObject.SetActive(false);
+
+                Save();
+
                 break;
             default:
                 break;
