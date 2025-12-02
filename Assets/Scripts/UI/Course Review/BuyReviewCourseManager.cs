@@ -33,6 +33,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         LoadKey();
         playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
         playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
+
+        playVideoHandleUI.skipButton.onClick.AddListener(Skip);
     }
 
     private void SaveKey()
@@ -59,7 +61,7 @@ public class BuyReviewCourseManager : MonoBehaviour
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
-        
+        playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
         SaveKey();
     }
 
@@ -150,7 +152,9 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         // must wait for 
         StopCoroutine(ShowPreviewCoroutine());
-
+        courseReviewUI.Show();
+        tabItemManagerUI.Hide();
+        playVideoHandleUI.Hide();
         playVideoOpenBook.Stop();
     }
 
