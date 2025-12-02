@@ -137,31 +137,31 @@ bool IsTaggedItemsRecursive(Transform t)
     void TeleportPlayer(Vector3 targetPos)
     {
         if (!player) return;
+        player.GetComponent<PointClickSystem>().TeleportDelay(targetPos);
+        //        var cc = player.GetComponent<CharacterController>();
+        //        var AIPath = player.GetComponent<IAstarAI>();
+        //        AIPath.destination = targetPos;
+        //        if (cc)
+        //        {
+        //            bool was = cc.enabled;
+        //            cc.enabled = false;
+        //            player.position = targetPos;
+        //            cc.enabled = was;
+        //            return;
+        //        }
 
-        var cc = player.GetComponent<CharacterController>();
-        var AIPath = player.GetComponent<IAstarAI>();
-        AIPath.destination = targetPos;
-        if (cc)
-        {
-            bool was = cc.enabled;
-            cc.enabled = false;
-            player.position = targetPos;
-            cc.enabled = was;
-            return;
-        }
-
-        var rb = player.GetComponent<Rigidbody>();
-        if (rb && !rb.isKinematic)
-        {
-#if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = Vector3.zero;
-#else
-            rb.velocity = Vector3.zero;
-#endif
-            rb.angularVelocity = Vector3.zero;
-            rb.MovePosition(targetPos);
-            return;
-        }
+        //        var rb = player.GetComponent<Rigidbody>();
+        //        if (rb && !rb.isKinematic)
+        //        {
+        //#if UNITY_6000_0_OR_NEWER
+        //            rb.linearVelocity = Vector3.zero;
+        //#else
+        //            rb.velocity = Vector3.zero;
+        //#endif
+        //            rb.angularVelocity = Vector3.zero;
+        //            rb.MovePosition(targetPos);
+        //            return;
+        //        }
 
         player.position = targetPos;
     }

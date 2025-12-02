@@ -320,6 +320,31 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
+    public void TeleportDelay(Vector3 targetPos)
+    {
+        var position = targetPos;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+        characterController.enabled = false;
+
+        Vector3 groundPos = (Vector3)node.position;
+        if (ai != null)
+        {
+            ai.isStopped = true;
+            ai.canMove = false;
+
+            ai.maxSpeed = defaultSpeed * 2f;
+            ai.Teleport(groundPos);
+        }
+
+        lastPickPosition = groundPos;
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
+
+        characterController.enabled = true;
+
+    }
+
     public void TeleportDelay(Transform hitTransform)
     {
         var position = hitTransform.position;
