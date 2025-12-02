@@ -17,6 +17,7 @@ public class OtpVerificationController : MonoBehaviour
     [Header("Hiển thị thời gian")]
     public TextMeshProUGUI minuteText;
     public TextMeshProUGUI secondText;
+    public TextMeshProUGUI textStatus;
 
     [Header("6 ô nhập OTP")]
     public TMP_InputField[] otpInputs = new TMP_InputField[6];
@@ -26,7 +27,7 @@ public class OtpVerificationController : MonoBehaviour
     public Button btnBack;
 
     [Header("Timer (giây)")]
-    public int totalSeconds = 60;
+    public int totalSeconds = 60;              // sẽ bị override bởi config (limit * 60)
 
     [Header("Panels")]
     public GameObject successPanel;
@@ -42,7 +43,7 @@ public class OtpVerificationController : MonoBehaviour
 
     [Header("Resend OTP")]
     public Button resendButton;
-    public int resendCooldownSeconds = 60;
+    public int resendCooldownSeconds = 60;     // sẽ bị override bởi config (limit * 60)
 
     [Header("Optional UI")]
     public TextMeshProUGUI errorText;
@@ -51,11 +52,16 @@ public class OtpVerificationController : MonoBehaviour
     public LoginPopupUI warningPopupPrefab;
     public Transform popupParent;
 
+    [Header("Config từ server")]
+    public bool useServerConfig = true;
+    public string otpConfigKey = "otp-expired-time";   // key trên /config
+
     // ========= State =========
     private int  remainingSeconds;
     private bool isRunning       = false;
     private bool isSubmitting    = false;
     private bool _resending      = false;
+    private bool _configLoaded   = false;
 
     [SerializeField] private string contactIdentifier = "";
     [SerializeField] private string otpByChannel      = ""; // "phone" | "email"
@@ -79,7 +85,6 @@ public class OtpVerificationController : MonoBehaviour
         { "otp_expired",        "Mã OTP đã hết hạn. Bạn hãy bấm Gửi lại OTP để nhận mã mới." },
         { "otp_not_found",      "Mã OTP không hợp lệ. Hãy nhập lại hoặc bấm Gửi lại OTP." },
         { "otp_too_many_retry", "Bạn đã nhập sai OTP quá nhiều lần. Hãy bấm Gửi lại OTP." }
-        // thêm nếu BE có thêm code
     };
 
     // Mã lỗi cho resend OTP
@@ -88,12 +93,42 @@ public class OtpVerificationController : MonoBehaviour
     {
         { "please_wait_a_moment_to_get_new_otp", "Bạn vừa yêu cầu OTP, vui lòng chờ một lúc rồi thử lại." },
         { "otp_limit_reached",                   "Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau ít phút." },
-        { "otp_too_many_request",               "Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau ít phút." }
+        { "otp_too_many_request",                "Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau ít phút." }
     };
 
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
+    }
+
+    private void Start()
+    {
+        EnsureContactFromSessionOrPrefs();
+
+        // Lấy config OTP từ server (limit = phút)
+        if (useServerConfig)
+        {
+            StartCoroutine(LoadOtpConfigFromServer());
+        }
+
+        // OTP inputs
+        for (int i = 0; i < otpInputs.Length; i++)
+        {
+            int index = i;
+            if (otpInputs[i] == null) continue;
+            otpInputs[i].characterLimit = 1;
+            otpInputs[i].contentType = TMP_InputField.ContentType.IntegerNumber;
+            otpInputs[i].onValueChanged.AddListener((value) => OnInputChanged(index, value));
+        }
+
+        if (otpInputs.Length > 0 && otpInputs[0] != null)
+            otpInputs[0].Select();
+
+        // Buttons
+        if (btnEnter) btnEnter.onClick.AddListener(OnEnterClicked);
+        if (btnBack)  btnBack.onClick.AddListener(OnBackClicked);
+
+        if (errorText) errorText.text = "";
     }
 
     public void SetContact(string identifier, string otpBy, string purpose = "")
@@ -106,6 +141,9 @@ public class OtpVerificationController : MonoBehaviour
         AuthFlowSession.LastOtpBy         = otpByChannel;
         if (!string.IsNullOrEmpty(otpPurpose))
             AuthFlowSession.LastOtpPurpose = otpPurpose;
+
+        // Cập nhật status text ngay khi được set từ màn Register
+        UpdateStatusLabel();
     }
 
     public void SetUsername(string username84FromRegister) =>
@@ -132,31 +170,6 @@ public class OtpVerificationController : MonoBehaviour
             SetButtonLabel(resendButton, "Gửi lại OTP");
             resendButton.interactable = true;
         }
-    }
-
-    private void Start()
-    {
-        EnsureContactFromSessionOrPrefs();
-        ResetTimer();
-
-        // OTP inputs
-        for (int i = 0; i < otpInputs.Length; i++)
-        {
-            int index = i;
-            if (otpInputs[i] == null) continue;
-            otpInputs[i].characterLimit = 1;
-            otpInputs[i].contentType    = TMP_InputField.ContentType.IntegerNumber;
-            otpInputs[i].onValueChanged.AddListener((value) => OnInputChanged(index, value));
-        }
-
-        if (otpInputs.Length > 0 && otpInputs[0] != null)
-            otpInputs[0].Select();
-
-        // Buttons
-        if (btnEnter) btnEnter.onClick.AddListener(OnEnterClicked);
-        if (btnBack)  btnBack.onClick.AddListener(OnBackClicked);
-
-        if (errorText) errorText.text = "";
     }
 
     private void OnDestroy()
@@ -188,6 +201,12 @@ public class OtpVerificationController : MonoBehaviour
         }
     }
 
+    // Gọi từ màn Register / Forgot khi OTP đã được gửi thành công
+    public void BeginCountdown()
+    {
+        ResetTimer();
+    }
+
     // ================= Contact sourcing =================
     private void EnsureContactFromSessionOrPrefs()
     {
@@ -199,7 +218,7 @@ public class OtpVerificationController : MonoBehaviour
         if (string.IsNullOrEmpty(otpByChannel))
             otpByChannel = AuthFlowSession.LastOtpBy;
         if (string.IsNullOrEmpty(otpPurpose))
-            otpPurpose   = AuthFlowSession.LastOtpPurpose;
+            otpPurpose = AuthFlowSession.LastOtpPurpose;
 
         if (!string.IsNullOrEmpty(contactIdentifier)) return;
 
@@ -450,7 +469,7 @@ public class OtpVerificationController : MonoBehaviour
             }
         }
 
-        // Cooldown chống spam resend
+        // Cooldown chống spam resend — dùng limit * 60 nếu server trả về
         float cd = Mathf.Max(5, resendCooldownSeconds);
         float t = cd;
         while (t > 0f)
@@ -583,5 +602,131 @@ public class OtpVerificationController : MonoBehaviour
         Transform parent = popupParent != null ? popupParent : transform.root;
         var popup = Instantiate(warningPopupPrefab, parent);
         popup.Init("Cảnh báo", message);
+    }
+
+    private void UpdateStatusLabel()
+    {
+        if (textStatus == null)
+            return;
+
+        if (string.IsNullOrEmpty(contactIdentifier))
+        {
+            textStatus.text = "";
+            return;
+        }
+
+        string channelLabel = (otpByChannel == "phone")
+            ? "số điện thoại"
+            : "email";
+
+        string purposeLabel;
+        if (!string.IsNullOrEmpty(otpPurpose))
+        {
+            if (otpPurpose == forgotPurposeKey)
+                purposeLabel = "đặt lại mật khẩu";
+            else if (otpPurpose == "register")
+                purposeLabel = "hoàn tất đăng ký";
+            else
+                purposeLabel = "tiếp tục";
+        }
+        else
+        {
+            purposeLabel = "tiếp tục";
+        }
+
+        textStatus.text =
+            $"Mã xác minh gồm 6 số vừa được gửi đến {channelLabel} {contactIdentifier}. " +
+            $"\nVui lòng nhập mã OTP để {purposeLabel}.";
+    }
+
+    // =============== CONFIG /config?key=otp-expired-time ===============
+    [System.Serializable]
+    private class OtpConfigItem
+    {
+        public string type;   // vd: "order"
+        public int    limit;  // phút
+    }
+
+    [System.Serializable]
+    private class OtpConfigData
+    {
+        public string        _id;
+        public string        key;
+        public OtpConfigItem[] data;
+    }
+
+    [System.Serializable]
+    private class OtpConfigResponse
+    {
+        public bool          status;
+        public OtpConfigData data;
+    }
+
+    private IEnumerator LoadOtpConfigFromServer()
+    {
+        string url = baseUrl.TrimEnd('/') + "/config?key=" + otpConfigKey;
+
+        using (var req = UnityWebRequest.Get(url))
+        {
+            req.downloadHandler = new DownloadHandlerBuffer();
+            yield return req.SendWebRequest();
+
+#if UNITY_2020_2_OR_NEWER
+            bool ok = req.result == UnityWebRequest.Result.Success ||
+                      (req.responseCode >= 200 && req.responseCode < 300);
+#else
+            bool ok = !req.isNetworkError && !req.isHttpError &&
+                      (req.responseCode >= 200 && req.responseCode < 300);
+#endif
+            if (!ok)
+            {
+                Debug.LogWarning($"[OTP Config] FAIL {req.responseCode}: {req.error}\n{req.downloadHandler.text}");
+                yield break;
+            }
+
+            var json = req.downloadHandler.text;
+            OtpConfigResponse resp = null;
+            try
+            {
+                resp = JsonUtility.FromJson<OtpConfigResponse>(json);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[OTP Config] Parse JSON fail: " + e.Message + "\nRaw: " + json);
+            }
+
+            if (resp == null || resp.data == null || resp.data.data == null || resp.data.data.Length == 0)
+            {
+                Debug.LogWarning("[OTP Config] Response rỗng hoặc sai cấu trúc.");
+                yield break;
+            }
+
+            // Lấy phần tử đầu tiên (hoặc có type = "order")
+            OtpConfigItem item = resp.data.data[0];
+            for (int i = 0; i < resp.data.data.Length; i++)
+            {
+                if (resp.data.data[i] != null && resp.data.data[i].type == "order")
+                {
+                    item = resp.data.data[i];
+                    break;
+                }
+            }
+
+            int limitMinutes = item != null ? item.limit : 0;
+            if (limitMinutes > 0)
+            {
+                int seconds = limitMinutes * 60;
+                totalSeconds         = seconds;   // thời gian hiệu lực OTP
+                resendCooldownSeconds = seconds;  // thời gian chờ gửi lại OTP
+
+                Debug.Log($"[OTP Config] Loaded limit = {limitMinutes} phút => {seconds} giây.");
+            }
+            else
+            {
+                Debug.LogWarning("[OTP Config] limit <= 0, giữ nguyên giá trị mặc định trong Inspector.");
+            }
+
+            _configLoaded = true;
+        }
     }
 }

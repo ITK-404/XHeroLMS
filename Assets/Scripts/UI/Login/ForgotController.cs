@@ -9,27 +9,26 @@ using System.Collections.Generic;
 public class ForgotController : MonoBehaviour
 {
     [Header("API")]
-    // private string baseUrl = LmsStore.Instance.baseUrl;
     private string baseUrl;
 
     [Tooltip("Các endpoint ứng viên để yêu cầu gửi OTP quên mật khẩu (thử lần lượt cho tới khi thành công)")]
     public string[] otpRequestPathsToTry = new string[]
     {
-        "/users/otp",                   // theo tài liệu
-        "/api/v1/users/otp",            // nếu backend chạy dưới /api/v1
-        "/users/otp/request",           // 1 số backend đặt /request
-        "/users/otp/forgot-password",   // hoặc chuyên biệt cho forgot
-        "/users/otp/send"               // alias phổ biến
+        "/users/otp",
+        "/api/v1/users/otp",
+        "/users/otp/request",
+        "/users/otp/forgot-password",
+        "/users/otp/send"
     };
 
     [Header("Payload flags")]
     public string functionName = "forgot-password"; // theo Swagger
-    public string platform     = "web";             
-    public bool   isApp        = false;             // nếu BE check cờ này
+    public string platform     = "web";
+    public bool   isApp        = false;
 
     // PlayerPrefs key dùng liên thông với màn OTP
-    private const string PREF_OTP_BY         = "REG_OTP_BY";          // "phone" | "email"
-    private const string PREF_OTP_IDENTIFIER = "REG_OTP_IDENTIFIER";  // 84xxxx... hoặc email
+    private const string PREF_OTP_BY         = "REG_OTP_BY";         
+    private const string PREF_OTP_IDENTIFIER = "REG_OTP_IDENTIFIER";
 
     [Header("Toggles (Chỉ chọn 1)")]
     public Toggle toggleSms;
@@ -45,17 +44,15 @@ public class ForgotController : MonoBehaviour
     public GameObject currentPanel;
 
     [Header("Đi tới màn nhập OTP (tuỳ chọn)")]
-    public GameObject otpPanel;                     // panel OTP
-    public OtpVerificationController otpController; // ref tới OTP controller
+    public GameObject otpPanel;
+    public OtpVerificationController otpController;
 
     [Header("UI Thông báo (optional)")]
     public TextMeshProUGUI errorText;
 
     [Header("Popup Warning (optional)")]
-    public LoginPopupUI warningPopupPrefab;   // prefab cảnh báo
-    public Transform popupParent;             // Canvas/Panel để spawn popup
-
-    // ====== Error mapping cho Forgot OTP ======
+    public LoginPopupUI warningPopupPrefab;
+    public Transform popupParent;
 
     [System.Serializable]
     private class ErrorResponse
@@ -66,9 +63,6 @@ public class ForgotController : MonoBehaviour
         public int    statusCode;
     }
 
-    /// <summary>
-    /// Map mã lỗi từ BE -> thông điệp thân thiện cho Forgot OTP.
-    /// </summary>
     private static readonly Dictionary<string, string> ForgotErrorMessageMap =
         new Dictionary<string, string>
     {
@@ -156,7 +150,7 @@ public class ForgotController : MonoBehaviour
                 ShowWarningPopup(msg);
                 return;
             }
-            identifier = ConvertPhoneTo84(digits);   // đổi về 84xxxx
+            identifier = ConvertPhoneTo84(digits);
         }
         else
         {
@@ -188,7 +182,6 @@ public class ForgotController : MonoBehaviour
 
         string lastErrLog = null;
 
-        // Build query string (GET)
         string query =
             $"?username={UnityWebRequest.EscapeURL(identifier)}" +
             $"&otpBy={UnityWebRequest.EscapeURL(otpBy)}" +
@@ -233,11 +226,16 @@ public class ForgotController : MonoBehaviour
                     AuthFlowSession.LastOtpPurpose    = functionName;
 
                     // Chuyển panel
-                    if (otpPanel)      otpPanel.SetActive(true);
-                    if (currentPanel)  currentPanel.SetActive(false);
+                    if (otpPanel)     otpPanel.SetActive(true);
+                    if (currentPanel) currentPanel.SetActive(false);
 
                     if (otpController)
+                    {
+                        // set contact để label trên màn OTP đúng
                         otpController.SetContact(identifier, otpBy, functionName);
+                        // bắt đầu đếm ngược khi BE đã gửi OTP thành công
+                        otpController.BeginCountdown();
+                    }
 
                     // Nếu không có panel OTP riêng thì show text thông báo
                     if (errorText && otpPanel == null)
@@ -251,7 +249,7 @@ public class ForgotController : MonoBehaviour
                     yield break;
                 }
 
-                // 404 -> có thể sai route, thử route tiếp theo
+                // 404 -> thử route tiếp theo
                 if (req.responseCode == 404)
                 {
                     lastErrLog =
@@ -260,7 +258,6 @@ public class ForgotController : MonoBehaviour
                     continue;
                 }
 
-                // Các lỗi khác (4xx, 5xx, lỗi mạng...)
                 string raw = req.downloadHandler.text;
                 lastErrLog =
                     $"OTP request FAIL ({req.responseCode}) at path '{path}': {req.error}\n{raw}";
@@ -276,7 +273,6 @@ public class ForgotController : MonoBehaviour
             }
         }
 
-        // Nếu chạy hết các path vẫn 404
         Debug.LogWarning("[Forgot] All candidate OTP routes returned 404. Last: " + lastErrLog);
 
         const string finalMsg =
@@ -287,13 +283,8 @@ public class ForgotController : MonoBehaviour
         if (btnEnter) btnEnter.interactable = true;
     }
 
-    /// <summary>
-    /// Chuyển lỗi từ UnityWebRequest/raw JSON thành message thân thiện cho user.
-    /// Tuyệt đối không trả lại message thô từ server.
-    /// </summary>
     private string BuildForgotFriendlyMessage(UnityWebRequest req, string raw)
     {
-        // Lỗi mạng / không kết nối được server
 #if UNITY_2020_2_OR_NEWER
         if (req.result == UnityWebRequest.Result.ConnectionError)
 #else
@@ -303,13 +294,11 @@ public class ForgotController : MonoBehaviour
             return "Lỗi mạng, bạn vui lòng kiểm tra kết nối internet và thử lại.";
         }
 
-        // Lỗi 5xx / server bận
         if (req.responseCode >= 500 && req.responseCode < 600)
         {
             return "Hệ thống đang bận hoặc bảo trì. Bạn vui lòng thử lại sau giây lát.";
         }
 
-        // Thử parse JSON để lấy mã lỗi
         if (!string.IsNullOrEmpty(raw))
         {
             try
@@ -322,7 +311,6 @@ public class ForgotController : MonoBehaviour
                         return mapped;
                     }
 
-                    // Mã lỗi không có trong map -> log cho dev, UI vẫn dùng câu generic
                     Debug.LogWarning("[Forgot] Unmapped backend error code: " + err.message);
                 }
             }
@@ -333,19 +321,16 @@ public class ForgotController : MonoBehaviour
             }
         }
 
-        // 4xx khác (400/401/403/422...) hoặc JSON lạ -> dùng message chung
         if (req.responseCode >= 400 && req.responseCode < 500)
         {
             return "Gửi mã OTP thất bại. Bạn vui lòng kiểm tra lại thông tin và thử lại.";
         }
 
-        // Fallback cuối cùng
         return "Gửi mã OTP thất bại. Bạn vui lòng thử lại sau giây lát.";
     }
 
     public static bool IsValidPhone(string phoneDigits)
     {
-        // Cho phép: 84xxxxxxxxx (11 số), 0xxxxxxxxx (10/11), xxxxxxxxx (9/10)
         return Regex.IsMatch(phoneDigits ?? "", @"^(84\d{9}|0?\d{9,10})$");
     }
 
@@ -355,14 +340,13 @@ public class ForgotController : MonoBehaviour
     public static string ConvertPhoneTo84(string phone)
     {
         if (string.IsNullOrEmpty(phone)) return "";
-        phone = Regex.Replace(phone, @"\D", ""); // chỉ còn số
+        phone = Regex.Replace(phone, @"\D", "");
 
-        if (phone.StartsWith("84")) return phone;              // đã là 84...
-        if (phone.StartsWith("0"))  return "84" + phone[1..];  // 0xxxxxxxxx -> 84xxxxxxxxx
-        return "84" + phone;                                   // 9–10 số không leading 0
+        if (phone.StartsWith("84")) return phone;
+        if (phone.StartsWith("0"))  return "84" + phone[1..];
+        return "84" + phone;
     }
 
-    // ======= Popup =======
     private void ShowWarningPopup(string message)
     {
         if (warningPopupPrefab == null)
@@ -373,8 +357,6 @@ public class ForgotController : MonoBehaviour
 
         Transform parent = popupParent != null ? popupParent : transform.root;
         var popup = Instantiate(warningPopupPrefab, parent);
-
-        // Dùng Init để auto gán onClick + Destroy
         popup.Init("Cảnh báo", message);
     }
 }
