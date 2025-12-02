@@ -10,7 +10,7 @@ public class IntroManager : MonoBehaviour
     public string nextSceneName = "New Scene"; 
 
     private bool videoStarted = false; // Biến kiểm tra xem video đã bắt đầu chưa
-    private float videoStartTimeout = 7f; // Thời gian tối đa để video bắt đầu (3 giây)
+    private float videoStartTimeout = 5f; // Thời gian tối đa để video bắt đầu (3 giây)
 
     void Start()
     {
