@@ -8,10 +8,10 @@ public class TutorialManager : MonoBehaviour
     public static TutorialManager Instance;
     public List<TutorialButton> tutorialButtons = new();
     public int currentIndex = 0;
-
+    private bool isPlayed = false;
     // Assign the Canvas that contains the UI (set in inspector)
     public Canvas uiCanvas;
-
+    private string tutorialKey = "Tutorial_1";
     private void Awake()
     {
         if (Instance == null)
@@ -22,7 +22,24 @@ public class TutorialManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+        if (PlayerPrefs.HasKey(tutorialKey))
+        {
+            isPlayed = PlayerPrefs.GetInt(tutorialKey) == 1;
+        }
+        if (isPlayed)
+        {
+            return;
+        }
         StartTutorial();
+    }
+
+    [ContextMenu("Delete Key")]
+    private void DeleteKey()
+    {
+        if (PlayerPrefs.HasKey(tutorialKey))
+        {
+            PlayerPrefs.DeleteKey(tutorialKey);
+        }
     }
 
     public void StartTutorial()
@@ -41,7 +58,9 @@ public class TutorialManager : MonoBehaviour
         currentIndex++;
         if (currentIndex >= tutorialButtons.Count)
         {
-            if(currentTutorial != null)
+            isPlayed = true;
+            PlayerPrefs.SetInt(tutorialKey, 1);
+            if (currentTutorial != null)
                 Destroy(currentTutorial);
             return;
         }
