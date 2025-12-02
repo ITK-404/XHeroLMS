@@ -18,6 +18,9 @@ public class TutorialHandler : MonoBehaviour
         //    PlayerPrefs.SetInt(key, 1);
         //    return;
         //}
+
+        worldTutorialStep.gameObject.SetActive(false);
+        standupUI.gameObject.SetActive(false);
     }
     
     private void Load()
@@ -44,6 +47,7 @@ public class TutorialHandler : MonoBehaviour
 
     public void ShowStep(int index)
     {
+        return;
         switch (index)
         {
             case 0:
