@@ -59,7 +59,7 @@ public class PointClickSystem : MonoBehaviour
     }
     private bool IsBlendingCamera()
     {
-        return brain != null && brain.IsBlending;
+        return brain != null && brain.IsBlending && BuildingCameraManager.Instance.IsFocus();
     }
     void Update()
     {

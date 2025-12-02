@@ -41,7 +41,7 @@ public class TeleMapController : MonoBehaviour
 
     void Update()
     {
-        if (IsBlendingCamera())
+        if (IsBlendingCamera() || BuildingCameraManager.Instance.IsFocus())
         {
             return;
         }
