@@ -63,6 +63,7 @@ public class PointClickSystem : MonoBehaviour
     }
     void Update()
     {
+        if (TeleMapController._mapActive) return;
         if (InputBlocker.IsBlocked() || IsBlendingCamera())
             return;
 

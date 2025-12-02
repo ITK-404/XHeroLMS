@@ -47,7 +47,7 @@ AudioSource:
   m_PlayOnAwake: 0
   m_Volume: 0.3
   m_Pitch: 1
-  Loop: 1
+  Loop: 0
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -210,6 +210,8 @@ MonoBehaviour:
   originalScene: New Scene
   musicSource: {fileID: 4274411648696809927}
   bgmClips:
+  - clip: {fileID: 8300000, guid: ccf58a0614da797449bad0652735ef44, type: 3}
+    volume: 0.3
   - clip: {fileID: 8300000, guid: e06056dc89bd72e49b814e408a186d21, type: 3}
     volume: 0.3
   - clip: {fileID: 8300000, guid: 26959f41521936f46b96d3a7316e5e26, type: 3}
@@ -218,7 +220,6 @@ MonoBehaviour:
     volume: 0.3
   - clip: {fileID: 8300000, guid: 0e6e4090796e58b4faaaa3bcc34b74de, type: 3}
     volume: 0.3
-  index: 0
   fadeDuration: 1.5
   targetVolume: 0.5
   isRandom: 1

@@ -1,6 +1,9 @@
-﻿using System;
+﻿using NUnit.Framework;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 
 public class BackgroundMusicManager : MonoBehaviour
@@ -14,7 +17,6 @@ public class BackgroundMusicManager : MonoBehaviour
         public float volume;
     }
     public BGMConfig[] bgmClips;
-    public int index = 0;
 
     [Tooltip("Default fade duration used by Pause/Resume if no duration supplied")]
     public float fadeDuration = 1f;
@@ -25,10 +27,18 @@ public class BackgroundMusicManager : MonoBehaviour
     [Header("Main Audio")]
     public bool isRandom = false;
     public AudioClip audioClip;
+    [Header("Random Music")]
+    private List<int> defaultMusicIndexs = new();
+    private List<int> playedMusic = new();
     private void Awake()
     {
         if (musicSource == null)
             musicSource = GetComponent<AudioSource>();
+
+        for (int i = 0; i < bgmClips.Length; i++)
+        {
+            defaultMusicIndexs.Add(i);
+        }
 
         if (SceneManager.GetActiveScene().name == originalScene)
         {
@@ -48,9 +58,9 @@ public class BackgroundMusicManager : MonoBehaviour
 
     private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
     {
-        if(arg1.name == "New Scene")
+        if (arg1.name == "New Scene")
         {
-            ResumeWithFade();
+            PlayRandomMusic();
         }
         else
         {
@@ -73,31 +83,46 @@ public class BackgroundMusicManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.G))
         {
             Debug.Log("Change next music");
-            GoNextMusic();
+            PlayRandomMusic();
         }
-    }
+        if (musicSource.clip != null
+                && !musicSource.loop
+                && !musicSource.isPlaying
+                && musicSource.time > 0.01f)
+        {
+            PlayRandomMusic();
+        }
 
+    }
+    private bool firstTimePlay = false;
     private void PlayRandomMusic()
     {
         if (bgmClips == null || bgmClips.Length == 0) return;
+        // lấy index từ danh sách nhạc mặc định
 
-        int randomIndex = UnityEngine.Random.Range(0, bgmClips.Length);
-        var getRandomMusic = bgmClips[randomIndex];
+        if (defaultMusicIndexs.Count == 0)
+        {
+            defaultMusicIndexs.AddRange(playedMusic);
+            playedMusic.Clear();
+        }
+        int randomIndex = 0;
+        if (firstTimePlay)
+        {
+            randomIndex = UnityEngine.Random.Range(0, defaultMusicIndexs.Count);
+        }
+        else
+        {
+            firstTimePlay = true;
+        }
+        var correctIndex = defaultMusicIndexs[randomIndex];
+        var randomClip = bgmClips[correctIndex];
 
-        index = randomIndex;
-        PlayMusic(getRandomMusic.clip, getRandomMusic.volume);
+        playedMusic.Add(correctIndex);
+        defaultMusicIndexs.RemoveAt(randomIndex);
+
+        PlayMusic(randomClip.clip, randomClip.volume);
     }
 
-    private void GoNextMusic()
-    {
-        if (bgmClips == null || bgmClips.Length == 0) return;
-
-        index = (index + 1) % bgmClips.Length;
-
-        var music = bgmClips[index];
-        PlayMusic(music.clip, music.volume);
-        // index already advanced and wrapped above
-    }
 
     // Public API: pause with fade to 0 over duration seconds
     public void PauseWithFade(float duration)
