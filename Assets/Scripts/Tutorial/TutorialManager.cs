@@ -1,6 +1,63 @@
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+[Serializable]
+public class TutorialStep
+{
+    public string step_ID;
+    public bool isShowingUI = false;
+    public Transform popupUI;
+    
+    public bool CanShowUI()
+    {
+        if (isShowingUI)
+        {
+            if(popupUI == null)
+            {
+                Debug.Log("Popup đang rỗng");
+            }
+            return popupUI != null;
+        }
+        return false;
+    }
+    
+}public class TutorialHandler : MonoBehaviour
+{
+    public List<TutorialStep> tutorialSteps = new();
+    private int index = 0;
+    private void Awake()
+    {
+        EventHub.OnSendTutorialStep += TryValidStep;
+    }
 
+    private void TryValidStep(string step_ID)
+    {
+        if (index < 0 || index >= tutorialSteps.Count)
+        {
+            Debug.LogWarning($"Current index out of range: {index}");
+            return;
+        }
+        var currentStep = tutorialSteps[index];
+        if (!string.Equals(currentStep.step_ID, step_ID, StringComparison.Ordinal))
+            return;
+
+        // đi tới step tiếp theo
+        // nếu có UI thì hiện ra
+
+        if (currentStep.CanShowUI())
+        {
+            currentStep.popupUI.gameObject.SetActive(false);
+        }
+
+        var nextStep = tutorialSteps[index + 1];
+
+        if (nextStep.CanShowUI())
+        {
+            currentStep.popupUI.gameObject.SetActive(true);
+        }
+    }
+
+}
 public class TutorialManager : MonoBehaviour
 {
     public GameObject tutorialPrefab;
