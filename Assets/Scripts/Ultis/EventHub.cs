@@ -4,7 +4,6 @@ using UnityEngine;
 public class EventHub
 {
     public static event Action<int> OnExamIndexClampChanged;
-
     public static void RaiseExamClampItem(int score)
     {
         OnExamIndexClampChanged?.Invoke(score);
@@ -15,4 +14,15 @@ public class EventHub
     {
         OnExamIndexCenterChanged?.Invoke(score);
     }
+
+    public static Action<string> OnSendTutorialStep;
+
+    public static void RaiseSendTutorialStep(string stepID)
+    {
+        if (OnSendTutorialStep != null)
+        {
+            OnSendTutorialStep.Invoke(stepID);
+        }
+    }
+
 }
