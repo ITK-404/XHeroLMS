@@ -5,6 +5,7 @@ using UnityEngine.Networking;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 public class OtpVerificationController : MonoBehaviour
 {
@@ -13,6 +14,8 @@ public class OtpVerificationController : MonoBehaviour
     private const string PREF_USERNAME84     = "REG_USERNAME_84";
     private const string PREF_OTP_BY         = "REG_OTP_BY";
     private const string PREF_OTP_IDENTIFIER = "REG_OTP_IDENTIFIER";
+    public string otpConfigKey = "otp-expired-time";   // key trên /config
+    private const string PREF_LOGIN_PREFILL  = "LOGIN_PREFILL_USERNAME";
 
     [Header("Hiển thị thời gian")]
     public TextMeshProUGUI minuteText;
@@ -54,14 +57,13 @@ public class OtpVerificationController : MonoBehaviour
 
     [Header("Config từ server")]
     public bool useServerConfig = true;
-    public string otpConfigKey = "otp-expired-time";   // key trên /config
 
     // ========= State =========
     private int  remainingSeconds;
     private bool isRunning       = false;
     private bool isSubmitting    = false;
     private bool _resending      = false;
-    private bool _configLoaded   = false;
+    private bool _configLoaded = false;
 
     [SerializeField] private string contactIdentifier = "";
     [SerializeField] private string otpByChannel      = ""; // "phone" | "email"
@@ -316,8 +318,13 @@ public class OtpVerificationController : MonoBehaviour
                 {
                     Debug.Log("[OTP] Verify OK -> " + req.downloadHandler.text);
 
+                    // 1) Lưu username cho màn Login
+                    SetLoginPrefillFromVerifiedContact();
+
+                    // 2) Dừng timer như cũ
                     if (isRunning) { StopAllCoroutines(); isRunning = false; }
 
+                    // 3) Điều hướng như cũ
                     if (isForgot && openResetOnSuccess && resetPanel != null)
                     {
                         if (resetController != null) resetController.SetUsername(username);
@@ -328,13 +335,14 @@ public class OtpVerificationController : MonoBehaviour
                     {
                         if (currentPanel) currentPanel.SetActive(false);
                         if (successPanel) successPanel.SetActive(true);
-                        if (imageToShow)  imageToShow.gameObject.SetActive(true);
+                        if (imageToShow) imageToShow.gameObject.SetActive(true);
                     }
 
                     isSubmitting = false;
                     if (btnEnter) btnEnter.interactable = true;
                     yield break;
                 }
+
 
                 string raw = req.downloadHandler.text;
                 lastLog =
@@ -716,7 +724,7 @@ public class OtpVerificationController : MonoBehaviour
             if (limitMinutes > 0)
             {
                 int seconds = limitMinutes * 60;
-                totalSeconds         = seconds;   // thời gian hiệu lực OTP
+                totalSeconds = seconds;   // thời gian hiệu lực OTP
                 resendCooldownSeconds = seconds;  // thời gian chờ gửi lại OTP
 
                 Debug.Log($"[OTP Config] Loaded limit = {limitMinutes} phút => {seconds} giây.");
@@ -729,4 +737,36 @@ public class OtpVerificationController : MonoBehaviour
             _configLoaded = true;
         }
     }
+    private void SetLoginPrefillFromVerifiedContact()
+    {
+        if (string.IsNullOrEmpty(contactIdentifier))
+            return;
+
+        string display = contactIdentifier.Trim();
+
+        // Nếu là phone thì convert 84xxxxxxxxx -> 0xxxxxxxxx cho dễ nhìn
+        if (otpByChannel == "phone")
+        {
+            string digits = display.Replace(" ", "").Replace("-", "");
+            if (digits.StartsWith("84") && digits.Length > 2)
+            {
+                display = "0" + digits.Substring(2);
+            }
+            else
+            {
+                display = digits;
+            }
+        }
+
+        PlayerPrefs.SetString(PREF_LOGIN_PREFILL, display);
+        PlayerPrefs.Save();
+        Debug.Log($"[OTP] Set LOGIN_PREFILL_USERNAME = {display}");
+
+        // Nếu login đang tồn tại trên scene thì cập nhật luôn
+        if (LoginController.Instance != null)
+        {
+            LoginController.Instance.RefreshLoginPrefill();
+        }
+    }
+
 }
