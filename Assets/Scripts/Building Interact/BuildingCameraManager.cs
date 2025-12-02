@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -12,12 +13,12 @@ public class BuildingCameraManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-        
+
     }
 
     private void Update()
     {
-        if(brain.IsBlending && brain.ActiveBlend != null)
+        if (brain.IsBlending && brain.ActiveBlend != null)
         {
             return;
         }
@@ -50,7 +51,7 @@ public class BuildingCameraManager : MonoBehaviour
 
     public void FocusOnBuilding(BuildingInteractable interactable)
     {
-        if(interactable == null)
+        if (interactable == null)
         {
             Debug.Log("Interact building is null");
         }
@@ -61,5 +62,10 @@ public class BuildingCameraManager : MonoBehaviour
         isTeleport = false;
 
         StartCoroutine(WaitForBlend());
+    }
+
+    public bool IsFocus()
+    {
+        return buildingInteractable != null;
     }
 }
