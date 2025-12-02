@@ -297,16 +297,26 @@ public class PointClickSystem : MonoBehaviour
 
     private bool TryHandleMoveToHouse(Ray ray)
     {
-        if (Physics.Raycast(ray, out var checkPointHit, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
+        foreach (var hit in results)
         {
-            if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
+            if (hit.collider.CompareTag("CheckPoint") && hit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
                 BuildingCameraManager.Instance.FocusOnBuilding(interactable);
                 Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
-
                 return true;
             }
         }
+        //if (Physics.Raycast(ray, out var checkPointHit, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        //{
+        //    if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
+        //    {
+        //        BuildingCameraManager.Instance.FocusOnBuilding(interactable);
+        //        Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
+
+        //        return true;
+        //    }
+        //}
         return false;
     }
 
