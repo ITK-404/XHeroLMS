@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 public class PlayerStandUI : MonoBehaviour
 {
+    public GameObject returnBtn;
     public Button standupButton;
     public Button sitdownButton;
     public RectTransform navigationBarUI;
@@ -43,11 +44,13 @@ public class PlayerStandUI : MonoBehaviour
     public void ShowWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(true);
+        returnBtn.gameObject.SetActive(false);
     }
     
     public void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
+        returnBtn.gameObject.SetActive(true);
     }
 
     
