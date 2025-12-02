@@ -5,6 +5,7 @@ public class RotateToCamera : MonoBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] private Transform item;
     [SerializeField] private bool ignoreY = false;
+    [SerializeField] private bool flipFoward = false;
     private void LateUpdate()
     {
         if (playerCamera == null) return;
@@ -14,6 +15,10 @@ public class RotateToCamera : MonoBehaviour
         if (ignoreY)
         {
             direction.y = 0;
+        }
+        if(flipFoward)
+        {
+            direction = -direction;
         }
         item.transform.forward = direction;
     }
