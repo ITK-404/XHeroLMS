@@ -60,6 +60,7 @@ public class BackgroundMusicManager : MonoBehaviour
     {
         if (arg1.name == "New Scene")
         {
+            ResumeWithFade();
             PlayRandomMusic();
         }
         else
@@ -80,11 +81,6 @@ public class BackgroundMusicManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            Debug.Log("Change next music");
-            PlayRandomMusic();
-        }
         if (musicSource.clip != null
                 && !musicSource.loop
                 && !musicSource.isPlaying
@@ -106,13 +102,14 @@ public class BackgroundMusicManager : MonoBehaviour
             playedMusic.Clear();
         }
         int randomIndex = 0;
-        if (firstTimePlay)
+        if (!firstTimePlay)
         {
-            randomIndex = UnityEngine.Random.Range(0, defaultMusicIndexs.Count);
+            randomIndex = 0;
+            firstTimePlay = true;
         }
         else
         {
-            firstTimePlay = true;
+            randomIndex = UnityEngine.Random.Range(0, defaultMusicIndexs.Count);
         }
         var correctIndex = defaultMusicIndexs[randomIndex];
         var randomClip = bgmClips[correctIndex];
@@ -146,10 +143,10 @@ public class BackgroundMusicManager : MonoBehaviour
         // If already playing, just ensure volume fades to target
         if (fadeCoroutine != null) StopCoroutine(fadeCoroutine);
         // If paused, unpause first then fade in
-        if (!musicSource.isPlaying && musicSource.time > 0f)
-            musicSource.UnPause();
-        else if (!musicSource.isPlaying)
-            musicSource.Play();
+        //if (!musicSource.isPlaying && musicSource.time > 0f)
+        //    musicSource.UnPause();
+        //else if (!musicSource.isPlaying)
+        musicSource.Play();
 
         fadeCoroutine = StartCoroutine(ResumeFadeCoroutine(Mathf.Max(0f, duration)));
     }
@@ -166,7 +163,6 @@ public class BackgroundMusicManager : MonoBehaviour
         if (duration <= 0f)
         {
             musicSource.volume = 0f;
-            musicSource.Pause();
             fadeCoroutine = null;
             yield break;
         }
@@ -179,7 +175,6 @@ public class BackgroundMusicManager : MonoBehaviour
         }
 
         musicSource.volume = 0f;
-        musicSource.Pause();
         fadeCoroutine = null;
     }
 
