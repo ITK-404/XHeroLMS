@@ -381,21 +381,27 @@ public class PointClickSystem : MonoBehaviour
             if (chairHit.collider.CompareTag("CheckPoint"))
             {
                 // hardcode
-                
-                
+
+
 
                 if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
                     return false;
 
-                
+
 
                 currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
                 if (currentCheckPoint != null)
 
-                    if (TutorialHandler.Instance.IsStep(0))
+                    if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
                     {
                         var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
-                        if (isTutorialChair) return true;
+
+                        if (isTutorialChair)
+                        
+                        {
+                            Debug.Log($"haha");
+                            return true;
+                        }
 
                         TutorialHandler.Instance.worldTutorialStep.SetActive(false);
                     }

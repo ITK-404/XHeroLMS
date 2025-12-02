@@ -11,22 +11,28 @@ public class TutorialHandler : MonoBehaviour
     public static TutorialHandler Instance;
     private const string keyPlayedBefore = "TutorialPlayedBefore";
     private bool isPlayedBefore = false;
+    private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
+    //private string key => $"{keyPlayedBefore}";
     public void Save()
     {
-        string key = $"{TokenStore.UserID}" + keyPlayedBefore;
-
         Debug.Log("Save key");
         PlayerPrefs.SetInt(key, 1);
     }
 
     private void Load()
     {
-        if (PlayerPrefs.HasKey($"{TokenStore.UserID}" + keyPlayedBefore))
+        if (!PlayerPrefs.HasKey(key))
         {
             isPlayedBefore = false;
             return;
         }
-        isPlayedBefore = PlayerPrefs.GetInt($"{TokenStore.UserID}" + keyPlayedBefore, 0) == 1;
+        isPlayedBefore = PlayerPrefs.GetInt(key) == 1;
+    }
+
+    [ContextMenu("Reset Key")]
+    public void ResetKey()
+    {
+        PlayerPrefs.SetInt(key, 0);
     }
 
     private void Awake()
@@ -50,6 +56,11 @@ public class TutorialHandler : MonoBehaviour
 
     public void ShowStep(int index)
     {
+        if(isPlayedBefore)
+        {
+            return;
+        }
+
         switch (index)
         {
             case 0:
@@ -76,10 +87,11 @@ public class TutorialHandler : MonoBehaviour
             default:
                 break;
         }
+        this.index = index;
     }
 
     public bool IsPlayedBefore()
     {
-        return false;
+        return isPlayedBefore;
     }
 }
