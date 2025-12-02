@@ -68,7 +68,12 @@ public class BuyReviewCourseManager : MonoBehaviour
     private void EnterCourse()
     {
         Debug.Log("Enter course "+SeoResolver.IsContainData());
-        if (SeoResolver.IsContainData())
+        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+        {
+            LoadingTransition.Load("dai_dao_chi_gian_2");
+
+        }
+        else
         {
             LoadingTransition.Load(SeoResolver.DefaultScene);
         }
@@ -125,6 +130,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
+            LoadingUI.ShowErrorPopup("Hiện tại chưa có dữ liệu cho khóa học này.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Không có dữ liệu");
             Debug.Log("Không có data");
             yield break;
         }
