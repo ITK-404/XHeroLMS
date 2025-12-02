@@ -430,6 +430,7 @@ public class PointClickSystem : MonoBehaviour
         if (moveVfxInstance == null)
         {
             moveVfxInstance = Instantiate(moveVfxPrefab, position, Quaternion.identity);
+            moveVfxInstance.GetComponent<RotateToCamera>().SetCamera(playerCamera.mainCamera);
         }
         else
         {

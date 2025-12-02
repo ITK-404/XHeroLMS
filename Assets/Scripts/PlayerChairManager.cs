@@ -56,6 +56,7 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
+        videoPlayerControllerPro.TryToPauseVideo();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);

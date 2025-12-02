@@ -33,6 +33,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         LoadKey();
         playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
         playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
+
+        playVideoHandleUI.skipButton.onClick.AddListener(Skip);
     }
 
     private void SaveKey()
@@ -59,14 +61,19 @@ public class BuyReviewCourseManager : MonoBehaviour
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
-        
+        playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
         SaveKey();
     }
 
     private void EnterCourse()
     {
         Debug.Log("Enter course "+SeoResolver.IsContainData());
-        if (SeoResolver.IsContainData())
+        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+        {
+            LoadingTransition.Load("dai_dao_chi_gian_2");
+
+        }
+        else
         {
             LoadingTransition.Load(SeoResolver.DefaultScene);
         }
@@ -123,6 +130,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
+            LoadingUI.ShowErrorPopup("Hiện tại chưa có dữ liệu cho khóa học này.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Không có dữ liệu");
             Debug.Log("Không có data");
             yield break;
         }
@@ -150,7 +159,9 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         // must wait for 
         StopCoroutine(ShowPreviewCoroutine());
-
+        courseReviewUI.Show();
+        tabItemManagerUI.Hide();
+        playVideoHandleUI.Hide();
         playVideoOpenBook.Stop();
     }
 
