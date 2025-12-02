@@ -380,6 +380,38 @@ public class PointClickSystem : MonoBehaviour
         {
             if (chairHit.collider.CompareTag("CheckPoint"))
             {
+                // hardcode
+                
+                
+
+                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
+                    return false;
+
+                
+
+                currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
+                if (currentCheckPoint != null)
+
+                    if (TutorialHandler.Instance.IsStep(0))
+                    {
+                        var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
+                        if (isTutorialChair) return true;
+
+                        TutorialHandler.Instance.worldTutorialStep.SetActive(false);
+                    }
+
+                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+                    {
+                        Debug.Log("Hiện UI Xem bước chân");
+                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
+                        TutorialHandler.Instance.ShowStep(1);
+                    }));
+
+                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
+                isClickMoving = false;
+                HideMoveVfx(); // VFX
+
+                // moving logic
                 StopWaitToMoveChair();
                 Debug.Log("Đánh dính check point");
                 var position = chairHit.transform.position;
@@ -395,20 +427,6 @@ public class PointClickSystem : MonoBehaviour
                 }
 
                 lastPickPosition = groundPos;
-
-                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
-                    return false;
-
-                currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
-                if (currentCheckPoint != null)
-                    waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                    {
-                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
-                    }));
-
-                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
 
                 return true;
             }

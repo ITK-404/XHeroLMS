@@ -18,7 +18,7 @@ public class PlayerStandUI : MonoBehaviour
             sitdownButton.onClick.AddListener(playerChairManager.PlayerSitdown);
         }
         UILearnCanvas.OnClickReturnBtn += playerChairManager.PlayerStandup;
-        
+
         HideWatchVideoUI();
         UILearnCanvas.Hide();
 
@@ -27,18 +27,27 @@ public class PlayerStandUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (playerChairManager!= null)
+        if (playerChairManager != null)
         {
             standupButton.onClick.RemoveListener(playerChairManager.PlayerStandup);
             sitdownButton.onClick.RemoveListener(playerChairManager.PlayerSitdown);
         }
         UILearnCanvas.OnClickReturnBtn -= playerChairManager.PlayerStandup;
     }
-
+    private bool isShowOneTime = false;
     private void Update()
     {
         bool canInteract = playerChairManager.currentCheckPoint;
         sitdownButton.interactable = canInteract;
+        if (TutorialHandler.Instance.IsPlayedBefore())
+        {
+            return;
+        }
+        if (isShowOneTime == false && playerChairManager.currentCheckPoint != null && playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
+        {
+            TutorialHandler.Instance.ShowStep(1);
+            isShowOneTime = true;
+        }
     }
 
     public void ShowWatchVideoUI()
@@ -46,14 +55,14 @@ public class PlayerStandUI : MonoBehaviour
         navigationBarUI.gameObject.SetActive(true);
         returnBtn.gameObject.SetActive(false);
     }
-    
+
     public void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
         returnBtn.gameObject.SetActive(true);
     }
 
-    
+
     public void ShowSitdownButton()
     {
         sitdownButton.gameObject.SetActive(true);

@@ -2,11 +2,14 @@ using UnityEngine;
 using UnityEngine.UI;
 public class TutorialButton : TutorialBase
 {
-    private Button btn;
+    [SerializeField] private Button btn;
 
     private void Awake()
     {
-        btn = GetComponent<Button>();
+        if(btn == null)
+        {
+            btn = GetComponent<Button>();
+        }
         if (btn != null)
         {
             btn.onClick.AddListener(OnDoneTutorial);
@@ -22,18 +25,24 @@ public class TutorialButton : TutorialBase
     }
  
 }
-
-public class TutorialChair : MonoBehaviour
-{
-
-}
 public class TutorialBase : MonoBehaviour
 {
+    public string step_ID;
+    public bool isUI;
+
     private bool isClick = false;
+
     public void OnDoneTutorial()
     {
         if (isClick) return;
         isClick = true;
-        TutorialManager.Instance.GoNextTutorial();
+
+        gameObject.SetActive(false);
+        TutorialManager.Instance.Clear();
+    }
+
+    public void ShowTutorial()
+    {
+        TutorialManager.Instance.ShowTutorial(this);
     }
 }
