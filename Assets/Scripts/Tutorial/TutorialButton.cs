@@ -1,16 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
-public class TutorialButton : MonoBehaviour
+public class TutorialButton : TutorialBase
 {
-    public string tutorialName;
     private Button btn;
-    private bool isClick = false;
+
     private void Awake()
     {
         btn = GetComponent<Button>();
         if (btn != null)
         {
-            btn.onClick.AddListener(OnClick);
+            btn.onClick.AddListener(OnDoneTutorial);
         }
     }
 
@@ -18,10 +17,20 @@ public class TutorialButton : MonoBehaviour
     {
         if (btn != null)
         {
-            btn.onClick.RemoveListener(OnClick);
+            btn.onClick.RemoveListener(OnDoneTutorial);
         }
     }
-    public void OnClick()
+ 
+}
+
+public class TutorialChair : MonoBehaviour
+{
+
+}
+public class TutorialBase : MonoBehaviour
+{
+    private bool isClick = false;
+    public void OnDoneTutorial()
     {
         if (isClick) return;
         isClick = true;
