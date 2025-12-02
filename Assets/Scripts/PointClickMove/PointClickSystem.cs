@@ -329,8 +329,8 @@ public class PointClickSystem : MonoBehaviour
         Vector3 groundPos = (Vector3)node.position;
         if (ai != null)
         {
-            ai.isStopped = false;
-            ai.canMove = true;
+            ai.isStopped = true;
+            ai.canMove = false;
 
             ai.maxSpeed = defaultSpeed * 2f;
             ai.Teleport(groundPos);
