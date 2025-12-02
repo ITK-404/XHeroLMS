@@ -27,6 +27,8 @@ public class PlayerChairManager : MonoBehaviour
     [SerializeField] PlayerStandUI playerStandUI;
     [HideInInspector] public ChairCheckPoint currentCheckPoint;
 
+    private TutorialBase TutorialBase;
+
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
@@ -56,6 +58,13 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
+        TutorialHandler.Instance.standupUI.gameObject.SetActive(false);
+        //if (TutorialHandler.Instance.IsPlayedBefore() == false && TutorialHandler.Instance.IsStep(2))
+        //{
+        //    TutorialHandler.Instance.ShowStep(3);
+        //    TutorialHandler.Instance.Save();
+        //}
+
         videoPlayerControllerPro.TryToPauseVideo();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
@@ -112,7 +121,8 @@ public class PlayerChairManager : MonoBehaviour
     {
 
         // sit down logic
-
+        TutorialHandler.Instance.standupUI.gameObject.SetActive(false);
+    
         ChairCheckPoint temp = currentCheckPoint;
 
         if (temp != null)
@@ -139,6 +149,11 @@ public class PlayerChairManager : MonoBehaviour
                 playerStandUI.ShowWatchVideoUI();
                 playerStandUI.UILearnCanvas.Show();
                 videoPlayerControllerPro.EnterFullscreenUI();
+
+                if (!TutorialHandler.Instance.IsPlayedBefore())
+                {
+                    TutorialHandler.Instance.ShowStep(2);
+                }
             }));
         }
     }

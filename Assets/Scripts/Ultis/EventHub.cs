@@ -14,15 +14,4 @@ public class EventHub
     {
         OnExamIndexCenterChanged?.Invoke(score);
     }
-
-    public static Action<string> OnSendTutorialStep;
-
-    public static void RaiseSendTutorialStep(string stepID)
-    {
-        if (OnSendTutorialStep != null)
-        {
-            OnSendTutorialStep.Invoke(stepID);
-        }
-    }
-
 }
