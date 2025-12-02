@@ -304,7 +304,7 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
             ShowPopup(
                 failPopupPrefab,
                 "Cảnh báo",
-                "Tên đăng nhập không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
+                "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
             );
             return;
         }
