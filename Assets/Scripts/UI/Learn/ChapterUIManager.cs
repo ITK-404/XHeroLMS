@@ -70,6 +70,7 @@ public class ChapterUIManager : MonoBehaviour
         if (previousChapter != null)
         {
             previousChapter.ChangeState(ChapterUI.ChapterState.Normal);
+            previousChapter.ResetLessonState();
         }
 
         // update current chapter
