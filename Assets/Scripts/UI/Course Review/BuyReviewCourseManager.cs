@@ -113,7 +113,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         Debug.Log("Load book by seo: " + currentBookSelect.book_seo);
         ShowBuyCourseUI();
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
