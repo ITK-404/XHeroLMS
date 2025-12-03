@@ -54,7 +54,9 @@ public class LoadingScreenController : MonoBehaviour
         if (imageScene1) _images.Add(imageScene1);
         foreach (var img in _images)
             if (img) img.gameObject.SetActive(false);
-
+        // Bật đỡ lên để tránh không có background
+        imageScene1.gameObject.SetActive(true);
+        
         if (progressRing) progressRing.fillAmount = 0f;
         if (sliderUI) sliderUI.value = 0f;
 
@@ -82,7 +84,13 @@ public class LoadingScreenController : MonoBehaviour
         _displayStartTime = Time.unscaledTime; // đếm thời gian hiển thị tối thiểu
 
         SetProgress(0f);
+        var opUnLoad = SceneManager.UnloadSceneAsync(LoadingTransition.PreviousSceneName);
 
+        while (opUnLoad.progress < 0.9f)
+        {
+            yield return null;
+        }
+        yield return null;
         var op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false;
         _async = op;
