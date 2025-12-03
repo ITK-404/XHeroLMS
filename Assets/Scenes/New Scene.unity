@@ -323750,6 +323750,73 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -6054254380233404972, guid: 8b9bd60e9c09afa49ab9f0025ad45444, type: 3}
+--- !u!1 &1637402101
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1637402104}
+  - component: {fileID: 1637402103}
+  - component: {fileID: 1637402102}
+  m_Layer: 0
+  m_Name: Minimap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1637402102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1637402101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68c5b5f1c4fa04d44a4353475df61657, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LimitCamera
+  player: {fileID: 8692491915194145231}
+--- !u!114 &1637402103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1637402101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8302205b0d6f96f479dec7681f199011, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TeleMapController
+  mapCamera: {fileID: 1424336786}
+  playerCamera: {fileID: 413529770562562033}
+  player: {fileID: 3705668464690039549}
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  preservePlayerY: 0
+  yLift: 1
+--- !u!4 &1637402104
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1637402101}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -15.50392, y: 41.77, z: 120.46233}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1967652633}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1638369052 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4808939381513523339, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -352102,7 +352169,7 @@ Canvas:
   m_Enabled: 1
   serializedVersion: 3
   m_RenderMode: 2
-  m_Camera: {fileID: 0}
+  m_Camera: {fileID: 1424336786}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -379906,8 +379973,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1967652633}
-  - component: {fileID: 1967652632}
-  - component: {fileID: 1967652631}
   m_Layer: 0
   m_Name: Telemap
   m_TagString: Untagged
@@ -379915,39 +379980,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1967652631
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1967652630}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68c5b5f1c4fa04d44a4353475df61657, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LimitCamera
-  player: {fileID: 8692491915194145231}
---- !u!114 &1967652632
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1967652630}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8302205b0d6f96f479dec7681f199011, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TeleMapController
-  mapCamera: {fileID: 1424336786}
-  playerCamera: {fileID: 413529770562562033}
-  player: {fileID: 3705668464690039549}
-  raycastMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  preservePlayerY: 0
-  yLift: 1
 --- !u!4 &1967652633
 Transform:
   m_ObjectHideFlags: 0
@@ -379956,13 +379988,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1967652630}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -15.50392, y: 41.77, z: 120.46233}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1172043771}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1637402104}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1967699308 stripped
 GameObject:
@@ -407031,7 +407063,7 @@ SceneRoots:
   - {fileID: 1424336787}
   - {fileID: 850556906}
   - {fileID: 378596266}
-  - {fileID: 1967652633}
+  - {fileID: 1637402104}
   - {fileID: 887599357988543951}
   - {fileID: 1952375502}
   - {fileID: 8201207987643709038}
