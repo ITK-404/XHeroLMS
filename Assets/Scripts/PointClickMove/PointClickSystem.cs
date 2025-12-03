@@ -184,7 +184,7 @@ public class PointClickSystem : MonoBehaviour
         );
 
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
-        if (ai.reachedDestination && Quaternion.Angle(transform.rotation, targetRot) < 1f)
+        if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
         {
             isClickMoving = false;
             HideMoveVfx(); // VFX
