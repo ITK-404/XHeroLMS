@@ -130,8 +130,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
-            LoadingUI.ShowErrorPopup("Hiện tại chưa có dữ liệu cho khóa học này.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Không có dữ liệu");
+            LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Cảnh báo");
             Debug.Log("Không có data");
             yield break;
         }
