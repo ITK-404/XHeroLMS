@@ -46,6 +46,11 @@ public class CourseMenuButtons : MonoBehaviour
             });
     }
 
+    private void OnDestroy()
+    {
+        LoginController.OnLoginComplete -= Show;
+    }
+
     private void Show()
     {
         container.gameObject.SetActive(true);
