@@ -171,7 +171,7 @@ public class OpenClosePanel : MonoBehaviour
         yield return new WaitForSecondsRealtime(loadDelay);
         SceneManager.LoadScene(sceneNameAfterLogout);
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
