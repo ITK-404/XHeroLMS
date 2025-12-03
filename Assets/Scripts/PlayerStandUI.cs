@@ -45,6 +45,10 @@ public class PlayerStandUI : MonoBehaviour
         }
         if (isShowOneTime == false && playerChairManager.currentCheckPoint != null && playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
         {
+            if(TutorialHandler.Instance.IsPlayedBefore())
+            {
+                return;
+            }
             TutorialHandler.Instance.ShowStep(1);
             isShowOneTime = true;
         }
