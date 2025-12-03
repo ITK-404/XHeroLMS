@@ -82,7 +82,7 @@ public class FinalExamHandler : MonoBehaviour
     {
         // examUIController.HideAll();
         // đi tới camera và ngồi
-        ChangeToExamCamera();
+        //ChangeToExamCamera();
         yield return new WaitForSecondsRealtime(2);
         
         // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
@@ -142,7 +142,7 @@ public class FinalExamHandler : MonoBehaviour
 
     private IEnumerator MoveCameraBackFromExam()
     {
-        ResetExamCamera();
+        //ResetExamCamera();
         yield return new WaitForSecondsRealtime(2);
 
         playerStandUI.ShowWatchVideoUI();
