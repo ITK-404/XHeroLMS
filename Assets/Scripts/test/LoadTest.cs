@@ -8,6 +8,16 @@ public class LoadTest: MonoBehaviour
 
     public void Start()
     {
-        button.onClick.AddListener(() => LoadingTransition.Load(nameScene));
+        button.onClick.AddListener(LoadScene);
+    }
+
+    private void OnDestroy()
+    {
+        button.onClick.RemoveListener(LoadScene);
+    }
+
+    private void LoadScene()
+    {
+        LoadingTransition.Load(nameScene);
     }
 }
