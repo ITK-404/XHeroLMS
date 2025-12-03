@@ -123,7 +123,7 @@ public class BookModel : MonoBehaviour
         StopAllCoroutines();
         isMouseDown = true;
     }
-
+    
     private void OnMouseUp()
     {
         Debug.Log("On Mouse Up");

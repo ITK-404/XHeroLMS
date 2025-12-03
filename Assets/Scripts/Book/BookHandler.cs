@@ -13,6 +13,8 @@ public class BookHandler : MonoBehaviour
     public BookViewUI bookHandleUI;
     public BookModel bookModel;
 
+    public static bool CanSelectBook = true;
+
     private void Awake()
     {
         bookModel = GetComponentInChildren<BookModel>();
@@ -42,6 +44,7 @@ public class BookHandler : MonoBehaviour
     
     private void OnPlayerClickBook()
     {
+        if (CanSelectBook == false) return;
         BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
     }
 
@@ -120,5 +123,6 @@ public class BookHandler : MonoBehaviour
         {
             Debug.Log($"Book SKU {book_sku} bị rỗng");
         }
+        gameObject.name = $"Book_:{book_name}_Sku:{book_sku}";
     }
 }
