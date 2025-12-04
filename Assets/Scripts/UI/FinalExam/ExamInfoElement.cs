@@ -57,6 +57,7 @@ public class ExamInfoElement : MonoBehaviour
         {
             item.DOFade(0, 0);
         }
+        ActiveHover(false);
     }
 
     // private void OnEnable()
