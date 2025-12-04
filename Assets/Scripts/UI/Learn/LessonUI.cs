@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class LessonUI : MonoBehaviour
@@ -48,7 +49,7 @@ public class LessonUI : MonoBehaviour
         // Thay lesson đang học
         
     }
-
+ 
     public void SetActive(bool active)
     {
         Debug.Log("Set active lesson: " + active, gameObject);
@@ -57,6 +58,12 @@ public class LessonUI : MonoBehaviour
         frameHighlight.gameObject.SetActive(active);
         
         iconImg.sprite = active ? onActiveIcon : onDeActiveIcon;
+    }
+
+    public void SetHover(bool hover) 
+    {
+        titleTMP.color = hover ? textSelectColor : textNormalColor;
+        frameHighlight.gameObject.SetActive(hover);
     }
 
     public void TryUpdateProgress(float newProgressTime)
@@ -70,3 +77,4 @@ public class LessonUI : MonoBehaviour
         progressTime = Mathf.Clamp(newProgressTime + 1, progressTime, duration);
     }
 }
+
