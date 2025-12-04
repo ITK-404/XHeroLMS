@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Net; // WebUtility.HtmlDecode
 
-[Serializable] public enum ExamQuestionType {
+[Serializable]
+public enum ExamQuestionType {
     SINGLE_CHOICE, MULTIPLE_CHOICE, MATCHING, ESSAY, UNKNOWN
 }
 
-[Serializable] public class ExamPaper {
+[Serializable]
+public class ExamPaper {
     public List<ExamQuestion> questions = new();
 
-    // ---- APIs tiện dùng ----
     public int Count => questions?.Count ?? 0;
 
     public int CountByType(ExamQuestionType t) {
@@ -29,7 +30,8 @@ using System.Net; // WebUtility.HtmlDecode
     }
 }
 
-[Serializable] public class ExamQuestion {
+[Serializable]
+public class ExamQuestion {
     public string id;
     public string title;                  // plain text
     public ExamQuestionType type;
@@ -43,8 +45,8 @@ using System.Net; // WebUtility.HtmlDecode
 // ===== Parser cốt lõi: từ JSON -> ExamPaper =====
 public static class ExamParser
 {
-    // JsonUtility cần wrapper & fields (không phải property).
     [Serializable] class Root { public QuestionRaw[] questions; }
+
     [Serializable] class QuestionRaw {
         public string[] answers; public string[] tag; public string _id;
         public string title; public string keyword; public string type; public string explain;
@@ -53,24 +55,37 @@ public static class ExamParser
 
     public static ExamPaper Parse(string json)
     {
-        // B1: bóc JSON thô -> model tạm
-        var root = UnityEngine.JsonUtility.FromJson<Root>(json);
+        var root  = UnityEngine.JsonUtility.FromJson<Root>(json);
         var paper = new ExamPaper();
-
         if (root?.questions == null) return paper;
 
         foreach (var qr in root.questions)
         {
+            var mappedType = MapType(qr.type);
+
+            // ====== HEURISTIC: ép một số SINGLE_CHOICE thành MATCHING ======
+            if (mappedType == ExamQuestionType.SINGLE_CHOICE &&
+                LooksLikeMatching(qr))
+            {
+                mappedType = ExamQuestionType.MATCHING;
+            }
+            // ===============================================================
+
+            UnityEngine.Debug.Log(
+                $"[Parse] rawId={qr._id}, rawType={qr.type}, mappedType={mappedType}"
+            );
+
             var q = new ExamQuestion
             {
-                id = qr._id ?? "",
-                title = HtmlToText(qr.title),
-                type = MapType(qr.type),
+                id      = qr._id ?? "",
+                title   = HtmlToText(qr.title),
+                type    = mappedType,
                 explain = HtmlToText(qr.explain),
-                rawAnswersHtml = qr.answers != null ? new List<string>(qr.answers) : new List<string>()
+                rawAnswersHtml = qr.answers != null
+                    ? new List<string>(qr.answers)
+                    : new List<string>()
             };
 
-            // B2: parse answers theo type
             switch (q.type)
             {
                 case ExamQuestionType.SINGLE_CHOICE:
@@ -79,13 +94,10 @@ public static class ExamParser
                     break;
 
                 case ExamQuestionType.MATCHING:
-                    // BE mẫu: answers có 2 phần tử, mỗi phần tử là nhiều <p>…</p> ghép bằng dấu “-”
-                    // Ví dụ: "Kim</p>-<p>Thủy</p>-<p>Mộc..."
                     SplitMatching(q.rawAnswersHtml, out q.matchingLeft, out q.matchingRight);
                     break;
 
                 case ExamQuestionType.ESSAY:
-                    // không có options
                     q.options = new List<string>();
                     break;
 
@@ -105,12 +117,40 @@ public static class ExamParser
         if (string.IsNullOrEmpty(t)) return ExamQuestionType.UNKNOWN;
         switch (t.Trim().ToUpperInvariant())
         {
-            case "SINGLE_CHOICE": return ExamQuestionType.SINGLE_CHOICE;
+            case "SINGLE_CHOICE":   return ExamQuestionType.SINGLE_CHOICE;
             case "MULTIPLE_CHOICE": return ExamQuestionType.MULTIPLE_CHOICE;
-            case "MATCHING": return ExamQuestionType.MATCHING;
-            case "ESSAY": return ExamQuestionType.ESSAY;
-            default: return ExamQuestionType.UNKNOWN;
+            case "MATCHING":        return ExamQuestionType.MATCHING;
+            case "ESSAY":           return ExamQuestionType.ESSAY;
+            default:                return ExamQuestionType.UNKNOWN;
         }
+    }
+
+    // Heuristic nhận diện MATCHING khi BE vẫn trả SINGLE_CHOICE
+    static bool LooksLikeMatching(QuestionRaw qr)
+    {
+        if (qr.answers == null || qr.answers.Length < 2) return false;
+
+        bool HasMatchingPattern(string html)
+        {
+            if (string.IsNullOrEmpty(html)) return false;
+
+            // dạng "</p> - <p>"
+            if (Regex.IsMatch(html, @"</p>\s*-\s*<p>", RegexOptions.IgnoreCase))
+                return true;
+
+            // dạng text "A-B-C" với mọi loại gạch ngang Unicode
+            var plain = HtmlToText(html);
+            if (Regex.IsMatch(plain, @"[-–—-]")) return true;
+
+            // hoặc có nhiều từ với dấu phẩy
+            if (plain.Contains(",")) return true;
+
+            // hoặc có >= 4 token (Kim Thuỷ Mộc Hoả Thổ)
+            var tokens = plain.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            return tokens.Length >= 4;
+        }
+
+        return HasMatchingPattern(qr.answers[0]) && HasMatchingPattern(qr.answers[1]);
     }
 
     // Trích tất cả <p>…</p> trong mỗi câu trả lời, gộp thành list thuần text
@@ -121,7 +161,6 @@ public static class ExamParser
 
         foreach (var html in htmlList)
         {
-            // Nhiều API format 1 lựa chọn/1 <p>, có thể có nhiều <p> trong 1 string
             foreach (var piece in ExtractPTags(html))
             {
                 var txt = HtmlToText(piece).Trim();
@@ -135,16 +174,15 @@ public static class ExamParser
     static IEnumerable<string> ExtractPTags(string html)
     {
         if (string.IsNullOrEmpty(html)) yield break;
-        // Bóc từng p-block
+
         var rx = new Regex(@"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-        var m = rx.Matches(html);
+        var m  = rx.Matches(html);
         if (m.Count > 0)
         {
             foreach (Match mm in m) yield return mm.Groups[1].Value;
         }
         else
         {
-            // không có <p> thì trả luôn
             yield return html;
         }
     }
@@ -152,43 +190,33 @@ public static class ExamParser
     // MATCHING: answers[0] = cột trái, answers[1] = cột phải
     static void SplitMatching(List<string> htmlList, out List<string> left, out List<string> right)
     {
-        left = new List<string>(); right = new List<string>();
+        left  = new List<string>();
+        right = new List<string>();
         if (htmlList == null || htmlList.Count == 0) return;
 
-        // cột trái
         if (htmlList.Count >= 1)
             left = SplitMatchingColumn(htmlList[0]);
 
-        // cột phải
         if (htmlList.Count >= 2)
             right = SplitMatchingColumn(htmlList[1]);
     }
 
-    // Cột MATCHING có dạng: "<p>A</p>-<p>B</p>-<p>C</p>" hoặc 1 block <p>…</p> nhiều
+    // Cột MATCHING có thể là:
+    //  - "<p>A</p>-<p>B</p>-<p>C</p>"
+    //  - "<p>Kim-Thuỷ-Mộc-Hoả-Thổ</p>"
+    //  - "Kim–Thuỷ–Mộc–Hoả–Thổ"
+    //  - "Kim, Thuỷ, Mộc, Hoả, Thổ"
+    //  - "Kim Thuỷ Mộc Hoả Thổ"
     static List<string> SplitMatchingColumn(string html)
     {
         var items = new List<string>();
-        if (string.IsNullOrEmpty(html)) return items;
+        if (string.IsNullOrWhiteSpace(html)) return items;
 
-        // chia tại “</p> - <p>”
+        // 1) Thử pattern "</p> - <p>"
         var chunks = Regex.Split(html, @"</p>\s*-\s*<p>", RegexOptions.IgnoreCase);
-
-        if (chunks.Length <= 1)
+        if (chunks.Length > 1)
         {
-            // fallback: không có dấu -, cứ extract p
-            foreach (var p in ExtractPTags(html))
-            {
-                var t = HtmlToText(p).Trim();
-                if (!string.IsNullOrEmpty(t)) items.Add(t);
-            }
-        }
-        else
-        {
-            // Chỉnh 2 đầu (vì split bỏ mất <p> đầu / </p> cuối)
-            // Đảm bảo strip sạch HTML
-            // head: remove leading <p>
             chunks[0] = Regex.Replace(chunks[0], @"^\s*<p[^>]*>", "", RegexOptions.IgnoreCase);
-            // tail: remove trailing </p>
             int last = chunks.Length - 1;
             chunks[last] = Regex.Replace(chunks[last], @"</p>\s*$", "", RegexOptions.IgnoreCase);
 
@@ -197,19 +225,62 @@ public static class ExamParser
                 var t = HtmlToText(ch).Trim();
                 if (!string.IsNullOrEmpty(t)) items.Add(t);
             }
+            return items;
         }
+
+        // 2) Không có "</p>-<p>" → strip HTML sang plain text
+        var plain = HtmlToText(html);   // ví dụ: "Kim-Thuỷ-Mộc-Hoả-Thổ"
+
+        // Chuẩn hoá các loại gạch ngang thành '-'
+        plain = plain.Replace('–', '-').Replace('—', '-');
+
+        // Ưu tiên tách theo '-'
+        if (plain.Contains("-"))
+        {
+            var parts = plain.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var t = part.Trim();
+                if (!string.IsNullOrEmpty(t))
+                    items.Add(t);
+            }
+        }
+        else if (plain.Contains(","))   // nếu có dấu phẩy
+        {
+            var parts = plain.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var t = part.Trim();
+                if (!string.IsNullOrEmpty(t))
+                    items.Add(t);
+            }
+        }
+        else
+        {
+            // cuối cùng: tách theo khoảng trắng
+            var parts = plain.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var t = part.Trim();
+                if (!string.IsNullOrEmpty(t))
+                    items.Add(t);
+            }
+        }
+
+        // nếu vẫn rỗng thì add nguyên chuỗi để tránh crash
+        if (items.Count == 0 && !string.IsNullOrEmpty(plain))
+            items.Add(plain);
+
+        UnityEngine.Debug.Log($"[SplitMatchingColumn] plain='{plain}' -> {items.Count} items");
+
         return items;
     }
 
-    // Bóc HTML -> text (giữ ký tự, bỏ tag, decode entities)
     static string HtmlToText(string html)
     {
         if (string.IsNullOrEmpty(html)) return "";
-        // loại bỏ thẻ
         var noTag = Regex.Replace(html, "<.*?>", string.Empty, RegexOptions.Singleline);
-        // decode entities (&nbsp; &lt; …)
         noTag = WebUtility.HtmlDecode(noTag);
-        // normalize space
         return Regex.Replace(noTag, @"\s+", " ").Trim();
     }
 }
