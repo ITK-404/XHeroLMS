@@ -17,6 +17,7 @@ public class TutorialHandler : MonoBehaviour
     {
         Debug.Log("Save key");
         PlayerPrefs.SetInt(key, 1);
+        isPlayedBefore = true;
     }
 
     private void Load()

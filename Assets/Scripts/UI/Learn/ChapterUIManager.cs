@@ -51,6 +51,7 @@ public class ChapterUIManager : MonoBehaviour
             //string title = chaptersList[i].titleName.text.Trim();
             //if (title == "Bài thi cuối khóa")
             //{
+            //    Debug.Log($"Dang bật tự động mở khóa bài thì, nhớ tắt khi build",gameObject);
             //    chaptersList[i].ChangeState(ChapterUI.ChapterState.Normal);
             //    Debug.Log("Final Exam ALWAYS UNLOCKED for testing.");
             //    continue;
