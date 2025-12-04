@@ -1,3 +1,4 @@
+﻿using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -39,9 +40,9 @@ public class ChapterUI : ChapterBaseUI
     [SerializeField] private Sprite finalExamUnLockSprite;
     [SerializeField] private Image unlockExamImg;
     [SerializeField] private Image lockExamImg;
+    [Header("Hover UI")]
     private ChapterUIManager chapterUIManager;
-
-    private ChapterState chapterState;
+    public ChapterState chapterState;
     public GameObject lockGroup;
 
     protected override void Awake()
@@ -51,6 +52,7 @@ public class ChapterUI : ChapterBaseUI
         {
             bannerBtn.onClick.AddListener(SelectThisChapter);
         }
+        // cap nhật hover state ban đầu
     }
 
     private void Start()
@@ -177,9 +179,11 @@ public class ChapterUI : ChapterBaseUI
         UpdateUI();
     }
 
+
     public void SetFinalExam()
     {
         lockExamImg.sprite = finalExamLockSprite;
         unlockExamImg.sprite = finalExamUnLockSprite;
     }
+    private float hoverImgAlpha = 0;
 }

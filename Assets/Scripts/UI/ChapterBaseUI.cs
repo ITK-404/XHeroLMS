@@ -17,7 +17,7 @@ public class ChapterBaseUI : MonoBehaviour
     public GameObject activeGroup;
     public GameObject deActiveGroup;
 
-    protected bool isOpen;
+    public bool isOpen;
 
     protected virtual void Awake()
     {

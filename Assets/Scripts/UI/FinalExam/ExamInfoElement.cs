@@ -2,13 +2,14 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 // [RequireComponent(typeof(Button))]
 // [RequireComponent(typeof(Image))]
 [ExecuteAlways] // để OnValidate chạy trong Editor
-public class ExamInfoElement : MonoBehaviour
+public class ExamInfoElement : MonoBehaviour 
 {
     public enum State { Unanswered, Answered, Selected }
 
@@ -24,13 +25,16 @@ public class ExamInfoElement : MonoBehaviour
     [SerializeField] private TextMeshProUGUI grayTmp;
     [SerializeField] private TextMeshProUGUI gradientTmp;
 
+    [Header("Hover Sprites")]
+    [SerializeField] private Sprite normalUnanswered;
+    [SerializeField] private Sprite normalAnswered;
+    [SerializeField] private Sprite hoverUnanswered;
+    [SerializeField] private Sprite hoverAnswered;
     // ===== lifecycle =====
     private void Reset()
     {
         clickable       = GetComponent<Button>();
         rootButtonImage = GetComponent<Image>();
-        
-        
     }
 
 #if UNITY_EDITOR
@@ -78,7 +82,7 @@ public class ExamInfoElement : MonoBehaviour
     public void SetAnsweredButton()        => ApplyState(State.Answered);
     public void SetUnansweredButton()      => ApplyState(State.Unanswered);
     public void ShowSelectedAnswerButton() => ApplyState(State.Selected);
-
+    private State currentState;
     public void ApplyState(State s)
     {
         // text layers
@@ -101,6 +105,7 @@ public class ExamInfoElement : MonoBehaviour
                 ActiveImage(sprSelected);
                 break;
         }
+        currentState = s;
     }
 
     private List<Image> activeList = new();
@@ -119,7 +124,8 @@ public class ExamInfoElement : MonoBehaviour
             }
         }
     }
-    
+   
+
     // private void AutoWire()
     // {
     //     if (!clickable)       clickable       = GetComponent<Button>();
