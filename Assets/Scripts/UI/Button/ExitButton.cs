@@ -18,6 +18,15 @@ public class ExitButton : MonoBehaviour
 
     private void OnClickExit()
     {
-        Application.Quit();
+        if (Application.isEditor)
+        {
+            // Application.Quit() does not work in the editor so
+            // UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+            UnityEditor.EditorApplication.isPlaying = false;
+        }
+        else
+        {
+            Application.Quit();
+        }
     }
 }
