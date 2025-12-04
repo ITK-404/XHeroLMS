@@ -6,15 +6,27 @@ using UnityEngine;
 
 public static class ExamFormat
 {
-    public static ExamQuestionType FormatStringToExamQuestion(string t)
-    {
-        if (string.Equals(t, "SINGLE_CHOICE", StringComparison.OrdinalIgnoreCase))
-            return ExamQuestionType.SINGLE_CHOICE;
-        if (string.Equals(t, "MULTIPLE_CHOICE", StringComparison.OrdinalIgnoreCase))
-            return ExamQuestionType.MULTIPLE_CHOICE;
+public static ExamQuestionType FormatStringToExamQuestion(string t)
+{
+    if (string.IsNullOrEmpty(t))
+        return ExamQuestionType.SINGLE_CHOICE; // fallback
+
+    if (string.Equals(t, "SINGLE_CHOICE", StringComparison.OrdinalIgnoreCase))
         return ExamQuestionType.SINGLE_CHOICE;
-    }
-    
+
+    if (string.Equals(t, "MULTIPLE_CHOICE", StringComparison.OrdinalIgnoreCase))
+        return ExamQuestionType.MULTIPLE_CHOICE;
+
+    if (string.Equals(t, "MATCHING", StringComparison.OrdinalIgnoreCase))
+        return ExamQuestionType.MATCHING;
+
+    if (string.Equals(t, "ESSAY", StringComparison.OrdinalIgnoreCase))
+        return ExamQuestionType.ESSAY;
+
+    // fallback nếu BE thêm type mới mà mình chưa support
+    return ExamQuestionType.SINGLE_CHOICE;
+}
+
     public static string CleanHtmlToPlainText(string html)
     {
         if (string.IsNullOrEmpty(html)) return "";
