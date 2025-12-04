@@ -157,6 +157,7 @@ MonoBehaviour:
   finalExamUnLockSprite: {fileID: 21300000, guid: c6cb4d81afc8d9144a316a430b6d33bd, type: 3}
   unlockExamImg: {fileID: 7909763238213117139}
   lockExamImg: {fileID: 7156382998896803068}
+  chapterState: 0
   lockGroup: {fileID: 4913739277680074808}
 --- !u!114 &1288364123702094937
 MonoBehaviour:
@@ -609,8 +610,20 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: c72ff9e5be6d1ff46b9749afa2a10875, type: 2}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_fontStyle
       value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -2299269205121453840, guid: c72ff9e5be6d1ff46b9749afa2a10875, type: 2}
+    - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1149812142204298310, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_enableVertexGradient
@@ -668,9 +681,21 @@ PrefabInstance:
       propertyPath: m_Name
       value: Lock Group
       objectReference: {fileID: 0}
+    - target: {fileID: 1874517482388937682, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3254186031631245724, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6123530441254605303, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7177505369809184452, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7683876446002439676, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_AnchorMax.x
@@ -699,6 +724,10 @@ PrefabInstance:
     - target: {fileID: 7683876446002439676, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -50.975
+      objectReference: {fileID: 0}
+    - target: {fileID: 7708551473939114440, guid: 0527484f260cb9d4e92b07b62a072b75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
