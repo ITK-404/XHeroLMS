@@ -101,7 +101,8 @@ public class ExamQuestionManager : MonoBehaviour
             () => getWithCorrectAnswer,
             selectedMap,
             essayMap,
-            _certificatesExamUI
+            _certificatesExamUI,
+            this                  // <<< truyền ExamQuestionManager để lấy matching snapshot
         );
 
         if (navRoot) navRoot.SetActive(false);
@@ -352,47 +353,69 @@ public class ExamQuestionManager : MonoBehaviour
         });
     }
 
-private void RenderMatching(ExamQuestion q)
-{
-    if (!prefabMatching)
+    private void RenderMatching(ExamQuestion q)
     {
-        SpawnQuestionText("(Thiếu prefabMatching cho câu MATCHING)");
-        return;
-    }
+        if (!prefabMatching)
+        {
+            SpawnQuestionText("(Thiếu prefabMatching cho câu MATCHING)");
+            return;
+        }
 
-    var go = Instantiate(prefabMatching, content);
+        var go = Instantiate(prefabMatching, content);
 
-    var handler = go.GetComponent<MatchingElementHandler>();
-    if (handler != null)
-    {
-        // lấy state đã lưu nếu có
-        matchingMap.TryGetValue(q.id, out var currentPairs);
+        var handler = go.GetComponent<MatchingElementHandler>();
+        if (handler != null)
+        {
+            // lấy state đã lưu nếu có
+            matchingMap.TryGetValue(q.id, out var currentPairs);
 
-        handler.SetupQuestion(
-            q,
-            currentPairs,
-            updatedPairs => { SetMatchingAnswer(q.id, updatedPairs); }
-        );
+            handler.SetupQuestion(
+                q,
+                currentPairs,
+                updatedPairs => { SetMatchingAnswer(q.id, updatedPairs); }
+            );
+        }
+        else
+        {
+            // fallback nếu prefab chưa gán script đúng
+            go.SendMessage("SetupQuestion", q, SendMessageOptions.DontRequireReceiver);
+        }
     }
-    else
-    {
-        // fallback nếu prefab chưa gán script đúng
-        go.SendMessage("SetupQuestion", q, SendMessageOptions.DontRequireReceiver);
-    }
-}
 
     /// <summary>
-    /// Dùng cho MATCHING – gọi từ script trên prefabMatching khi user thay đổi đáp án.
+    /// Dùng cho MATCHING – gọi từ MatchingElementHandler khi user thay đổi đáp án.
     /// </summary>
     public void SetMatchingAnswer(string questionId, Dictionary<int, int> pairs)
     {
+        // lưu đầy đủ cặp để vẽ lại
         if (pairs == null || pairs.Count == 0)
         {
             matchingMap.Remove(questionId);
         }
         else
         {
-            matchingMap[questionId] = pairs;
+            matchingMap[questionId] = new Dictionary<int, int>(pairs);
+        }
+
+        // sync với selectedMap (dùng cho submit/chấm)
+        if (pairs == null || pairs.Count == 0)
+        {
+            selectedMap.Remove(questionId);
+        }
+        else
+        {
+            if (!selectedMap.TryGetValue(questionId, out var set))
+            {
+                set = new HashSet<int>();
+                selectedMap[questionId] = set;
+            }
+
+            set.Clear();
+            foreach (var kv in pairs)
+            {
+                set.Add(kv.Key);
+                set.Add(kv.Value);
+            }
         }
 
         RefreshSingleNavStateByQuestionId(questionId);
@@ -664,5 +687,22 @@ private void RenderMatching(ExamQuestion q)
     public IEnumerator SubmitExamCoroutine(bool timeUp)
     {
         yield return _submissionService.SubmitExamCoroutine(timeUp);
+    }
+
+    /// <summary>
+    /// Trả về snapshot các cặp MATCHING user đã nối: q.id -> (leftIndex -> rightIndex).
+    /// Dùng cho ReviewPanel để vẽ lại y chang lúc làm bài.
+    /// </summary>
+    public Dictionary<string, Dictionary<int, int>> GetMatchingUserPairsSnapshot()
+    {
+        var copy = new Dictionary<string, Dictionary<int, int>>();
+
+        foreach (var kv in matchingMap)
+        {
+            // clone dictionary con
+            copy[kv.Key] = new Dictionary<int, int>(kv.Value);
+        }
+
+        return copy;
     }
 }

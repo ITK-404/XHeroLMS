@@ -549,4 +549,12 @@ public partial class ExamUIController : MonoBehaviour
         _examQuestionManager.gameObject.SetActive(false);
         _examTitleManager.gameObject.SetActive(false);
     }
+    public Dictionary<string, Dictionary<int, int>> GetMatchingUserPairsSnapshot()
+    {
+        if (_examQuestionManager == null)
+            return new Dictionary<string, Dictionary<int, int>>();
+
+        return _examQuestionManager.GetMatchingUserPairsSnapshot();
+    }
+
 }
