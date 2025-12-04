@@ -2,7 +2,6 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -14,9 +13,9 @@ public class ExamInfoElement : MonoBehaviour
     public enum State { Unanswered, Answered, Selected }
 
     [Header("Sprites")]
-    [SerializeField] private Image sprUnanswered;
-    [SerializeField] private Image sprAnswered;
-    [SerializeField] private Image sprSelected;
+    [SerializeField] private CanvasGroup sprUnanswered;
+    [SerializeField] private CanvasGroup sprAnswered;
+    [SerializeField] private CanvasGroup sprSelected;
 
     [Header("UI Refs")]
     [SerializeField] private Image  rootButtonImage;   // Image của Button
@@ -24,12 +23,9 @@ public class ExamInfoElement : MonoBehaviour
     [SerializeField] private TextMeshProUGUI coloredTmp;
     [SerializeField] private TextMeshProUGUI grayTmp;
     [SerializeField] private TextMeshProUGUI gradientTmp;
-
-    [Header("Hover Sprites")]
-    [SerializeField] private Sprite normalUnanswered;
-    [SerializeField] private Sprite normalAnswered;
-    [SerializeField] private Sprite hoverUnanswered;
-    [SerializeField] private Sprite hoverAnswered;
+    [Header("Hoevr")]
+    public HoverNavigationUI hoverUnanswered;
+    public HoverNavigationUI hoverAnswered;
     // ===== lifecycle =====
     private void Reset()
     {
@@ -103,13 +99,14 @@ public class ExamInfoElement : MonoBehaviour
                 break;
             case State.Selected:
                 ActiveImage(sprSelected);
+                // turn off hover when selected
                 break;
         }
         currentState = s;
     }
 
-    private List<Image> activeList = new();
-    private void ActiveImage(Image activeImage)
+    private List<CanvasGroup> activeList = new();
+    private void ActiveImage(CanvasGroup activeImage)
     {
         foreach (var item in activeList)
         {
@@ -124,32 +121,26 @@ public class ExamInfoElement : MonoBehaviour
             }
         }
     }
-   
 
-    // private void AutoWire()
-    // {
-    //     if (!clickable)       clickable       = GetComponent<Button>();
-    //     if (!rootButtonImage) rootButtonImage = GetComponent<Image>();
-    //     if (clickable && clickable.targetGraphic != rootButtonImage)
-    //         clickable.targetGraphic = rootButtonImage;
-    // }
-
-    // private void EnsureRootImageSetup()
-    // {
-    //     if (!rootButtonImage) return;
-    //
-    //     // đảm bảo nhìn thấy
-    //     var c = rootButtonImage.color; c.a = 1f; rootButtonImage.color = c;
-    //     rootButtonImage.enabled        = true;
-    //     rootButtonImage.raycastTarget = true;
-    //     
-    //     rootButtonImage.preserveAspect = false;
-    //
-    //     // chọn type hợp lý
-    //     var cur = rootButtonImage.sprite;
-    //     if (cur && cur.border.sqrMagnitude > 0f)
-    //         rootButtonImage.type = Image.Type.Sliced;
-    //     else
-    //         rootButtonImage.type = Image.Type.Simple;
-    // }
+    public void ActiveHover(bool isHover)
+    {
+        // show hover đi
+        switch (currentState)
+        {
+            case State.Unanswered:
+                hoverUnanswered.SetHoverAndHideNormal(isHover);
+                hoverAnswered.SetHoverAndHideNormal(false);
+                break;
+            case State.Answered:
+                hoverAnswered.SetHoverAndHideNormal(isHover);
+                hoverUnanswered.SetHoverAndHideNormal(false);
+                break;
+            case State.Selected:
+                hoverUnanswered.SetHoverAndHideNormal(false);
+                hoverAnswered.SetHoverAndHideNormal(false);
+                break;
+            default:
+                break;
+        }
+    }
 }
