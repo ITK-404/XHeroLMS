@@ -4,159 +4,159 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ExamMatchingElement : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+public class ExamMatchingElement : MonoBehaviour
 {
-    public enum ElementSide
-    {
-        A,
-        B
-    }
+    // public enum ElementSide
+    // {
+    //     A,
+    //     B
+    // }
 
-    public ElementSide side;
+    // public ElementSide side;
 
-    [Header("Matching Points")]
-    [SerializeField] private Transform topPoint;    // dùng cho Side B
-    [SerializeField] private Transform lowerPoint;  // dùng cho Side A
-    [SerializeField] private Image matchingImg;
-    [SerializeField] private Sprite normalMatching;
-    [SerializeField] private Sprite correctMatching;
+    // [Header("Matching Points")]
+    // [SerializeField] private Transform topPoint;    // dùng cho Side B
+    // [SerializeField] private Transform lowerPoint;  // dùng cho Side A
+    // [SerializeField] private Image matchingImg;
+    // [SerializeField] private Sprite normalMatching;
+    // [SerializeField] private Sprite correctMatching;
 
-    [SerializeField] private Color normalPointColor;
-    [SerializeField] private Color correctPointColor;
+    // [SerializeField] private Color normalPointColor;
+    // [SerializeField] private Color correctPointColor;
 
-    public ExamMatchingElement ConnectedElement { get; private set; }
+    // public ExamMatchingElement ConnectedElement { get; private set; }
 
-    private LineRenderer currentLine;
+    // private LineRenderer currentLine;
 
-    private void Awake()
-    {
-        if (side == ElementSide.A)
-        {
-            topPoint.gameObject.SetActive(false);
-        }
-        else
-        {
-            lowerPoint.gameObject.SetActive(false);
-        }
-    }
+    // private void Awake()
+    // {
+    //     if (side == ElementSide.A)
+    //     {
+    //         topPoint.gameObject.SetActive(false);
+    //     }
+    //     else
+    //     {
+    //         lowerPoint.gameObject.SetActive(false);
+    //     }
+    // }
 
-    public Transform GetMatchingPoint()
-    {
-        return side == ElementSide.A ? lowerPoint : topPoint;
-    }
+    // public Transform GetMatchingPoint()
+    // {
+    //     return side == ElementSide.A ? lowerPoint : topPoint;
+    // }
 
-    #region Drag & Drop Events
+    // #region Drag & Drop Events
 
-    public void OnPointerDown(PointerEventData eventData)
-    {
-    }
+    // public void OnPointerDown(PointerEventData eventData)
+    // {
+    // }
 
-    public void OnDrag(PointerEventData eventData)
-    {
+    // public void OnDrag(PointerEventData eventData)
+    // {
         
-    }
+    // }
 
-    public void OnPointerUp(PointerEventData eventData)
-    {
-        if (EventSystem.current == null) return;
+    // public void OnPointerUp(PointerEventData eventData)
+    // {
+    //     if (EventSystem.current == null) return;
 
-        var pointer = new PointerEventData(EventSystem.current) { position = eventData.position };
-        var results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(pointer, results);
+    //     var pointer = new PointerEventData(EventSystem.current) { position = eventData.position };
+    //     var results = new List<RaycastResult>();
+    //     EventSystem.current.RaycastAll(pointer, results);
 
-        ExamMatchingElement target = null;
+    //     ExamMatchingElement target = null;
 
-        foreach (var result in results)
-        {
-            target = result.gameObject.GetComponentInParent<ExamMatchingElement>();
-            if (target != null && target != this && target.side != side)
-            {
-                break;
-            }
-            target = null;
-        }
+    //     foreach (var result in results)
+    //     {
+    //         target = result.gameObject.GetComponentInParent<ExamMatchingElement>();
+    //         if (target != null && target != this && target.side != side)
+    //         {
+    //             break;
+    //         }
+    //         target = null;
+    //     }
 
-        if (target != null)
-        {
-            MatchingElementHandler.Instance.TryConnect(this, target);
-        }
-        else
-        {
-            // Huy ket noi
-            MatchingElementHandler.Instance.Disconnect(this);
-        }
-    }
+    //     if (target != null)
+    //     {
+    //         MatchingElementHandler.Instance.TryConnect(this, target);
+    //     }
+    //     else
+    //     {
+    //         // Huy ket noi
+    //         MatchingElementHandler.Instance.Disconnect(this);
+    //     }
+    // }
 
-    #endregion
+    // #endregion
 
-    #region Connection Management
+    // #region Connection Management
 
-    // Gọi từ Handler khi kết nối thành công
-    public void SetConnection(ExamMatchingElement other, LineRenderer line)
-    {
-        if (ConnectedElement != null && ConnectedElement != other)
-        {
-            MatchingElementHandler.Instance.DisconnectPair(this, ConnectedElement);
-        }
+    // // Gọi từ Handler khi kết nối thành công
+    // public void SetConnection(ExamMatchingElement other, LineRenderer line)
+    // {
+    //     if (ConnectedElement != null && ConnectedElement != other)
+    //     {
+    //         MatchingElementHandler.Instance.DisconnectPair(this, ConnectedElement);
+    //     }
 
-        ConnectedElement = other;
-        currentLine = line;
+    //     ConnectedElement = other;
+    //     currentLine = line;
 
-        UpdateLinePosition();
-    }
+    //     UpdateLinePosition();
+    // }
 
-    public void ClearConnection()
-    {
-        ConnectedElement = null;
+    // public void ClearConnection()
+    // {
+    //     ConnectedElement = null;
 
-        if (currentLine != null)
-        {
-            Destroy(currentLine.gameObject);
-            currentLine = null;
-        }
-    }
+    //     if (currentLine != null)
+    //     {
+    //         Destroy(currentLine.gameObject);
+    //         currentLine = null;
+    //     }
+    // }
 
-    private void UpdateLinePosition()
-    {
-        if (currentLine == null || ConnectedElement == null) return;
+    // private void UpdateLinePosition()
+    // {
+    //     if (currentLine == null || ConnectedElement == null) return;
 
-        Vector3 posA = GetMatchingPoint().position;
-        Vector3 posB = ConnectedElement.GetMatchingPoint().position;
+    //     Vector3 posA = GetMatchingPoint().position;
+    //     Vector3 posB = ConnectedElement.GetMatchingPoint().position;
        
-        float zOffset = -0.5f; 
+    //     float zOffset = -0.5f; 
 
-        posA.z += zOffset;
-        posB.z += zOffset;
+    //     posA.z += zOffset;
+    //     posB.z += zOffset;
         
-        currentLine.SetPosition(0, posA);
-        currentLine.SetPosition(1, posB);
-    }
+    //     currentLine.SetPosition(0, posA);
+    //     currentLine.SetPosition(1, posB);
+    // }
 
-    private void LateUpdate()
-    {
-        if (currentLine != null && ConnectedElement != null)
-        {
-            UpdateLinePosition();
-        }
-    }
+    // private void LateUpdate()
+    // {
+    //     if (currentLine != null && ConnectedElement != null)
+    //     {
+    //         UpdateLinePosition();
+    //     }
+    // }
 
-    public void SetNormalMatching()
-    {
-        matchingImg.sprite = normalMatching;
-        UpdateColorPoint(false);
-    }
+    // public void SetNormalMatching()
+    // {
+    //     matchingImg.sprite = normalMatching;
+    //     UpdateColorPoint(false);
+    // }
 
-    public void SetCorrectMatching()
-    {
-        matchingImg.sprite = correctMatching;
-        UpdateColorPoint(true);
-    }
+    // public void SetCorrectMatching()
+    // {
+    //     matchingImg.sprite = correctMatching;
+    //     UpdateColorPoint(true);
+    // }
 
-    private void UpdateColorPoint(bool isCorrect)
-    {
-        topPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
-        lowerPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
-    }
+    // private void UpdateColorPoint(bool isCorrect)
+    // {
+    //     topPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
+    //     lowerPoint.GetComponent<Image>().color = isCorrect ? correctPointColor : normalPointColor;
+    // }
 
-    #endregion
+    // #endregion
 }

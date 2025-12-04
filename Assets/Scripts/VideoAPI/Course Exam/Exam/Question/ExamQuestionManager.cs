@@ -12,39 +12,39 @@ public class ExamQuestionManager : MonoBehaviour
     public Transform content;
 
     [Header("Prefabs")]
-    public TMP_Text prefabCauHoi;
+    public TMP_Text    prefabCauHoi;
     public AnswerButton prefabCauTraLoi;
-    public GameObject prefabCauTraLoiTuLuan;
+    public GameObject   prefabCauTraLoiTuLuan;
 
-    [Tooltip("Prefab cho câu hỏi MATCHING (chứa UI + ExamMatchingElement, v.v.)")]
+    [Tooltip("Prefab cho câu hỏi MATCHING (chứa UI + script SetupQuestion, v.v.)")]
     public GameObject prefabMatching;
 
     [Header("Question Nav")]
-    [SerializeField] private GameObject navRoot;
-    [SerializeField] private Transform navContent;
+    [SerializeField] private GameObject     navRoot;
+    [SerializeField] private Transform      navContent;
     [SerializeField] private ExamInfoElement navItemPrefab;
 
     [Header("Buttons & Timer")]
     public TMP_Text textQuestionCounter; // "01/30"
-    public Button btnBack;
-    public Button btnNext;
-    public Button btnNopBai;
+    public Button   btnBack;
+    public Button   btnNext;
+    public Button   btnNopBai;
 
-    public Image multiple_hint;
+    public Image  multiple_hint;
     [Tooltip("Khi submit xong gọi GET result với đáp án đúng")]
     public bool getWithCorrectAnswer = true;
 
     [Header("Type Hint")]
     [SerializeField] protected GameObject typeHintRoot;
-    [SerializeField] private TMP_Text typeHintText;
+    [SerializeField] private   TMP_Text   typeHintText;
 
     [Header("Panels")]
     public ExamConfirmPanel confirmPanel;
-    public GameObject mainConfirmPanel;
-    public GameObject mainExamPanelRoot;
+    public GameObject       mainConfirmPanel;
+    public GameObject       mainExamPanelRoot;
 
     [Header("Result UI")]
-    [SerializeField] private ExamResultUI resultUI;
+    [SerializeField] private ExamResultUI          resultUI;
     [SerializeField] private ExamResultReviewPanel reviewPanel;
 
     [Header("Timer UI")]
@@ -64,29 +64,33 @@ public class ExamQuestionManager : MonoBehaviour
     // ===================== State =====================
     private bool _isReviewMode;
     private bool _isSubmitting;
-    private int _lastQuestionIndexBeforeSubmit = -1;
+    private int  _lastQuestionIndexBeforeSubmit = -1;
 
     public ExamUIController _examUIController;
 
     // user state
-    private readonly Dictionary<string, HashSet<int>> selectedMap = new();
-    public readonly Dictionary<string, string>        essayMap    = new();
+    private readonly Dictionary<string, HashSet<int>> selectedMap    = new();
+    public  readonly Dictionary<string, string>       essayMap       = new();
     private readonly List<AnswerButton>               spawnedOptions = new();
 
+    // MATCHING: q.id -> (leftIndex -> rightIndex)
+    private readonly Dictionary<string, Dictionary<int, int>> matchingMap =
+        new Dictionary<string, Dictionary<int, int>>();
+
     private readonly Dictionary<string, int> _qidToIndex = new();
-    public readonly List<ExamInfoElement> _navItems = new();
+    public  readonly List<ExamInfoElement>   _navItems    = new();
 
     public bool IsSubmitting => _isSubmitting;
 
     // services
-    private QuestionRandomizer      _randomizer;
-    private ExamSubmissionService   _submissionService;
+    private QuestionRandomizer    _randomizer;
+    private ExamSubmissionService _submissionService;
 
     // ===================== Lifecycle =====================
     private void Awake()
     {
         _certificatesExamUI = FindAnyObjectByType<CertificatesExamUI>();
-        _examUIController = GetComponent<ExamUIController>();
+        _examUIController   = GetComponent<ExamUIController>();
 
         // init randomizer & submission service
         _randomizer = new QuestionRandomizer(randomizeQuestions, numberOfQuestions);
@@ -103,7 +107,7 @@ public class ExamQuestionManager : MonoBehaviour
         if (navRoot) navRoot.SetActive(false);
     }
 
-    void Start()
+    private void Start()
     {
         numberOfQuestions = _examUIController?.Paper.Count ?? 0;
     }
@@ -114,7 +118,7 @@ public class ExamQuestionManager : MonoBehaviour
         _isReviewMode = enabled;
         if (btnNopBai) btnNopBai.gameObject.SetActive(!enabled);
         if (timerRoot) timerRoot.SetActive(!enabled);
-        if (navRoot) navRoot.SetActive(true); // luôn cho hiện nav khi làm bài hoặc review
+        if (navRoot)   navRoot.SetActive(true); // luôn cho hiện nav khi làm bài hoặc review
     }
 
     public void ShowNoQuestion()
@@ -157,8 +161,11 @@ public class ExamQuestionManager : MonoBehaviour
         BuildQuestionIndexMapOnce();
         RebuildQuestionNavIfNeeded();
 
-        _examUIController.currentIndex = Mathf.Clamp(_examUIController.currentIndex, 0, qs.Count - 1);
+        _examUIController.currentIndex =
+            Mathf.Clamp(_examUIController.currentIndex, 0, qs.Count - 1);
         var q = qs[_examUIController.currentIndex];
+
+        Debug.Log($"[Render] QID: {q.id}, Type: {q.type}, Options: {(q.options?.Count ?? 0)}");
 
         ClearContent();
         SpawnQuestionText($"{_examUIController.currentIndex + 1}. {q.title}");
@@ -214,7 +221,7 @@ public class ExamQuestionManager : MonoBehaviour
         }
 
         if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
-        if (mainConfirmPanel) mainConfirmPanel.SetActive(true);
+        if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
 
         confirmPanel.examPanelRoot = mainExamPanelRoot;
         confirmPanel.gameObject.SetActive(true);
@@ -228,8 +235,8 @@ public class ExamQuestionManager : MonoBehaviour
         StopTimerSafe();
         SetReviewMode(true);
 
-        if (mainConfirmPanel)   mainConfirmPanel.SetActive(false);
-        if (mainExamPanelRoot)  mainExamPanelRoot.SetActive(true);
+        if (mainConfirmPanel)  mainConfirmPanel.SetActive(false);
+        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
 
         StartCoroutine(SubmitExamRoutine(false));
     }
@@ -255,8 +262,8 @@ public class ExamQuestionManager : MonoBehaviour
 
     public void ReturnToLastQuestion()
     {
-        if (mainConfirmPanel)   mainConfirmPanel.SetActive(false);
-        if (mainExamPanelRoot)  mainExamPanelRoot.SetActive(true);
+        if (mainConfirmPanel)  mainConfirmPanel.SetActive(false);
+        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
 
         if (_lastQuestionIndexBeforeSubmit >= 0 && _examUIController?.Paper != null)
         {
@@ -345,22 +352,50 @@ public class ExamQuestionManager : MonoBehaviour
         });
     }
 
-    /// <summary>
-    /// Render câu hỏi MATCHING bằng prefab riêng.
-    /// Prefab này nên chứa các ExamMatchingElement (Left/Right) + MatchingElementHandler.
-    /// </summary>
-    private void RenderMatching(ExamQuestion q)
+private void RenderMatching(ExamQuestion q)
+{
+    if (!prefabMatching)
     {
-        if (!prefabMatching)
+        SpawnQuestionText("(Thiếu prefabMatching cho câu MATCHING)");
+        return;
+    }
+
+    var go = Instantiate(prefabMatching, content);
+
+    var handler = go.GetComponent<MatchingElementHandler>();
+    if (handler != null)
+    {
+        // lấy state đã lưu nếu có
+        matchingMap.TryGetValue(q.id, out var currentPairs);
+
+        handler.SetupQuestion(
+            q,
+            currentPairs,
+            updatedPairs => { SetMatchingAnswer(q.id, updatedPairs); }
+        );
+    }
+    else
+    {
+        // fallback nếu prefab chưa gán script đúng
+        go.SendMessage("SetupQuestion", q, SendMessageOptions.DontRequireReceiver);
+    }
+}
+
+    /// <summary>
+    /// Dùng cho MATCHING – gọi từ script trên prefabMatching khi user thay đổi đáp án.
+    /// </summary>
+    public void SetMatchingAnswer(string questionId, Dictionary<int, int> pairs)
+    {
+        if (pairs == null || pairs.Count == 0)
         {
-            SpawnQuestionText("(Thiếu prefabMatching cho câu MATCHING)");
-            return;
+            matchingMap.Remove(questionId);
+        }
+        else
+        {
+            matchingMap[questionId] = pairs;
         }
 
-        // Tạo UI matching
-        var go = Instantiate(prefabMatching, content);
-
-        go.SendMessage("SetupQuestion", q, SendMessageOptions.DontRequireReceiver);
+        RefreshSingleNavStateByQuestionId(questionId);
     }
 
     // ===================== Nav =====================
@@ -536,11 +571,17 @@ public class ExamQuestionManager : MonoBehaviour
         return type switch
         {
             ExamQuestionType.SINGLE_CHOICE or ExamQuestionType.MULTIPLE_CHOICE
-                => selectedMap.TryGetValue(qid, out var set) && set != null && set.Count > 0,
+                => selectedMap.TryGetValue(qid, out var set) &&
+                   set != null && set.Count > 0,
+
             ExamQuestionType.ESSAY
-                => essayMap.TryGetValue(qid, out var txt) && !string.IsNullOrWhiteSpace(txt),
-            // Hiện tại MATCHING chưa nối vào selectedMap.
-            // Khi bạn có format lưu đáp án MATCHING, có thể thêm case ở đây.
+                => essayMap.TryGetValue(qid, out var txt) &&
+                   !string.IsNullOrWhiteSpace(txt),
+
+            ExamQuestionType.MATCHING
+                => matchingMap.TryGetValue(qid, out var pairs) &&
+                   pairs != null && pairs.Count > 0,
+
             _ => false
         };
     }
@@ -554,14 +595,13 @@ public class ExamQuestionManager : MonoBehaviour
         _isSubmitting = false;
         _lastQuestionIndexBeforeSubmit = -1;
 
-        // randomizer: restore bank + cho phép random lại
         _randomizer?.ResetForNewAttempt(_examUIController?.Paper);
 
         selectedMap.Clear();
         essayMap.Clear();
+        matchingMap.Clear();
         _qidToIndex.Clear();
 
-        // clear nav UI cũ
         if (navContent != null)
         {
             for (int i = navContent.childCount - 1; i >= 0; i--)
@@ -569,13 +609,10 @@ public class ExamQuestionManager : MonoBehaviour
         }
         _navItems.Clear();
 
-        // clear nội dung câu hỏi
         ClearContent();
 
-        // ẩn nav cho tới khi RenderCurrentQuestion()+SetReviewMode(false) bật lại
         if (navRoot) navRoot.SetActive(false);
 
-        // bật lại các nút điều hướng/submit cho lần làm bài mới
         if (btnBack)   btnBack.gameObject.SetActive(true);
         if (btnNext)   btnNext.gameObject.SetActive(true);
         if (btnNopBai) btnNopBai.gameObject.SetActive(true);
@@ -613,7 +650,7 @@ public class ExamQuestionManager : MonoBehaviour
                 typeHintText.text = "Có thể chọn nhiều đáp án";
                 break;
 
-            case ExamQuestionType.MATCHING: // <-- THÊM HINT MỚI
+            case ExamQuestionType.MATCHING:
                 typeHintRoot.SetActive(true);
                 typeHintText.text = "Nối các cặp tương ứng";
                 break;
