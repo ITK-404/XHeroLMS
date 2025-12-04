@@ -11,10 +11,10 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
     [Header("UI Roots")]
     public Transform leftRoot;
     public Transform rightRoot;
-    public GameObject itemPrefab; // prefab: TMP_Text + child "Point" (Image)
+    public GameObject itemPrefab; // prefab: TMP_Text + ExamMatchingElement
 
     [Header("Line Parent (common parent cho line + items)")]
-    public Transform lineParent;  // KÉO Panel/Root chung vào đây
+    public Transform lineParent;
 
     [Header("Camera dùng cho Matching (nếu Canvas không phải Overlay)")]
     [SerializeField] private Camera uiCamera;
@@ -27,32 +27,44 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
 
     [Header("Item Colors")]
     public Color normalColor   = Color.white;
-    public Color selectedColor = new Color(1f, 0.92f, 0.55f); // vàng nhạt
+    public Color selectedColor = new Color(1f, 0.92f, 0.55f);
+
+    [Header("Review")]
+    public bool isReadOnlyReview = false;
 
     // ====== Exam Data ======
     private string _qid;
+
+    // TEXT gốc (đúng thứ tự server / data)
+    private List<string> _leftTextsOriginal;
+    private List<string> _rightTextsOriginal;
+
+    // TEXT sau khi split (và random order)
     private List<string> _leftTexts;
     private List<string> _rightTexts;
     private Action<Dictionary<int, int>> _onAnswerChanged;
     private readonly Dictionary<int, int> _pairs = new();
 
+    // Mapping displayIndex -> originalIndex
+    private readonly List<int> _leftDisplayToOrig  = new();
+    private readonly List<int> _rightDisplayToOrig = new();
+
     // ====== Runtime ======
     private readonly List<Item> leftItems  = new();
     private readonly List<Item> rightItems = new();
     private Image   _bg;
-    private Item    _selectedItem; // item đang chọn chờ nối
+    private Item    _selectedItem;
 
     private Canvas _canvas;
-    private Camera _uiCamResolved;   // camera thực sự dùng cho Canvas (có thể null nếu Overlay)
+    private Camera _uiCamResolved;
 
     private class Item
     {
-        public RectTransform rt;
-        public TMP_Text      txt;
-        public Image         point;
-        public Image         bg;
+        public RectTransform      rt;
+        public TMP_Text           txt;
+        public Image              bg;
+        public ExamMatchingElement elem;  // chứa topPoint/lowerPoint
 
-        // line UI dùng Image + RectTransform
         public RectTransform lineRt;
         public Item          connected;
     }
@@ -64,15 +76,9 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         if (_canvas != null)
         {
             if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            {
-                // Overlay: không dùng camera
                 _uiCamResolved = null;
-            }
             else
-            {
-                // ScreenSpaceCamera hoặc WorldSpace
                 _uiCamResolved = _canvas.worldCamera != null ? _canvas.worldCamera : uiCamera;
-            }
         }
         else
         {
@@ -92,39 +98,99 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
     // =================== SETUP ===================
     public void SetupQuestion(
         ExamQuestion q,
-        Dictionary<int, int> savedPairs,
-        Action<Dictionary<int, int>> callback)
+        Dictionary<int, int> savedPairs,        // KEY = rightIndex (orig), VALUE = leftIndex (orig)
+        Action<Dictionary<int, int>> callback)  // callback nhận (rightOrig -> leftOrig)
     {
         _qid             = q.id;
         _onAnswerChanged = callback;
 
-        _leftTexts  = (q.matchingLeft  != null) ? new List<string>(q.matchingLeft)  : new List<string>();
-        _rightTexts = (q.matchingRight != null) ? new List<string>(q.matchingRight) : new List<string>();
+        // Lấy text gốc từ question
+        _leftTextsOriginal  = (q.matchingLeft  != null) ? new List<string>(q.matchingLeft)  : new List<string>();
+        _rightTextsOriginal = (q.matchingRight != null) ? new List<string>(q.matchingRight) : new List<string>();
 
-        // Fallback nếu BE vẫn nhét vào options
-        if (_leftTexts.Count == 0 && _rightTexts.Count == 0 &&
+        if (_leftTextsOriginal.Count == 0 && _rightTextsOriginal.Count == 0 &&
             q.options != null && q.options.Count > 0)
         {
             int half = q.options.Count / 2;
             for (int i = 0; i < q.options.Count; i++)
             {
-                if (i < half) _leftTexts.Add(q.options[i]);
-                else          _rightTexts.Add(q.options[i]);
+                if (i < half) _leftTextsOriginal.Add(q.options[i]);
+                else          _rightTextsOriginal.Add(q.options[i]);
             }
         }
 
-        // Tách chuỗi theo '-'
-        _leftTexts  = SplitColumnText(_leftTexts);
-        _rightTexts = SplitColumnText(_rightTexts);
+        // Split text (có thể tách "Kim-Thủy-..." thành list)
+        _leftTextsOriginal  = SplitColumnText(_leftTextsOriginal);
+        _rightTextsOriginal = SplitColumnText(_rightTextsOriginal);
 
-        Debug.Log($"[MATCHING] QID={_qid}, left={_leftTexts.Count}, right={_rightTexts.Count}");
+        Debug.Log($"[MATCHING] QID={_qid}, left={_leftTextsOriginal.Count}, right={_rightTextsOriginal.Count}");
 
         ClearUI();
+
+        // Tạo mapping displayIndex -> originalIndex và RANDOM order
+        BuildAndShuffleDisplayMaps();
+
+        // Tạo list text hiển thị theo order random
+        BuildDisplayTextsFromOriginal();
+
         SpawnItems();
-        RestorePairs(savedPairs);
+        RestorePairs(savedPairs);   // savedPairs đang dùng index gốc
         RaiseChanged();
     }
 
+    private void BuildAndShuffleDisplayMaps()
+    {
+        _leftDisplayToOrig.Clear();
+        _rightDisplayToOrig.Clear();
+
+        for (int i = 0; i < _leftTextsOriginal.Count; i++)
+            _leftDisplayToOrig.Add(i);
+
+        for (int i = 0; i < _rightTextsOriginal.Count; i++)
+            _rightDisplayToOrig.Add(i);
+
+        // Seed ổn định theo QID để cùng 1 câu luôn ra cùng 1 random
+        int baseSeed = GetStableSeed(_qid);
+
+        Shuffle(_leftDisplayToOrig,  baseSeed ^ 397);
+        Shuffle(_rightDisplayToOrig, baseSeed ^ 791);
+    }
+
+    private static void Shuffle(List<int> list, int seed)
+    {
+        var rng = new System.Random(seed);
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = rng.Next(n + 1);
+            (list[n], list[k]) = (list[k], list[n]);
+        }
+    }
+
+    private static int GetStableSeed(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return 123456;
+        unchecked
+        {
+            int h = 23;
+            for (int i = 0; i < s.Length; i++)
+                h = h * 31 + s[i];
+            return h;
+        }
+    }
+
+    private void BuildDisplayTextsFromOriginal()
+    {
+        _leftTexts  = new List<string>(_leftDisplayToOrig.Count);
+        _rightTexts = new List<string>(_rightDisplayToOrig.Count);
+
+        foreach (var origIdx in _leftDisplayToOrig)
+            _leftTexts.Add(_leftTextsOriginal[origIdx]);
+
+        foreach (var origIdx in _rightDisplayToOrig)
+            _rightTexts.Add(_rightTextsOriginal[origIdx]);
+    }
     // ---------- Render ----------
     private void ClearUI()
     {
@@ -133,14 +199,11 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         if (rightRoot != null)
             foreach (Transform c in rightRoot) Destroy(c.gameObject);
 
-        // Xóa line cũ nếu còn (phòng trường hợp để chung parent)
         if (lineParent != null)
         {
             foreach (Transform c in lineParent)
-            {
                 if (c.name.StartsWith("MatchLine"))
                     Destroy(c.gameObject);
-            }
         }
 
         leftItems.Clear();
@@ -154,23 +217,33 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         if (leftRoot == null || rightRoot == null || itemPrefab == null) return;
 
         for (int i = 0; i < _leftTexts.Count; i++)
-            leftItems.Add(CreateItem(leftRoot, _leftTexts[i]));
+            leftItems.Add(CreateItem(leftRoot, _leftTexts[i], true));
 
         for (int i = 0; i < _rightTexts.Count; i++)
-            rightItems.Add(CreateItem(rightRoot, _rightTexts[i]));
+            rightItems.Add(CreateItem(rightRoot, _rightTexts[i], false));
     }
 
-    private Item CreateItem(Transform root, string label)
+    private Item CreateItem(Transform root, string label, bool isLeft)
     {
-        // leftRoot/rightRoot nên là con của lineParent để tất cả cùng hệ toạ độ
         var go   = Instantiate(itemPrefab, root);
         var item = new Item
         {
-            rt    = go.GetComponent<RectTransform>(),
-            txt   = go.GetComponentInChildren<TMP_Text>(true),
-            point = go.transform.Find("Point")?.GetComponent<Image>(),
-            bg    = go.GetComponent<Image>()
+            rt   = go.GetComponent<RectTransform>(),
+            txt  = go.GetComponentInChildren<TMP_Text>(true),
+            bg   = go.GetComponent<Image>(),
+            elem = go.GetComponent<ExamMatchingElement>()
         };
+
+        // set side + ẩn/hiện point đúng cột
+        if (item.elem != null)
+        {
+            var side = isLeft
+                ? ExamMatchingElement.ElementSide.A
+                : ExamMatchingElement.ElementSide.B;
+
+            item.elem.Initialize(side);
+        }
+
         if (item.txt != null) item.txt.text = label ?? "New Text";
         if (item.bg  != null) item.bg.color = normalColor;
         return item;
@@ -182,7 +255,6 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         item.bg.color = selected ? selectedColor : normalColor;
     }
 
-    // ---------- tạo Line Image (UI) ----------
     private RectTransform CreateLineImage()
     {
         Transform parent = lineParent != null ? lineParent : transform.parent;
@@ -196,24 +268,17 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         img.raycastTarget = false;
         img.type = Image.Type.Simple;
 
-        // gán sprite để image thật sự render được
+        // Chỉ dùng sprite nếu bạn gán trong Inspector
         if (lineSprite != null)
         {
             img.sprite = lineSprite;
-        }
-        else
-        {
-            // dùng sprite UI mặc định nếu chưa set
-            img.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Background.psd");
+            img.type = Image.Type.Sliced;
         }
 
         var rt = go.GetComponent<RectTransform>();
-        // anchor giữa để dễ tính
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
-        // WIDTH = độ dày, HEIGHT sẽ được set = A→B
-        rt.sizeDelta = new Vector2(lineThickness, 0f);
-
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(lineThickness, 0f);   // width = độ dày
         return rt;
     }
 
@@ -223,13 +288,14 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         if (a == null || b == null) return;
         if (a == b) return;
 
-        // CHẶN nối cùng 1 bên (cùng leftRoot / cùng rightRoot)
+        // phải khác cột
         if (!IsOppositeSide(a, b)) return;
 
-        // clear các connection cũ (nếu có)
+        // clear cặp cũ (nếu có)
         ClearConnection(a);
         ClearConnection(b);
 
+        // tạo line chung
         var lineRt = CreateLineImage();
 
         a.connected = b;
@@ -240,10 +306,31 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         UpdateLine(a);
         UpdateLine(b);
 
-        int ai = leftItems.IndexOf(a);
-        int bi = rightItems.IndexOf(b);
-        if (ai >= 0 && bi >= 0)
-            _pairs[ai] = bi;
+        // ===== CHUẨN HOÁ: luôn encode RIGHT(orig) -> LEFT(orig) =====
+        int leftDisplayIndex  = -1;
+        int rightDisplayIndex = -1;
+
+        if (leftItems.Contains(a) && rightItems.Contains(b))
+        {
+            leftDisplayIndex  = leftItems.IndexOf(a);
+            rightDisplayIndex = rightItems.IndexOf(b);
+        }
+        else if (leftItems.Contains(b) && rightItems.Contains(a))
+        {
+            leftDisplayIndex  = leftItems.IndexOf(b);
+            rightDisplayIndex = rightItems.IndexOf(a);
+        }
+
+        if (leftDisplayIndex >= 0 && rightDisplayIndex >= 0 &&
+            leftDisplayIndex  < _leftDisplayToOrig.Count &&
+            rightDisplayIndex < _rightDisplayToOrig.Count)
+        {
+            int leftOrig  = _leftDisplayToOrig[leftDisplayIndex];   // j (gốc)
+            int rightOrig = _rightDisplayToOrig[rightDisplayIndex]; // i (gốc)
+
+            // “dòng trái j nối với dòng phải i”  => _pairs[i] = j (index gốc)
+            _pairs[rightOrig] = leftOrig;
+        }
 
         RaiseChanged();
     }
@@ -261,17 +348,24 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         o.connected = null;
         o.lineRt    = null;
 
-        int ai1 = leftItems.IndexOf(x);
-        int ai2 = leftItems.IndexOf(o);
-        if (ai1 >= 0) _pairs.Remove(ai1);
-        if (ai2 >= 0) _pairs.Remove(ai2);
+        // KEY trong _pairs là index cột PHẢI GỐC
+        RemoveRightKeyByDisplayIndex(x);
+        RemoveRightKeyByDisplayIndex(o);
     }
 
-    // =================== LINE UPDATE (Canvas-aware) ===================
+    private void RemoveRightKeyByDisplayIndex(Item item)
+    {
+        int d = rightItems.IndexOf(item);
+        if (d < 0 || d >= _rightDisplayToOrig.Count) return;
+
+        int rightOrig = _rightDisplayToOrig[d];   // index gốc
+        _pairs.Remove(rightOrig);
+    }
+
     private void UpdateLine(Item x)
     {
         if (x == null || x.connected == null) return;
-        if (x.point == null || x.connected.point == null) return;
+        if (x.elem == null || x.connected.elem == null) return;
         if (x.lineRt == null) return;
 
         Transform parent = lineParent != null ? lineParent : transform.parent;
@@ -280,40 +374,33 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         RectTransform parentRt = parent as RectTransform;
         if (parentRt == null)
         {
-            Debug.LogWarning("[MATCHING] lineParent / parent không phải RectTransform (Canvas/UI)");
+            Debug.LogWarning("[MATCHING] lineParent / parent không phải RectTransform");
             return;
         }
 
-        // 1) screen pos của 2 Point (dùng camera ĐÚNG của Canvas)
-        Camera camForUI = _uiCamResolved;
-        Vector2 screen1 = RectTransformUtility.WorldToScreenPoint(camForUI, x.point.rectTransform.position);
-        Vector2 screen2 = RectTransformUtility.WorldToScreenPoint(camForUI, x.connected.point.rectTransform.position);
+        // 1) world position của 2 MatchingPoint
+        Vector3 world1 = x.elem.GetMatchingPoint().position;
+        Vector3 world2 = x.connected.elem.GetMatchingPoint().position;
 
-        // 2) Convert sang local trong parent (lineParent)
-        Vector2 local1, local2;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRt, screen1, camForUI, out local1))
-            return;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRt, screen2, camForUI, out local2))
-            return;
+        // 2) convert sang local của lineParent
+        Vector3 local1_3D = parentRt.InverseTransformPoint(world1);
+        Vector3 local2_3D = parentRt.InverseTransformPoint(world2);
 
-        // 3) Tính midpoint, độ dài, góc
-        Vector2 dir    = local2 - local1;
-        float   length = dir.magnitude;
+        Vector2 local1 = new Vector2(local1_3D.x, local1_3D.y);
+        Vector2 local2 = new Vector2(local2_3D.x, local2_3D.y);
+
+        Vector2 dir = local2 - local1;
+        float length = dir.magnitude;
         if (length <= 0.01f) return;
 
-        Vector2 mid = (local1 + local2) * 0.5f;
+        Vector2 mid   = (local1 + local2) * 0.5f;
+        float alpha   = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        float angle   = alpha - 90f; // trục Y của Image hướng A->B
 
-        // alpha = góc để trục X trùng với dir
-        float alpha = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        // muốn trục Y (HEIGHT) trùng với dir => quay thêm -90°
-        float angle = alpha - 90f;
-
-        // 4) Set cho RectTransform của line
         var rt = x.lineRt;
         rt.anchoredPosition = mid;
-        // WIDTH = độ dày, HEIGHT = A→B
         rt.sizeDelta        = new Vector2(lineThickness, length);
-        rt.localRotation    = Quaternion.Euler(0f, 0f, angle);    // chỉ xoay Z
+        rt.localRotation    = Quaternion.Euler(0f, 0f, angle);
     }
 
     private bool IsOppositeSide(Item a, Item b)
@@ -325,10 +412,11 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
     // =================== POINTER (CLICK ĐỂ NỐI) ===================
     public void OnPointerDown(PointerEventData e)
     {
+        if (isReadOnlyReview) return;
+
         var hit = FindHitItem(e);
         if (hit == null) return;
 
-        // click lại chính nó => bỏ chọn
         if (_selectedItem == hit)
         {
             SetItemSelected(_selectedItem, false);
@@ -336,7 +424,6 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
             return;
         }
 
-        // Chưa có item nào được chọn -> chọn item hiện tại
         if (_selectedItem == null)
         {
             _selectedItem = hit;
@@ -344,32 +431,28 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
             return;
         }
 
-        // ĐÃ có 1 item được chọn trước đó
         if (!IsOppositeSide(_selectedItem, hit))
         {
-            // Cùng bên -> chỉ đổi selection, không nối
             SetItemSelected(_selectedItem, false);
             _selectedItem = hit;
             SetItemSelected(_selectedItem, true);
             return;
         }
 
-        // Khác bên -> TỰ ĐỘNG TẠO LINE NỐI 2 PREFAB
         TryConnect(_selectedItem, hit);
 
-        // reset selection sau khi nối xong
         SetItemSelected(_selectedItem, false);
         SetItemSelected(hit, false);
         _selectedItem = null;
     }
 
-    // Không dùng drag nhưng vẫn phải implement interface
     public void OnDrag(PointerEventData e) { }
     public void OnPointerUp(PointerEventData e) { }
 
     private Item FindHitItem(PointerEventData e)
     {
-        Camera camForUI = _uiCamResolved; // cùng camera với line
+        Camera camForUI = _uiCamResolved;
+
         foreach (var i in leftItems)
             if (RectTransformUtility.RectangleContainsScreenPoint(i.rt, e.position, camForUI))
                 return i;
@@ -392,41 +475,27 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
     {
         if (saved == null) return;
 
+        // saved: KEY = rightOrigIndex (i), VALUE = leftOrigIndex (j)
         foreach (var kv in saved)
         {
-            int li = kv.Key;
-            int ri = kv.Value;
-            if (li >= 0 && li < leftItems.Count &&
-                ri >= 0 && ri < rightItems.Count)
+            int rightOrig = kv.Key;
+            int leftOrig  = kv.Value;
+
+            int leftDisplay  = _leftDisplayToOrig.IndexOf(leftOrig);
+            int rightDisplay = _rightDisplayToOrig.IndexOf(rightOrig);
+
+            if (leftDisplay  >= 0 && leftDisplay  < leftItems.Count &&
+                rightDisplay >= 0 && rightDisplay < rightItems.Count)
             {
-                TryConnect(leftItems[li], rightItems[ri]);
+                TryConnect(leftItems[leftDisplay], rightItems[rightDisplay]);
             }
         }
     }
 
     private void RaiseChanged()
     {
+        // Trả ra đúng format: KEY = index cột PHẢI (orig), VALUE = index cột TRÁI (orig)
         _onAnswerChanged?.Invoke(new Dictionary<int, int>(_pairs));
-    }
-
-    // =================== REVIEW ===================
-    public void ShowCorrect(Dictionary<int, int> correctPairs)
-    {
-        if (correctPairs == null) return;
-
-        foreach (var kv in correctPairs)
-        {
-            int li = kv.Key;
-            int ri = kv.Value;
-
-            if (li < 0 || li >= leftItems.Count) continue;
-            if (ri < 0 || ri >= rightItems.Count) continue;
-
-            bool ok = _pairs.ContainsKey(li) && _pairs[li] == ri;
-
-            if (leftItems[li].point != null)
-                leftItems[li].point.color = ok ? Color.green : Color.red;
-        }
     }
 
     // =================== SPLIT TEXT ===================
@@ -460,5 +529,10 @@ public class MatchingElementHandler : MonoBehaviour, IPointerDownHandler, IDragH
         }
 
         return result;
+    }
+
+    public void SetReadOnly(bool readOnly)
+    {
+        isReadOnlyReview = readOnly;
     }
 }
