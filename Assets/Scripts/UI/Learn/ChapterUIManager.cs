@@ -48,14 +48,14 @@ public class ChapterUIManager : MonoBehaviour
 
             Debug.Log($"Chapter :{chaptersList[i].titleName.text} is Unlock all {isUnlockAll}");
 
-            string title = chaptersList[i].titleName.text.Trim();
-            if (title == "Bài thi cuối khóa")
-            {
-                Debug.Log($"Dang bật tự động mở khóa bài thì, nhớ tắt khi build",gameObject);
-                chaptersList[i].ChangeState(ChapterUI.ChapterState.Normal);
-                Debug.Log("Final Exam ALWAYS UNLOCKED for testing.");
-                continue;
-            }
+            //string title = chaptersList[i].titleName.text.Trim();
+            //if (title == "Bài thi cuối khóa")
+            //{
+            //    Debug.Log($"Dang bật tự động mở khóa bài thì, nhớ tắt khi build",gameObject);
+            //    chaptersList[i].ChangeState(ChapterUI.ChapterState.Normal);
+            //    Debug.Log("Final Exam ALWAYS UNLOCKED for testing.");
+            //    continue;
+            //}
         }
         // reapply selection state after updating progress so selection doesn't affect completion checks
         if (currentChapter != null && chaptersList.Contains(currentChapter))
