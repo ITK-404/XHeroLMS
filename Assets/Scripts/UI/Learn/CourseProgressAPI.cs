@@ -21,7 +21,7 @@ public class CourseProgressAPI : MonoBehaviour
         // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
         if (LmsStore.Instance != null)
         {
-            baseUrl = LmsStore.Instance.baseUrl; 
+            baseUrl = LmsStore.Instance.baseUrl;
         }
         else
         {
@@ -51,6 +51,11 @@ public class CourseProgressAPI : MonoBehaviour
             req.SetRequestHeader("Authorization", "Bearer " + accessToken);
 
         req.SetRequestHeader("Accept", "application/json");
+
+        // ===== THÊM HEADER x-data (AES-256-GCM) =====
+        string xData = LmsSecurityHeader.BuildXDataHeader();
+        req.SetRequestHeader("x-data", xData);
+        Debug.Log($"[CourseProgressAPI] x-data: {xData}");
 
         yield return req.SendWebRequest();
 
@@ -121,30 +126,31 @@ public class CourseProgressAPI : MonoBehaviour
 
     public void UpdateProgressTime(string lessonID, int progressTime)
     {
-        
     }
-    
+
     [Serializable]
     public class CustomPrivateData
     {
         public bool status;
-        public WarpperBigData data; 
+        public WarpperBigData data;
     }
+
     [Serializable]
     public class WarpperBigData
     {
         public string _id;
         public ResultExam resultExam;
         public LmsCoursePrivate course;
-
     }
+
     [Serializable]
     public class ResultExam
     {
         public string status;
     }
+
     private void FormatString(string rawData)
     {
-        
+        // hiện không dùng
     }
 }
