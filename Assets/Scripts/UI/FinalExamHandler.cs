@@ -143,8 +143,7 @@ public class FinalExamHandler : MonoBehaviour
     private IEnumerator MoveCameraBackFromExam()
     {
         //ResetExamCamera();
-        yield return new WaitForSecondsRealtime(2);
-
+        yield return null;
         playerStandUI.ShowWatchVideoUI();
         playerPanelUI.ShowLoginUI();
     }
