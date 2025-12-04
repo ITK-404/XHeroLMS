@@ -6,8 +6,8 @@ using UnityEngine.UI;
 public class ExamResultReviewPanel : ExamQuestionManager
 {
     [Header("Review Header (tuỳ chọn)")]
-    [SerializeField] private TMP_Text titleTmp;          // ví dụ: "XEM KẾT QUẢ"
-    [SerializeField] private TMP_Text counterTmp;        // ví dụ: "01/40"
+    [SerializeField] private TMP_Text titleTmp;
+    [SerializeField] private TMP_Text counterTmp;
 
     [Header("Badges (tuỳ chọn)")]
     [SerializeField] private GameObject correctStatusObj;
@@ -21,36 +21,47 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [SerializeField] private GameObject reviewRoot;
     [SerializeField] private CertificatesExamUI certificatesExamUI;
 
+    [Header("Matching Review (optional override)")]
+    [SerializeField] private GameObject matchingReviewPrefab;  // prefab có MatchingElementHandler
+
     // ----- state review -----
     private ExamPaper _paper;
-    private Dictionary<string, HashSet<int>> _userPicked;        // q.id -> indices user chọn (0-based)
-    private Dictionary<string, HashSet<int>> _correctPicked;     // q.id -> indices đúng (có thể 0/1-based từ API)
-    private Dictionary<string, HashSet<string>> _correctByText;  // q.id -> normalized correct texts
+    private Dictionary<string, HashSet<int>> _userPicked;
+    private Dictionary<string, HashSet<int>> _correctPicked;
+    private Dictionary<string, HashSet<string>> _correctByText;
 
-    // Lưu lại bài tự luận người dùng đã nhập: q.id -> text
+    // đáp án matching user đã nối: q.id -> (leftIndex -> rightIndex)
+    private Dictionary<string, Dictionary<int, int>> _matchingUserPairs;
+    // correct strings (dùng đặc biệt cho MATCHING)
+    private Dictionary<string, List<string>> _correctMatchingStrings;
+
+
     private Dictionary<string, string> _essayMapReview = new();
 
     private int _idx;
-
     public static bool FlagContinue { get; set; }
 
-    // cờ đang override hành vi nút của base
     private bool _navHijacked;
 
     public void ShowReview(
         ExamPaper paper,
         Dictionary<string, HashSet<int>> userPicked,
-        Dictionary<string, List<int>> correctAnswers,
+        Dictionary<string, List<int>>   correctAnswers,
         int startIndex = 0,
         Dictionary<string, List<string>> correctAnswerTexts = null,
-        Dictionary<string, string> essayMapFromExam = null)
+        Dictionary<string, string>       essayMapFromExam   = null,
+        Dictionary<string, Dictionary<int,int>> matchingUserPairs = null  // <- THAM SỐ MỚI
+    )
     {
         SetReviewMode(true);
 
         if (typeHintRoot != null)
             typeHintRoot.SetActive(false);
 
-        // copy bài tự luận từ ExamQuestionManager
+        // Lưu matching pairs
+        _matchingUserPairs = matchingUserPairs ?? new();
+
+        // copy bài tự luận
         _essayMapReview = new Dictionary<string, string>();
         if (essayMapFromExam != null)
         {
@@ -61,7 +72,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
         _paper      = paper;
         _userPicked = userPicked ?? new();
 
-        // Lưu tạm set đáp án đúng dạng raw index (có thể 0-based hoặc 1-based tuỳ API)
         _correctPicked = new();
         if (correctAnswers != null)
         {
@@ -72,12 +82,17 @@ public class ExamResultReviewPanel : ExamQuestionManager
             }
         }
 
-        // Build map theo TEXT (đã clean/normalize), bỏ rỗng
         _correctByText = new();
+        _correctMatchingStrings = new();
+
         if (correctAnswerTexts != null)
         {
             foreach (var kv in correctAnswerTexts)
             {
+                // Lưu raw list cho MATCHING
+                _correctMatchingStrings[kv.Key] = new List<string>(kv.Value ?? new List<string>());
+
+                // Cũ: set text normalize cho MULTI/SINGLE
                 var set  = new HashSet<string>();
                 var list = kv.Value ?? new List<string>();
                 for (int i = 0; i < list.Count; i++)
@@ -109,78 +124,29 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
     public void HideReview()
     {
-        // trả lại behavior cũ cho btn Back/Next
         RestoreBaseNav();
-
-        // tắt review mode -> trả lại UI làm bài
         SetReviewMode(false);
 
-        // reset trạng thái review
-        _paper          = null;
-        _userPicked     = null;
-        _correctPicked  = null;
-        _correctByText  = null;
-        _essayMapReview = new Dictionary<string, string>();
-        _idx            = 0;
+        _paper             = null;
+        _userPicked        = null;
+        _correctPicked     = null;
+        _correctByText     = null;
+        _correctMatchingStrings    = null;
+        _matchingUserPairs = null;
+        _essayMapReview    = new Dictionary<string, string>();
+        _idx               = 0;
 
-        if (correctStatusObj) correctStatusObj.SetActive(false);
-        if (wrongStatusObj)  wrongStatusObj.SetActive(false);
-        if (informationPanel) informationPanel.gameObject.SetActive(false);
+        if (correctStatusObj)  correctStatusObj.SetActive(false);
+        if (wrongStatusObj)    wrongStatusObj.SetActive(false);
+        if (informationPanel)  informationPanel.gameObject.SetActive(false);
         certificatesExamUI.Hide();
 
-        // xóa hết nội dung câu hỏi/đáp án đang spawn
         ClearContent();
 
-        // tắt toàn bộ panel review (root)
         var root = reviewRoot != null ? reviewRoot : gameObject;
         root.SetActive(false);
 
         FlagContinue = true;
-    }
-
-    // ----------------- điều hướng dùng lại nút của base -----------------
-    private void HijackBaseNav()
-    {
-        if (_navHijacked) return;
-
-        if (btnBack)
-        {
-            btnBack.onClick.RemoveAllListeners();
-            btnBack.onClick.AddListener(() =>
-            {
-                _idx = Mathf.Max(0, _idx - 1);
-                RenderReview();
-            });
-        }
-        if (btnNext)
-        {
-            btnNext.onClick.RemoveAllListeners();
-            btnNext.onClick.AddListener(() =>
-            {
-                if (_paper != null)
-                    _idx = Mathf.Min(_paper.questions.Count - 1, _idx + 1);
-                RenderReview();
-            });
-        }
-        _navHijacked = true;
-    }
-
-    private void RestoreBaseNav()
-    {
-        if (!_navHijacked) return;
-
-        // trả lại hành vi làm bài gốc của ExamQuestionManager
-        if (btnBack)
-        {
-            btnBack.onClick.RemoveAllListeners();
-            btnBack.onClick.AddListener(OnBack);
-        }
-        if (btnNext)
-        {
-            btnNext.onClick.RemoveAllListeners();
-            btnNext.onClick.AddListener(OnNext);
-        }
-        _navHijacked = false;
     }
 
     // ----------------- render review (read-only) -----------------
@@ -194,7 +160,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
         ClearContent();
 
-        // header
         if (titleTmp) titleTmp.text = "XEM KẾT QUẢ";
         UpdateReviewCounters();
 
@@ -206,27 +171,19 @@ public class ExamResultReviewPanel : ExamQuestionManager
                 $"{(_idx + 1).ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
         }
 
-        // tiêu đề câu hỏi
         var head = Instantiate(prefabCauHoi, content);
         head.text = $"{_idx + 1}. {q.title}";
 
-        // ==== xác định loại câu hỏi hiệu dụng ====
         var effectiveType = q.type;
         if (_essayMapReview != null && _essayMapReview.ContainsKey(q.id))
-        {
-            // nếu có lưu bài tự luận cho câu này thì coi nó là ESSAY
             effectiveType = ExamQuestionType.ESSAY;
-        }
 
-        // map chọn/đúng
         _userPicked.TryGetValue(q.id, out var userSet);
         userSet ??= new HashSet<int>();
 
         _correctPicked.TryGetValue(q.id, out var correctSetRaw);
-        // Chuyển correctSet về 0-based theo từng câu hỏi (nếu API là 1-based)
         var correctSet = NormalizeCorrectIndexSet(q, correctSetRaw);
 
-        // Lấy set TEXT đáp án đúng (nếu có)
         HashSet<string> correctTextSet = null;
         if (_correctByText != null) _correctByText.TryGetValue(q.id, out correctTextSet);
 
@@ -234,34 +191,37 @@ public class ExamResultReviewPanel : ExamQuestionManager
 
         if (effectiveType == ExamQuestionType.ESSAY)
         {
-            // ESSAY: chỉ cần có text là ĐÚNG, bỏ trắng là SAI
             if (_essayMapReview != null &&
                 _essayMapReview.TryGetValue(q.id, out var txt) &&
                 !string.IsNullOrWhiteSpace(txt))
-            {
                 exactlyCorrect = true;
-            }
             else
-            {
                 exactlyCorrect = false;
-            }
+        }
+        else if (effectiveType == ExamQuestionType.MATCHING)
+        {
+            // chấm riêng cho MATCHING
+            exactlyCorrect = IsMatchingExactlyCorrect(q);
         }
         else
         {
-            // SINGLE / MULTIPLE / MATCHING dùng chung logic
             exactlyCorrect = IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
         }
 
-        if (correctStatusObj) correctStatusObj.SetActive(exactlyCorrect);
-        if (wrongStatusObj)   wrongStatusObj.SetActive(!exactlyCorrect);
-        if (informationPanel) informationPanel.SetActive(true);
+
+        if (correctStatusObj)  correctStatusObj.SetActive(exactlyCorrect);
+        if (wrongStatusObj)    wrongStatusObj.SetActive(!exactlyCorrect);
+        if (informationPanel)  informationPanel.SetActive(true);
 
         switch (effectiveType)
         {
             case ExamQuestionType.SINGLE_CHOICE:
             case ExamQuestionType.MULTIPLE_CHOICE:
-            case ExamQuestionType.MATCHING:   // MATCHING chấm giống multi-choices
                 RenderChoicesReadOnly(q, userSet, correctSet, correctTextSet);
+                break;
+
+            case ExamQuestionType.MATCHING:
+                RenderMatchingReadOnly(q);
                 break;
 
             case ExamQuestionType.ESSAY:
@@ -274,11 +234,55 @@ public class ExamResultReviewPanel : ExamQuestionManager
                 break;
         }
 
-        // cập nhật trạng thái enable cho 2 nút
         if (btnBack) btnBack.interactable = _idx > 0;
         if (btnNext) btnNext.interactable = _idx < _paper.questions.Count - 1;
 
         ReviewHighlightNavIndex(_idx);
+    }
+
+    private void RenderMatchingReadOnly(ExamQuestion q)
+    {
+        // Ưu tiên dùng prefab riêng cho review; nếu không có, dùng prefabMatching của base
+        GameObject prefab = matchingReviewPrefab != null ? matchingReviewPrefab : prefabMatching;
+
+        if (!prefab)
+        {
+            var note = Instantiate(prefabCauHoi, content);
+            note.text = "(Thiếu prefabMatching / matchingReviewPrefab cho câu nối cặp)";
+            return;
+        }
+
+        // Tạo panel matching
+        var go = Instantiate(prefab, content);
+        var handler = go.GetComponent<MatchingElementHandler>();
+
+        if (handler == null)
+        {
+            var note = Instantiate(prefabCauHoi, content);
+            note.text = "(Prefab matching không có MatchingElementHandler)";
+            return;
+        }
+
+        // Lấy pairs user đã nối cho câu này (nếu có)
+        Dictionary<int, int> userPairs = null;
+        if (_matchingUserPairs != null)
+            _matchingUserPairs.TryGetValue(q.id, out userPairs);
+
+        Debug.Log($"[ReviewMatching] QID={q.id}, pairsCount={(userPairs == null ? 0 : userPairs.Count)}");
+
+        // Setup giống lúc làm bài nhưng không dùng callback
+        handler.SetupQuestion(
+            q,
+            userPairs,
+            _ => { } // review chỉ xem
+        );
+
+        // Bật chế độ read only
+        handler.SetReadOnly(true);
+
+        // khóa raycast để lỡ có chạm cũng không ăn
+        var handlerImg = handler.GetComponent<Image>();
+        if (handlerImg) handlerImg.raycastTarget = false;
     }
 
     private void RenderChoicesReadOnly(ExamQuestion q,
@@ -339,7 +343,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
         }
     }
 
-    // ESSAY: dùng prefab GameObject chứa TMP_InputField để xem lại bài làm
     private void RenderEssayReadOnly(ExamQuestion q)
     {
         if (!prefabCauTraLoiTuLuan)
@@ -362,7 +365,6 @@ public class ExamResultReviewPanel : ExamQuestionManager
         input.interactable = false;
         input.readOnly     = true;
 
-        // Lấy text người dùng đã nhập
         string saved = null;
         if (_essayMapReview != null)
             _essayMapReview.TryGetValue(q.id, out saved);
@@ -400,10 +402,8 @@ public class ExamResultReviewPanel : ExamQuestionManager
     {
         if (q?.options == null) return false;
 
-        // userSet null -> coi như rỗng
         userSet ??= new HashSet<int>();
 
-        // Gộp tập chỉ số đúng từ cả index (đã 0-based) & text
         var combinedCorrect = new HashSet<int>();
         if (correctIndexSet0Based != null)
             foreach (var idx in correctIndexSet0Based) combinedCorrect.Add(idx);
@@ -433,11 +433,9 @@ public class ExamResultReviewPanel : ExamQuestionManager
         int current = Mathf.Clamp(_idx + 1, 1, total);
         int width   = total.ToString().Length;
 
-        // Header counter: "01/40"
         if (counterTmp)
             counterTmp.text = $"{current.ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
 
-        // Counter của base ở dưới khung
         if (textQuestionCounter)
             textQuestionCounter.text = $"{current.ToString().PadLeft(width, '0')}/{total.ToString().PadLeft(width, '0')}";
     }
@@ -456,7 +454,7 @@ public class ExamResultReviewPanel : ExamQuestionManager
     {
         RebuildQuestionNavIfNeeded();
 
-        // Rebind click của từng “chấm” để nhảy trong review
+        // Rebind click của từng “chấm”
         for (int i = 0; i < _navItems.Count; i++)
         {
             int t = i;
@@ -470,7 +468,168 @@ public class ExamResultReviewPanel : ExamQuestionManager
             });
         }
 
-        // highlight lần đầu
         ReviewHighlightNavIndex(_idx);
+    }
+
+    // ===================================================================================
+    // HIJACK NAV BUTTONS CHO REVIEW
+    // ===================================================================================
+    private void HijackBaseNav()
+    {
+        if (_navHijacked) return;
+
+        if (btnBack)
+        {
+            btnBack.onClick.RemoveAllListeners();
+            btnBack.onClick.AddListener(() =>
+            {
+                if (_paper == null || _paper.questions == null || _paper.questions.Count == 0)
+                    return;
+
+                _idx = Mathf.Clamp(_idx - 1, 0, _paper.questions.Count - 1);
+                RenderReview();
+            });
+        }
+
+        if (btnNext)
+        {
+            btnNext.onClick.RemoveAllListeners();
+            btnNext.onClick.AddListener(() =>
+            {
+                if (_paper == null || _paper.questions == null || _paper.questions.Count == 0)
+                    return;
+
+                _idx = Mathf.Clamp(_idx + 1, 0, _paper.questions.Count - 1);
+                RenderReview();
+            });
+        }
+
+        _navHijacked = true;
+    }
+
+    private void RestoreBaseNav()
+    {
+        if (!_navHijacked) return;
+
+        if (btnBack) btnBack.onClick.RemoveAllListeners();
+        if (btnNext) btnNext.onClick.RemoveAllListeners();
+
+        _navHijacked = false;
+    }
+        // ===================== MATCHING CHECK =====================
+
+    private bool IsMatchingExactlyCorrect(ExamQuestion q)
+    {
+        if (q == null) return false;
+
+        // user pairs: q.id -> (leftIndex -> rightIndex)
+        if (_matchingUserPairs == null ||
+            !_matchingUserPairs.TryGetValue(q.id, out var userPairs) ||
+            userPairs == null || userPairs.Count == 0)
+            return false;
+
+        // correct strings từ server (giống format payload result)
+        if (_correctMatchingStrings == null ||
+            !_correctMatchingStrings.TryGetValue(q.id, out var correctList) ||
+            correctList == null || correctList.Count == 0)
+            return false;
+
+        // Build set correct (normalize)
+        var correctSet = new HashSet<string>();
+        foreach (var s in correctList)
+        {
+            var norm = NormalizeMatchingPair(s);
+            if (!string.IsNullOrEmpty(norm))
+                correctSet.Add(norm);
+        }
+
+        // Build set user (normalize) từ leftIndex/rightIndex + text split
+        GetMatchingSides(q, out var leftTexts, out var rightTexts);
+
+        var userSet = new HashSet<string>();
+        foreach (var kv in userPairs)
+        {
+            int leftIndex  = kv.Key;
+            int rightIndex = kv.Value;
+            if (leftIndex  < 0 || leftIndex  >= leftTexts.Count)  continue;
+            if (rightIndex < 0 || rightIndex >= rightTexts.Count) continue;
+
+            string leftText  = leftTexts[leftIndex];
+            string rightText = rightTexts[rightIndex];
+
+            string leftHtml  = $"<p>{leftText}</p>";
+            string rightHtml = $"<p>{rightText}</p>";
+            string pairHtml  = $"{leftHtml}--{rightHtml}";
+
+            var norm = NormalizeMatchingPair(pairHtml);
+            if (!string.IsNullOrEmpty(norm))
+                userSet.Add(norm);
+        }
+
+        if (userSet.Count == 0) return false;
+        if (userSet.Count != correctSet.Count) return false;
+
+        foreach (var v in userSet)
+            if (!correctSet.Contains(v)) return false;
+
+        return true;
+    }
+
+    private static string NormalizeMatchingPair(string pairHtml)
+    {
+        if (string.IsNullOrWhiteSpace(pairHtml)) return "";
+
+        // tách 2 vế theo "--"
+        var parts = pairHtml.Split(new[] { "--" }, System.StringSplitOptions.None);
+        if (parts.Length != 2)
+        {
+            // fallback: normalize cả chuỗi
+            return NormalizeForCompare(pairHtml);
+        }
+
+        string leftRaw  = StripP(parts[0]);
+        string rightRaw = StripP(parts[1]);
+
+        string leftNorm  = NormalizeForCompare(leftRaw);
+        string rightNorm = NormalizeForCompare(rightRaw);
+
+        // ghép lại bằng ký tự đặc biệt để phân biệt
+        return $"{leftNorm}|{rightNorm}";
+    }
+
+    private static string StripP(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Replace("<p>", "").Replace("</p>", "");
+    }
+    
+    private static void GetMatchingSides(ExamQuestion q,
+                                         out List<string> leftTexts,
+                                         out List<string> rightTexts)
+    {
+        leftTexts  = new List<string>();
+        rightTexts = new List<string>();
+
+        if (q == null || q.options == null || q.options.Count == 0)
+            return;
+
+        int total = q.options.Count;
+        int half  = total / 2; // n cặp -> 2n option
+
+        // LEFT side
+        for (int i = 0; i < half; i++)
+        {
+            string raw = q.options[i] ?? "";
+            string cleaned = ExamFormat.CleanOptionText(raw) ?? "";
+            leftTexts.Add(cleaned.Trim());
+        }
+
+        // RIGHT side
+        for (int i = half; i < total; i++)
+        {
+            string raw = q.options[i] ?? "";
+            string cleaned = ExamFormat.CleanOptionText(raw) ?? "";
+            rightTexts.Add(cleaned.Trim());
+        }
     }
 }

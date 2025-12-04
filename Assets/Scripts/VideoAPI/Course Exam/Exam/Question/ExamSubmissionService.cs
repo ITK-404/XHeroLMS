@@ -16,8 +16,10 @@ public class ExamSubmissionService
     private readonly Func<bool> _getWithCorrectAnswerGetter;
     private readonly Dictionary<string, HashSet<int>> _selectedMap;
     private readonly Dictionary<string, string> _essayMap;
-
     private readonly CertificatesExamUI _certificatesExamUI;
+
+    // để lấy snapshot MATCHING local
+    private readonly ExamQuestionManager _questionManager;
 
     // Regex parse JSON
     private static readonly Regex ReInt = new Regex("\"(?<k>[^\"]+)\"\\s*:\\s*(-?\\d+)",
@@ -33,7 +35,9 @@ public class ExamSubmissionService
         Func<bool> getWithCorrectAnswerGetter,
         Dictionary<string, HashSet<int>> selectedMap,
         Dictionary<string, string> essayMap,
-        CertificatesExamUI certificatesExamUI)
+        CertificatesExamUI certificatesExamUI,
+        ExamQuestionManager questionManager   // <<< thêm param
+    )
     {
         _examUI = examUI;
         _resultUI = resultUI;
@@ -41,8 +45,8 @@ public class ExamSubmissionService
         _getWithCorrectAnswerGetter = getWithCorrectAnswerGetter;
         _selectedMap = selectedMap;
         _essayMap = essayMap;
-
         _certificatesExamUI = certificatesExamUI;
+        _questionManager = questionManager;
     }
 
     [Serializable] public class ResultItem { public string questionId; public List<string> result; }
@@ -129,9 +133,14 @@ public class ExamSubmissionService
                 {
                     var resultJson = getReq.downloadHandler?.text ?? "";
                     ShowResultFromJson(resultJson);
-                    TryOpenReview(resultJson);
+                    TryOpenReview(resultJson);   // <<< mở review dùng state local
                 }
             }
+        }
+        else
+        {
+            // nếu không cần GET result thì vẫn có thể mở review local
+            TryOpenReview(null);
         }
     }
 
@@ -145,7 +154,11 @@ public class ExamSubmissionService
         };
 
         var qs = _examUI?.Paper?.questions;
-        if (qs == null) return body;
+        if (qs == null)
+        {
+            Debug.LogWarning("[Submit] Paper null, không có câu hỏi nào.");
+            return body;
+        }
 
         foreach (var q in qs)
         {
@@ -161,20 +174,117 @@ public class ExamSubmissionService
                         {
                             if (q.options != null && idx >= 0 && idx < q.options.Count)
                             {
-                                item.result.Add("<p>" + q.options[idx] + "</p>" ?? "");
+                                var txt = "<p>" + q.options[idx] + "</p>";
+                                item.result.Add(txt ?? "");
                             }
                         }
                     }
+
+                    Debug.Log($"[SUBMIT_SINGLE/MULTI] qid={q.id}, resultCount={item.result.Count}");
                     break;
 
+                // ============= MATCHING =============
+case ExamQuestionType.MATCHING:
+{
+    Dictionary<string, Dictionary<int, int>> snapshot = null;
+    Dictionary<int, int> pairs = null;
+
+    if (_questionManager != null)
+    {
+        snapshot = _questionManager.GetMatchingUserPairsSnapshot();
+        snapshot?.TryGetValue(q.id, out pairs);
+    }
+
+    var optLog = new StringBuilder();
+    optLog.AppendLine($"[SubmitMatching] QID={q.id}");
+
+    if (q.options != null)
+    {
+        optLog.AppendLine("  options (raw):");
+        for (int i = 0; i < q.options.Count; i++)
+            optLog.AppendLine($"    options[{i}]: {q.options[i]}");
+    }
+    else
+    {
+        optLog.AppendLine("  options: NULL");
+    }
+
+    if (pairs != null && pairs.Count > 0)
+    {
+        GetMatchingSides(q, out var leftTexts, out var rightTexts);
+
+        optLog.AppendLine("  LEFT side split:");
+        for (int i = 0; i < leftTexts.Count; i++)
+            optLog.AppendLine($"    L[{i}]: {leftTexts[i]}");
+
+        optLog.AppendLine("  RIGHT side split:");
+        for (int i = 0; i < rightTexts.Count; i++)
+            optLog.AppendLine($"    R[{i}]: {rightTexts[i]}");
+
+        optLog.AppendLine($"  pairs.Count = {pairs.Count}");
+        optLog.AppendLine("  pairs (rightIndex -> leftIndex):");
+
+        // clear kết quả cũ (nếu có)
+        item.result.Clear();
+
+        foreach (var kv in new SortedDictionary<int, int>(pairs))
+        {
+            int rightIndex = kv.Key;   // cột PHẢI
+            int leftIndex  = kv.Value; // cột TRÁI
+            optLog.AppendLine($"    {rightIndex} -> {leftIndex}");
+
+            if (leftIndex < 0 || leftIndex >= leftTexts.Count)  continue;
+            if (rightIndex < 0 || rightIndex >= rightTexts.Count) continue;
+
+            string leftText  = leftTexts[leftIndex];
+            string rightText = rightTexts[rightIndex];
+
+            string leftHtml  = $"<p>{leftText}</p>";
+            string rightHtml = $"<p>{rightText}</p>";
+
+            // ĐÚNG FORMAT: "<p>Left</p>--<p>Right</p>"
+            string pairStr = $"{leftHtml}--{rightHtml}";
+
+            item.result.Add(pairStr);
+        }
+
+        optLog.AppendLine("  item.result (submit):");
+        for (int i = 0; i < item.result.Count; i++)
+            optLog.AppendLine($"    [{i}]: {item.result[i]}");
+    }
+    else
+    {
+        optLog.AppendLine("  pairs: NULL hoặc Count == 0");
+    }
+
+    Debug.Log(optLog.ToString());
+    Debug.Log($"[SUBMIT_MATCHING] qid={q.id}, resultCount={item.result.Count}");
+}
+break;
+
+
+                // ============= ESSAY =============
                 case ExamQuestionType.ESSAY:
-                    if (_essayMap.TryGetValue(q.id, out var essay) && !string.IsNullOrWhiteSpace(essay))
+                    if (_essayMap.TryGetValue(q.id, out var essay) &&
+                        !string.IsNullOrWhiteSpace(essay))
+                    {
                         item.result.Add(essay);
+                    }
+                    Debug.Log($"[SUBMIT_ESSAY] qid={q.id}, resultCount={item.result.Count}");
                     break;
             }
 
             body.results.Add(item);
         }
+
+        // DEBUG tổng thể
+        foreach (var item in body.results)
+        {
+            Debug.Log($"[SUBMIT_RESULT_ITEM] qid={item.questionId}, count={item.result.Count}");
+            for (int i = 0; i < item.result.Count; i++)
+                Debug.Log($"  [{i}] {item.result[i]}");
+        }
+
 
         return body;
     }
@@ -215,9 +325,9 @@ public class ExamSubmissionService
             sum.passed = (sum.correct >= req);
         }
 
-        _resultUI.textCorrectAnswer.text   = $"<color=#49D17D>{sum.correct}</color> câu";
+        _resultUI.textCorrectAnswer.text = $"<color=#49D17D>{sum.correct}</color> câu";
         _resultUI.textInCorrectAnswer.text = $"<color=#FF6B6B>{sum.wrong}</color> câu";
-        _resultUI.skipAnswer.text          = $"<color=#F4A42B>{sum.skipped}</color> câu";
+        _resultUI.skipAnswer.text = $"<color=#F4A42B>{sum.skipped}</color> câu";
         _resultUI.SetTotalAnswerPass(sum.correct, sum.total);
         if (sum.passed)
         {
@@ -243,8 +353,22 @@ public class ExamSubmissionService
         if (_reviewPanel == null || _examUI?.Paper == null) return;
 
         var paper = _examUI.Paper;
-        var correctIndexMap = ParseCorrectAnswerIndicesFromJson(json, paper);
-        var correctTextMap  = ParseCorrectAnswerTextsFromJson(json);
+
+        Dictionary<string, List<int>> correctIndexMap = null;
+        Dictionary<string, List<string>> correctTextMap = null;
+
+        if (!string.IsNullOrEmpty(json))
+        {
+            correctIndexMap = ParseCorrectAnswerIndicesFromJson(json, paper);
+            correctTextMap = ParseCorrectAnswerTextsFromJson(json);
+        }
+
+        // LẤY MATCHING LOCAL TỪ ExamQuestionManager
+        Dictionary<string, Dictionary<int, int>> matchingPairs = null;
+        if (_questionManager != null)
+            matchingPairs = _questionManager.GetMatchingUserPairsSnapshot();
+        else
+            matchingPairs = new Dictionary<string, Dictionary<int, int>>();
 
         _reviewPanel.ShowReview(
             paper,
@@ -252,7 +376,8 @@ public class ExamSubmissionService
             correctIndexMap,
             0,
             correctTextMap,
-            _essayMap        // truyền luôn bài tự luận sang review
+            _essayMap,
+            matchingPairs
         );
     }
 
@@ -422,14 +547,11 @@ public class ExamSubmissionService
 
             if (isEssayLike)
             {
-                // CÂU TỰ LUẬN / CHO ĐIỂM:
-                // Có text => đúng; bỏ trống => bỏ qua (skipped)
                 if (hasEssayAnswer) c++;
                 else s++;
                 continue;
             }
 
-            // Các loại trắc nghiệm
             if (uSet == null || uSet.Count == 0)
             {
                 s++;
@@ -469,7 +591,7 @@ public class ExamSubmissionService
             for (int i = 0; i < q.options.Count; i++)
             {
                 string optClean = ExamFormat.CleanOptionText(q.options[i]) ?? "";
-                string optNorm  = ExamResultReviewPanel.NormalizeForCompare(optClean);
+                string optNorm = ExamResultReviewPanel.NormalizeForCompare(optClean);
                 if (correctTextSet.Contains(optNorm)) combinedCorrect.Add(i);
             }
         }
@@ -500,7 +622,6 @@ public class ExamSubmissionService
 
     private bool IsAnsweredLocal(string qid, ExamQuestionType type)
     {
-        // Nếu có bài tự luận cho câu này thì coi như đã trả lời (kể cả type server bị set sai)
         if (_essayMap != null &&
             _essayMap.TryGetValue(qid, out var txt) &&
             !string.IsNullOrWhiteSpace(txt))
@@ -508,10 +629,14 @@ public class ExamSubmissionService
 
         return type switch
         {
-            ExamQuestionType.SINGLE_CHOICE or ExamQuestionType.MULTIPLE_CHOICE
+            ExamQuestionType.SINGLE_CHOICE
+                or ExamQuestionType.MULTIPLE_CHOICE
+                or ExamQuestionType.MATCHING
                 => _selectedMap.TryGetValue(qid, out var set) && set != null && set.Count > 0,
+
             ExamQuestionType.ESSAY
                 => _essayMap.TryGetValue(qid, out var txt2) && !string.IsNullOrWhiteSpace(txt2),
+
             _ => false
         };
     }
@@ -522,5 +647,32 @@ public class ExamSubmissionService
         foreach (var kv in _selectedMap)
             copy[kv.Key] = new HashSet<int>(kv.Value);
         return copy;
+    }
+    // ===================== MATCHING =====================
+    // raw: "<p>Kim</p>-<p>Thủy</p>-<p>Mộc</p>-..."
+    private static List<string> SplitMatchingSideRaw(string raw)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrEmpty(raw)) return list;
+
+        var parts = raw.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in parts)
+        {
+            var trimmed = p.Trim();
+            if (!string.IsNullOrEmpty(trimmed))
+                list.Add(trimmed);
+        }
+        return list;
+    }
+    
+    private static void GetMatchingSides(ExamQuestion q, out List<string> left, out List<string> right)
+    {
+        left  = new List<string>();
+        right = new List<string>();
+
+        if (q.options == null || q.options.Count < 2) return;
+
+        left  = SplitMatchingSideRaw(q.options[0]); 
+        right = SplitMatchingSideRaw(q.options[1]); 
     }
 }

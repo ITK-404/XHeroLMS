@@ -74,7 +74,7 @@ public class ExamTitleManager : MonoBehaviour
                 ? string.Format(timeFormat, mm, ss)
                 : "--:--";
 
-            textDemNguoc.color = Color.white;
+            textDemNguoc.color = "812E11".ToColor();
         }
 
         Debug.Log(
