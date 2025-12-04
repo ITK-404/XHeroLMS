@@ -26,14 +26,14 @@ public class HouseHandler : MonoBehaviour
         }
     }
 
-    private void OnValidate()
-    {
-        loadRoomTriggers = GetComponentsInChildren<LoadRoomTrigger>();
-    }
-
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= Show;
+    }
+
+    private void OnValidate()
+    {
+        loadRoomTriggers = GetComponentsInChildren<LoadRoomTrigger>();
     }
 
     private void Show()

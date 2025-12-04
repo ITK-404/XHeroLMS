@@ -29,7 +29,6 @@ public class OpenClosePanel : MonoBehaviour
 
     void OnEnable()
     {
-        LoginController.OnLoginComplete -= HandleLoginComplete;
         LoginController.OnLoginComplete += HandleLoginComplete;
 
         // gán click handler an toàn

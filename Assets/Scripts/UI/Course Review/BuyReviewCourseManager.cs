@@ -130,8 +130,13 @@ public class BuyReviewCourseManager : MonoBehaviour
         // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
+            BookHandler.CanSelectBook = false;
             LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Cảnh báo");
+                "Cảnh báo", () =>
+                {
+                    // cho phép chọn sách tiếp
+                    BookHandler.CanSelectBook = true;
+                });
             Debug.Log("Không có data");
             yield break;
         }
