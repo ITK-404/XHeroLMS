@@ -28,8 +28,6 @@ public class PlayerPanelUI : MonoBehaviour
             LoginController.OnLoginComplete += ShowLoginUI;
         }
     }
-
-
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;

@@ -61,9 +61,22 @@ public class PointClickSystem : MonoBehaviour
     {
         return brain != null && brain.IsBlending && BuildingCameraManager.Instance.IsFocus();
     }
+    private float protectionTimer = 0f;
+
     void Update()
     {
-        if (TeleMapController._mapActive) return;
+        if (TeleMapController._mapActive)
+        {
+            protectionTimer = .5f;
+            return;
+        }
+
+        if (protectionTimer > 0f)
+        {
+            protectionTimer -= Time.deltaTime;
+            return;
+        }
+
         if (InputBlocker.IsBlocked() || IsBlendingCamera())
             return;
 

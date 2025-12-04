@@ -83,7 +83,7 @@ public class PlayerChairManager : MonoBehaviour
         {
             Debug.Log("bật lại input");
             InputBlocker.SetBlocked(false);
-
+            playerStandUI.returnBtn.gameObject.SetActive(true);
         }));
     }
 
@@ -149,9 +149,10 @@ public class PlayerChairManager : MonoBehaviour
                 playerStandUI.ShowWatchVideoUI();
                 playerStandUI.UILearnCanvas.Show();
                 videoPlayerControllerPro.EnterFullscreenUI();
-
+                playerStandUI.returnBtn.gameObject.SetActive(false);
                 if (!TutorialHandler.Instance.IsPlayedBefore())
                 {
+
                     TutorialHandler.Instance.ShowStep(2);
                 }
             }));

@@ -83,7 +83,7 @@ public class FinalExamHandler : MonoBehaviour
         // examUIController.HideAll();
         // đi tới camera và ngồi
         //ChangeToExamCamera();
-        yield return new WaitForSecondsRealtime(2);
+        //yield return new WaitForSecondsRealtime(2);
         
         // sau này kiểm tra có có submit chưa, có bắt đầu làm bài chưa
         examUIController.ExamQuestionManager.mainExamPanelRoot.gameObject.SetActive(true);
