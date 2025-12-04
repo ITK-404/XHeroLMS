@@ -294,7 +294,7 @@ public class ExamQuestionManager : MonoBehaviour
             int optionIndex = i;
             btn.OnSelectButton = b =>
             {
-                bool turnOn = !b.value;
+                bool turnOn = !b.isSelect;
 
                 if (isSingle)
                 {
