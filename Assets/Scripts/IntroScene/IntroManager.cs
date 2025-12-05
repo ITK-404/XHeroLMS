@@ -33,7 +33,7 @@ public class IntroManager : MonoBehaviour
 
     IEnumerator LoadAndPlayVideo()
     {
-        string videoPath = System.IO.Path.Combine(Application.streamingAssetsPath, "myintro.mp4");
+        string videoPath = System.IO.Path.Combine(Application.streamingAssetsPath, "INTRO_NHACMOI.mp4");
         string videoUrl = "file://" + videoPath;
 
         Debug.Log("Video URL: " + videoUrl);

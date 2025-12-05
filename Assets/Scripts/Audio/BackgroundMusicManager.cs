@@ -81,13 +81,13 @@ public class BackgroundMusicManager : MonoBehaviour
 
     private void Update()
     {
-        if (musicSource.clip != null
-                && !musicSource.loop
-                && !musicSource.isPlaying
-                && musicSource.time > 0.01f)
-        {
-            PlayRandomMusic();
-        }
+        //if (musicSource.clip != null
+        //        && !musicSource.loop
+        //        && !musicSource.isPlaying
+        //        && musicSource.time > 0.01f)
+        //{
+        //    PlayRandomMusic();
+        //}
 
     }
     private bool firstTimePlay = false;
