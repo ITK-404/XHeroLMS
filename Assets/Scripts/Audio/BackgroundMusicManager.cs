@@ -44,7 +44,8 @@ public class BackgroundMusicManager : MonoBehaviour
         {
             if (isRandom)
             {
-                PlayRandomMusic();
+                PlayMusic(bgmClips[0].clip, bgmClips[0].volume);
+                //PlayRandomMusic();
             }
             else
             {
@@ -81,13 +82,14 @@ public class BackgroundMusicManager : MonoBehaviour
 
     private void Update()
     {
-        //if (musicSource.clip != null
-        //        && !musicSource.loop
-        //        && !musicSource.isPlaying
-        //        && musicSource.time > 0.01f)
-        //{
-        //    PlayRandomMusic();
-        //}
+        if(SceneManager.GetActiveScene().name != originalScene) return;
+        if (musicSource.clip != null
+                && !musicSource.loop
+                && !musicSource.isPlaying
+                && musicSource.time > 0.01f)
+        {
+            PlayRandomMusic();
+        }
 
     }
     private bool firstTimePlay = false;
