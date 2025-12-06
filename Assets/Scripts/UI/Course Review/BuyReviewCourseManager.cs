@@ -85,6 +85,7 @@ public class BuyReviewCourseManager : MonoBehaviour
                     // cho phép chọn sách tiếp
                     BookHandler.CanSelectBook = true;
                 });
+            return;
         }
     }
 
