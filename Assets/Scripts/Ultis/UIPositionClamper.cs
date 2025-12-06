@@ -3,7 +3,7 @@
 public class UIPositionClamper : MonoBehaviour
 {
     private RectTransform rectTransform;
-
+    private Vector2 offset;
     private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();

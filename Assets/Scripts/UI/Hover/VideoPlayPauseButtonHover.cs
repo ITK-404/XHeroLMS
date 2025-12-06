@@ -14,7 +14,7 @@ public class VideoPlayPauseButtonHover : HoverButtonBase
     private void Awake()
     {
         videoPlayer.OnPlayStateChanged.AddListener(VideoPlayer_OnPlayStateChanged);
-        HandleSprite();
+        HandleSprite(isPlaying);
     }
 
     private void OnDestroy()
@@ -25,10 +25,10 @@ public class VideoPlayPauseButtonHover : HoverButtonBase
     private void VideoPlayer_OnPlayStateChanged(bool isPlay)
     {
         isPlaying = isPlay;
-        HandleSprite();
+        HandleSprite(isPlaying);
     }
 
-    private void HandleSprite()
+    public void HandleSprite(bool isPlaying)
     {
         if (isPlaying)
         {

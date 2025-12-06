@@ -58,7 +58,7 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
-        TutorialHandler.Instance.standupUI.gameObject.SetActive(false);
+        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
         //if (TutorialHandler.Instance.IsPlayedBefore() == false && TutorialHandler.Instance.IsStep(2))
         //{
         //    TutorialHandler.Instance.ShowStep(3);
@@ -121,7 +121,7 @@ public class PlayerChairManager : MonoBehaviour
     {
 
         // sit down logic
-        TutorialHandler.Instance.standupUI.gameObject.SetActive(false);
+        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
     
         ChairCheckPoint temp = currentCheckPoint;
 
@@ -153,7 +153,7 @@ public class PlayerChairManager : MonoBehaviour
                 if (!TutorialHandler.Instance.IsPlayedBefore())
                 {
 
-                    TutorialHandler.Instance.ShowStep(2);
+                    TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
             }));
         }
