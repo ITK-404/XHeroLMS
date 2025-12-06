@@ -77,10 +77,20 @@ public class BookHandler : MonoBehaviour
             {
                 LoadingTransition.Load("dai_dao_chi_gian_2");
 
-            }else
+            }else if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-i")
             {
                 LoadingTransition.Load(SeoResolver.DefaultScene);
             }
+        else
+        {
+                LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                    "Cảnh báo", () =>
+                    {
+                        // cho phép chọn sách tiếp
+                        BookHandler.CanSelectBook = true;
+                    });
+                yield return null;
+        }
             // LoadingTransition.Load(SeoResolver.DefaultScene);
         }
     }
