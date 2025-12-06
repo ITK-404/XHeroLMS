@@ -66,6 +66,8 @@ public class PanelSwitchController : MonoBehaviour
         if (loginQrPanel != null)
             loginQrPanel.SetActive(true);
 
+        LoadingUI.Show();
+
         // Gọi flow QR khi user mở panel
         if (loginQrUI != null)
         {

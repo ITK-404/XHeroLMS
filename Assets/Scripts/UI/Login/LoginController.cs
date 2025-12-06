@@ -417,7 +417,7 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         inputPassword.selectionFocusPosition = pos;
     }
 
-    private void ShowPopup(LoginPopupUI prefab, string header, string message, Action onReturn = null)
+    public void ShowPopup(LoginPopupUI prefab, string header, string message, Action onReturn = null)
     {
         if (prefab == null)
         {
@@ -433,6 +433,16 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         {
             onReturn?.Invoke();
         });
+    }
+    public static void ShowWarning(string message, string header = "Cảnh báo")
+    {
+        if (Instance == null)
+        {
+            Debug.LogWarning("[LoginController] ShowWarning được gọi nhưng Instance == null. Message: " + message);
+            return;
+        }
+        
+        Instance.ShowPopup(Instance.failPopupPrefab, header, message);
     }
 
     // ================== DTOs (match JSON) ==================
