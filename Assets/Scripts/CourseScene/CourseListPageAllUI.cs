@@ -329,27 +329,53 @@ public bool defaultOpenBasic = true;
         }
     }
 
-    // ================== NETWORK ==================
-    IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
+// ================== NETWORK ==================
+IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
+{
+    using (var req = UnityWebRequest.Get(url))
     {
-        using (var req = UnityWebRequest.Get(url))
-        {
-            req.SetRequestHeader("Authorization", "Bearer " + token);
-            req.SetRequestHeader("Accept", "application/json");
-            yield return req.SendWebRequest();
+        // --- Header auth + accept ---
+        req.SetRequestHeader("Authorization", "Bearer " + token);
+        req.SetRequestHeader("Accept", "application/json");
+
+        // --- Thêm header x-data ---
+        string xData = LmsSecurityHeader.BuildXDataHeader();
+        req.SetRequestHeader("x-data", xData);
+
+        Debug.Log($"[CourseList/ALL] URL: {url}");
+        Debug.Log($"[CourseList/ALL] x-data (sent): {xData}");
+
+        yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-            bool error = req.result == UnityWebRequest.Result.ConnectionError ||
-                         req.result == UnityWebRequest.Result.ProtocolError;
+        bool error = req.result == UnityWebRequest.Result.ConnectionError ||
+                     req.result == UnityWebRequest.Result.ProtocolError;
 #else
-            bool error = req.isNetworkError || req.isHttpError;
+        bool error = req.isNetworkError || req.isHttpError;
 #endif
-            string body = req.downloadHandler.text;
 
-            if (error) onErrorBody?.Invoke(body);
-            else onSuccess?.Invoke(body);
+        string body = req.downloadHandler.text;
+
+        Debug.Log(
+            $"[CourseList/ALL] RESPONSE\n" +
+            $"- Status: {req.responseCode}\n" +
+            $"- Error: {req.error}\n" +
+            $"- Body: {body}\n" +
+            $"- x-data used: {xData}\n" +
+            $"- URL: {url}"
+        );
+
+        if (error)
+        {
+            Debug.LogError($"[CourseList/ALL] ERROR RESPONSE ({req.responseCode})");
+            onErrorBody?.Invoke(body);
+        }
+        else
+        {
+            onSuccess?.Invoke(body);
         }
     }
+}
 
     string BuildUrl(int skip, int limit)
     {

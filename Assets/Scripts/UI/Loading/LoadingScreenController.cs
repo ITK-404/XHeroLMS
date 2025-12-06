@@ -32,7 +32,7 @@ public class LoadingScreenController : MonoBehaviour
 
     // Thời gian cho từng mốc ở trên (giây). Nếu để trống hoặc khác độ dài sẽ dùng giá trị mặc định.
     public float[] milestoneDurations = new float[] { 0.35f, 0.45f, 0.30f, 0.30f, 0.35f, 0.50f };
-    
+
     public float fakeFillDuration = 3f;
 
     // --- private ---
@@ -54,6 +54,8 @@ public class LoadingScreenController : MonoBehaviour
         if (imageScene1) _images.Add(imageScene1);
         foreach (var img in _images)
             if (img) img.gameObject.SetActive(false);
+        // Bật đỡ lên để tránh không có background
+        imageScene1.gameObject.SetActive(true);
 
         if (progressRing) progressRing.fillAmount = 0f;
         if (sliderUI) sliderUI.value = 0f;
@@ -82,7 +84,13 @@ public class LoadingScreenController : MonoBehaviour
         _displayStartTime = Time.unscaledTime; // đếm thời gian hiển thị tối thiểu
 
         SetProgress(0f);
+        var opUnLoad = SceneManager.UnloadSceneAsync(LoadingTransition.PreviousSceneName);
 
+        while (opUnLoad.progress < 0.9f)
+        {
+            yield return null;
+        }
+        yield return null;
         var op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false;
         _async = op;
@@ -207,16 +215,15 @@ public class LoadingScreenController : MonoBehaviour
         if (textLoading)
             textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
 
+        // BỎ lerp - gán trực tiếp để đồng bộ với text
         if (progressRing)
         {
-            float lerpValue = Mathf.Lerp(progressRing.fillAmount, _currentProgress, Time.unscaledDeltaTime * 5f);
-            progressRing.fillAmount = lerpValue;
-            if (sliderUI) sliderUI.value = lerpValue;
+            progressRing.fillAmount = _currentProgress;
+            if (sliderUI) sliderUI.value = _currentProgress;
         }
         else if (sliderUI)
         {
-            float lerpValue = Mathf.Lerp(sliderUI.value, _currentProgress, Time.unscaledDeltaTime * 5f);
-            sliderUI.value = lerpValue;
+            sliderUI.value = _currentProgress;
         }
     }
 

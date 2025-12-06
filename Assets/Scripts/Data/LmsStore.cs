@@ -25,8 +25,6 @@ public class LmsStore : MonoBehaviour
     #endregion
 
     [Header("API")]
-    // public string baseUrl = "https://apis-lms.xheroapp.com"; // đổi sang PROD nếu cần
-    // public string baseUrl = SecurityConfig.GetBaseUrl();
     [NonSerialized] public string baseUrl;
 
     [Header("Caching")]
@@ -53,8 +51,9 @@ public class LmsStore : MonoBehaviour
         lastLoginQrCode = null;
         lastLoginQrTimestamp = null;
     }
-    
-    [Serializable] public class StoreData
+
+    [Serializable]
+    public class StoreData
     {
         public string tokenUserId;
         public List<LmsCourse> marketCourses = new();
@@ -64,7 +63,7 @@ public class LmsStore : MonoBehaviour
         // timestamps
         public long marketFetchedAtUnix;
         public long myCoursesFetchedAtUnix;
-        public Dictionary<string,long> privateFetchedAt = new(); // courseId -> unix time
+        public Dictionary<string, long> privateFetchedAt = new(); // courseId -> unix time
     }
 
     public StoreData Data { get; private set; } = new();
@@ -80,10 +79,11 @@ public class LmsStore : MonoBehaviour
     void Awake()
     {
         if (_instance && _instance != this) { Destroy(gameObject); return; }
-        _instance = this; DontDestroyOnLoad(gameObject);
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
 
         baseUrl = SecurityConfig.GetBaseUrl();
-        
+
         if (autoLoadOnAwake) LoadFromDisk();
         RebuildIndexes();
     }
@@ -91,7 +91,7 @@ public class LmsStore : MonoBehaviour
     #region Public API (high level)
 
     /// <summary>Gọi cả 3 API tuần tự và lưu cache.</summary>
-    public IEnumerator WarmupAll(int marketSkip=0, int marketLimit=50, string keyword="", string category="", string sortBy="", string order="")
+    public IEnumerator WarmupAll(int marketSkip = 0, int marketLimit = 50, string keyword = "", string category = "", string sortBy = "", string order = "")
     {
         if (!EnsureToken()) yield break;
 
@@ -117,7 +117,8 @@ public class LmsStore : MonoBehaviour
         if (string.IsNullOrEmpty(courseId)) return false;
         if (_idxPrivateById.TryGetValue(courseId, out var p) && !string.IsNullOrEmpty(p.videoLink))
         {
-            videoLink = p.videoLink; return true;
+            videoLink = p.videoLink;
+            return true;
         }
         return false;
     }
@@ -179,6 +180,8 @@ public class LmsStore : MonoBehaviour
         }
 
         var url = BuildMarketUrl(skip, limit, keyword, category, sortBy, order);
+
+        // Bật withXData = true cho chắc, BE có thể check timestamp cho mọi endpoint
         yield return GET(url, body =>
         {
             var root = JsonUtility.FromJson<ListWrapper<LmsCourse>>(WrapAsListRoot(body, "data"));
@@ -192,7 +195,7 @@ public class LmsStore : MonoBehaviour
             Debug.Log($"[LMS] Market fetched: {Data.marketCourses.Count} items.");
             RebuildIndexes();
             if (autoSaveAfterFetch) SaveToDisk();
-        });
+        }, withXData: true);
     }
 
     public IEnumerator FetchMyCoursesIfExpired()
@@ -204,6 +207,8 @@ public class LmsStore : MonoBehaviour
         }
 
         var url = $"{baseUrl}/users/lms/courses?skip=0&limit=200";
+
+        // Bật withXData = true luôn
         yield return GET(url, body =>
         {
             var root = JsonUtility.FromJson<ListWrapper<LmsCourseUser>>(WrapAsListRoot(body, "data"));
@@ -217,7 +222,7 @@ public class LmsStore : MonoBehaviour
             Debug.Log($"[LMS] MyCourses fetched: {Data.userCourses.Count} items.");
             RebuildIndexes();
             if (autoSaveAfterFetch) SaveToDisk();
-        });
+        }, withXData: true);
     }
 
     public IEnumerator FetchPrivateIfExpired(string courseId)
@@ -230,11 +235,12 @@ public class LmsStore : MonoBehaviour
             yield break;
 
         var url = $"{baseUrl}/lms/courses/{courseId}/private";
+
+        // ======= Ở ĐÂY TRUYỀN withXData = true =======
         yield return GET(url, body =>
         {
             LmsCoursePrivate p = null;
 
-            // 1) Thử parse kiểu bọc trong { "data": {...} } hoặc { "course": {...} }
             try
             {
                 var root = JsonUtility.FromJson<PrivateRoot>(body);
@@ -244,9 +250,8 @@ public class LmsStore : MonoBehaviour
                     else if (root.course != null && !string.IsNullOrEmpty(root.course._id)) p = root.course;
                 }
             }
-            catch { /* bỏ qua, thử cách 2 */ }
+            catch { }
 
-            // 2) Nếu vẫn chưa có, thử parse trực tiếp vào model (server trả flat object)
             if (p == null)
             {
                 try
@@ -254,7 +259,7 @@ public class LmsStore : MonoBehaviour
                     var direct = JsonUtility.FromJson<LmsCoursePrivate>(body);
                     if (direct != null && !string.IsNullOrEmpty(direct._id)) p = direct;
                 }
-                catch { /* ignore */ }
+                catch { }
             }
 
             if (p == null)
@@ -263,10 +268,8 @@ public class LmsStore : MonoBehaviour
                 return;
             }
 
-            // chuẩn hoá finalExam
             NormalizeFinalExam(p);
 
-            // replace or add
             int idx = Data.coursePrivates.FindIndex(x => x._id == p._id);
             if (idx >= 0) Data.coursePrivates[idx] = p;
             else Data.coursePrivates.Add(p);
@@ -277,11 +280,11 @@ public class LmsStore : MonoBehaviour
             RebuildIndexes();
             if (autoSaveAfterFetch) SaveToDisk();
             Debug.Log($"[LMS] Private fetched OK: {courseId} ({p._id})");
-        });
+        }, withXData: true); // <===== QUAN TRỌNG
     }
 
     // hỗ trợ nhiều dạng root
-    [System.Serializable]
+    [Serializable]
     public class PrivateRoot
     {
         public bool status;
@@ -351,7 +354,7 @@ public class LmsStore : MonoBehaviour
             }
 
             onDone(foundId);
-        });
+        }, withXData: true);
     }
 
     /// <summary>
@@ -387,22 +390,31 @@ public class LmsStore : MonoBehaviour
         return true;
     }
 
-    IEnumerator GET(string url, Action<string> onSuccess)
+    IEnumerator GET(string url, Action<string> onSuccess, bool withXData = false)
     {
         if (!EnsureToken()) yield break;
 
         using (var req = UnityWebRequest.Get(url))
         {
-        var token = TokenStore.AccessToken;
+            var token = TokenStore.AccessToken;
 
-        Debug.Log($"[LMS] BaseUrl = {baseUrl}");
-        Debug.Log($"[LMS] Token (first 40 chars) = {token?.Substring(0, Mathf.Min(40, token.Length))}");
-        Debug.Log($"[LMS] Token length = {token?.Length}");
+            Debug.Log($"[LMS] BaseUrl = {baseUrl}");
+            Debug.Log($"[LMS] Token (first 40 chars) = {token?.Substring(0, Mathf.Min(40, token.Length))}");
+            Debug.Log($"[LMS] Token length = {token?.Length}");
 
-        req.SetRequestHeader("Authorization", "Bearer " + token);
-        req.SetRequestHeader("Accept", "application/json");
+            // JWT
+            req.SetRequestHeader("Authorization", "Bearer " + token);
+            req.SetRequestHeader("Accept", "application/json");
 
-        Debug.Log("[HTTP GET] " + url);
+            // === THÊM HEADER x-data KHI CẦN ===
+            if (withXData)
+            {
+                string cipherB64 = LmsSecurityHeader.BuildXDataHeader();
+                req.SetRequestHeader("x-data", cipherB64);
+                Debug.Log($"[LMS] x-data header (Base64 cipher) length={cipherB64?.Length} value={cipherB64}");
+            }
+
+            Debug.Log("[HTTP GET] " + url);
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -427,7 +439,7 @@ public class LmsStore : MonoBehaviour
     {
         var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
         if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));  
+        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
         if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
@@ -623,7 +635,8 @@ public class CompletionCondition
 }
 
 [Serializable]
-public class SeoInfo {
+public class SeoInfo
+{
     public string url;
     public string title;
     public List<string> keywords;

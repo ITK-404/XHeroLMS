@@ -1,78 +1,101 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Video;
 using UnityEngine.Networking;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class IntroManager : MonoBehaviour
 {
-    public VideoPlayer videoPlayer; 
-    public string nextSceneName = "New Scene"; 
+    [Header("Intro Config")]
+    public VideoPlayer videoPlayer;
+    public string nextSceneName = "New Scene";
 
-    private bool videoStarted = false; // Biến kiểm tra xem video đã bắt đầu chưa
-    private float videoStartTimeout = 9f; // Thời gian tối đa để video bắt đầu (3 giây)
+    private bool videoIsPlaying = false;
+    private AsyncOperation preloadSceneOp;
+    private float videoStartTimeout = 5f; // nếu sau 5s video chưa chạy => skip
 
-    void Start()
+    private void Start()
     {
-        try
+        if (videoPlayer == null)
         {
-            if (videoPlayer != null)
-            {
-                string videoPath = System.IO.Path.Combine(Application.streamingAssetsPath, "myintro.mp4");
-                string videoUrl = "file://" + videoPath;
-
-                Debug.Log("videoUrl: " + videoUrl);
-
-                if (System.IO.File.Exists(videoPath) || Application.platform == RuntimePlatform.Android)
-                {
-                    videoPlayer.url = videoUrl;
-                    videoPlayer.loopPointReached += OnVideoEnd;
-                    videoPlayer.Play();
-                    videoStarted = true;
-                }
-                else
-                {
-                    Debug.LogError("Video file not found at path: " + videoPath);
-                    SceneManager.LoadScene(nextSceneName);
-                }
-
-                StartCoroutine(VideoStartTimeout());
-            }
-            else
-            {
-                Debug.LogError("VideoPlayer component is not assigned.");
-                SceneManager.LoadScene(nextSceneName);
-            }
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError("Exception caught: " + ex.Message);
+            Debug.LogError("VideoPlayer is not assigned!");
             SceneManager.LoadScene(nextSceneName);
+            return;
         }
+
+        // 🔹 Preload scene ngay từ đầu (nhưng chưa active)
+        preloadSceneOp = SceneManager.LoadSceneAsync(nextSceneName);
+        preloadSceneOp.allowSceneActivation = false;
+
+        StartCoroutine(LoadAndPlayVideo());
+        StartCoroutine(VideoStartTimeoutCheck());
     }
 
-    // Đếm thời gian tối đa 3 giây, nếu video chưa chạy thì chuyển sang scene tiếp theo
-    IEnumerator VideoStartTimeout()
+    IEnumerator LoadAndPlayVideo()
     {
-        float timer = 0f;
+        string videoPath = System.IO.Path.Combine(Application.streamingAssetsPath, "INTRO_NHACMOI.mp4");
+        string videoUrl = "file://" + videoPath;
 
-        // Trong vòng 3 giây nếu video chưa bắt đầu
-        while (timer < videoStartTimeout && !videoStarted)
+        Debug.Log("Video URL: " + videoUrl);
+
+        if (System.IO.File.Exists(videoPath) || Application.platform == RuntimePlatform.Android)
         {
-            timer += Time.deltaTime;
-            yield return null; // Tiến hành kiểm tra theo từng frame
+            videoPlayer.source = VideoSource.Url;
+            videoPlayer.url = videoUrl;
+
+            videoPlayer.prepareCompleted += OnVideoPrepared;
+            videoPlayer.loopPointReached += OnVideoEnd;
+            videoPlayer.Prepare();
+        }
+        else
+        {
+            Debug.LogError("Video file NOT FOUND! Skipping...");
+            ActivateNextScene();
         }
 
-        if (!videoStarted) // Nếu video không bắt đầu sau 3 giây
+        yield return null;
+    }
+
+    void OnVideoPrepared(VideoPlayer vp)
+    {
+        Debug.Log("Video Prepared!");
+        videoPlayer.Play();
+        videoIsPlaying = true;
+    }
+
+    IEnumerator VideoStartTimeoutCheck()
+    {
+        float timer = 0f;
+        while (timer < videoStartTimeout && !videoIsPlaying)
         {
-            Debug.LogWarning("Video didn't start within 3 seconds. Switching to next scene.");
-            SceneManager.LoadScene(nextSceneName);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!videoIsPlaying)
+        {
+            Debug.LogWarning("Video didn't start! Skip to next scene.");
+            ActivateNextScene();
         }
     }
 
     void OnVideoEnd(VideoPlayer vp)
     {
-        // Load the next scene after the video ends
-        SceneManager.LoadScene(nextSceneName);
+        Debug.Log("Video finished!");
+        ActivateNextScene();
+    }
+
+    private void ActivateNextScene()
+    {
+        if (preloadSceneOp != null)
+        {
+            Debug.Log("Activating preloaded scene...");
+            preloadSceneOp.allowSceneActivation = true;
+        }
+        else
+        {
+            Debug.LogWarning("Scene wasn't preloaded! Loading normally...");
+            SceneManager.LoadScene(nextSceneName);
+        }
     }
 }

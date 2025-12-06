@@ -49,7 +49,7 @@ public class VideoLoadingHandler : MonoBehaviour
         {
             _waitingFirstFrame = true;
             LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -94,7 +94,7 @@ public class VideoLoadingHandler : MonoBehaviour
         bool shouldShow = noTexture || _waitingFirstFrame || stalled;
 
         if (shouldShow) LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -119,7 +119,7 @@ public class VideoLoadingHandler : MonoBehaviour
         _lastFrame = -1;
 
         LoadingUI.Show(
-            timeoutSeconds: 15f,
+            timeoutSeconds: 60f,
             timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
             timeoutHeader: "Lỗi Mạng"
         );
@@ -140,7 +140,7 @@ public class VideoLoadingHandler : MonoBehaviour
         _lastFrame  = -1;
 
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -181,7 +181,7 @@ public class VideoLoadingHandler : MonoBehaviour
         _stallTimer = 0f;
         _lastFrame  = -1;
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );

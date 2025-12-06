@@ -4,28 +4,25 @@ using UnityEngine.UI;
 public class PlayVideoHandleUI : MonoBehaviour
 {
     [SerializeField] PlayVideoOpenBook playVideoOpenBook;
-    [SerializeField] Button skipButton;
+    [SerializeField] private CourseReviewUI courseReviewUI;
+    [SerializeField] private TabItemManagerUI tabItemManagerUI;
+
+    public Button skipButton;
     [SerializeField] RawImage rawImage;
     [SerializeField] private GameObject container;
     public Toggle autoSkipToggle;
     private void Awake()
-    {   
-        container.gameObject.SetActive(false);
-        skipButton.onClick.AddListener(playVideoOpenBook.Stop);   
-    }
-
-    private void OnDestroy()
     {
-        skipButton.onClick.RemoveListener(playVideoOpenBook.Stop);   
+        container.gameObject.SetActive(false);
     }
 
     public void Show()
     {
         container.gameObject.SetActive(true);
-    } 
+    }
 
     public void Hide()
     {
         container.gameObject.SetActive(false);
-    } 
+    }
 }

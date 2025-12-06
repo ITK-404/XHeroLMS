@@ -1,4 +1,5 @@
 using Pathfinding;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -9,7 +10,7 @@ public class TeleMapController : MonoBehaviour
     public Camera mapCamera;        // camera bản đồ (top-down)
     public Camera playerCamera;     // camera người chơi (optional)
     public Transform player;        // transform người chơi
-
+    private CinemachineBrain brain;
     [Header("Raycast")]
     public LayerMask raycastMask = ~0;
 
@@ -26,14 +27,24 @@ public class TeleMapController : MonoBehaviour
 
     void Awake()
     {
+        brain = playerCamera ? playerCamera.GetComponent<CinemachineBrain>() : null;
         if (playerCamera) _playerCamDepth = playerCamera.depth;
         if (mapCamera) mapCamera.gameObject.SetActive(false);
         
         cursorMgr = FindAnyObjectByType<CursorGameManager>();
     }
 
+    private bool IsBlendingCamera()
+    {
+        return brain != null && brain.IsBlending;
+    }
+
     void Update()
     {
+        if (IsBlendingCamera() || BuildingCameraManager.Instance.IsFocus())
+        {
+            return;
+        }
         if (InputBlocker.IsBlocked())
         return;
         // Nhấn phím M để bật/tắt map
@@ -126,31 +137,31 @@ bool IsTaggedItemsRecursive(Transform t)
     void TeleportPlayer(Vector3 targetPos)
     {
         if (!player) return;
+        player.GetComponent<PointClickSystem>().TeleportDelay(targetPos);
+        //        var cc = player.GetComponent<CharacterController>();
+        //        var AIPath = player.GetComponent<IAstarAI>();
+        //        AIPath.destination = targetPos;
+        //        if (cc)
+        //        {
+        //            bool was = cc.enabled;
+        //            cc.enabled = false;
+        //            player.position = targetPos;
+        //            cc.enabled = was;
+        //            return;
+        //        }
 
-        var cc = player.GetComponent<CharacterController>();
-        var AIPath = player.GetComponent<IAstarAI>();
-        AIPath.destination = targetPos;
-        if (cc)
-        {
-            bool was = cc.enabled;
-            cc.enabled = false;
-            player.position = targetPos;
-            cc.enabled = was;
-            return;
-        }
-
-        var rb = player.GetComponent<Rigidbody>();
-        if (rb && !rb.isKinematic)
-        {
-#if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = Vector3.zero;
-#else
-            rb.velocity = Vector3.zero;
-#endif
-            rb.angularVelocity = Vector3.zero;
-            rb.MovePosition(targetPos);
-            return;
-        }
+        //        var rb = player.GetComponent<Rigidbody>();
+        //        if (rb && !rb.isKinematic)
+        //        {
+        //#if UNITY_6000_0_OR_NEWER
+        //            rb.linearVelocity = Vector3.zero;
+        //#else
+        //            rb.velocity = Vector3.zero;
+        //#endif
+        //            rb.angularVelocity = Vector3.zero;
+        //            rb.MovePosition(targetPos);
+        //            return;
+        //        }
 
         player.position = targetPos;
     }

@@ -89,7 +89,7 @@ public class CourseListPageMyUI : MonoBehaviour
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
-        
+
         // Ẩn tất cả root để ngăn các script con chạy khi inactive
         if (basicView?.root)     basicView.root.SetActive(false);
         if (advancedView?.root)  advancedView.root.SetActive(false);
@@ -334,7 +334,6 @@ public class CourseListPageMyUI : MonoBehaviour
                     //     ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
                     //     : "";
                     slot.bookHandleUI.fullPriceText.text = "";
-                    
                 }
 
                 // Tránh lỗi Coroutine khi object inactive
@@ -356,26 +355,52 @@ public class CourseListPageMyUI : MonoBehaviour
     }
 
     // ================== NETWORK ==================
-    IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
+IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
+{
+    using (var req = UnityWebRequest.Get(url))
     {
-        using (var req = UnityWebRequest.Get(url))
-        {
-            req.SetRequestHeader("Authorization", "Bearer " + token);
-            req.SetRequestHeader("Accept", "application/json");
-            yield return req.SendWebRequest();
+        req.SetRequestHeader("Authorization", "Bearer " + token);
+        req.SetRequestHeader("Accept", "application/json");
+
+        // === THÊM HEADER x-data (AES-256-GCM) ===
+        string xData = LmsSecurityHeader.BuildXDataHeader();
+        req.SetRequestHeader("x-data", xData);
+
+        Debug.Log($"[CourseList/MY] URL: {url}");
+        Debug.Log($"[CourseList/MY] x-data (sent): {xData}");
+
+        yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-            bool error = req.result == UnityWebRequest.Result.ConnectionError ||
-                         req.result == UnityWebRequest.Result.ProtocolError;
+        bool error = req.result == UnityWebRequest.Result.ConnectionError ||
+                     req.result == UnityWebRequest.Result.ProtocolError;
 #else
-            bool error = req.isNetworkError || req.isHttpError;
+        bool error = req.isNetworkError || req.isHttpError;
 #endif
-            string body = req.downloadHandler.text;
 
-            if (error) onErrorBody?.Invoke(body);
-            else onSuccess?.Invoke(body);
+        string body = req.downloadHandler.text;
+
+        // ===== LOG RESPONSE =====
+        Debug.Log(
+            $"[CourseList/MY] RESPONSE\n" +
+            $"- Status: {req.responseCode}\n" +
+            $"- Error: {req.error}\n" +
+            $"- Body: {body}\n" +
+            $"- x-data used: {xData}\n" +
+            $"- URL: {url}"
+        );
+
+        if (error)
+        {
+            Debug.LogError($"[CourseList/MY] ERROR RESPONSE ({req.responseCode})\nBody:\n{body}");
+            onErrorBody?.Invoke(body);
+        }
+        else
+        {
+            onSuccess?.Invoke(body);
         }
     }
+}
 
     string GetToken()
     {

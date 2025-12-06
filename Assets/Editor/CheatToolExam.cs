@@ -329,8 +329,8 @@ public class CheatToolExam : EditorWindow
     {
         var paper = _ui.Paper;
         int total = paper.questions.Count;
-        int idx   = Mathf.Clamp(_ui.currentIndex, 0, total - 1);
-        var q     = paper.questions[idx];
+        int idx = Mathf.Clamp(_ui.currentIndex, 0, total - 1);
+        var q = paper.questions[idx];
 
         EditorGUILayout.LabelField($"-> Câu hiện tại [{idx + 1}/{total}]", EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Question ID:", q.id);
@@ -339,11 +339,90 @@ public class CheatToolExam : EditorWindow
 
         var titleStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
         {
-            fontSize  = 13,
+            fontSize = 13,
             fontStyle = FontStyle.Bold
         };
         EditorGUILayout.LabelField(q.title, titleStyle);
         EditorGUILayout.Space();
+
+        // ======== MATCHING: hiển thị cặp ghép ========
+        if (q.type == ExamQuestionType.MATCHING)
+        {
+            // Cột trái/phải từ q.options[0], q.options[1]
+            List<string> leftCol = new List<string>();
+            List<string> rightCol = new List<string>();
+
+            if (q.options != null && q.options.Count >= 2)
+            {
+                string leftRaw = ExamFormat.CleanOptionText(q.options[0]) ?? "";
+                string rightRaw = ExamFormat.CleanOptionText(q.options[1]) ?? "";
+
+                leftCol = SplitMatchingSideRaw(leftRaw);
+                rightCol = SplitMatchingSideRaw(rightRaw);
+            }
+
+            EditorGUILayout.LabelField("Cột TRÁI:", EditorStyles.boldLabel);
+            for (int i = 0; i < leftCol.Count; i++)
+                EditorGUILayout.LabelField($"  L[{i}]: {leftCol[i]}");
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Cột PHẢI:", EditorStyles.boldLabel);
+            for (int i = 0; i < rightCol.Count; i++)
+                EditorGUILayout.LabelField($"  R[{i}]: {rightCol[i]}");
+
+            EditorGUILayout.Space();
+
+            // Lấy đúng QuestionNode từ JSON cache để đọc correctAnswer
+            QuestionNode qNode = null;
+            if (_cachedQuestions != null)
+                qNode = _cachedQuestions.Find(n => n != null && n._id == q.id);
+
+            if (qNode != null && qNode.correctAnswer != null && qNode.correctAnswer.Count > 0)
+            {
+                EditorGUILayout.LabelField("CÁC CẶP ĐÚNG (theo API):", EditorStyles.boldLabel);
+
+                var pairStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                {
+                    fontStyle = FontStyle.Bold
+                };
+                pairStyle.normal.textColor = Color.green;
+
+                foreach (var raw in qNode.correctAnswer)
+                {
+                    // ví dụ raw: "<p>Kim</p>-<p>Canh, Tân</p>"
+                    string cleaned = ExamFormat.CleanOptionText(raw) ?? "";
+                    var parts = cleaned.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length == 2)
+                    {
+                        string left = parts[0].Trim();
+                        string right = parts[1].Trim();
+                        EditorGUILayout.LabelField($"{left}  ↔  {right}", pairStyle);
+                    }
+                    else
+                    {
+                        // fallback nếu format khác
+                        EditorGUILayout.LabelField(cleaned, pairStyle);
+                    }
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "API /result-exam không trả correctAnswer cho câu MATCHING này " +
+                    "hoặc cache chưa load được.",
+                    MessageType.Info);
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(
+                "Câu MATCHING: nối mỗi phần tử cột TRÁI với đúng phần tử cột PHẢI như list \"CÁC CẶP ĐÚNG\" ở trên.",
+                MessageType.None);
+
+            return; // đã render xong MATCHING, khỏi vẽ kiểu SINGLE/MULTI nữa
+        }
+
+        // ======== CÁC LOẠI CÂU HỎI KHÁC ========
 
         if (q.options == null || q.options.Count == 0)
         {
@@ -351,7 +430,7 @@ public class CheatToolExam : EditorWindow
             return;
         }
 
-        // Lấy set đáp án đúng cho câu này (nếu API đã trả)
+        // Lấy set đáp án đúng (TEXT) cho các loại thường
         _correctTextMap.TryGetValue(q.id, out var correctSet);
         correctSet ??= new HashSet<string>();
 
@@ -361,7 +440,7 @@ public class CheatToolExam : EditorWindow
         for (int i = 0; i < q.options.Count; i++)
         {
             string shown = ExamFormat.CleanOptionText(q.options[i]) ?? "";
-            string norm  = ExamResultReviewPanel.NormalizeForCompare(shown);
+            string norm = ExamResultReviewPanel.NormalizeForCompare(shown);
 
             bool isCorrect = correctSet.Contains(norm);
 
@@ -369,7 +448,7 @@ public class CheatToolExam : EditorWindow
             if (isCorrect)
             {
                 style.normal.textColor = Color.green;
-                style.fontStyle        = FontStyle.Bold;
+                style.fontStyle = FontStyle.Bold;
             }
 
             EditorGUILayout.LabelField($"{(isCorrect ? "[OK]" : "[ ]")} {shown}", style);
@@ -382,6 +461,21 @@ public class CheatToolExam : EditorWindow
             "Nếu đổi bài thi (exam/course khác) tool sẽ tự clear cache & tải lại.\n" +
             "Nhấn \"Clear Cache\" hoặc đóng cửa sổ để giải phóng RAM thủ công.",
             MessageType.None);
+    }
+
+    private static List<string> SplitMatchingSideRaw(string raw)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrEmpty(raw)) return list;
+
+        var parts = raw.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in parts)
+        {
+            var trimmed = p.Trim();
+            if (!string.IsNullOrEmpty(trimmed))
+                list.Add(trimmed);
+        }
+        return list;
     }
 }
 #endif

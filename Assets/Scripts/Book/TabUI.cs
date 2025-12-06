@@ -21,7 +21,7 @@ public class TabUI : MonoBehaviour
     public TextMeshProUGUI nameTitle;
     public TMP_ColorGradient gradient;
     public Color deActiveColor = Color.white;
-
+    public bool buttonState;
     private void Awake()
     {
         button = GetComponent<Button>();
@@ -89,7 +89,14 @@ public class TabUI : MonoBehaviour
     {
         if (button == null) return;
 
+        buttonState = state;
         // An toàn khi thiếu Image hoặc Sprite
+        SetSpriteActive(state);
+        SetGradientActive(state);
+    }
+
+    public void SetSpriteActive(bool state)
+    {
         var img = button.image;
         if (img != null)
         {
@@ -98,8 +105,6 @@ public class TabUI : MonoBehaviour
             else if (!state && deActiveSprite != null)
                 img.sprite = deActiveSprite;
         }
-
-        SetGradientActive(state);
     }
 
     public void SetGradientActive(bool enable)

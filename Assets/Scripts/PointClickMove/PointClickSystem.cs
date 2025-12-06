@@ -2,12 +2,13 @@
 using Pathfinding;
 using System;
 using System.Collections;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UIElements;
 
 public class PointClickSystem : MonoBehaviour
 {
+    public CinemachineBrain brain;
     IAstarAI ai;
     private Vector3 lastPickPosition;
     public float debugRadius = 1;
@@ -56,10 +57,27 @@ public class PointClickSystem : MonoBehaviour
         if (ai != null)
             defaultSpeed = ai.maxSpeed;
     }
+    private bool IsBlendingCamera()
+    {
+        return brain != null && brain.IsBlending && BuildingCameraManager.Instance.IsFocus();
+    }
+    private float protectionTimer = 0f;
 
     void Update()
     {
-        if (InputBlocker.IsBlocked())
+        if (TeleMapController._mapActive)
+        {
+            protectionTimer = .5f;
+            return;
+        }
+
+        if (protectionTimer > 0f)
+        {
+            protectionTimer -= Time.deltaTime;
+            return;
+        }
+
+        if (InputBlocker.IsBlocked() || IsBlendingCamera())
             return;
 
         // Gravity update
@@ -179,7 +197,7 @@ public class PointClickSystem : MonoBehaviour
         );
 
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
-        if (ai.reachedDestination && Quaternion.Angle(transform.rotation, targetRot) < 1f)
+        if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
         {
             isClickMoving = false;
             HideMoveVfx(); // VFX
@@ -220,7 +238,7 @@ public class PointClickSystem : MonoBehaviour
             {
                 return;
             }
-            
+
             // Case click vào checkpoint ghế: giữ nguyên behavior cũ
             if (PlayerChairManager.Instance)
             {
@@ -292,41 +310,82 @@ public class PointClickSystem : MonoBehaviour
 
     private bool TryHandleMoveToHouse(Ray ray)
     {
-        if (Physics.Raycast(ray, out var checkPointHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
+        foreach (var hit in results)
         {
-            if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
+            if (hit.collider.CompareTag("CheckPoint") && hit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
+                BuildingCameraManager.Instance.FocusOnBuilding(interactable);
                 Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
-                var hitTransform = interactable.GetStandTransform();
-                var position = hitTransform.position;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-                Vector3 groundPos = (Vector3)node.position;
-                if (ai != null)
-                {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-
-                    ai.maxSpeed = defaultSpeed * 2f;
-                    ai.destination = groundPos;
-                   
-                }
-                lastPickPosition = groundPos;
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
-                Debug.Log($"House hit box ?");
-                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                {
-                    transform.DORotateQuaternion(hitTransform.rotation, 1);
-                }));
                 return true;
             }
         }
+        //if (Physics.Raycast(ray, out var checkPointHit, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        //{
+        //    if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
+        //    {
+        //        BuildingCameraManager.Instance.FocusOnBuilding(interactable);
+        //        Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
 
+        //        return true;
+        //    }
+        //}
         return false;
     }
 
+    public void TeleportDelay(Vector3 targetPos)
+    {
+        var position = targetPos;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+        characterController.enabled = false;
 
+        Vector3 groundPos = (Vector3)node.position;
+        if (ai != null)
+        {
+            ai.isStopped = true;
+            ai.canMove = false;
+
+            ai.maxSpeed = defaultSpeed * 2f;
+            ai.Teleport(groundPos);
+        }
+
+        lastPickPosition = groundPos;
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
+
+        characterController.enabled = true;
+
+    }
+
+    public void TeleportDelay(Transform hitTransform)
+    {
+        var position = hitTransform.position;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+        characterController.enabled = false;
+
+        Vector3 groundPos = (Vector3)node.position;
+        if (ai != null)
+        {
+            ai.isStopped = true;
+            ai.canMove = false;
+
+            ai.maxSpeed = defaultSpeed * 2f;
+            ai.Teleport(groundPos);
+            ai.rotation = hitTransform.rotation;
+        }
+
+        lastPickPosition = groundPos;
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
+
+        transform.DORotateQuaternion(hitTransform.rotation, 1);
+
+        characterController.enabled = true;
+
+
+    }
 
     private bool MoveToChairHandle(Ray ray)
     {
@@ -334,6 +393,44 @@ public class PointClickSystem : MonoBehaviour
         {
             if (chairHit.collider.CompareTag("CheckPoint"))
             {
+                // hardcode
+
+
+
+                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
+                    return false;
+
+
+
+                currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
+                if (currentCheckPoint != null)
+
+                    if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
+                    {
+                        var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
+
+                        if (isTutorialChair)
+                        
+                        {
+                            Debug.Log($"haha");
+                            return true;
+                        }
+
+                        TutorialHandler.Instance.worldTutorialStep.SetActive(false);
+                    }
+
+                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+                    {
+                        Debug.Log("Hiện UI Xem bước chân");
+                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
+                        //TutorialHandler.Instance.ShowStep(1);
+                    }));
+
+                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
+                isClickMoving = false;
+                HideMoveVfx(); // VFX
+
+                // moving logic
                 StopWaitToMoveChair();
                 Debug.Log("Đánh dính check point");
                 var position = chairHit.transform.position;
@@ -349,20 +446,6 @@ public class PointClickSystem : MonoBehaviour
                 }
 
                 lastPickPosition = groundPos;
-
-                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
-                    return false;
-
-                currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
-                if (currentCheckPoint != null)
-                    waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                    {
-                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
-                    }));
-
-                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
 
                 return true;
             }
@@ -420,6 +503,7 @@ public class PointClickSystem : MonoBehaviour
         if (moveVfxInstance == null)
         {
             moveVfxInstance = Instantiate(moveVfxPrefab, position, Quaternion.identity);
+            moveVfxInstance.GetComponent<RotateToCamera>().SetCamera(playerCamera.mainCamera);
         }
         else
         {

@@ -73,13 +73,13 @@ public class RegistrationController : MonoBehaviour
     public LoginPopupUI warningPopupPrefab;
     public Transform popupParent;
 
-
     private bool confirmed = false;
 
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
     }
+
     private void Start()
     {
         // Fill provinces
@@ -100,7 +100,11 @@ public class RegistrationController : MonoBehaviour
         if (confirmToggle)
         {
             confirmToggle.isOn = false;
-            confirmToggle.onValueChanged.AddListener(isOn => { confirmed = isOn; ValidateAll(); });
+            confirmToggle.onValueChanged.AddListener(isOn =>
+            {
+                confirmed = isOn;
+                ValidateAll();
+            });
         }
 
         if (btnRegister) btnRegister.onClick.AddListener(OnRegisterClick);
@@ -265,14 +269,15 @@ public class RegistrationController : MonoBehaviour
 
     private void OnRegisterClick()
     {
-        if (!btnRegister || !btnRegister.interactable) return;
+        // Giờ nút luôn bấm được, chỉ chặn khi đang gửi request
+        if (!btnRegister) return;
+        if (!btnRegister.interactable) return; // sẽ bị set false trong RegisterRoutine khi đang gửi
 
         string fullName = fullNameField ? fullNameField.text.Trim() : "";
         string email    = emailField    ? emailField.text.Trim()    : "";
 
         string phoneRaw    = phoneField ? phoneField.text : "";
         string phoneDigits = NormalizeDigits(phoneRaw);
-        string username    = ConvertPhoneTo84(phoneDigits).Trim();
 
         string pass1 = passwordField ? passwordField.text : "";
         string pass2 = confirmPasswordField ? confirmPasswordField.text : "";
@@ -284,30 +289,44 @@ public class RegistrationController : MonoBehaviour
 
         // otpBy by toggles (email/sms)
         string otpBy = (toggleSms != null && toggleSms.isOn) ? "phone" : "email";
+
         // username chuẩn cho SMS
         string username84 = ConvertPhoneTo84(phoneDigits).Trim();
+        string idForOtp   = (otpBy == "email") ? email : username84;
 
-        string idForOtp = (otpBy == "email") ? email : username84;
+        // validate cơ bản
+        bool nameOk      = !string.IsNullOrEmpty(fullName);
+        bool phoneOk     = IsValidPhone(phoneDigits);
+        bool emailOk     = IsValidEmail(email);
+        bool passOk      = IsValidPassword(pass1, passwordMinLen);
+        bool matchOk     = pass1 == pass2 && pass1.Length > 0;
+        bool termsAgreed = confirmed;
+
+        // Ưu tiên báo lỗi theo từng bước cụ thể
+        string message = null;
+        if (!nameOk)
+            message = "Vui lòng nhập Họ và tên.";
+        else if (!phoneOk)
+            message = "Số điện thoại không hợp lệ.";
+        else if (!emailOk)
+            message = "Email không hợp lệ.";
+        else if (!passOk)
+            message = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
+        else if (!matchOk)
+            message = "Mật khẩu nhập lại không khớp.";
+        else if (!termsAgreed)
+            message = "Hãy đồng ý điều khoản để tiếp tục.";
+
+        if (message != null)
+        {
+            if (errorText) errorText.text = message;
+            ShowWarningPopup(message);
+            return;
+        }
 
         // province (id) – optional
         // string provinceId = GetSelectedProvinceId();
         string provinceId = GetSelectedProvinceName();
-
-        // validate cơ bản (giữ giống trước)
-        bool nameOk  = !string.IsNullOrEmpty(fullName);
-        bool phoneOk = IsValidPhone(phoneDigits);
-        bool emailOk = IsValidEmail(email);
-        bool passOk  = IsValidPassword(pass1, passwordMinLen);
-        bool matchOk = pass1 == pass2 && pass1.Length > 0;
-
-        if (!(nameOk && phoneOk && emailOk && passOk && matchOk))
-        {
-            if (errorText)
-                errorText.text = "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
-
-            ShowWarningPopup(errorText.text);
-            return;
-        }
 
         var payload = new RegisterPayload
         {
@@ -325,6 +344,7 @@ public class RegistrationController : MonoBehaviour
             province          = GetSelectedProvinceName(),
             gender            = gender
         };
+
         StartCoroutine(RegisterRoutine(payload, username84));
     }
 
@@ -368,27 +388,33 @@ public class RegistrationController : MonoBehaviour
                 if (targetOtp == null)
                     targetOtp = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
 
-                // if (targetOtp != null) targetOtp.SetUsername(username84);
-                // else Debug.LogWarning("[Register] Không tìm thấy OtpVerificationController để SetUsername.");
                 if (targetOtp != null)
                 {
                     // truyền đúng contact theo kênh đã chọn
                     string contact = (payload.otpBy == "email") ? payload.email : username84;
                     targetOtp.SetContact(contact, payload.otpBy, "register");
+
+                    // BẮT ĐẦU ĐẾM THỜI GIAN OTP SAU KHI CHUYỂN QUA MÀN OTP
+                    targetOtp.BeginCountdown();
                 }
 
-                // (tuỳ chọn) lưu session để các panel khác dùng
                 AuthFlowSession.LastOtpIdentifier = (payload.otpBy == "email") ? payload.email : username84;
                 AuthFlowSession.LastOtpBy         = payload.otpBy;
                 AuthFlowSession.LastOtpPurpose    = "register";
-
             }
             else
             {
-                string msg = $"Register FAIL ({req.responseCode}): {req.error}\n{req.downloadHandler.text}";
-                Debug.LogWarning(msg);
-                if (errorText) errorText.text = "Đăng ký thất bại. " +
-                                                (string.IsNullOrEmpty(req.downloadHandler.text) ? "Vui lòng thử lại." : req.downloadHandler.text);
+                string raw = req.downloadHandler.text;
+                string msgLog = $"Register FAIL ({req.responseCode}): {req.error}\n{raw}";
+                Debug.LogWarning(msgLog);
+
+                // ---- parse message từ BE (tuỳ chọn) ----
+                string friendly = BuildFriendlyErrorMessage(req, raw);
+
+                if (errorText) errorText.text = friendly;
+
+                // Gọi popup luôn
+                ShowWarningPopup(friendly);
             }
         }
 
@@ -430,66 +456,34 @@ public class RegistrationController : MonoBehaviour
 
     private void ValidateAll()
     {
-        string fullName = fullNameField ? fullNameField.text.Trim() : "";
-        string phone = phoneField ? phoneField.text.Trim() : "";
-        string email = emailField ? emailField.text.Trim() : "";
-        string pass1 = passwordField ? passwordField.text : "";
-        string pass2 = confirmPasswordField ? confirmPasswordField.text : "";
-
-        string normalizedPhone = NormalizeDigits(phone);
-
-        bool nameOk = !string.IsNullOrEmpty(fullName);
-        bool phoneOk = IsValidPhone(normalizedPhone);
-        bool emailOk = IsValidEmail(email);
-        bool passOk = IsValidPassword(pass1, passwordMinLen);
-        bool matchOk = pass1 == pass2 && pass1.Length > 0;
-
-        bool formOk = nameOk && phoneOk && emailOk && passOk && matchOk;
-
-        if (btnRegister) btnRegister.interactable = formOk && confirmed;
-
-        if (errorText)
-        {
-            if (!nameOk)
-            {
-                errorText.text = "Vui lòng nhập Họ và tên.";
-                ShowWarningPopup(errorText.text);
-            }
-            else if (!phoneOk)
-            {
-                errorText.text = "Số điện thoại không hợp lệ.";
-                ShowWarningPopup(errorText.text);
-            }
-            else if (!emailOk)
-            {
-                errorText.text = "Email không hợp lệ.";
-                ShowWarningPopup(errorText.text);
-            }
-            else if (!passOk)
-            {
-                errorText.text = "Mật khẩu phải gồm chữ, số và ký tự đặc biệt.";
-                ShowWarningPopup(errorText.text);
-            }
-            else if (!matchOk)
-            {
-                errorText.text = "Mật khẩu nhập lại không khớp.";
-                ShowWarningPopup(errorText.text);
-            }
-            else if (!confirmed)
-            {
-                errorText.text = "Hãy đồng ý điều khoản để tiếp tục.";
-                ShowWarningPopup(errorText.text);
-            }
-            else
-            {
-                errorText.text = "";
-            }
-        }
+        // Tránh spam popup khi đang gõ, nên chỉ clear lỗi + đảm bảo nút luôn nhấn được
+        if (errorText) errorText.text = "";
+        if (btnRegister) btnRegister.interactable = true;
     }
     
     private string NormalizeDigits(string s) => Regex.Replace(s ?? "", @"\D", "");
     public static bool IsValidPhone(string digitsOnly) => Regex.IsMatch(digitsOnly ?? "", @"^(0?\d{9,10})$");
-    public static bool IsValidEmail(string email)      => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    public static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        email = email.Trim();
+
+        // Check format chung
+        var okFormat = Regex.IsMatch(
+            email,
+            @"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+        );
+        if (!okFormat)
+            return false;
+
+        // Rule bổ sung: không cho phép gmail.co (gõ nhầm)
+        if (Regex.IsMatch(email, @"@gmail\.co$", RegexOptions.IgnoreCase))
+            return false;
+
+        return true;
+    }
 
     public static bool IsValidPassword(string s, int minLen = 0)
     {
@@ -520,18 +514,19 @@ public class RegistrationController : MonoBehaviour
         var popup = Instantiate(warningPopupPrefab, parent);
         popup.Init("Cảnh báo", message);
     }
+
     // ---------- Payload ----------
     [Serializable]
     private class RegisterPayload
     {
         public string username;
-        public bool   isApp;
+        public bool isApp;
         public string password;
         public string retypePassword;
         public string otpBy;               // "phone" | "email"
         public string registerPlatform;
-        public bool   isFromGame;
-        public bool   isUsernameEmail;
+        public bool isFromGame;
+        public bool isUsernameEmail;
 
         // bổ sung
         public string fullName;
@@ -539,4 +534,68 @@ public class RegistrationController : MonoBehaviour
         public string province;           // id tỉnh (hoặc đổi sang name nếu backend yêu cầu)
         public string gender;
     }
+
+    [Serializable]
+    private class ErrorResponse
+    {
+        public bool status;
+        public string message;
+        public int remaining;
+        public int statusCode;
+    }
+
+    private string BuildFriendlyErrorMessage(UnityWebRequest req, string raw)
+    {
+        // 1) Lỗi mạng
+#if UNITY_2020_2_OR_NEWER
+        if (req.result == UnityWebRequest.Result.ConnectionError)
+#else
+        if (req.isNetworkError)
+#endif
+        {
+            return "Lỗi mạng, bạn vui lòng kiểm tra kết nối và thử lại sau giây lát.";
+        }
+
+        // 2) Thử parse JSON từ BE
+        if (!string.IsNullOrEmpty(raw))
+        {
+            try
+            {
+                var err = JsonUtility.FromJson<ErrorResponse>(raw);
+                if (err != null && !string.IsNullOrEmpty(err.message))
+                {
+                    // Nếu có map -> trả message đẹp
+                    if (ErrorMessageMap.TryGetValue(err.message, out var friendly))
+                    {
+                        return friendly;
+                    }
+
+                    // Không có map -> generic, không quăng code thô vào mặt user
+                    Debug.LogWarning("[Register] Unmapped error message code: " + err.message);
+                    return "Đăng ký thất bại. Bạn vui lòng thử lại sau giây lát.";
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Register] Parse error: " + e.Message + "\nRaw: " + raw);
+            }
+        }
+
+        // 3) Fallback cuối cùng
+        return "Đăng ký thất bại. Bạn vui lòng thử lại sau giây lát.";
+    }
+
+    // Map mã lỗi backend -> message hiển thị
+    private static readonly Dictionary<string, string> ErrorMessageMap = new Dictionary<string, string>
+    {
+        // Đăng ký
+        { "username_is_existed", "Tài khoản này đã được đăng ký. Bạn hãy dùng số điện thoại / email khác hoặc đăng nhập." },
+        { "email_is_existed",    "Email này đã được sử dụng. Bạn hãy dùng email khác hoặc đăng nhập." },
+        { "phone_is_existed",    "Số điện thoại này đã được sử dụng. Bạn hãy dùng số khác hoặc đăng nhập." },
+
+        // OTP
+        { "please_wait_a_moment_to_get_new_otp", "Bạn vừa yêu cầu OTP, vui lòng chờ một lúc rồi thử lại." },
+        { "otp_incorrect",  "Mã OTP không đúng. Bạn hãy kiểm tra lại." },
+        { "otp_expired",    "Mã OTP đã hết hạn, bạn hãy yêu cầu mã mới." },
+    };
 }

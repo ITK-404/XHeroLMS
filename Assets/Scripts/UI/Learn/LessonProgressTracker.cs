@@ -85,6 +85,7 @@ public class LessonProgressTracker : MonoBehaviour
             {
                 hasPostedCompletion = true;
                 lmsVideoProgressApiClient?.SendOnceBlocking(lessonUI, false);
+                ChapterUIManager.Instance?.UpdateLessonProgress();
             }
         }
     }

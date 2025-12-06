@@ -16,6 +16,7 @@ public class BuyReviewCourseManager : MonoBehaviour
 
     private bool autoSkipVideo = false;
     private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
+    public AutomaticTextPreview automaticTextPreview;
     private void Awake()
     {
         Instance = this;
@@ -32,6 +33,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         LoadKey();
         playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
         playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
+
+        playVideoHandleUI.skipButton.onClick.AddListener(Skip);
     }
 
     private void SaveKey()
@@ -58,16 +61,31 @@ public class BuyReviewCourseManager : MonoBehaviour
             playVideoHandleUI.autoSkipToggle.isOn = false;
             ShowBookPreviewUI(currentBookSelect);
         });
-        
+        playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
         SaveKey();
     }
 
     private void EnterCourse()
     {
         Debug.Log("Enter course "+SeoResolver.IsContainData());
-        if (SeoResolver.IsContainData())
+        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+        {
+            LoadingTransition.Load("dai_dao_chi_gian_2");
+
+        }
+        else if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i")
         {
             LoadingTransition.Load(SeoResolver.DefaultScene);
+        }
+        else
+        {
+            LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Cảnh báo", () =>
+                {
+                    // cho phép chọn sách tiếp
+                    BookHandler.CanSelectBook = true;
+                });
+            return;
         }
     }
 
@@ -87,6 +105,9 @@ public class BuyReviewCourseManager : MonoBehaviour
             Debug.LogError("Sách bị null không thể load");
             return;
         }
+        automaticTextPreview.seoUrl = currentBookSelect.book_seo;
+        
+
         StopCoroutine(ShowPreviewCoroutine());
         StartCoroutine(ShowPreviewCoroutine());
     }
@@ -102,7 +123,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         Debug.Log("Load book by seo: " + currentBookSelect.book_seo);
         ShowBuyCourseUI();
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -119,13 +140,19 @@ public class BuyReviewCourseManager : MonoBehaviour
         // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
+            BookHandler.CanSelectBook = false;
+            LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Cảnh báo", () =>
+                {
+                    // cho phép chọn sách tiếp
+                    BookHandler.CanSelectBook = true;
+                });
             Debug.Log("Không có data");
             yield break;
         }
 
         Debug.Log("Có data hiển thị đi");
         courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
-
         if (!autoSkipVideo)
         {
             Debug.Log("Skip Video");
@@ -147,7 +174,9 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         // must wait for 
         StopCoroutine(ShowPreviewCoroutine());
-
+        courseReviewUI.Show();
+        tabItemManagerUI.Hide();
+        playVideoHandleUI.Hide();
         playVideoOpenBook.Stop();
     }
 

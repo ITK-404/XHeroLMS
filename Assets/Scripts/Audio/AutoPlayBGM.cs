@@ -3,8 +3,14 @@ using UnityEngine;
 
 public class AutoPlayBGM : MonoBehaviour
 {
+    private static bool initDone = false;
     private void Awake()
     {
-        AudioManager.Instance.CreateSound(null);
+        if (!initDone)
+        {
+            initDone = true;
+            var audioManager = AudioManager.Instance;
+        }
     }
+
 }

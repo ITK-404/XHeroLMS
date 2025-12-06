@@ -504,7 +504,6 @@ MonoBehaviour:
   examCamera: {fileID: 0}
   examUIController: {fileID: 0}
   examMoveDuration: 1.5
-  examLookAt: {fileID: 0}
   UICamera: {fileID: 0}
   playerPanelUI: {fileID: 0}
 --- !u!1 &3814370445742551030
@@ -704,6 +703,7 @@ GameObject:
   - component: {fileID: 2709777481377513684}
   - component: {fileID: 2168393171170740835}
   - component: {fileID: 1439428000645672955}
+  - component: {fileID: 9147504617450012802}
   m_Layer: 5
   m_Name: Lesson Toggle Button
   m_TagString: Untagged
@@ -832,6 +832,18 @@ MonoBehaviour:
   OnToggleOff:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9147504617450012802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4782245512407501498}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b1fc7a5ed7506546af1171fceadbf80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LessonTutorialValid
 --- !u!1 &5100721932418394410
 GameObject:
   m_ObjectHideFlags: 0

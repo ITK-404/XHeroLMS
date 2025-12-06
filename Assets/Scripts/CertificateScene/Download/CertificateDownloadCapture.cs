@@ -24,6 +24,10 @@ public class CertificateDownloadCapture : MonoBehaviour
     [Header("Nội dung share")]
     public string shareMessage = "Chúc mừng đã nhận bằng tốt nghiệp!";
 
+    [Header("Trạng thái khung (link từ Certificate2DPreviewUI)")]
+    public Toggle toggleWithFrame;
+    public Toggle toggleWithoutFrame;
+
     private void Awake()
     {
         if (downloadButton != null)
@@ -57,6 +61,18 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
 
         StartCoroutine(CaptureAndSaveCoroutine());
+    }
+
+    /// <summary>
+    /// Đang chọn chế độ có khung hay không khung?
+    /// - Nếu toggleWithoutFrame đang bật => không khung
+    /// - Các trường hợp còn lại coi như "có khung"
+    /// </summary>
+    private bool IsWithFrame()
+    {
+        if (toggleWithoutFrame != null && toggleWithoutFrame.isOn)
+            return false;
+        return true;
     }
 
     private IEnumerator CaptureAndSaveCoroutine()
@@ -102,7 +118,10 @@ public class CertificateDownloadCapture : MonoBehaviour
 
         // Tạo tên file tự động theo thời gian
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        string defaultFileName = $"{fileNamePrefix}{timestamp}.png";
+
+        // thêm hậu tố theo trạng thái khung
+        string modeSuffix = IsWithFrame() ? "with-frame" : "no-frame";
+        string defaultFileName = $"{fileNamePrefix}{modeSuffix}_{timestamp}.png";
 
         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
@@ -126,7 +145,7 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
 
         File.WriteAllBytes(path, pngBytes);
-        Debug.Log("[CertificateDownloadCapture] Đã lưu: " + path);
+        Debug.Log($"[CertificateDownloadCapture] Đã lưu: {path} (mode = {modeSuffix})");
 #else
         Debug.LogWarning("[CertificateDownloadCapture] Không hỗ trợ SaveFilePanel trên WebGL.");
 #endif
@@ -149,6 +168,10 @@ public class CertificateDownloadCapture : MonoBehaviour
             ? "Chúc mừng đã nhận bằng tốt nghiệp!"
             : shareMessage;
 
+        // thêm thông tin mode khung vào cuối cho rõ ràng
+        string modeLabel = IsWithFrame() ? "có khung" : "không khung";
+        msg = $"{msg} ({modeLabel})";
+
         GUIUtility.systemCopyBuffer = msg;
         Debug.Log("[CertificateDownloadCapture] Copied share message to clipboard: " + msg);
     }
@@ -161,16 +184,17 @@ public class CertificateDownloadCapture : MonoBehaviour
         string fbProfileUrl = "https://www.facebook.com/me/";
         Application.OpenURL(fbProfileUrl);
 
-        Debug.Log("[CertificateDownloadCapture] Open Facebook profile: " + fbProfileUrl);
+        Debug.Log("[CertificateDownloadCapture] Open Facebook profile: " + fbProfileUrl +
+                  $" | mode = {(IsWithFrame() ? "with-frame" : "no-frame")}");
     }
 
     // ================== SHARE ZALO: ưu tiên app, fallback web ==================
     private void OnClickShareZalo()
     {
-        // Copy sẵn nội dung
         CopyShareMessageToClipboard();
         Application.OpenURL("zalo://");
 
-        Debug.Log("[CertificateDownloadCapture] Tried open Zalo app via zalo://");
+        Debug.Log("[CertificateDownloadCapture] Tried open Zalo app via zalo:// " +
+                  $"| mode = {(IsWithFrame() ? "with-frame" : "no-frame")}");
     }
 }

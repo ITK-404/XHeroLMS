@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using DG.Tweening;
+using JetBrains.Annotations;
 using NUnit.Framework;
 using System;
 using System.Collections;
@@ -23,9 +24,11 @@ public class PlayerChairManager : MonoBehaviour
     [Header("UI")]
 
     VideoPlayerControllerPro videoPlayerControllerPro;
-    [SerializeField]  PlayerStandUI playerStandUI;
+    [SerializeField] PlayerStandUI playerStandUI;
     [HideInInspector] public ChairCheckPoint currentCheckPoint;
-    
+
+    private TutorialBase TutorialBase;
+
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
@@ -55,6 +58,14 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
+        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
+        //if (TutorialHandler.Instance.IsPlayedBefore() == false && TutorialHandler.Instance.IsStep(2))
+        //{
+        //    TutorialHandler.Instance.ShowStep(3);
+        //    TutorialHandler.Instance.Save();
+        //}
+
+        videoPlayerControllerPro.TryToPauseVideo();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
@@ -72,7 +83,7 @@ public class PlayerChairManager : MonoBehaviour
         {
             Debug.Log("bật lại input");
             InputBlocker.SetBlocked(false);
-            
+            playerStandUI.returnBtn.gameObject.SetActive(true);
         }));
     }
 
@@ -105,22 +116,25 @@ public class PlayerChairManager : MonoBehaviour
         currentCheckPoint = temp;
 
     }
-    
+
     public void PlayerSitdown()
     {
-    
+
         // sit down logic
-        
+        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
+    
         ChairCheckPoint temp = currentCheckPoint;
-     
+
         if (temp != null)
         {
             playerState = PlayerState.Sitdown;
             Debug.Log("Sit down");
-            QuadCameraManager.Instance.ChangeToSitdownCameraState(temp.checkPoint.transform.position);
-            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
             
-            // ẩn tất cả icon của item
+            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
+
+            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+
+            // ẩn tất cả icon của ghế
             foreach (var item in allCheckPoints)
             {
                 item.Show(false);
@@ -128,17 +142,24 @@ public class PlayerChairManager : MonoBehaviour
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
-            
+
             StartCoroutine(WaitForBlendDone(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
                 playerStandUI.ShowWatchVideoUI();
                 playerStandUI.UILearnCanvas.Show();
                 videoPlayerControllerPro.EnterFullscreenUI();
+                playerStandUI.returnBtn.gameObject.SetActive(false);
+                if (!TutorialHandler.Instance.IsPlayedBefore())
+                {
+
+                    TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
+                }
             }));
         }
     }
 
+    
     public void TrySetChair(ChairCheckPoint currentChair)
     {
         if (!chairList.Contains(currentChair))

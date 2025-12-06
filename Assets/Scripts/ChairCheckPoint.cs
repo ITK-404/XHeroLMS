@@ -4,6 +4,7 @@ public class ChairCheckPoint : MonoBehaviour
 {
     public GameObject spriteCheckPoint;
     public GameObject checkPoint;
+    public GameObject examCheckPoint;
     public GameObject player;
     public void Show(bool isShow)
     {
@@ -12,6 +13,11 @@ public class ChairCheckPoint : MonoBehaviour
 
     private void LateUpdate()
     {
+        if(player == null)
+        {
+            return;
+        }
+
         var direction = player.transform.position - transform.position;
 
         if (direction.y < 0f)

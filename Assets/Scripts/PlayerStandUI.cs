@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 public class PlayerStandUI : MonoBehaviour
 {
+    public GameObject returnBtn;
     public Button standupButton;
     public Button sitdownButton;
     public RectTransform navigationBarUI;
@@ -17,7 +18,7 @@ public class PlayerStandUI : MonoBehaviour
             sitdownButton.onClick.AddListener(playerChairManager.PlayerSitdown);
         }
         UILearnCanvas.OnClickReturnBtn += playerChairManager.PlayerStandup;
-        
+
         HideWatchVideoUI();
         UILearnCanvas.Hide();
 
@@ -26,31 +27,45 @@ public class PlayerStandUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (playerChairManager!= null)
+        if (playerChairManager != null)
         {
             standupButton.onClick.RemoveListener(playerChairManager.PlayerStandup);
             sitdownButton.onClick.RemoveListener(playerChairManager.PlayerSitdown);
         }
         UILearnCanvas.OnClickReturnBtn -= playerChairManager.PlayerStandup;
     }
-
+    private bool isShowOneTime = false;
     private void Update()
     {
         bool canInteract = playerChairManager.currentCheckPoint;
         sitdownButton.interactable = canInteract;
+        if (TutorialHandler.Instance.IsPlayedBefore())
+        {
+            return;
+        }
+        if (isShowOneTime == false && playerChairManager.currentCheckPoint != null && playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
+        {
+            if(TutorialHandler.Instance.IsPlayedBefore())
+            {
+                return;
+            }
+            Debug.Log("Hiển thị hướng dẫn ngồi xuống");
+            TutorialHandler.Instance.SetCurrentStep(TutorialStepType.Sitdown);
+            isShowOneTime = true;
+        }
     }
 
     public void ShowWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(true);
     }
-    
+
     public void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
     }
 
-    
+
     public void ShowSitdownButton()
     {
         sitdownButton.gameObject.SetActive(true);

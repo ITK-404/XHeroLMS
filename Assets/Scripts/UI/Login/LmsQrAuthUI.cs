@@ -14,15 +14,15 @@ public class LmsQrAuthUI : MonoBehaviour
     public float  requestTimeout = 10f;
 
     [Header("UI")]
-    public TMP_Text countdownText;   // text hiển thị thời gian đếm ngược
-    public Button   refreshButton;   // nút reset / gửi lại
-    public RawImage qrImage;         // nơi hiển thị QR
+    public TMP_Text countdownText;
+    public Button   refreshButton;
+    public RawImage qrImage;
 
     [Header("Thời gian sống của QR (giây)")]
     public float qrLifetimeSeconds = 120f; // 2 phút
 
     [Header("Polling result (nếu backend có step=2)")]
-    public bool  autoPollResult = false;   // mặc định TẮT, vì hiện tại dùng Firebase
+    public bool  autoPollResult = false;
     public float pollInterval   = 1.0f;
 
     [Serializable]
@@ -40,16 +40,19 @@ public class LmsQrAuthUI : MonoBehaviour
     public GameObject currentPanel;
     public GameObject backPanel;
 
-    // flag để không subscribe trùng
     private bool _subscribedFirebase = false;
+    private string baseUrl;
+    private float _qrExpireTime = 0f;
 
     private void Awake()
     {
+        baseUrl = LmsStore.Instance.baseUrl;
+
         if (refreshButton != null)
             refreshButton.onClick.AddListener(OnClickRefresh);
     }
 
-    void Start()
+    private void Start()
     {
         if (btnBack) btnBack.onClick.AddListener(BackAndReset);
     }
@@ -63,10 +66,13 @@ public class LmsQrAuthUI : MonoBehaviour
     private void OnEnable()
     {
         _loggedIn = false;
-        _subscribedFirebase = false;      // cho phép subscribe lại nếu panel bật/tắt nhiều lần
+        _subscribedFirebase = false;
 
-        TrySubscribeFirebase();           // thử 1 lần
-        RequestNewQr();
+        // Chỉ chuẩn bị subscribe Firebase, KHÔNG request QR ở đây
+        TrySubscribeFirebase();
+
+        // Không gọi RequestNewQr() nữa
+        // RequestNewQr();
     }
 
     private void OnDisable()
@@ -88,11 +94,22 @@ public class LmsQrAuthUI : MonoBehaviour
 
     private void Update()
     {
-        // Nếu lúc OnEnable chưa có Instance thì ở Update sẽ retry cho đến khi được
+        // Retry subscribe Firebase nếu cần
         if (!_subscribedFirebase)
         {
             TrySubscribeFirebase();
         }
+    }
+
+    // === PUBLIC API: gọi khi user bấm "Đăng nhập bằng QR" ===
+    public void StartQrLogin()
+    {
+        _loggedIn = false;
+        _currentCode = null;
+        _currentTimestamp = null;
+
+        TrySubscribeFirebase();
+        RequestNewQr();     // Chỉ lúc này mới request QR + start countdown
     }
 
     // ===================== SUBSCRIBE FIREBASE =====================
@@ -106,11 +123,6 @@ public class LmsQrAuthUI : MonoBehaviour
             FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived += OnFirebaseAccessToken;
             _subscribedFirebase = true;
             Debug.Log("[LmsQrAuthUI] Subscribed to FirebaseLoginQrPerCode.OnAccessTokenReceived");
-        }
-        else
-        {
-            // chỉ log 1 lần đầu OnEnable, các frame sau im lặng để đỡ spam
-            Debug.Log("[LmsQrAuthUI] TrySubscribeFirebase: FirebaseLoginQrPerCode.Instance == null, sẽ retry ở Update.");
         }
     }
 
@@ -159,14 +171,11 @@ public class LmsQrAuthUI : MonoBehaviour
         if (countdownText != null)
             countdownText.text = "Đã đăng nhập";
 
-        // ===== GIAO CHO LOGINCONTROLLER XỬ LÝ =====
         LoginController.LoginWithQrToken(accessToken);
         onLoginSuccess?.Invoke(accessToken);
 
-        // Tắt panel QR sau khi login xong
         gameObject.SetActive(false);
 
-        // Clear cache QR nếu muốn
         if (LmsStore.Instance != null)
         {
             LmsStore.Instance.ClearQrLoginCache();
@@ -176,7 +185,22 @@ public class LmsQrAuthUI : MonoBehaviour
     // ===================== UI EVENT =====================
     private void OnClickRefresh()
     {
-        RequestNewQr();
+        // Nếu đã đăng nhập rồi thì khỏi làm gì
+        if (_loggedIn)
+            return;
+
+        // Nếu QR hiện tại vẫn còn thời gian sống -> show popup cảnh báo, không request mới
+        if (Time.unscaledTime < _qrExpireTime)
+        {
+            LoginController.ShowWarning(
+                "Mã QR hiện tại vẫn còn hiệu lực.\n" +
+                "Vui lòng dùng mã đang hiển thị hoặc đợi hết thời gian rồi lấy mã mới."
+            );
+            return;
+        }
+
+        // Hết thời gian rồi mới cho lấy QR mới
+        StartQrLogin();
     }
 
     // ===================== MAIN FLOW =====================
@@ -202,6 +226,8 @@ public class LmsQrAuthUI : MonoBehaviour
         {
             LmsStore.Instance.ClearQrLoginCache();
         }
+
+        _qrExpireTime = Time.unscaledTime + qrLifetimeSeconds; // anti-spam
 
         StartCoroutine(CoRequestQrFromApi());
     }
@@ -269,18 +295,11 @@ public class LmsQrAuthUI : MonoBehaviour
             {
                 LmsStore.Instance.lastLoginQrCode      = _currentCode;
                 LmsStore.Instance.lastLoginQrTimestamp = _currentTimestamp;
-                Debug.Log("[LmsQrAuthUI] Saved to LmsStore: lastLoginQrCode + lastLoginQrTimestamp");
             }
-
-            Debug.Log("[LmsQrAuthUI] Start Firebase listen with code = " + _currentCode);
 
             if (FirebaseLoginQrPerCode.Instance != null)
             {
                 FirebaseLoginQrPerCode.Instance.StartListen(_currentCode);
-            }
-            else
-            {
-                Debug.LogWarning("[LmsQrAuthUI] FirebaseLoginQrPerCode.Instance == null khi gọi StartListen (nhưng Update vẫn retry subscribe).");
             }
 
             string qrContent =
@@ -331,6 +350,8 @@ public class LmsQrAuthUI : MonoBehaviour
                 Debug.LogError("[LmsQrAuthUI] Download QR fail: " + req.error);
                 if (countdownText != null)
                     countdownText.text = "Lỗi tải QR";
+
+                LoadingUI.Hide();
                 yield break;
             }
 
@@ -338,8 +359,9 @@ public class LmsQrAuthUI : MonoBehaviour
             if (qrImage != null)
             {
                 qrImage.texture = tex;
-                qrImage.color   = Color.white;
+                qrImage.color = Color.white;
             }
+            LoadingUI.Hide();
         }
     }
 

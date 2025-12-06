@@ -1,9 +1,10 @@
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using Unity.Cinemachine;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public enum ViewState
 {
@@ -131,7 +132,6 @@ public class QuadCinemachineController : MonoBehaviour
                 videoPlayerController.EnterFullScreenMode();
                 break;
             case ViewState.Exam:
-                videoPlayerController.EnterFullScreenMode();
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -174,4 +174,5 @@ public class QuadCinemachineController : MonoBehaviour
         if (EventSystem.current)
             EventSystem.current.SetSelectedGameObject(null);
     }
+
 }

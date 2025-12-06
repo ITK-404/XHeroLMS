@@ -30,6 +30,7 @@ public class LoginController : MonoBehaviour
 
     bool _isLoggingIn = false;
     OpenClosePanel openClosePanel;
+    private const string PREF_LOGIN_PREFILL = "LOGIN_PREFILL_USERNAME";
 
     private void Awake()
     {
@@ -58,11 +59,13 @@ public class LoginController : MonoBehaviour
         if (buttonLogin != null)
             buttonLogin.onClick.AddListener(OnLoginClicked);
 
-        if (autoFocusUsername && inputUsername != null)
-        {
-            inputUsername.ActivateInputField();
-            inputUsername.Select();
-        }
+        ApplyPrefillOrFocus();
+    }
+
+    private void OnEnable()
+    {
+        // Mỗi lần panel Login SetActive(true) thì chạy lại
+        ApplyPrefillOrFocus();
     }
 
     private void Update()
@@ -102,6 +105,10 @@ public class LoginController : MonoBehaviour
         TokenStore.SetData(auth);
         Debug.Log("[LoginController] Token đã được lưu, chuẩn bị đóng UI login.");
 
+        // <<< Xoá prefill sau khi login thành công >>>
+        PlayerPrefs.DeleteKey(PREF_LOGIN_PREFILL);
+        PlayerPrefs.Save();
+
         // POPUP THÀNH CÔNG
         ShowPopup(
             successPopupPrefab,
@@ -109,7 +116,6 @@ public class LoginController : MonoBehaviour
             successMessage,
             () =>
             {
-                // Sau khi bấm OK trong popup
                 OnLoginComplete?.Invoke();
 
                 if (openClosePanel != null)
@@ -304,7 +310,7 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
             ShowPopup(
                 failPopupPrefab,
                 "Cảnh báo",
-                "Tên đăng nhập không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
+                "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
             );
             return;
         }
@@ -411,7 +417,7 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         inputPassword.selectionFocusPosition = pos;
     }
 
-    private void ShowPopup(LoginPopupUI prefab, string header, string message, Action onReturn = null)
+    public void ShowPopup(LoginPopupUI prefab, string header, string message, Action onReturn = null)
     {
         if (prefab == null)
         {
@@ -428,6 +434,16 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
             onReturn?.Invoke();
         });
     }
+    public static void ShowWarning(string message, string header = "Cảnh báo")
+    {
+        if (Instance == null)
+        {
+            Debug.LogWarning("[LoginController] ShowWarning được gọi nhưng Instance == null. Message: " + message);
+            return;
+        }
+        
+        Instance.ShowPopup(Instance.failPopupPrefab, header, message);
+    }
 
     // ================== DTOs (match JSON) ==================
     [System.Serializable]
@@ -442,6 +458,39 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
     {
         public string message;
     }
+
+    // Gom logic prefill vào 1 chỗ
+    private void ApplyPrefillOrFocus()
+    {
+        if (inputUsername == null) return;
+
+        string prefill = PlayerPrefs.GetString(PREF_LOGIN_PREFILL, "");
+
+        if (!string.IsNullOrEmpty(prefill))
+        {
+            inputUsername.text = prefill;
+
+            // Cho user nhập thẳng mật khẩu
+            if (inputPassword != null)
+            {
+                inputPassword.text = "";
+                inputPassword.ActivateInputField();
+                inputPassword.Select();
+            }
+        }
+        else if (autoFocusUsername)
+        {
+            inputUsername.ActivateInputField();
+            inputUsername.Select();
+        }
+    }
+
+    // Cho chỗ khác (OTP) gọi thẳng
+    public void RefreshLoginPrefill()
+    {
+        ApplyPrefillOrFocus();
+    }
+
 }
 
 // ====== Models (đặt riêng file cũng được) ======

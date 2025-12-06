@@ -73,7 +73,7 @@ public partial class ExamUIController : MonoBehaviour
         {
             if (_loadingShown) return;
             LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -549,4 +549,12 @@ public partial class ExamUIController : MonoBehaviour
         _examQuestionManager.gameObject.SetActive(false);
         _examTitleManager.gameObject.SetActive(false);
     }
+    public Dictionary<string, Dictionary<int, int>> GetMatchingUserPairsSnapshot()
+    {
+        if (_examQuestionManager == null)
+            return new Dictionary<string, Dictionary<int, int>>();
+
+        return _examQuestionManager.GetMatchingUserPairsSnapshot();
+    }
+
 }

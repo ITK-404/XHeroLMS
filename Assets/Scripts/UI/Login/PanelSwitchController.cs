@@ -14,6 +14,9 @@ public class PanelSwitchController : MonoBehaviour
     public GameObject currentPanel;
     public GameObject loginQrPanel;
 
+    [Header("QR UI")]
+    public LmsQrAuthUI loginQrUI;   // <-- kéo thả LmsQrAuthUI vào đây trong Inspector
+
     private void Start()
     {
         if (btnForgot != null)
@@ -33,12 +36,16 @@ public class PanelSwitchController : MonoBehaviour
 
         if (btnRegister != null)
             btnRegister.onClick.RemoveListener(ShowRegister);
+
+        if (btnLoginQR != null)
+            btnLoginQR.onClick.RemoveListener(ShowLoginQr);
     }
 
     private void ShowForgot()
     {
         if (currentPanel != null) currentPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(false);
+        if (loginQrPanel != null) loginQrPanel.SetActive(false);
         if (forgotPanel != null) forgotPanel.SetActive(true);
     }
 
@@ -46,6 +53,7 @@ public class PanelSwitchController : MonoBehaviour
     {
         if (currentPanel != null) currentPanel.SetActive(false);
         if (forgotPanel != null) forgotPanel.SetActive(false);
+        if (loginQrPanel != null) loginQrPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(true);
     }
 
@@ -54,6 +62,20 @@ public class PanelSwitchController : MonoBehaviour
         if (currentPanel != null) currentPanel.SetActive(false);
         if (forgotPanel != null) forgotPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(false);
-        if (loginQrPanel != null) loginQrPanel.SetActive(true);
+
+        if (loginQrPanel != null)
+            loginQrPanel.SetActive(true);
+
+        LoadingUI.Show();
+
+        // Gọi flow QR khi user mở panel
+        if (loginQrUI != null)
+        {
+            loginQrUI.StartQrLogin();
+        }
+        else
+        {
+            Debug.LogWarning("[PanelSwitchController] loginQrUI chưa được gán trong Inspector.");
+        }
     }
 }

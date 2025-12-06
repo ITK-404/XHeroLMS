@@ -13,6 +13,8 @@ public class BookHandler : MonoBehaviour
     public BookViewUI bookHandleUI;
     public BookModel bookModel;
 
+    public static bool CanSelectBook = true;
+
     private void Awake()
     {
         bookModel = GetComponentInChildren<BookModel>();
@@ -42,6 +44,7 @@ public class BookHandler : MonoBehaviour
     
     private void OnPlayerClickBook()
     {
+        if (CanSelectBook == false) return;
         BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
     }
 
@@ -58,7 +61,7 @@ public class BookHandler : MonoBehaviour
     private IEnumerator TryEnterCourse()
     {
         LoadingUI.Show(
-                timeoutSeconds: 15f,
+                timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
                 timeoutHeader:  "Lỗi Mạng"
             );
@@ -74,10 +77,20 @@ public class BookHandler : MonoBehaviour
             {
                 LoadingTransition.Load("dai_dao_chi_gian_2");
 
-            }else
+            }else if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-i")
             {
                 LoadingTransition.Load(SeoResolver.DefaultScene);
             }
+        else
+        {
+                LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                    "Cảnh báo", () =>
+                    {
+                        // cho phép chọn sách tiếp
+                        BookHandler.CanSelectBook = true;
+                    });
+                yield return null;
+        }
             // LoadingTransition.Load(SeoResolver.DefaultScene);
         }
     }
@@ -120,5 +133,6 @@ public class BookHandler : MonoBehaviour
         {
             Debug.Log($"Book SKU {book_sku} bị rỗng");
         }
+        gameObject.name = $"Book_:{book_name}_Sku:{book_sku}";
     }
 }
