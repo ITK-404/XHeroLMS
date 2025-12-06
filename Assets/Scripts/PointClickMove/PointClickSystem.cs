@@ -423,7 +423,7 @@ public class PointClickSystem : MonoBehaviour
                     {
                         Debug.Log("Hiện UI Xem bước chân");
                         PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
-                        TutorialHandler.Instance.ShowStep(1);
+                        //TutorialHandler.Instance.ShowStep(1);
                     }));
 
                 // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật

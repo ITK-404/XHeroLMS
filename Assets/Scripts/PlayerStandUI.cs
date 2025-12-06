@@ -49,7 +49,8 @@ public class PlayerStandUI : MonoBehaviour
             {
                 return;
             }
-            TutorialHandler.Instance.ShowStep(1);
+            Debug.Log("Hiển thị hướng dẫn ngồi xuống");
+            TutorialHandler.Instance.SetCurrentStep(TutorialStepType.Sitdown);
             isShowOneTime = true;
         }
     }
