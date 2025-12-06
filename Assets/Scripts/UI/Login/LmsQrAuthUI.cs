@@ -42,6 +42,7 @@ public class LmsQrAuthUI : MonoBehaviour
 
     private bool _subscribedFirebase = false;
     private string baseUrl;
+    private float _qrExpireTime = 0f;
 
     private void Awake()
     {
@@ -184,7 +185,21 @@ public class LmsQrAuthUI : MonoBehaviour
     // ===================== UI EVENT =====================
     private void OnClickRefresh()
     {
-        // User bấm làm mới => luôn request QR mới + reset timer
+        // Nếu đã đăng nhập rồi thì khỏi làm gì
+        if (_loggedIn)
+            return;
+
+        // Nếu QR hiện tại vẫn còn thời gian sống -> show popup cảnh báo, không request mới
+        if (Time.unscaledTime < _qrExpireTime)
+        {
+            LoginController.ShowWarning(
+                "Mã QR hiện tại vẫn còn hiệu lực.\n" +
+                "Vui lòng dùng mã đang hiển thị hoặc đợi hết thời gian rồi lấy mã mới."
+            );
+            return;
+        }
+
+        // Hết thời gian rồi mới cho lấy QR mới
         StartQrLogin();
     }
 
@@ -211,6 +226,8 @@ public class LmsQrAuthUI : MonoBehaviour
         {
             LmsStore.Instance.ClearQrLoginCache();
         }
+
+        _qrExpireTime = Time.unscaledTime + qrLifetimeSeconds; // anti-spam
 
         StartCoroutine(CoRequestQrFromApi());
     }
@@ -333,6 +350,8 @@ public class LmsQrAuthUI : MonoBehaviour
                 Debug.LogError("[LmsQrAuthUI] Download QR fail: " + req.error);
                 if (countdownText != null)
                     countdownText.text = "Lỗi tải QR";
+
+                LoadingUI.Hide();
                 yield break;
             }
 
@@ -340,8 +359,9 @@ public class LmsQrAuthUI : MonoBehaviour
             if (qrImage != null)
             {
                 qrImage.texture = tex;
-                qrImage.color   = Color.white;
+                qrImage.color = Color.white;
             }
+            LoadingUI.Hide();
         }
     }
 
