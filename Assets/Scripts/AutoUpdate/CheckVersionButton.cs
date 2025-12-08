@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+#if UNITY_STANDALONE_WIN
 [RequireComponent(typeof(Button))]
 public class CheckVersionButton : MonoBehaviour
 {
@@ -30,3 +31,4 @@ public class CheckVersionButton : MonoBehaviour
         updater.CheckNow(runInEditor);
     }
 }
+#endif

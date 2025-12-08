@@ -10,6 +10,7 @@ using UnityEngine.Networking;
 using System.Diagnostics;                 // Restart exe / helper
 using Debug = UnityEngine.Debug;
 
+#if UNITY_STANDALONE_WIN
 [DisallowMultipleComponent]
 public class AutoUpdaterUI : MonoBehaviour
 {
@@ -444,11 +445,9 @@ function Needs-Elevation($p) {
   ($pf86 -and $p.StartsWith($pf86,[System.StringComparison]::InvariantCultureIgnoreCase))
 }
 
-# Logging
 $global:LOG = if ([string]::IsNullOrWhiteSpace($logPath)) { Join-Path $env:TEMP ('lms_update_' + [Guid]::NewGuid().ToString('N') + '.log') } else { $logPath }
 function Log($m){ ('[{0}] {1}' -f (Get-Date), $m) | Out-File -FilePath $global:LOG -Append -Encoding UTF8 }
 
-# Elevate when needed
 if (Needs-Elevation $dest -and -not (Test-Admin)) {
   Log 'Re-launching elevated...'
   Start-Process -FilePath 'powershell.exe' `
@@ -460,11 +459,9 @@ if (Needs-Elevation $dest -and -not (Test-Admin)) {
 Log 'Helper started'
 Log ""zip=$zip""; Log ""dest=$dest""; Log ""exe=$exe""; Log ""ver=$ver""; Log ""log=$global:LOG""
 
-# Wait game exit
 while (Get-Process -Id $gamePid -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 300 }
 Log 'Game exited.'
 
-# Unpack to temp
 $tempBase = Join-Path $env:TEMP ('lms_unpack_' + [Guid]::NewGuid().ToString('N'))
 $tempDir  = Join-Path $tempBase 'payload'
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
@@ -524,3 +521,4 @@ Log 'Done.'
     }
 #endif
 }
+#endif
