@@ -35,6 +35,7 @@ public class AutomaticTextPreview : MonoBehaviour
     [ContextMenu("Create Text")]
     public void CreateText()
     {
+        currentSourceData = null;
         hasSpawned = false; // reset when creating
         StopTimer();
 
@@ -102,7 +103,7 @@ public class AutomaticTextPreview : MonoBehaviour
             StopCoroutine(timerCoroutine);
             timerCoroutine = null;
         }
-
+        
         // Kill DOTween tweens that may target the UI elements
         // This prevents tweens from accessing destroyed/disabled objects
         try

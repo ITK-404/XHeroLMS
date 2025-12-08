@@ -16,7 +16,17 @@ public class BookViewUI : MonoBehaviour
     {
         ShowEnterCourse();
     }
-    
+    private void OnEnable()
+    {
+        if (priceText != null)
+            priceText.RegisterDirtyVerticesCallback(LocalRefreshColor);
+    }
+
+    private void OnDisable()
+    {
+        if (priceText != null)
+            priceText.UnregisterDirtyVerticesCallback(LocalRefreshColor);
+    }
 
     [ContextMenu("Refresh Color")]
     public void RefreshColor()
