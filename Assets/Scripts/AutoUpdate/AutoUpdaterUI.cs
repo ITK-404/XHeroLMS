@@ -1,4 +1,4 @@
-// Assets/Scripts/AutoUpdaterUI.cs
+// Assets/Scripts/AutoUpdate/AutoUpdaterUI.cs
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -38,6 +38,7 @@ public class AutoUpdaterUI : MonoBehaviour
     public int maxRetries = 2;
 
     [SerializeField] bool helperDebug = true; // bật để xem console/log lần đầu
+
     // ===== Runtime UI state =====
     Rect windowRect = new Rect(20, 20, 520, 220);
     bool showPopup = false;
@@ -51,13 +52,14 @@ public class AutoUpdaterUI : MonoBehaviour
 
     void Awake()
     {
+        // Giữ TLS 1.2 cho Windows / .NET cũ
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
     }
 
     void Start()
     {
 #if UNITY_EDITOR
-    Debug.Log("[Updater] Skipped in Editor (no version check)");
+        Debug.Log("[Updater] Skipped in Editor (no version check)");
         return;
 #else
         _ = FlowCheckAndUpdate();
@@ -93,7 +95,7 @@ public class AutoUpdaterUI : MonoBehaviour
                 uiMessage = $"Phiên bản: {current}";
                 await Task.Delay(2000);
                 showPopup = false;
-                return;
+                return; // up-to-date
             }
 
             // Dựng URL từ GitHub Releases
@@ -201,6 +203,7 @@ public class AutoUpdaterUI : MonoBehaviour
         if (!showPopup) return;
         windowRect = GUI.ModalWindow(1927, windowRect, DrawWindow, "Auto Updater");
     }
+
     public void CheckNow(bool forceInEditor = true)
     {
 #if UNITY_EDITOR
@@ -210,8 +213,9 @@ public class AutoUpdaterUI : MonoBehaviour
             return;
         }
 #endif
-        _ = FlowCheckAndUpdate(); // gọi flow có sẵn: sẽ hiện popup & báo “bản mới nhất + version” nếu up-to-date
+        _ = FlowCheckAndUpdate(); // gọi flow có sẵn
     }
+
     void DrawWindow(int id)
     {
         GUILayout.Label($"Trạng thái: {state}");
@@ -420,6 +424,20 @@ public class AutoUpdaterUI : MonoBehaviour
         catch (Exception e) { SetError("Không thể khởi động lại: " + e.Message); }
     }
 
+    void CopyDirectoryRecursive(string src, string dest)
+    {
+        foreach (var dir in Directory.GetDirectories(src, "*", SearchOption.AllDirectories))
+        {
+            var rel = dir.Substring(src.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            Directory.CreateDirectory(Path.Combine(dest, rel));
+        }
+        foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
+        {
+            var rel = file.Substring(src.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            File.Copy(file, Path.Combine(dest, rel), true);
+        }
+    }
+
 #if UNITY_STANDALONE_WIN
     void StartHelperAndQuit(string zipPath, string gameDir, string exePath, int pid, string newVersion)
     {
@@ -444,11 +462,9 @@ function Needs-Elevation($p) {
   ($pf86 -and $p.StartsWith($pf86,[System.StringComparison]::InvariantCultureIgnoreCase))
 }
 
-# Logging
 $global:LOG = if ([string]::IsNullOrWhiteSpace($logPath)) { Join-Path $env:TEMP ('lms_update_' + [Guid]::NewGuid().ToString('N') + '.log') } else { $logPath }
 function Log($m){ ('[{0}] {1}' -f (Get-Date), $m) | Out-File -FilePath $global:LOG -Append -Encoding UTF8 }
 
-# Elevate when needed
 if (Needs-Elevation $dest -and -not (Test-Admin)) {
   Log 'Re-launching elevated...'
   Start-Process -FilePath 'powershell.exe' `
@@ -460,11 +476,9 @@ if (Needs-Elevation $dest -and -not (Test-Admin)) {
 Log 'Helper started'
 Log ""zip=$zip""; Log ""dest=$dest""; Log ""exe=$exe""; Log ""ver=$ver""; Log ""log=$global:LOG""
 
-# Wait game exit
 while (Get-Process -Id $gamePid -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 300 }
 Log 'Game exited.'
 
-# Unpack to temp
 $tempBase = Join-Path $env:TEMP ('lms_unpack_' + [Guid]::NewGuid().ToString('N'))
 $tempDir  = Join-Path $tempBase 'payload'
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
@@ -512,7 +526,11 @@ Log 'Done.'
 
             Debug.Log($"[Updater] Helper log: {logPath}");
             var p = Process.Start(psi);
-            if (p == null) { SetError("Không khởi chạy được helper."); return; }
+            if (p == null)
+            {
+                SetError("Không khởi chạy được helper.");
+                return;
+            }
 
             System.Threading.Thread.Sleep(300); // cho helper spawn xong
             Application.Quit();
