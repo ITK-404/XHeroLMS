@@ -1,4 +1,8 @@
+using MacacaGames;
+using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.Windows;
 
 public static class InputBlocker
 {
@@ -20,4 +24,32 @@ public static class InputBlocker
     {
         return _blocked;
     }
+}
+public class InputManager : Singleton<InputManager>
+{
+    public InputHandler InputHandler;
+
+    public InputManager()
+    {
+        InputHandler = new InputHandler();
+    }
+ 
+}
+public class BaseInput : MonoBehaviour
+{
+    public InputHandler InputHandler;
+    public bool IsClicked = false;
+    public Vector2 MoveVector;
+
+    private void Awake()
+    {
+        InputHandler = InputManager.Instance.InputHandler;
+        InputHandler.Enable();
+        InputHandler.Player.Enable();
+    }
+}
+
+public class MobileInput : MonoBehaviour
+{
+    
 }
