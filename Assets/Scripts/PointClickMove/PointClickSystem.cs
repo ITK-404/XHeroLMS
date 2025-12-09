@@ -42,11 +42,12 @@ public class PointClickSystem : MonoBehaviour
     [Header("Move VFX")]
     [SerializeField] private GameObject moveVfxPrefab;   // drag prefab vào đây
     private GameObject moveVfxInstance;
-
+    private BaseInput baseInput;
     private void Awake()
     {
         rotateLeftRightCamera = GetComponent<RotateLeftRightCamera>();
         playerCamera = GetComponent<PlayerCamera>();
+        baseInput = GetComponent<BaseInput>();
     }
 
     void OnEnable()
@@ -92,8 +93,12 @@ public class PointClickSystem : MonoBehaviour
             verticalVelocity += gravity * gravityMultiplier * Time.deltaTime;
         }
 
-        float h = Input.GetAxisRaw("Horizontal") + rotateLeftRightCamera.vertical; // A/D
-        float v = Input.GetAxisRaw("Vertical"); // W/S
+        float h = 0; // A/D
+        float v = 0; // W/S
+        //h = Input.GetAxisRaw("Horizontal") + rotateLeftRightCamera.vertical; // A/D
+        //v = Input.GetAxisRaw("Vertical"); // W/S
+        h = baseInput != null ? baseInput.MoveVector.x : 0;
+        v = baseInput != null ? baseInput.MoveVector.y : 0;
 
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
@@ -222,8 +227,10 @@ public class PointClickSystem : MonoBehaviour
             Debug.LogError("Player camera is null");
             return;
         }
+        bool isPlayerClick = false;
+        isPlayerClick = baseInput != null ? baseInput.IsClicked : false;
 
-        if (Input.GetMouseButtonDown(0))
+        if (isPlayerClick)
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
