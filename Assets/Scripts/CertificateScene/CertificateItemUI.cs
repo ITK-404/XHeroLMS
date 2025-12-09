@@ -18,6 +18,8 @@ public class CertificateItemUI : MonoBehaviour
     [Header("Đế + Khung 3D")]
     public GameObject baseObject;   // đế
     public GameObject frameObject;  // khung
+     public GameObject tempObject_1;  // khung
+      public GameObject tempObject_2;  // khung
 
     // Texture đã tải về để preview dùng
     [NonSerialized] public Texture2D loadedTexture;
@@ -61,6 +63,8 @@ public class CertificateItemUI : MonoBehaviour
     {
         if (baseObject != null)   baseObject.SetActive(visible);
         if (frameObject != null)  frameObject.SetActive(visible);
+        if(tempObject_1 != null) tempObject_1.SetActive(visible);
+         if(tempObject_2 != null) tempObject_2.SetActive(visible);
     }
 
     private IEnumerator LoadImageIntoQuad(string imageUrl)
