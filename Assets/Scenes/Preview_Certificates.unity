@@ -400,6 +400,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 59.873, y: 0, z: 0}
+--- !u!114 &560896924 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3132618283634372093, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+  m_PrefabInstance: {fileID: 4294245593945574732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914766869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!4 &594191598 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1951814485915899225, guid: 6232a29a0e5e312469c6e4a0494dc538, type: 3}
@@ -410,6 +421,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 7461517609235872628, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
   m_PrefabInstance: {fileID: 4294245593945574732}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &914766870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914766869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 806b20a52169960419885fb16b44d028, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LoadTest
+  nameScene: New Scene
+  button: {fileID: 560896924}
 --- !u!1 &1004457871
 GameObject:
   m_ObjectHideFlags: 0
@@ -1209,6 +1234,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3738334815125792108, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      propertyPath: closeButton
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6299477801536468551, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
       propertyPath: m_Camera
       value: 
@@ -1304,7 +1333,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7461517609235872628, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 914766870}
   m_SourcePrefab: {fileID: 100100000, guid: 623f90d0871cd1c4ab0646a34421c8a3, type: 3}
 --- !u!114 &4294245593945574733 stripped
 MonoBehaviour:
