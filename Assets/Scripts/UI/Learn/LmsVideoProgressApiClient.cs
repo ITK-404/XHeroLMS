@@ -1,82 +1,49 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class LmsVideoProgressApiClient : MonoBehaviour
 {
-    [Header("Scene/Refs")]
-    private CourseListView courseListView;           // để lấy courseId và list LessonUI
-
     [Header("Progress API")]
-    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
     private string baseUrl;
-    public bool useTokenFromStore = true;           // lấy TokenStore.AccessToken nếu không override
-    public string overrideAccessToken = "";         // KHÔNG cần kèm "Bearer "
+    [SerializeField] private string _courseId;
 
-
-    [Header("Auto resolve IDs (fallback)")]
-    public bool autoCourseIdFromPrefs = true;
-    public string courseIdPrefsKey = "COURSE_CURRENT_ID";
-
-    [Header("Debug")]
     public bool verboseLog = true;
-
-    // ===== runtime =====
 
     private void Awake()
     {
-        baseUrl = LmsStore.Instance.baseUrl;
+        baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
     }
 
-    [SerializeField] private string _courseId;
-    // ================= Networking =================
-    string GetTokenBare()
+    //======== TOKEN =========
+    private string GetTokenBare()
     {
-        if (!string.IsNullOrEmpty(overrideAccessToken))
-            return NormalizeBearer(overrideAccessToken);
-
-        if (useTokenFromStore)
-        {
-            try
-            {
-                var t = Type.GetType("TokenStore");
-                var prop = t?.GetProperty("AccessToken");
-                var raw = prop?.GetValue(null, null) as string;
-                return NormalizeBearer(raw);
-            }
-            catch { }
-        }
-        return null;
-    }
-
-    string NormalizeBearer(string raw)
-    {
+        string raw = TokenStore.AccessToken;
         if (string.IsNullOrEmpty(raw)) return null;
-        var t = raw.Trim();
-        if (t.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            t = t.Substring(7).Trim();
-        return t;
+
+        raw = raw.Trim();
+        if (raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            raw = raw.Substring(7).Trim();
+
+        return raw;
     }
 
-    public void SendOnceBlocking(LessonUI target, bool safeBlock = true)
+    //======== PUBLIC API =========
+    public void SendProgress(LessonUI target)
     {
-        if (target == null)
-        {
-            return;
-        }
-        int progress = (int)target.progressTime;
-        var req = BuildRequest(progress, target);
-        if (req == null) return;
+        if (target == null) return;
+        StartCoroutine(SendProgressCoroutine(target));
+    }
 
-        var op = req.SendWebRequest();
-        float start = Time.realtimeSinceStartup;
-        if (safeBlock)
-        {
-            while (!op.isDone && Time.realtimeSinceStartup - start < 1.5f) { }
-        }
+    public IEnumerator SendProgressCoroutine(LessonUI target)
+    {
+        int progress = Mathf.Max(0, (int)target.progressTime);
+        UnityWebRequest req = BuildRequest(progress, target);
+        if (req == null) yield break;
+
+        yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
         bool error = req.result == UnityWebRequest.Result.ConnectionError ||
@@ -84,45 +51,78 @@ public class LmsVideoProgressApiClient : MonoBehaviour
 #else
         bool error = req.isNetworkError || req.isHttpError;
 #endif
-        if (!error && req.responseCode >= 200 && req.responseCode < 300)
+        if (verboseLog)
         {
-            if (verboseLog) Debug.Log($"[LPM] (blocking) PUT OK lesson={target.lessonID} progress={progress}s");
+            Debug.Log($"[LPM] Response ({req.responseCode}) => {req.downloadHandler.text}");
         }
+
+        if (error || req.responseCode < 200 || req.responseCode >= 300)
+        {
+            Debug.LogWarning($"[LPM] PUT FAILED lesson={target.lessonID} progress={progress}s");
+        }
+        else
+        {
+            if (verboseLog)
+                Debug.Log($"[LPM] PUT OK lesson={target.lessonID} progress={progress}s");
+        }
+
         req.Dispose();
     }
 
+    //======== BUILD REQUEST =========
     private UnityWebRequest BuildRequest(int progress, LessonUI target)
     {
-        string tokenBare = GetTokenBare();
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            Debug.LogError("[LPM] baseUrl NULL");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(_courseId))
+        {
+            Debug.LogError("[LPM] CourseId NULL");
+            return null;
+        }
+
+        var tokenBare = GetTokenBare();
         if (string.IsNullOrEmpty(tokenBare))
         {
-            Debug.LogWarning("[LPM] No token => skip PUT");
+            Debug.LogWarning("[LPM] No Token => Skip");
             return null;
         }
 
         string url = $"{baseUrl}/lms/result-lesson/{_courseId}";
+
         var dto = new ProgressDto
         {
             lesson = target.lessonID,
             lessonType = string.IsNullOrEmpty(target.type) ? "video" : target.type,
-            progressTime = Mathf.Max(0, progress)
+            progressTime = progress
         };
+
         string json = JsonUtility.ToJson(dto);
         byte[] body = Encoding.UTF8.GetBytes(json);
 
         var req = new UnityWebRequest(url, "PUT");
         req.uploadHandler = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
+
         req.SetRequestHeader("Authorization", "Bearer " + tokenBare);
         req.SetRequestHeader("Content-Type", "application/json");
         req.SetRequestHeader("Accept", "application/json");
 
-        if (verboseLog) Debug.Log($"[LPM] PUT {url} body={json}");
+        // ADD x-data
+        string xData = LmsSecurityHeader.BuildXDataHeader();
+        req.SetRequestHeader("x-data", xData);
+
+        if (verboseLog)
+            Debug.Log($"[LPM] PUT {url}\nBody={json}");
+
         return req;
     }
 
     [Serializable]
-    class ProgressDto
+    public class ProgressDto
     {
         public string lesson;
         public string lessonType;
@@ -131,12 +131,6 @@ public class LmsVideoProgressApiClient : MonoBehaviour
 
     public void SetCourseID(string courseID)
     {
-        if (string.IsNullOrEmpty(courseID))
-        {
-            Debug.Log("Course ID bị rỗng, vui lòng kiểm tra lại");
-            return;
-        }
         _courseId = courseID;
     }
 }
-
