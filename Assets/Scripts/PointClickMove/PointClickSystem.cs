@@ -16,8 +16,7 @@ public class PointClickSystem : MonoBehaviour
     public LayerMask checkPointLayerMask;
     private CharacterController characterController;
     public float moveSpeed = 5;
-    public float rotationSpeed = 10f;
-
+    public float rotationSpeed = 70;
     // gravity
     public float gravity = -9.81f;
     public float gravityMultiplier = 1f;
@@ -43,6 +42,11 @@ public class PointClickSystem : MonoBehaviour
     [SerializeField] private GameObject moveVfxPrefab;   // drag prefab vào đây
     private GameObject moveVfxInstance;
     private BaseInput baseInput;
+    [Header("Mobile")]
+    public float rotationTouchSpeed = 1;
+    private float cameraPitch = 0f;
+    public float minPitch = -40f;
+    public float maxPitch = 60f;
     private void Awake()
     {
         rotateLeftRightCamera = GetComponent<RotateLeftRightCamera>();
@@ -131,7 +135,29 @@ public class PointClickSystem : MonoBehaviour
         }
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
-        if (Mathf.Abs(h) > 0.1f && ai.isStopped && ai.canMove == false)
+        var delta = TouchRotationView.deltaGlobal;
+        if (delta != Vector2.zero)
+        {
+            float horizontalRotation = delta.x * rotationTouchSpeed * Time.deltaTime;
+            transform.Rotate(0, horizontalRotation, 0);
+
+            if (playerCamera != null && playerCamera.playerCinemachineCamera != null)
+            {
+                //var camTransform = playerCamera.playerCinemachineCamera.transform;
+                //float verticalRotation = -delta.y * rotationTouchSpeed * Time.deltaTime;
+                //camTransform.Rotate(verticalRotation, 0, 0, Space.Self);
+                var camTransform = playerCamera.playerCinemachineCamera.transform;
+                // Cộng dồn pitch, clamp lại
+                cameraPitch -= delta.y * rotationTouchSpeed * Time.deltaTime;
+                cameraPitch = Mathf.Clamp(cameraPitch, minPitch, maxPitch);
+
+                // Giữ nguyên yaw, chỉ thay đổi pitch
+                Vector3 euler = camTransform.localEulerAngles;
+                euler.x = cameraPitch;
+                camTransform.localEulerAngles = euler;
+            }
+        }
+        else if (Mathf.Abs(h) > 0.1f && ai.isStopped && ai.canMove == false)
         {
             Debug.Log("Đang xoay");
             float rotationAmount = h * rotationSpeed * Time.deltaTime;
@@ -417,7 +443,7 @@ public class PointClickSystem : MonoBehaviour
                         var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
 
                         if (isTutorialChair)
-                        
+
                         {
                             Debug.Log($"haha");
                             return true;
