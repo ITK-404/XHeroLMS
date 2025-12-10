@@ -267,6 +267,11 @@ public class PointClickSystem : MonoBehaviour
             Vector3 mousePosition = Input.mousePosition;
             Ray ray = playerCamera.mainCamera.ScreenPointToRay(mousePosition);
 
+            if (TryHandleMoveStair(ray))
+            {
+                return;
+            }
+
             if (TryHandleMoveToHouse(ray))
             {
                 return;
@@ -339,6 +344,40 @@ public class PointClickSystem : MonoBehaviour
                 Debug.Log("Không bắn dính mặt đất rồi");
             }
         }
+    }
+
+    private bool TryHandleMoveStair(Ray ray)
+    {
+        if (Physics.Raycast(ray, out var stairHit, 1000f, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        {
+
+            Debug.Log("bắn dính cầu thang",stairHit.collider.gameObject);
+            if (stairHit.collider.CompareTag("CheckPoint"))
+            {
+                Debug.Log("Thử di chuyển tới cầu thang");
+                var stair = stairHit.collider.GetComponentInParent<StairZone>();
+                isClickMoving = false;
+                HideMoveVfx(); // VFX
+
+                Debug.Log("Đánh dính check point");
+                var position = stair.transform.position + stair.standPoint;
+                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+                Vector3 groundPos = (Vector3)node.position;
+
+                if (ai != null)
+                {
+                    ai.isStopped = false;
+                    ai.canMove = true;
+                    ai.destination = groundPos;
+                }
+
+                lastPickPosition = groundPos;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool TryHandleMoveToHouse(Ray ray)
