@@ -3,8 +3,7 @@ using UnityEngine;
 public class PCInput : BaseInput
 {
     public bool isMobile = false;
-    public float xInput, yInput;
-
+    public Vector2 delta;
     private void Update()
     {
         if (InputHandler == null) return;
@@ -20,9 +19,8 @@ public class PCInput : BaseInput
 
     private void MoveHandle()
     {
-        Vector2 MoveVector = InputHandler.Player.Move.ReadValue<Vector2>();
-        xInput = MoveVector.x;
-        yInput = MoveVector.y;
+        MoveVector = InputHandler.Player.Move.ReadValue<Vector2>();
+
 
         IsClicked = InputBlocker.IsBlocked() ? false : InputHandler.Player.Attack.WasPressedThisFrame();
     }

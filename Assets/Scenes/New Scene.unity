@@ -1756,6 +1756,7 @@ GameObject:
   - component: {fileID: 7838362}
   - component: {fileID: 7838364}
   - component: {fileID: 7838363}
+  - component: {fileID: 7838365}
   m_Layer: 5
   m_Name: Rotate Handle
   m_TagString: Untagged
@@ -1779,8 +1780,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 438.12024, y: 0}
+  m_SizeDelta: {x: -876.2405, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7838363
 MonoBehaviour:
@@ -1802,7 +1803,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: d17aa658b77c75049b4adc66f23a956a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1820,6 +1821,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7838361}
   m_CullTransparentMesh: 1
+--- !u!114 &7838365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7838361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71ec87ee643a013418b516b9a0985201, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TouchRotationView
+  isLooking: 0
+  touchID: 0
 --- !u!1 &8071901 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 466427676402627422, guid: 43b73e1953805574b901b4fa4f057c84, type: 3}
@@ -101009,7 +101024,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 873d8b6d79d777448b404828adb1d54b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d17aa658b77c75049b4adc66f23a956a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -222718,7 +222733,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 220, y: 220}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1000621299
 MonoBehaviour:
@@ -222733,14 +222748,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.62352943}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9b966c943bb001a4d82b8217bae8c645, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 93d02a2b14396f34bad00e70820d9805, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -222770,7 +222785,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9d677f1681015749b15c436eec6d880, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.OnScreen.OnScreenStick
-  m_MovementRange: 100
+  m_MovementRange: 150
   m_DynamicOriginRange: 100
   m_ControlPath: <AndroidJoystick>/stick
   m_Behaviour: 0
@@ -222807,7 +222822,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::JoystickUI
   background: {fileID: 413220298}
   handle: {fileID: 1000621299}
-  stick: {fileID: 1000621301}
 --- !u!1001 &1000666553
 PrefabInstance:
   m_ObjectHideFlags: 0
