@@ -4171,9 +4171,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1482920f9f5aea44a8ea5bf5f41f33da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MatchingElementHandler
-  linePrefab: {fileID: 7980976157222803758, guid: 86763bf237a28054aa810e1bd804b81b, type: 3}
+  leftRoot: {fileID: 0}
+  rightRoot: {fileID: 0}
+  itemPrefab: {fileID: 0}
   lineParent: {fileID: 1351362532909905101}
-  correctLineColor: {r: 0.02745098, g: 0.6392157, b: 0.19215687, a: 1}
+  uiCamera: {fileID: 0}
+  lineThickness: 3
+  lineSprite: {fileID: 0}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  selectedColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+  isReadOnlyReview: 0
 --- !u!1001 &3025096741367581211
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4745,6 +4752,14 @@ PrefabInstance:
       propertyPath: m_LocalScale.x
       value: 1.2
       objectReference: {fileID: 0}
+    - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -8.072998
+      objectReference: {fileID: 0}
+    - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -1.0810013
+      objectReference: {fileID: 0}
     - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -5042,6 +5057,14 @@ PrefabInstance:
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_LocalScale.z
       value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -8.072998
+      objectReference: {fileID: 0}
+    - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -1.0810013
       objectReference: {fileID: 0}
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_ConstrainProportionsScale
