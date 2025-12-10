@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.Video;
 
 [RequireComponent(typeof(VideoPlayer))]
@@ -187,17 +188,40 @@ public class VideoLoadingHandler : MonoBehaviour
             );
     }
 
-    private void OnError(VideoPlayer source, string message)
-    {
-        Debug.LogError($"[VideoLoadingHandler] Video error: {message}");
-        _waitingFirstFrame = false;
+private void OnError(VideoPlayer source, string message)
+{
+    Debug.LogError($"[VideoLoadingHandler] Video error: {message}, url={source.url}");
+    _waitingFirstFrame = false;
 
-        LoadingUI.ShowErrorPopup(
-            "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
-            "Lỗi Mạng",
-            onReturn: () => { CancelLoadingAndStop(); }
-        );
+    // Chỉ test trên device cho đỡ ồn log Editor
+#if UNITY_ANDROID && !UNITY_EDITOR
+    if (!string.IsNullOrEmpty(source.url))
+        StartCoroutine(TestVideoUrlRoutine(source.url));
+#endif
+
+    LoadingUI.ShowErrorPopup(
+        "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+        "Lỗi Mạng",
+        onReturn: () => { CancelLoadingAndStop(); }
+    );
+}
+
+private IEnumerator TestVideoUrlRoutine(string url)
+{
+    using (var req = UnityWebRequest.Head(url))
+    {
+        req.redirectLimit = 8;
+        req.timeout = 15;
+
+        yield return req.SendWebRequest();
+
+        Debug.Log("[TestVideoUrl]Result   = " + req.result);
+        Debug.Log("[TestVideoUrl]Error    = " + req.error);
+        Debug.Log("[TestVideoUrl]Code     = " + req.responseCode);
+        Debug.Log("[TestVideoUrl]Type     = " + req.GetResponseHeader("Content-Type"));
+        Debug.Log("[TestVideoUrl]Location = " + req.GetResponseHeader("Location"));
     }
+}
 
     private IEnumerator PrepareTimeout(float seconds, bool autoplay)
     {

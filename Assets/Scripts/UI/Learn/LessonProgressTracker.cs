@@ -4,35 +4,33 @@ using UnityEngine;
 public class LessonProgressTracker : MonoBehaviour
 {
     public static LessonProgressTracker Instance;
-    public double highestProgressTime;
-    public LessonUI lessonUI;
 
+    public LessonUI lessonUI;
     public VideoPlayerControllerPro videoPlayerControllerPro;
     public LmsVideoProgressApiClient lmsVideoProgressApiClient;
-    private WaitForSecondsRealtime yieldWaitTime;
     public SceneLessonUI sceneLessonUI;
-    private Coroutine postCoroutine;
 
+    private Coroutine postCoroutine;
     private bool hasPostedCompletion;
+
+    private WaitForSecondsRealtime wait15s;
 
     private void Awake()
     {
         Instance = this;
-        videoPlayerControllerPro.GetSkipVideoDuration += GetSkipVideoDuration;
-        yieldWaitTime = new WaitForSecondsRealtime(15);
 
+        wait15s = new WaitForSecondsRealtime(15);
+
+        videoPlayerControllerPro.GetSkipVideoDuration += GetSkipVideoDuration;
         sceneLessonUI.OnLoadCourseDone += OnLoadCourseDone;
     }
 
     private void OnLoadCourseDone(LmsCoursePrivate obj)
     {
-        if (obj == null)
+        if (obj != null)
         {
-            Debug.Log("Obj is null");
-            return;
+            lmsVideoProgressApiClient.SetCourseID(obj._id);
         }
-
-        lmsVideoProgressApiClient.SetCourseID(obj._id);
     }
 
     private void OnDestroy()
@@ -43,35 +41,12 @@ public class LessonProgressTracker : MonoBehaviour
 
     private bool GetSkipVideoDuration(double second)
     {
-        if (second <= 1)
-        {
-            return true;
-        }
-
-        if (lessonUI == null)
-        {
-            return false;
-        }
-
-        if (second > lessonUI.progressTime)
-        {
-            return false;
-        }
+        if (second <= 1) return true;
+        if (lessonUI == null) return false;
+        if (second > lessonUI.progressTime) return false;
 
         return true;
     }
-
-    private void OnDisable()
-    {
-        if (postCoroutine != null)
-        {
-            StopCoroutine(postCoroutine);
-            postCoroutine = null;
-        }
-    }
-
-    private float lastPostDataTime;
-    private float postDataInterval = 15;
 
     private void Update()
     {
@@ -80,25 +55,28 @@ public class LessonProgressTracker : MonoBehaviour
             float videoProgress = (float)videoPlayerControllerPro.videoPlayer.time;
             lessonUI.TryUpdateProgress(videoProgress);
 
-            // Post once when progress reaches or exceeds duration
-            if (!hasPostedCompletion && lessonUI.duration > 0f && lessonUI.progressTime >= lessonUI.duration)
+            // khi xem xong
+            if (!hasPostedCompletion &&
+                lessonUI.duration > 0 &&
+                lessonUI.progressTime >= lessonUI.duration)
             {
                 hasPostedCompletion = true;
-                lmsVideoProgressApiClient?.SendOnceBlocking(lessonUI, false);
+
+                lmsVideoProgressApiClient.SendProgress(lessonUI);
                 ChapterUIManager.Instance?.UpdateLessonProgress();
             }
         }
     }
 
-    private IEnumerator PostDataEach15Second()
+    private IEnumerator PostDataEvery15s()
     {
         while (true)
         {
-            yield return yieldWaitTime;
+            yield return wait15s;
 
             if (lessonUI != null)
             {
-                lmsVideoProgressApiClient.SendOnceBlocking(lessonUI);
+                lmsVideoProgressApiClient.SendProgress(lessonUI);
             }
         }
     }
@@ -107,22 +85,30 @@ public class LessonProgressTracker : MonoBehaviour
     {
         if (newLessonUI == null) return;
 
-        if (lessonUI == newLessonUI) return;
-
+        // stop cũ
         if (postCoroutine != null)
         {
             StopCoroutine(postCoroutine);
             postCoroutine = null;
         }
 
-        // update old progress
-        lmsVideoProgressApiClient?.SendOnceBlocking(lessonUI, false);
+        // gửi progress bài trước
+        if (lessonUI != null)
+            lmsVideoProgressApiClient.SendProgress(lessonUI);
 
+        // gán bài mới
         lessonUI = newLessonUI;
-
-        // reset one-time completion flag for the new lesson
         hasPostedCompletion = false;
 
-        postCoroutine = StartCoroutine(PostDataEach15Second());
+        // bắt đầu timer mới
+        postCoroutine = StartCoroutine(PostDataEvery15s());
+    }
+
+    private void OnDisable()
+    {
+        if (postCoroutine != null)
+        {
+            StopCoroutine(postCoroutine);
+        }
     }
 }

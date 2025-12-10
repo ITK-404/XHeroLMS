@@ -84,7 +84,7 @@ public class BookHandler : MonoBehaviour
         else
         {
                 LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                    "Cảnh báo", () =>
+                    "Thông báo", () =>
                     {
                         // cho phép chọn sách tiếp
                         BookHandler.CanSelectBook = true;
