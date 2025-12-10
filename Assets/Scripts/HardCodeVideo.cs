@@ -41,21 +41,32 @@ public class HardCodeVideo : MonoBehaviour
     private void Timeline2_stopped(PlayableDirector obj)
     {
         // chạy đoạn từ cái hồ nhỏ đến suối trước cổng xong
-        camera_di_doc_bo_song.AutomaticDolly.Enabled = true;
-
+        StartCoroutine(StartDollyWithDelay2());
         cameraDiDocBoSong.gameObject.SetActive(true);
         cameraBayToiTruyenTHua.gameObject.SetActive(false);
     }
-   
+
     private void Timeline1_stopped(PlayableDirector obj)
     {
         // chạy đoạn zoom toàn cảnh xong
         //camera_di_bo.CameraPosition = pausedPosition; // Khôi phục vị trí
-        camera_di_bo_2.AutomaticDolly.Enabled = true;
+        StartCoroutine(StartDollyWithDelay1());
         camera_di_bo_2.gameObject.SetActive(true);
 
         cameraBayLen.gameObject.SetActive(false);
         camera_di_bo.AutomaticDolly.Enabled = true;
+    }
+
+    private IEnumerator StartDollyWithDelay1()
+    {
+        yield return new WaitForSeconds(2f);
+        camera_di_bo_2.AutomaticDolly.Enabled = true;
+    }
+
+    private IEnumerator StartDollyWithDelay2()
+    {
+        yield return new WaitForSeconds(2f);
+        camera_di_doc_bo_song.AutomaticDolly.Enabled = true;
     }
     private float pausedPosition;
 
