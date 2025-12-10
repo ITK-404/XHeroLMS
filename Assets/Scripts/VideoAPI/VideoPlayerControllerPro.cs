@@ -55,13 +55,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     [Header("Fullscreen (UI RawImage)")]
     public Canvas fullscreenCanvas;          // có thể để trống, script sẽ tự tạo
-    public RawImage fullscreenRawImage;   
-    // có thể để trống, script sẽ tự tạo
+    public RawImage fullscreenRawImage;      // có thể để trống, script sẽ tự tạo
     public bool useAspectFitter = true;
 
     [Header("RenderTexture (optional fixed size)")]
-    public bool useFixedRT = true;                // BẬT: luôn dùng RT cố định
-    public int  fixedRTWidth  = 3840;             // 4K
+    public bool useFixedRT = true;           // BẬT: luôn dùng RT cố định
+    public int  fixedRTWidth  = 3840;        // 4K
     public int  fixedRTHeight = 2160;
     public RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
     public int  rtDepth = 0;
@@ -78,10 +77,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     [Header("Watch Video Container")]
     public VideoContainer defaultContainer;
-
     public VideoContainer secondContainer;
-
     public VideoContainer fullScreenContainer;
+
     // ==== INTERNAL ====
     int _currentQualityIndex = -1;
     bool _isSwitchingQuality;
@@ -99,7 +97,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     public Predicate<double> GetSkipVideoDuration;
 
-  
     // ---- Lifecycle ----
     void Reset()
     {
@@ -143,10 +140,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         ApplyVolume();
         ApplyPlaybackSpeed();
-        
-        defaultContainer.Hide();
-        secondContainer.Hide();
-        fullScreenContainer.Hide();
+
+        if (defaultContainer)    defaultContainer.Hide();
+        if (secondContainer)     secondContainer.Hide();
+        if (fullScreenContainer) fullScreenContainer.Hide();
     }
 
     void Start()
@@ -199,7 +196,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
             if (panelMenu.activeSelf && (Time.time - _lastInteractTime) > autoHideSeconds)
                 panelMenu.SetActive(false);
 
-        // Hotkeys
+        // Hotkeys (PC)
         if (Input.GetKeyDown(KeyCode.Space))      { RegisterInteraction(); TogglePlayPause(); }
         if (Input.GetKeyDown(KeyCode.LeftArrow))  { RegisterInteraction(); SeekRelative(-seekStepSeconds); }
         if (Input.GetKeyDown(KeyCode.RightArrow)) { RegisterInteraction(); SeekRelative(+seekStepSeconds); }
@@ -318,14 +315,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
         { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
     }
 
-    public void SeekRelativeLeft()
-    {
-        SeekRelative(-seekStepSeconds);
-    }
-    public void SeekRelativeRight()
-    {
-        SeekRelative(+seekStepSeconds);
-    }
+    public void SeekRelativeLeft()  => SeekRelative(-seekStepSeconds);
+    public void SeekRelativeRight() => SeekRelative(+seekStepSeconds);
 
     public void SeekRelative(double deltaSeconds)
     {
@@ -340,7 +331,11 @@ public class VideoPlayerControllerPro : MonoBehaviour
         FindAnyObjectByType<VolumeIconController>()?.SetVolume(volume, updateSlider:true);
     }
 
-    public void ToggleMute() { _muted = !_muted; ApplyVolume(); }
+    public void ToggleMute()
+    {
+        _muted = !_muted;
+        ApplyVolume();
+    }
 
     public void ChangeSpeed(float delta)
     {
@@ -363,11 +358,11 @@ public class VideoPlayerControllerPro : MonoBehaviour
     [ContextMenu("EnterFullscreenUI")]
     public void EnterFullscreenUI()
     {
-        // if (videoQuad) videoQuad.gameObject.SetActive(false);
         if (videoQuad) fullscreenCanvas.gameObject.SetActive(true);
         if (fullscreenCanvas) fullscreenCanvas.enabled = true;
 
-        if (useFixedRT) EnsureFixedRT(); else RebindIfNeeded(force:true);
+        if (useFixedRT) EnsureFixedRT();
+        else RebindIfNeeded(force:true);
 
         _isFullscreen = true;
         OnFullscreenChanged?.Invoke(true);
@@ -404,8 +399,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         _isFullscreen = false;
         OnFullscreenChanged?.Invoke(false);
-        
-        // logic
+
         defaultContainer.Hide();
         secondContainer.Hide();
         fullScreenContainer.Hide();
@@ -414,7 +408,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public void DefEx()
     {
         if (videoQuad) fullscreenCanvas.gameObject.SetActive(false);
-        
         if (videoQuad) videoQuad.gameObject.SetActive(true);
         if (fullscreenCanvas) fullscreenCanvas.enabled = false;
     }
@@ -511,13 +504,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void SetTimeSafely(double t)
     {
         if (!videoPlayer) return;
-        if (GetSkipVideoDuration(t) == false)
+        if (GetSkipVideoDuration != null && GetSkipVideoDuration(t) == false)
         {
-            Debug.Log("Cảnh báo, không thể skip video tới thời gian: "+t);
+            Debug.Log("Cảnh báo, không thể skip video tới thời gian: " + t);
             return;
         }
-        
-        
+
         if (videoPlayer.frameRate > 0.01f && videoPlayer.frameCount > 0)
         {
             long frame = (long)Mathf.Clamp((float)(t * videoPlayer.frameRate), 0, (float)(videoPlayer.frameCount - 1));
@@ -539,7 +531,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
         }
         else
         {
-            // tạo RT theo kích thước video nếu chưa có
             if (vp.targetTexture == null)
             {
                 int w = Mathf.Clamp((int)(vp.width  > 0 ? vp.width  : 1920), 16, 8192);
@@ -554,6 +545,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
                         useDynamicScale = false
                     };
                     _rt.Create();
+                    ClearRT(Color.black);
                 }
                 vp.targetTexture = _rt;
             }
@@ -573,14 +565,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         Debug.LogError("[VideoPlayer] Error: " + msg);
 
-        LoadingUI.Hide();
+        // clear RT về đen để không bị rác lốm đốm
+        ClearRT(Color.black);
 
-        // Show popup cảnh báo - thường là lỗi API nên thông báo User là lỗi mạng
-        // LoadingUI.ShowErrorPopup(
-        //     "Chúng tôi đang cố kết nối lại.\n" +
-        //     "Bạn vui lòng đợi trong giây lát hoặc thử lại.",
-        //     "Mạng yếu"
-        // );
+        LoadingUI.Hide();
     }
 
     // ---- Utils ----
@@ -674,7 +662,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
         s.SetValueWithoutNotify(t);
         OnDurationSliderChangedContinuous(t);
     }
-    
+
+    // ---- UI / RT helper ----
     void EnsureFullscreenUI()
     {
         if (!fullscreenCanvas)
@@ -722,6 +711,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
                 useDynamicScale = false
             };
             _rt.Create();
+            ClearRT(Color.black); // clear ngay khi tạo
         }
 
         videoPlayer.targetTexture = _rt;
@@ -729,13 +719,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (fullscreenRawImage && fullscreenRawImage.texture != _rt)
             fullscreenRawImage.texture = _rt;
 
-        defaultContainer.videoContainer.texture = _rt;
-        secondContainer.videoContainer.texture = _rt;
+        if (defaultContainer) defaultContainer.videoContainer.texture = _rt;
+        if (secondContainer)  secondContainer.videoContainer.texture  = _rt;
         
         if (_quadRenderer && _quadRenderer.material && _quadRenderer.material.mainTexture != _rt)
             _quadRenderer.material.mainTexture = _rt;
 
-        // cập nhật AR nếu có
         if (useAspectFitter && fullscreenRawImage)
         {
             var fitter = fullscreenRawImage.GetComponent<AspectRatioFitter>();
@@ -747,7 +736,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (!videoPlayer) return;
 
-        // Lấy RT hiện tại từ VP (hoặc tạo tạm nếu chưa có)
         if (videoPlayer.targetTexture == null || force)
         {
             if (videoPlayer.targetTexture == null)
@@ -760,6 +748,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
                     if (_rt) { _rt.Release(); Destroy(_rt); }
                     _rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32);
                     _rt.Create();
+                    ClearRT(Color.black);
                 }
                 videoPlayer.targetTexture = _rt;
             }
@@ -769,20 +758,28 @@ public class VideoPlayerControllerPro : MonoBehaviour
             }
         }
 
-        // Bind lên RawImage & Quad nếu đang lệch
         if (fullscreenRawImage && fullscreenRawImage.texture != videoPlayer.targetTexture && videoPlayer.targetTexture != null)
             fullscreenRawImage.texture = videoPlayer.targetTexture;
 
         if (_quadRenderer && _quadRenderer.material && _quadRenderer.material.mainTexture != videoPlayer.targetTexture && videoPlayer.targetTexture != null)
             _quadRenderer.material.mainTexture = videoPlayer.targetTexture;
 
-        // Cập nhật AspectRatio
         if (useAspectFitter && fullscreenRawImage)
         {
             var fitter = fullscreenRawImage.GetComponent<AspectRatioFitter>();
             if (fitter && videoPlayer.width > 0 && videoPlayer.height > 0)
                 fitter.aspectRatio = Mathf.Max(0.01f, (float)videoPlayer.width / Mathf.Max(1, (float)videoPlayer.height));
         }
+    }
+
+    // Clear RT về 1 màu (dùng khi mới tạo hoặc khi lỗi video)
+    void ClearRT(Color c)
+    {
+        if (_rt == null) return;
+        var prev = RenderTexture.active;
+        RenderTexture.active = _rt;
+        GL.Clear(true, true, c);
+        RenderTexture.active = prev;
     }
 }
 
