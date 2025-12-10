@@ -13,6 +13,12 @@ public class TouchRotationView : MonoBehaviour
         rectTransform = GetComponent<RectTransform>();
 
     }
+
+    private void OnDisable()
+    {
+        deltaGlobal = Vector2.zero;
+    }
+
     private void Update()
     {
         var activeTouches = EnhancedTouch.activeTouches;

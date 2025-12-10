@@ -25,6 +25,7 @@ public class PlayerChairManager : MonoBehaviour
 
     VideoPlayerControllerPro videoPlayerControllerPro;
     [SerializeField] PlayerStandUI playerStandUI;
+    [SerializeField] InputCanvas inputCanvas;
     [HideInInspector] public ChairCheckPoint currentCheckPoint;
 
     private TutorialBase TutorialBase;
@@ -84,6 +85,7 @@ public class PlayerChairManager : MonoBehaviour
             Debug.Log("bật lại input");
             InputBlocker.SetBlocked(false);
             playerStandUI.returnBtn.gameObject.SetActive(true);
+            inputCanvas.Show();
         }));
     }
 
@@ -133,6 +135,7 @@ public class PlayerChairManager : MonoBehaviour
             QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
 
             QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+            inputCanvas.Hide();
 
             // ẩn tất cả icon của ghế
             foreach (var item in allCheckPoints)
