@@ -80,11 +80,11 @@ public class BuyReviewCourseManager : MonoBehaviour
         else
         {
             LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Cảnh báo", () =>
-                {
-                    // cho phép chọn sách tiếp
-                    BookHandler.CanSelectBook = true;
-                });
+                    "Thông báo", () =>
+                    {
+                        // cho phép chọn sách tiếp
+                        BookHandler.CanSelectBook = true;
+                    });
             return;
         }
     }
@@ -142,11 +142,11 @@ public class BuyReviewCourseManager : MonoBehaviour
         {
             BookHandler.CanSelectBook = false;
             LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Cảnh báo", () =>
-                {
-                    // cho phép chọn sách tiếp
-                    BookHandler.CanSelectBook = true;
-                });
+                    "Thông báo", () =>
+                    {
+                        // cho phép chọn sách tiếp
+                        BookHandler.CanSelectBook = true;
+                    });
             Debug.Log("Không có data");
             yield break;
         }
