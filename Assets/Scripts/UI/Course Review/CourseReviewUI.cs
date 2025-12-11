@@ -121,13 +121,20 @@ public class CourseReviewUI : MonoBehaviour
             lessonUI.duration.text = duration;
         }
     }
-
+    [SerializeField] private bool isMobilePlatform = false;
     private string FormatFromSeconds(int totalSeconds)
     {
-        totalSeconds = Math.Max(0, totalSeconds);
-        int minutes = totalSeconds / 60;
-        int seconds = totalSeconds % 60;
-        return $"{minutes:D2} phút {seconds:D2} giây";
+        if (isMobilePlatform)
+        {
+            totalSeconds = Math.Max(0, totalSeconds);
+            int minutes = totalSeconds / 60;
+            int seconds = totalSeconds % 60;
+            return $"{minutes:D2} phút {seconds:D2} giây";
+        }
+        else
+        {
+            return $"{totalSeconds / 60:D2}:{totalSeconds % 60:D2}";
+        }
     }
 
 
