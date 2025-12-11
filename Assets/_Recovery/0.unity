@@ -390029,16 +390029,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
-  githubOwner: ITK-404
-  githubRepo: XHeroLMS
-  tagPrefix: v
-  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
-  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
-  localVersionFallback: 1.0.0
-  exeName: XHeroLMS.exe
-  patchFolder: Updates
-  maxRetries: 2
-  helperDebug: 1
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
@@ -419164,10 +419154,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1864574192384713718, guid: de865cb949872194985d7246ad512811, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 2042333984701007199, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: buttonOpen
       value: 
@@ -419243,35 +419229,8 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 1864574192384713718, guid: de865cb949872194985d7246ad512811, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 7948191528127235715}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: de865cb949872194985d7246ad512811, type: 3}
---- !u!1 &7948191528127235713 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1864574192384713718, guid: de865cb949872194985d7246ad512811, type: 3}
-  m_PrefabInstance: {fileID: 7948191528127235712}
-  m_PrefabAsset: {fileID: 0}
---- !u!224 &7948191528127235714 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 7805814833667151851, guid: de865cb949872194985d7246ad512811, type: 3}
-  m_PrefabInstance: {fileID: 7948191528127235712}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &7948191528127235715
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948191528127235713}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 232df2f94c5a87f419d67ec7ce2e4675, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AutoMoveWithKeyboard
-  targetPanel: {fileID: 7948191528127235714}
-  extraPadding: 50
 --- !u!1001 &8201207987643709038
 PrefabInstance:
   m_ObjectHideFlags: 0
