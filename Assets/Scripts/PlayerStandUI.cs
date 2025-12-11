@@ -9,6 +9,9 @@ public class PlayerStandUI : MonoBehaviour
     public RectTransform navigationBarUI;
     public LearnUI UILearnCanvas;
     public PlayerChairManager playerChairManager;
+    [Header("Handle Position")]
+    [SerializeField] private RectTransform activePosition;
+    [SerializeField] private RectTransform deActivePosition;
     private void Awake()
     {
         playerChairManager = FindAnyObjectByType<PlayerChairManager>();
@@ -58,11 +61,17 @@ public class PlayerStandUI : MonoBehaviour
     public void ShowWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(true);
+
+        sitdownButton.GetComponent<RectTransform>().anchoredPosition = activePosition.anchoredPosition;
+        standupButton.GetComponent<RectTransform>().anchoredPosition = activePosition.anchoredPosition;
     }
 
     public void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
+
+        sitdownButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
+        standupButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
     }
 
 
