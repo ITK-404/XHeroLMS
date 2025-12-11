@@ -46,10 +46,11 @@ public class ExamTitleManager : MonoBehaviour
         // ====== ALWAYS USE examName as the header title ======
         if (textExamTitle)
         {
+            Debug.Log("9999999[ExamTitleManager] Using examName as the header title.");
             string headerTitle =
                 !string.IsNullOrEmpty(_examUIController.examTitle)
-                    ? _examUIController.examTitle
-                    : _examUIController.examName;
+                    ? _examUIController.examName
+                    : _examUIController.examTitle;
 
             textExamTitle.text = headerTitle;
         }
