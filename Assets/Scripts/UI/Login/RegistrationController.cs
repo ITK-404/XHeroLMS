@@ -32,7 +32,6 @@ public class RegistrationController : MonoBehaviour
 
     [Header("Buttons")]
     public Button btnRegister;
-    public Button btnBack;
 
     [Header("Panels")]
     public GameObject currentPanel;
@@ -86,7 +85,6 @@ public class RegistrationController : MonoBehaviour
         }
 
         if (btnRegister) btnRegister.onClick.AddListener(OnRegisterClick);
-        if (btnBack)     btnBack.onClick.AddListener(BackAndReset);
 
         if (phoneField)    phoneField.onValueChanged.AddListener(_ => ValidateAll());
         if (passwordField) passwordField.onValueChanged.AddListener(_ => ValidateAll());
@@ -98,7 +96,6 @@ public class RegistrationController : MonoBehaviour
     {
         if (btnTogglePassword) btnTogglePassword.onClick.RemoveListener(TogglePassword);
         if (btnRegister)       btnRegister.onClick.RemoveListener(OnRegisterClick);
-        if (btnBack)           btnBack.onClick.RemoveListener(BackAndReset);
         if (confirmToggle)     confirmToggle.onValueChanged.RemoveAllListeners();
     }
 
@@ -256,17 +253,6 @@ public class RegistrationController : MonoBehaviour
         }
 
         btnRegister.interactable = true;
-    }
-
-    // =========================
-    // BACK & RESET
-    // =========================
-
-    private void BackAndReset()
-    {
-        ResetForm();
-        if (currentPanel) currentPanel.SetActive(false);
-        if (backPanel)    backPanel.SetActive(true);
     }
 
     private void ResetForm()
