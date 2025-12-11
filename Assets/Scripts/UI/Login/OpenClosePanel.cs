@@ -7,15 +7,11 @@ public class OpenClosePanel : MonoBehaviour
 {
     [Header("UI References")]
     public Button buttonOpen;
-    public Button buttonLogout;
 
-    public Button buttonTryLogout;
-    public Button buttonCloseWarning;
-    
     public Button buttonClose;
     public Image  targetImage;          // nền mờ (optional)
     public GameObject targetPanel;      // panel đăng nhập
-
+    public GameObject warningPopup;    // popup cảnh báo đăng xuất
     public GameObject[] showWhenLoggedIn;
     
     public GameObject[] showWhenLoggedOut;
@@ -24,7 +20,6 @@ public class OpenClosePanel : MonoBehaviour
     public bool reloadSceneOnLogout = true;
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
-    public Transform warningPopup;
     CursorGameManager cursorMgr;
 
     void OnEnable()
@@ -42,14 +37,24 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
-        buttonLogout.onClick.AddListener(DoLogout);
+        TryLogoutButton.OnTryLogout += OnShowWarning;
+        LogoutPopupUI.OnLogout += DoLogout;
+        LogoutPopupUI.OnReturn += HideWarning;
 
-        buttonTryLogout.onClick.AddListener(OnShowWarning);
-        buttonCloseWarning.onClick.AddListener(HideWarning);
-        
         UpdateVisualState();
     }
+    void OnDisable()
+    {
+        LoginController.OnLoginComplete -= HandleLoginComplete;
 
+        if (buttonOpen != null) buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
+        if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
+
+        TryLogoutButton.OnTryLogout -= OnShowWarning;
+        LogoutPopupUI.OnLogout -= DoLogout;
+        LogoutPopupUI.OnReturn -= HideWarning;
+
+    }
     private void OnShowWarning()
     {
         warningPopup.gameObject.SetActive(true);
@@ -60,19 +65,7 @@ public class OpenClosePanel : MonoBehaviour
         warningPopup.gameObject.SetActive(false);
     }
 
-    void OnDisable()
-    {
-        LoginController.OnLoginComplete -= HandleLoginComplete;
-
-        if (buttonOpen != null)  buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
-        if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
-
-        buttonLogout.onClick.RemoveListener(DoLogout);
-
-        buttonTryLogout.onClick.RemoveListener(OnShowWarning);
-        buttonCloseWarning.onClick.RemoveListener(HideWarning);
-
-    }
+ 
 
     void Start()
     {
