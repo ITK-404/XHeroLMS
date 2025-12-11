@@ -201314,7 +201314,15 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2261613554178741536, guid: 80019b5774bebc14d86a9a08eae41a3f, type: 3}
+      propertyPath: m_DrawHeightmap
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2261613554178741536, guid: 80019b5774bebc14d86a9a08eae41a3f, type: 3}
       propertyPath: m_ShadowCastingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2539494148917199533, guid: 80019b5774bebc14d86a9a08eae41a3f, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2539494148917199533, guid: 80019b5774bebc14d86a9a08eae41a3f, type: 3}
@@ -387421,16 +387429,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
-  githubOwner: ITK-404
-  githubRepo: XHeroLMS
-  tagPrefix: v
-  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
-  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
-  localVersionFallback: 1.0.0
-  exeName: XHeroLMS.exe
-  patchFolder: Updates
-  maxRetries: 2
-  helperDebug: 1
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
@@ -416491,7 +416489,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1268880969169165662, guid: 384cea599eab86642ad613a6ab610888, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1753530943856239736, guid: 384cea599eab86642ad613a6ab610888, type: 3}
       propertyPath: m_Pivot.x
@@ -416799,6 +416797,10 @@ PrefabInstance:
     - target: {fileID: 3445947244943455067, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3491491235348780523, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -74.40015
       objectReference: {fileID: 0}
     - target: {fileID: 3658248877743268083, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_Sprite
