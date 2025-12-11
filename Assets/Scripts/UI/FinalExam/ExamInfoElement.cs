@@ -70,7 +70,8 @@ public class ExamInfoElement : MonoBehaviour
 
     public void SetQuestionIndexText(int index)
     {
-        string t = $"Câu\n{index}";
+        //string t = $"Câu\n{index}";
+        string t = $"{index}";
         if (coloredTmp)  coloredTmp.text  = t;
         if (grayTmp)     grayTmp.text     = t;
         if (gradientTmp) gradientTmp.text = t;
