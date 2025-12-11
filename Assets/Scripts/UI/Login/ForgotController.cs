@@ -120,7 +120,7 @@ public class ForgotController : MonoBehaviour
         if (inputField == null || inputField.placeholder == null) return;
         var ph = inputField.placeholder.GetComponent<TextMeshProUGUI>();
         if (!ph) return;
-        ph.text = (toggleSms != null && toggleSms.isOn) ? "Số điện thoại<color=#FF0000>*</color>" : "Email<color=#FF0000>*</color>";
+        ph.text = (toggleSms != null && toggleSms.isOn) ? "Số điện thoại<color=##E95F18>*</color>" : "Email<color=##E95F18>*</color>";
     }
 
     private void OnBack()

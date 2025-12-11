@@ -1,6 +1,8 @@
+using System.Collections.Generic;
+using System.Xml;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
 
 public class UI_PanelSwitcher : MonoBehaviour
 {
@@ -66,6 +68,10 @@ public class UI_PanelSwitcher : MonoBehaviour
         if (current != null)
             current.SetActive(false);
     }
+    [SerializeField] private Color activeColor;
+    [SerializeField] private Color defaultColor;
+    [SerializeField] private TMP_FontAsset activeFont;
+    [SerializeField] private TMP_FontAsset deActiveFont;
 
     private void SetButtonState(ButtonSpriteState active)
     {
@@ -74,13 +80,24 @@ public class UI_PanelSwitcher : MonoBehaviour
         ResetButtonSprite(closeButton);
 
         if (active != null && active.targetImage != null && active.activeSprite != null)
+        {
             active.targetImage.sprite = active.activeSprite;
+            HandleText(active.button.GetComponentInChildren<TextMeshProUGUI>(), true);
+        }
     }
 
     private void ResetButtonSprite(ButtonSpriteState b)
     {
         if (b != null && b.targetImage != null && b.defaultSprite != null)
             b.targetImage.sprite = b.defaultSprite;
+        HandleText(b.button.GetComponentInChildren<TextMeshProUGUI>(), false);
+    }
+
+    private void HandleText(TextMeshProUGUI tmpText,bool isEnable)
+    {
+        tmpText.color = isEnable ? activeColor : defaultColor;
+        tmpText.enableVertexGradient = isEnable;
+        tmpText.font = isEnable ? activeFont : deActiveFont;
     }
 
     private void OpenLoginPanel()
