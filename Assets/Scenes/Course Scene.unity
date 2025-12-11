@@ -119,6 +119,23 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &185383239 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6668774967737140202, guid: d9752619ba01694449ce6c619d3795bc, type: 3}
+  m_PrefabInstance: {fileID: 253751631}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &185383240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185383239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb92e72a04e109349b5880f4aa0f01d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SafeAreaHandler
 --- !u!1001 &253751631
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -515,6 +532,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8888623467480204318, guid: d9752619ba01694449ce6c619d3795bc, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -3.09021
+      objectReference: {fileID: 0}
     - target: {fileID: 8972311619123952818, guid: d9752619ba01694449ce6c619d3795bc, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -543,6 +564,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6668774967737140202, guid: d9752619ba01694449ce6c619d3795bc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 185383240}
     - targetCorrespondingSourceObject: {fileID: 1369458593500168588, guid: d9752619ba01694449ce6c619d3795bc, type: 3}
       insertIndex: -1
       addedObject: {fileID: 356429663}
@@ -1420,14 +1444,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 890170925407595242, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
-      propertyPath: m_Spacing.x
-      value: 70
-      objectReference: {fileID: 0}
-    - target: {fileID: 2848707641918950209, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3536774411137212601, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
       propertyPath: playVideoOpenBook
       value: 
@@ -1511,14 +1527,6 @@ PrefabInstance:
     - target: {fileID: 4513811974907394896, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7250723932028091043, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7979526904703718078, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: -1742.66
       objectReference: {fileID: 0}
     - target: {fileID: 8290824394500532543, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
       propertyPath: playVideoOpenBook
