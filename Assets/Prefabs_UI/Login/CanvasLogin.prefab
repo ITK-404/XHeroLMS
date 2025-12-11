@@ -15363,6 +15363,7 @@ GameObject:
   - component: {fileID: 3182003711765752157}
   - component: {fileID: 2042333984701007199}
   - component: {fileID: 6913738588593151359}
+  - component: {fileID: 1398922974649150710}
   - component: {fileID: 138435921837431523}
   - component: {fileID: 196985437363407547}
   - component: {fileID: 8383946904143220256}
@@ -15441,7 +15442,7 @@ MonoBehaviour:
   failPopupPrefab: {fileID: 8635697060180763229, guid: 64d5553ad586b0f4b9f7694ab567ffcc, type: 3}
   popupParent: {fileID: 1603635343364897431}
   autoFocusUsername: 1
---- !u!114 &138435921837431523
+--- !u!114 &1398922974649150710
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -15449,6 +15450,26 @@ MonoBehaviour:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6531063588248528658}
   m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 104eb497d45351045a2f07d1fbf3cae9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_PanelSwitcher
+  btnLogin: {fileID: 3762883268473140356}
+  btnRegister: {fileID: 7568389316903729401}
+  buttonClose: {fileID: 3616173728963631396}
+  currentPanel: {fileID: 0}
+  loginPanel: {fileID: 1864574192384713718}
+  registerPanel: {fileID: 2276683081543559586}
+  targetImage: {fileID: 7165490593655577323}
+  targetPanel: {fileID: 2518810218876088319}
+--- !u!114 &138435921837431523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531063588248528658}
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af69dfe5cbc9cd84c896a504e4be58e7, type: 3}
   m_Name: 
@@ -15530,22 +15551,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d5dfa49672aed140b0d508705eb4f70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RegistrationController
-  fullNameField: {fileID: 0}
   phoneField: {fileID: 3841515722221001273}
-  emailField: {fileID: 1914271318982744398}
   passwordField: {fileID: 6841940221811314773}
-  confirmPasswordField: {fileID: 0}
+  referralCodeField: {fileID: 0}
   btnTogglePassword: {fileID: 2235348905799141254}
-  btnToggleConfirmPassword: {fileID: 0}
   btnTogglePasswordIcon: {fileID: 5650332250127856500}
-  btnToggleConfirmPasswordIcon: {fileID: 0}
   iconShow: {fileID: 21300000, guid: 87367e10a017d034ba77ec6d19a1a638, type: 3}
   iconHide: {fileID: 21300000, guid: 82f5616c0611d9a43a985f79d6374993, type: 3}
-  regionDropdown: {fileID: 0}
-  toggleMale: {fileID: 0}
-  toggleFemale: {fileID: 0}
-  toggleEmail: {fileID: 0}
-  toggleSms: {fileID: 0}
   confirmToggle: {fileID: 5750518261189580014}
   btnRegister: {fileID: 7985991223861329247}
   btnBack: {fileID: 3762883268473140356}
