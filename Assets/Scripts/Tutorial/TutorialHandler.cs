@@ -88,6 +88,8 @@ public class TutorialHandler : MonoBehaviour
 
     private void ShowStep(int index)
     {
+        Debug.Log($"Tutorial hiện tại đang đóng");
+        return;
         if (isPlayedBefore)
         {
             return;
@@ -149,7 +151,8 @@ public class TutorialHandler : MonoBehaviour
 
     public bool IsPlayedBefore()
     {
-        return isPlayedBefore;
+        return true;
+        //return isPlayedBefore;
     }
 
     private void Update()

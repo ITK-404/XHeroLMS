@@ -11,19 +11,22 @@ public class LearnUI : MonoBehaviour
     public Action OnClickReturnBtn;
     public GameObject scrollView;
     public ToggleBaseUI toggleLessonScrollView;
+    public Action<bool> onCourseListShow;
     private void Awake()
     {
         if (returnBtn != null)
             returnBtn.onClick.AddListener(ClickReturnBtn);
+        toggleLessonScrollView.OnToggleOff.AddListener(OnToggleHide);
+        toggleLessonScrollView.OnToggleOn.AddListener(OnToggleShow);
+    }
 
-        if (toggleLessonScrollView != null)
-        {
-            toggleLessonScrollView.OnToggleOff.AddListener(OnToggleHide);
-            toggleLessonScrollView.OnToggleOn.AddListener(OnToggleShow);
-        }
+    private void Start()
+    {
+        toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        scrollView.gameObject.SetActive(false);
         Hide();
     }
-    
+
     private void OnDestroy()
     {
         if (returnBtn != null)
@@ -44,11 +47,13 @@ public class LearnUI : MonoBehaviour
     private void OnToggleShow()
     {
         if (scrollView != null) scrollView.SetActive(true);
+        onCourseListShow?.Invoke(true);
     }
 
     private void OnToggleHide()
     {
         if (scrollView != null) scrollView.SetActive(false);
+        onCourseListShow?.Invoke(false);
     }
     
     public void Show()
@@ -62,6 +67,5 @@ public class LearnUI : MonoBehaviour
     {
         Debug.Log("Hide Learn UI");
         container.gameObject.SetActive(false);
-        toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
     }
 }
