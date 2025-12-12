@@ -209,57 +209,82 @@ public class ExamQuestionManager : MonoBehaviour
     public void OnBack() => Move(-1);
     public void OnNext() => Move(+1);
 
-    public void OnSubmit()
+public void OnSubmit()
+{
+    Debug.Log("[EQM] OnSubmit() CLICK");
+
+    if (_isReviewMode || _examUIController == null || !_examUIController.examStarted)
     {
-        if (_isReviewMode || _examUIController == null || !_examUIController.examStarted) return;
-
-        _lastQuestionIndexBeforeSubmit = _examUIController.currentIndex;
-
-        if (!confirmPanel)
-        {
-            Debug.LogWarning("[ExamUI] Chưa gán ExamConfirmPanel!");
-            return;
-        }
-
-        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
-        if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
-
-        confirmPanel.examPanelRoot = mainExamPanelRoot;
-        confirmPanel.gameObject.SetActive(true);
-        confirmPanel.Show(_examUIController, selectedMap, essayMap, _lastQuestionIndexBeforeSubmit);
+        Debug.LogWarning($"[EQM] OnSubmit() BỎ QUA: isReviewMode={_isReviewMode}, examStarted={_examUIController?.examStarted}");
+        return;
     }
 
-    public void SubmitExamNow()
+    _lastQuestionIndexBeforeSubmit = _examUIController.currentIndex;
+
+    if (!confirmPanel)
     {
-        if (_isSubmitting) return;
-
-        StopTimerSafe();
-        SetReviewMode(true);
-
-        if (mainConfirmPanel)  mainConfirmPanel.SetActive(false);
-        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
-
-        StartCoroutine(SubmitExamRoutine(false));
+        Debug.LogWarning("[ExamUI] Chưa gán ExamConfirmPanel!");
+        return;
     }
 
-    private IEnumerator SubmitExamRoutine(bool timeUp)
+    Debug.Log("[EQM] OnSubmit() -> mở panel xác nhận");
+
+    if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
+    if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
+
+    confirmPanel.examPanelRoot = mainExamPanelRoot;
+    confirmPanel.gameObject.SetActive(true);
+    confirmPanel.Show(_examUIController, selectedMap, essayMap, _lastQuestionIndexBeforeSubmit);
+}
+
+public void SubmitExamNow()
+{
+    Debug.Log("[EQM] SubmitExamNow() CALLED");
+
+    if (_isSubmitting)
     {
-        if (_examUIController == null) yield break;
-
-        _isSubmitting = true;
-        _examUIController.ShowLoading(true);
-        if (btnNopBai) btnNopBai.gameObject.SetActive(false);
-
-        yield return _submissionService.SubmitExamCoroutine(timeUp);
-
-        _examUIController.ShowLoading(false);
-        _isSubmitting = false;
-
-        // Bật nav buttons khi vào review
-        if (btnBack) btnBack.gameObject.SetActive(true);
-        if (btnNext) btnNext.gameObject.SetActive(true);
-        if (btnNopBai) btnNopBai.gameObject.SetActive(false);
+        Debug.LogWarning("[EQM] SubmitExamNow() BỎ QUA: đang _isSubmitting = true");
+        return;
     }
+
+    StopTimerSafe();
+    SetReviewMode(true);
+
+    if (mainConfirmPanel)  mainConfirmPanel.SetActive(false);
+    if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
+
+    Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(false))");
+    StartCoroutine(SubmitExamRoutine(false));
+}
+
+private IEnumerator SubmitExamRoutine(bool timeUp)
+{
+    Debug.Log($"[EQM] SubmitExamRoutine START, timeUp={timeUp}");
+
+    if (_examUIController == null)
+    {
+        Debug.LogError("[EQM] SubmitExamRoutine: _examUIController = null, DỪNG.");
+        yield break;
+    }
+
+    _isSubmitting = true;
+    _examUIController.ShowLoading(true);
+    if (btnNopBai) btnNopBai.gameObject.SetActive(false);
+
+    Debug.Log("[EQM] SubmitExamRoutine -> gọi _submissionService.SubmitExamCoroutine(...)");
+    yield return _submissionService.SubmitExamCoroutine(timeUp);
+    Debug.Log("[EQM] SubmitExamRoutine: SubmitExamCoroutine DONE");
+
+    _examUIController.ShowLoading(false);
+    _isSubmitting = false;
+
+    // Bật nav buttons khi vào review
+    if (btnBack) btnBack.gameObject.SetActive(true);
+    if (btnNext) btnNext.gameObject.SetActive(true);
+    if (btnNopBai) btnNopBai.gameObject.SetActive(false);
+
+    Debug.Log("[EQM] SubmitExamRoutine END");
+}
 
     public void ReturnToLastQuestion()
     {
