@@ -48,7 +48,10 @@ public class PlayerStandUI : MonoBehaviour
         // nếu UI danh sách bài học được hiển thị thì ẩn UI điều khiển video
         if (!isShow)
         {
-            ShowWatchVideoUI();
+            if(playerChairManager.playerState == PlayerChairManager.PlayerState.Sitdown)
+            {
+                ShowWatchVideoUI();
+            }
         }
         else
         {
