@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -21,12 +21,14 @@ public class ToggleBaseUI : MonoBehaviour
 
     protected virtual void Awake()
     {
-        btn.onClick.AddListener(OnClickButton);
+        if(btn)
+            btn.onClick.AddListener(OnClickButton);
     }
 
     private void OnDestroy()
     {
-        btn.onClick.RemoveListener(OnClickButton);
+        if(btn)
+            btn.onClick.RemoveListener(OnClickButton);
     }
 
     public enum State
@@ -37,8 +39,17 @@ public class ToggleBaseUI : MonoBehaviour
 
     public virtual void ChangeState(State newState)
     {
+        Debug.Log("Thay đổi state hiện tại: " + newState);
         currentState = newState;
         OnValueChange?.Invoke(currentState);
+        if(currentState == State.Active)
+        {
+            OnToggleOn?.Invoke();
+        }
+        else
+        {
+            OnToggleOff?.Invoke();
+        }
     }
 
     public void Toggle()

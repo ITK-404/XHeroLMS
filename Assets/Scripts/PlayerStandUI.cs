@@ -26,6 +26,8 @@ public class PlayerStandUI : MonoBehaviour
         UILearnCanvas.Hide();
 
         ShowSitdownButton();
+
+        UILearnCanvas.onCourseListShow += CourseListShow;
     }
 
     private void OnDestroy()
@@ -36,7 +38,28 @@ public class PlayerStandUI : MonoBehaviour
             sitdownButton.onClick.RemoveListener(playerChairManager.PlayerSitdown);
         }
         UILearnCanvas.OnClickReturnBtn -= playerChairManager.PlayerStandup;
+        UILearnCanvas.onCourseListShow -= CourseListShow;
+
     }
+    private bool localIsShow = false;
+    private void CourseListShow(bool isShow)
+    {
+        // hiển thị hoặc ẩn UI điều khiển video
+        // nếu UI danh sách bài học được hiển thị thì ẩn UI điều khiển video
+        if (!isShow)
+        {
+            if(playerChairManager.playerState == PlayerChairManager.PlayerState.Sitdown)
+            {
+                ShowWatchVideoUI();
+            }
+        }
+        else
+        {
+            HideWatchVideoUI();
+        }
+        localIsShow = isShow;
+    }
+
     private bool isShowOneTime = false;
     private void Update()
     {
@@ -48,7 +71,7 @@ public class PlayerStandUI : MonoBehaviour
         }
         if (isShowOneTime == false && playerChairManager.currentCheckPoint != null && playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
         {
-            if(TutorialHandler.Instance.IsPlayedBefore())
+            if (TutorialHandler.Instance.IsPlayedBefore())
             {
                 return;
             }
@@ -58,7 +81,7 @@ public class PlayerStandUI : MonoBehaviour
         }
     }
 
-    public void ShowWatchVideoUI()
+    private void ShowWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(true);
 
@@ -66,14 +89,13 @@ public class PlayerStandUI : MonoBehaviour
         standupButton.GetComponent<RectTransform>().anchoredPosition = activePosition.anchoredPosition;
     }
 
-    public void HideWatchVideoUI()
+    private void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
 
         sitdownButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
         standupButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
     }
-
 
     public void ShowSitdownButton()
     {
@@ -91,5 +113,20 @@ public class PlayerStandUI : MonoBehaviour
     {
         sitdownButton.gameObject.SetActive(false);
         standupButton.gameObject.SetActive(false);
+    }
+
+    public void HideLearningUI()
+    {
+        // ẩn giao diện danh sách bài học
+        // ẩn giao diện điều khiển video
+        UILearnCanvas.Hide();
+        HideWatchVideoUI();
+    }
+
+    public void ShowLearningUI()
+    {
+        // Hiện giao diện danh sách bài học
+        UILearnCanvas.Show();
+        CourseListShow(localIsShow);
     }
 }

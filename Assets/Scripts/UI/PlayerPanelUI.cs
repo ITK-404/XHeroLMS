@@ -1,16 +1,20 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+public enum PlayerState
+{
+    Unlogged,
+    LoggedIn,
+    Learning,
+    Examining, 
+}
 public class PlayerPanelUI : MonoBehaviour
 {
     public GameObject container;
+    [Header("Containers")]
     public GameObject loginContainer;
     public GameObject unLogginContainer;
     public GameObject defaultContainer;
-    public Button returnBtn;
     public PlayerInformationUI playerInformation;
-    public GameObject iconGroup;
-    public GameObject coinGroup;
 
     private void Awake()
     {
