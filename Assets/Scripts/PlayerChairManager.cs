@@ -75,9 +75,9 @@ public class PlayerChairManager : MonoBehaviour
             item.Show(true);
         }
         // ẩn UI ngay khi bắt đầu đứng dậy
-        playerStandUI.UILearnCanvas.Hide();
-        playerStandUI.HideWatchVideoUI();
-
+        //playerStandUI.UILearnCanvas.Hide();
+        //playerStandUI.HideWatchVideoUI();
+        playerStandUI.HideLearningUI();
         videoPlayerControllerPro.ExitFullscreenUI();
         StopAllCoroutines();
         StartCoroutine(WaitForBlendDone(() =>
@@ -149,8 +149,9 @@ public class PlayerChairManager : MonoBehaviour
             StartCoroutine(WaitForBlendDone(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
-                playerStandUI.ShowWatchVideoUI();
-                playerStandUI.UILearnCanvas.Show();
+                //playerStandUI.ShowWatchVideoUI();
+                //playerStandUI.UILearnCanvas.Show();
+                playerStandUI.ShowLearningUI();
                 videoPlayerControllerPro.EnterFullscreenUI();
                 playerStandUI.returnBtn.gameObject.SetActive(false);
                 if (!TutorialHandler.Instance.IsPlayedBefore())
