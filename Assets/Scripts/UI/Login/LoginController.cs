@@ -10,7 +10,6 @@ using System.Text;
 
 public class LoginController : MonoBehaviour
 {
-    // ===== SINGLETON ĐƠN GIẢN CHO LOGIN UI =====
     public static LoginController Instance { get; private set; }
     public static Action OnLoginComplete;
 
@@ -25,16 +24,22 @@ public class LoginController : MonoBehaviour
     public Transform popupParent;
 
     [Header("Options")]
-    [Tooltip("Tự động focus vào ô username khi mở scene.")]
     public bool autoFocusUsername = true;
 
+    bool autoRestoreOnStart = true;
+
+    string verifyPath = "/users/me";
+
+    bool disableLoginWhileVerifying = true;
+
     bool _isLoggingIn = false;
+    bool _isVerifying = false;
+
     OpenClosePanel openClosePanel;
     private const string PREF_LOGIN_PREFILL = "LOGIN_PREFILL_USERNAME";
 
     private void Awake()
     {
-        // Singleton
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -42,7 +47,6 @@ public class LoginController : MonoBehaviour
         }
         Instance = this;
 
-        // Ẩn ký tự mật khẩu + chặn copy/cut
         if (inputPassword != null)
         {
             inputPassword.contentType = TMP_InputField.ContentType.Password;
@@ -56,15 +60,19 @@ public class LoginController : MonoBehaviour
     private void Start()
     {
         openClosePanel = GameObject.FindAnyObjectByType<OpenClosePanel>();
+
         if (buttonLogin != null)
             buttonLogin.onClick.AddListener(OnLoginClicked);
 
         ApplyPrefillOrFocus();
+
+        // ===== AUTO CHECK LOGIN ON BOOT =====
+        if (autoRestoreOnStart)
+            StartCoroutine(AutoRestoreSession());
     }
 
     private void OnEnable()
     {
-        // Mỗi lần panel Login SetActive(true) thì chạy lại
         ApplyPrefillOrFocus();
     }
 
@@ -72,7 +80,6 @@ public class LoginController : MonoBehaviour
     {
         HandleKeyboardNavigation();
 
-        // Nếu password đang focus, chặn Ctrl+C / Ctrl+X
         if (inputPassword != null && inputPassword.isFocused)
         {
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
@@ -91,7 +98,116 @@ public class LoginController : MonoBehaviour
     }
 
     // ============================================================
-    //  HÀM DÙNG CHUNG KHI LOGIN THÀNH CÔNG (PASSWORD HOẶC QR)
+    //  AUTO RESTORE + VERIFY TOKEN
+    // ============================================================
+    private IEnumerator AutoRestoreSession()
+    {
+        if (_isVerifying) yield break;
+
+        bool restored = TokenStore.TryRestoreFromDisk();
+        if (!restored || string.IsNullOrEmpty(TokenStore.AccessToken))
+        {
+            // Không có session -> hiện login bình thường
+            ApplyPrefillOrFocus();
+            yield break;
+        }
+
+        _isVerifying = true;
+
+        if (disableLoginWhileVerifying && buttonLogin != null)
+            buttonLogin.interactable = false;
+
+        Debug.Log("[LoginController] Found saved token. Verifying...");
+
+        // Verify token với server
+        yield return StartCoroutine(VerifyTokenRoutine(
+            onValid: () =>
+            {
+                Debug.Log("[LoginController] Token valid -> auto login.");
+                // Token OK: coi như login xong
+                OnLoginComplete?.Invoke();
+
+                if (openClosePanel != null)
+                    openClosePanel.CloseUI();
+            },
+            onInvalid: (reason) =>
+            {
+                Debug.LogWarning("[LoginController] Token invalid -> require login. Reason: " + reason);
+                TokenStore.Clear(); // clear runtime + disk
+                ApplyPrefillOrFocus();
+            }
+        ));
+
+        _isVerifying = false;
+
+        if (disableLoginWhileVerifying && buttonLogin != null)
+            buttonLogin.interactable = true;
+    }
+
+    private IEnumerator VerifyTokenRoutine(Action onValid, Action<string> onInvalid)
+    {
+        // Build url
+        string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            onInvalid?.Invoke("BaseUrl empty");
+            yield break;
+        }
+
+        string path = string.IsNullOrEmpty(verifyPath) ? "/users/me" : verifyPath.Trim();
+        if (!path.StartsWith("/")) path = "/" + path;
+
+        string url = baseUrl + path;
+
+        using (UnityWebRequest www = UnityWebRequest.Get(url))
+        {
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Accept", "application/json");
+
+            // Bearer token
+            string token = TokenStore.AccessToken?.Trim();
+            if (!string.IsNullOrEmpty(token))
+            {
+                // nếu token đã chứa "Bearer " thì không double
+                if (!token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    token = "Bearer " + token;
+
+                www.SetRequestHeader("Authorization", token);
+            }
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                // Token hợp lệ.
+                // (Tuỳ server) nếu response có user mới thì bạn parse và update TokenStore lại.
+                // Ở đây chỉ coi là OK.
+                onValid?.Invoke();
+            }
+            else
+            {
+                long code = www.responseCode;
+                string serverText = www.downloadHandler != null ? www.downloadHandler.text : "";
+
+                // Nếu 401/403 -> token hết hạn/không hợp lệ
+                if (code == 401 || code == 403)
+                {
+                    onInvalid?.Invoke($"HTTP {code}");
+                }
+                else
+                {
+                    // Lỗi mạng/500…: tuỳ bạn muốn giữ token hay bắt login
+                    // Mặc định: KHÔNG xoá token, nhưng cũng không auto login để tránh vào app khi server lỗi.
+                    // Bạn có thể đổi chiến lược nếu muốn.
+                    Debug.LogWarning($"[LoginController] Verify error: {www.error} HTTP {code} body: {serverText}");
+                    onInvalid?.Invoke($"VerifyFailed HTTP {code}");
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    //  LOGIN SUCCESS (GIỮ NGUYÊN)
     // ============================================================
     private void HandleLoginSuccess(AuthResponseRoot auth, string successMessage = "Đăng nhập thành công")
     {
@@ -101,15 +217,12 @@ public class LoginController : MonoBehaviour
             return;
         }
 
-        // Lưu token + user vào TokenStore
         TokenStore.SetData(auth);
         Debug.Log("[LoginController] Token đã được lưu, chuẩn bị đóng UI login.");
 
-        // <<< Xoá prefill sau khi login thành công >>>
         PlayerPrefs.DeleteKey(PREF_LOGIN_PREFILL);
         PlayerPrefs.Save();
 
-        // POPUP THÀNH CÔNG
         ShowPopup(
             successPopupPrefab,
             "Thành công",
@@ -257,14 +370,15 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
     };
 
     return true;
-}
+    }
 
     // ============================================================
-    //  LOGIN BẰNG USERNAME/PASSWORD (GIỮ Y NHƯ CŨ, CHỈ GỌI HandleLoginSuccess)
+    //  LOGIN CLICK / VALIDATION (GIỮ NGUYÊN)
     // ============================================================
     private void HandleKeyboardNavigation()
     {
-        // Nhấn Tab để chuyển input
+        if (_isVerifying) return; // đang verify thì bỏ qua keyboard login
+
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             if (inputUsername != null && inputUsername.isFocused)
@@ -278,50 +392,36 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
             }
         }
 
-        // Nhấn Enter để login
         if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
-            if (!_isLoggingIn)
+            if (!_isLoggingIn && !_isVerifying)
                 OnLoginClicked();
         }
     }
 
     private void OnLoginClicked()
     {
-        if (_isLoggingIn) return;
+        if (_isLoggingIn || _isVerifying) return;
 
         string usernameRaw = inputUsername != null ? inputUsername.text.Trim() : string.Empty;
         string password = inputPassword != null ? inputPassword.text : string.Empty;
 
-        // ======== Validate cơ bản ========
         if (string.IsNullOrEmpty(usernameRaw) || string.IsNullOrEmpty(password))
         {
-            ShowPopup(
-                failPopupPrefab,
-                "Cảnh báo",
-                "Vui lòng nhập đầy đủ tài khoản và mật khẩu."
-            );
+            ShowPopup(failPopupPrefab, "Cảnh báo", "Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
             return;
         }
 
-        // ======== Validate username (email hoặc số điện thoại) ========
         if (!IsValidEmail(usernameRaw) && !IsValidPhoneVN(usernameRaw))
         {
-            ShowPopup(
-                failPopupPrefab,
-                "Cảnh báo",
-                "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ."
-            );
+            ShowPopup(failPopupPrefab, "Cảnh báo", "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ.");
             return;
         }
 
-        // ======== Nếu là số điện thoại thì convert 0 -> 84 ========
         string usernameForAPI = ConvertPhoneForAPI(usernameRaw);
-
         StartCoroutine(LoginRoutine(usernameForAPI, password));
     }
 
-    // ================== Regex validation ==================
     private bool IsValidEmail(string email)
     {
         if (string.IsNullOrEmpty(email)) return false;
@@ -332,7 +432,6 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
     private bool IsValidPhoneVN(string phone)
     {
         if (string.IsNullOrEmpty(phone)) return false;
-        // Cho phép: 0xxxxxxxxx hoặc +84xxxxxxxxx (3|5|7|8|9)
         string pattern = @"^(0|\+84)(3|5|7|8|9)\d{8}$";
         return Regex.IsMatch(phone, pattern);
     }
@@ -344,7 +443,6 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         return input;
     }
 
-    // ================== Gửi request đăng nhập ==================
     private IEnumerator LoginRoutine(string username, string password)
     {
         _isLoggingIn = true;
@@ -353,7 +451,7 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
         string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
 
         using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
         {
@@ -374,34 +472,20 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
                 var auth = JsonUtility.FromJson<AuthResponseRoot>(resp);
                 if (auth != null && auth.data != null)
                 {
-                    // Gọi hàm dùng chung
                     HandleLoginSuccess(auth, "Đăng nhập thành công");
                 }
                 else
                 {
-                    Debug.LogWarning("Không thể parse dữ liệu đăng nhập hợp lệ!");
-
-                    // POPUP THẤT BẠI – lỗi parse dữ liệu
-                    ShowPopup(
-                        failPopupPrefab,
-                        "Cảnh báo",
-                        "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.");
+                    ShowPopup(failPopupPrefab, "Cảnh báo", "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.");
                 }
             }
             else
             {
-                string serverText = www.downloadHandler != null
-                    ? www.downloadHandler.text
-                    : string.Empty;
-
+                string serverText = www.downloadHandler != null ? www.downloadHandler.text : string.Empty;
                 Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {serverText}");
 
                 string errorMessage = ServerErrorConverter.Convert(serverText);
-
-                ShowPopup(
-                    failPopupPrefab,
-                    "Cảnh báo",
-                    errorMessage);
+                ShowPopup(failPopupPrefab, "Cảnh báo", errorMessage);
             }
         }
 
@@ -428,12 +512,9 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         Transform parent = popupParent != null ? popupParent : transform.root;
         LoginPopupUI popupInstance = Instantiate(prefab, parent);
 
-        // Gọi Init để gán text + callback
-        popupInstance.Init(header, message, () =>
-        {
-            onReturn?.Invoke();
-        });
+        popupInstance.Init(header, message, () => { onReturn?.Invoke(); });
     }
+
     public static void ShowWarning(string message, string header = "Cảnh báo")
     {
         if (Instance == null)
@@ -441,25 +522,16 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
             Debug.LogWarning("[LoginController] ShowWarning được gọi nhưng Instance == null. Message: " + message);
             return;
         }
-        
         Instance.ShowPopup(Instance.failPopupPrefab, header, message);
     }
 
-    // ================== DTOs (match JSON) ==================
-    [System.Serializable]
+    [Serializable]
     private class LoginRequest
     {
         public string username;
         public string password;
     }
 
-    [Serializable]
-    private class ErrorResponse
-    {
-        public string message;
-    }
-
-    // Gom logic prefill vào 1 chỗ
     private void ApplyPrefillOrFocus()
     {
         if (inputUsername == null) return;
@@ -470,7 +542,6 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         {
             inputUsername.text = prefill;
 
-            // Cho user nhập thẳng mật khẩu
             if (inputPassword != null)
             {
                 inputPassword.text = "";
@@ -485,7 +556,6 @@ private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
         }
     }
 
-    // Cho chỗ khác (OTP) gọi thẳng
     public void RefreshLoginPrefill()
     {
         ApplyPrefillOrFocus();
