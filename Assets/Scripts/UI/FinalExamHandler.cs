@@ -67,7 +67,7 @@ public class FinalExamHandler : MonoBehaviour
         // ẩn UI học tập
         learnUI.Hide();
         videoPlayerControllerPro.ExitFullscreenUI();
-        playerStandUI.HideWatchVideoUI();
+        playerStandUI.HideLearningUI();
 
         // hiện UI làm bài
         if (examCamRoutine != null)
@@ -144,7 +144,7 @@ public class FinalExamHandler : MonoBehaviour
     {
         //ResetExamCamera();
         yield return null;
-        playerStandUI.ShowWatchVideoUI();
+        playerStandUI.ShowLearningUI();
         playerPanelUI.ShowLoginUI();
     }
 
@@ -156,7 +156,7 @@ public class FinalExamHandler : MonoBehaviour
         playerStandUI.HideButtons();
         yield return MoveCameraBackFromExam();
 
-        learnUI.Show();
+        playerStandUI.ShowLearningUI();
         videoPlayerControllerPro.EnterFullscreenUI();
         playerStandUI.ShowSitdownButton();
 
