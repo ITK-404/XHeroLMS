@@ -51,7 +51,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
 
         Debug.Log($"[LMS] Output folder:\n{Application.persistentDataPath}");
 
-        // 1) /lms/courses  (market)
+        // /lms/courses  (market)
         string marketUrl = BuildMarketUrl();
         string marketJson = null;
         yield return GET(marketUrl, token, s => marketJson = s, onErrorBody =>
@@ -61,7 +61,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
         if (!string.IsNullOrEmpty(marketJson))
             SaveText("courses_market.json", marketJson, prettyPrintJson);
 
-        // 2) /users/lms/courses (my courses)
+        // /users/lms/courses (my courses)
         string myCoursesUrl = $"{baseUrl}/users/lms/courses?skip=0&limit=100";
         string myCoursesJson = null;
         yield return GET(myCoursesUrl, token, s => myCoursesJson = s, onErrorBody =>
@@ -71,7 +71,7 @@ public class LmsApiMinimalExporter : MonoBehaviour
         if (!string.IsNullOrEmpty(myCoursesJson))
             SaveText("courses_my.json", myCoursesJson, prettyPrintJson);
 
-        // 3) /lms/courses/{course._id}/private cho TẤT CẢ khóa trong /users/lms/courses
+        // /lms/courses/{course._id}/private cho TẤT CẢ khóa trong /users/lms/courses
         var allCourseIds = ExtractAllCourseIdsFromMyCourses(myCoursesJson);
         if (allCourseIds.Count == 0)
         {
