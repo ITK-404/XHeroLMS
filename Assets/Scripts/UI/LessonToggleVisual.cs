@@ -9,6 +9,8 @@ public class LessonToggleVisual : MonoBehaviour
 
     private void Awake()
     {
+        activeBtn.gameObject.SetActive(true);
+        deActiveBtn.gameObject.SetActive(false);
         activeBtn.onClick.AddListener(ActiveToggle);
         deActiveBtn.onClick.AddListener(DeActiveToggle);
 
