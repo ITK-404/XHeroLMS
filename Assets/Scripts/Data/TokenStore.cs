@@ -148,7 +148,7 @@ public static class TokenStore
     }
 
     /// <summary>
-    /// Restore session từ sandbox vào runtime (gọi lúc app start).
+    /// Restore session từ sandbox vào runtime.
     /// Chỉ restore dữ liệu; việc token còn hợp lệ hay không bạn nên verify bằng API.
     /// </summary>
     public static bool TryRestoreFromDisk()
@@ -213,7 +213,7 @@ public static class TokenStore
             }
         }
 
-        Debug.Log("[TokenStore] Restore session từ sandbox OK.");
+        Debug.Log("[TokenStore] Restore session từ sandbox OK."); 
         return true;
     }
 
