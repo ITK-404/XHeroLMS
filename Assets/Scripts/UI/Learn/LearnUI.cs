@@ -44,13 +44,13 @@ public class LearnUI : MonoBehaviour
         OnClickReturnBtn?.Invoke();
     }
 
-    private void OnToggleShow()
+    public void OnToggleShow()
     {
         if (scrollView != null) scrollView.SetActive(true);
         onCourseListShow?.Invoke(true);
     }
 
-    private void OnToggleHide()
+    public void OnToggleHide()
     {
         if (scrollView != null) scrollView.SetActive(false);
         onCourseListShow?.Invoke(false);

@@ -42,7 +42,7 @@ public class PlayerStandUI : MonoBehaviour
 
     }
     private bool localIsShow = false;
-    private void CourseListShow(bool isShow)
+    public void CourseListShow(bool isShow)
     {
         // hiển thị hoặc ẩn UI điều khiển video
         // nếu UI danh sách bài học được hiển thị thì ẩn UI điều khiển video

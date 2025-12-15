@@ -186,6 +186,10 @@ public class CourseListView : MonoBehaviour
         videoPlayer.source = VideoSource.Url;
         videoPlayer.url = url;
         videoPlayer.Play();
+        
+        playerStandUI.UILearnCanvas.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        
+        
         Debug.Log("[SceneLessonUI] Playing: " + url);
     }
 
