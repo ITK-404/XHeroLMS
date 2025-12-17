@@ -6,7 +6,7 @@ public static class SecurityConfig
 {
     private const string XOR_KEY = "client_side_key_for_obfuscation";
 
-    private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgkULEgXGjodDQcFA00CGwQ=";
+    private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgEcKUgXGjodDQcFA00CGwQ=";
 
     private static string _cachedBaseUrl;
 
