@@ -286,7 +286,7 @@ public static void LoginWithQrToken(string raw)
 
     if (Instance != null)
     {
-        Instance.HandleLoginSuccess(auth, "Đăng nhập bằng QR thành công");
+        Instance.HandleLoginSuccess(auth, "Chào mừng bạn trở lại");
     }
     else
     {
