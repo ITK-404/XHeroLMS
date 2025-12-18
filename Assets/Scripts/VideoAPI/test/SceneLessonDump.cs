@@ -23,17 +23,17 @@ public class LessonDumpList
 public class SceneLessonDump : MonoBehaviour
 {
     [Header("Config")]
-    [Tooltip("Tên file JSON (Resources) ánh xạ scene ↔ seo. Không kèm .json")]
+    // Tên file JSON (Resources) ánh xạ scene ↔ seo. Không kèm .json
     public string resourceJsonName = "courses";
 
-    [Tooltip("Tự fetch private nếu cache thiếu/hết hạn")]
+    // Tự fetch private nếu cache thiếu/hết hạn
     public bool autoFetchPrivateIfMissing = true;
 
-    [Tooltip("Ghi thêm file JSON ra persistentDataPath để dễ kiểm tra")]
+    // Ghi thêm file JSON ra persistentDataPath để dễ kiểm tra
     public bool alsoWriteToDisk = true;
 
     [Header("Override (debug)")]
-    [Tooltip("Nếu set, sẽ dùng luôn SEO này và bỏ qua map sceneName ↔ seo trong courses.json")]
+    // Nếu set, sẽ dùng luôn SEO này và bỏ qua map sceneName ↔ seo trong courses.json
     public string overrideSeo = "";
 
     private string _seo;

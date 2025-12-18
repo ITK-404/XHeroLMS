@@ -37,7 +37,7 @@ public class CourseListView : MonoBehaviour
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    // ====== FINAL EXAM (thêm mới) ======
+    // ====== FINAL EXAM ======
     [Header("Final Exam")]
     public string finalExamSectionTitle = "Bài thi cuối khóa";
 
@@ -60,7 +60,6 @@ public class CourseListView : MonoBehaviour
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
 
-  
     public void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
