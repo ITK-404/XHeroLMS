@@ -11,7 +11,7 @@ public class SecurityEncodeRunner : MonoBehaviour
     [ContextMenu("Encode BaseUrl")]
     private void EncodeBaseUrl()
     {
-        SecurityConfig.EncodeForCode("https://apis-dev.xheroapp.com");
+        SecurityConfig.EncodeForCode("https://apis-lms.xheroapp.com");
     }
 #endif
 }
