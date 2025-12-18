@@ -11,9 +11,16 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     public string platform = "pc";
     public float requestTimeout = 10f;
 
-    [Header("XHero deeplink (MATCH AndroidManifest of XHero)")]
+    [Header("XHero deeplink")]
     public string xheroScheme = "xhero";
+
+    [Tooltip("ANDROID host (as in AndroidManifest intent-filter host)")]
     public string xheroAndroidHost = "com.xhero_app";
+
+    [Tooltip("iOS host (as in iOS URLTypes / associated host config if they use host)")]
+    public string xheroIosHost = "com.xhero.app";
+
+    [Tooltip("Deep link path. Example: '/', '/auth', ...")]
     public string xheroPath = "/";
 
     public string codeParamName = "authLMSCode";
@@ -39,16 +46,11 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     private string _currentCode;
     private string _currentTimestamp;
 
-    private void OnEnable()
-    {
-        TrySubscribeFirebase();
-    }
+    private void OnEnable() => TrySubscribeFirebase();
 
     private void OnDisable()
     {
-        // DeepLink có thể làm UI/panel disable giữa chừng -> nếu đang chạy flow thì KHÔNG unsubscribe
         if (_isRunning && !_loggedIn) return;
-
         StopFlow();
         UnsubscribeFirebase();
     }
@@ -98,8 +100,6 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         if (_subscribedFirebase) return;
 
         var fb = EnsureFirebase();
-
-        // đảm bảo không subscribe trùng
         fb.OnAccessTokenReceived -= OnFirebaseAccessToken;
         fb.OnAccessTokenReceived += OnFirebaseAccessToken;
 
@@ -153,7 +153,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             yield break;
         }
 
-        // gọi API xin code
+        // step=1: request code
         string url = $"{LmsStore.Instance.baseUrl}{path}?step=1&platform={platform}";
         Debug.Log("[LmsDeepLinkAuthUI] step=1 URL = " + url);
 
@@ -173,7 +173,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             {
                 _isRunning = false;
                 LoadingUI.Hide();
-                Debug.LogError("[LmsDeepLinkAuthUI] step=1 Request error: " + req.error + " | body=" + (req.downloadHandler != null ? req.downloadHandler.text : "<null>"));
+                Debug.LogError("[LmsDeepLinkAuthUI] step=1 Request error: " + req.error +
+                               " | body=" + (req.downloadHandler != null ? req.downloadHandler.text : "<null>"));
                 LoginController.ShowWarning("Không thể tạo mã đăng nhập. Vui lòng kiểm tra mạng và thử lại.");
                 yield break;
             }
@@ -210,13 +211,13 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             }
         }
 
-        // BÂY GIỜ mới listen firebase theo code
+        // listen firebase by code
         EnsureFirebase().StartListen(_currentCode);
 
-        // mở XHero trên CHÍNH thiết bị hiện tại
+        // open XHero app (android/ios)
         OpenXHeroDeepLink(_currentCode, _currentTimestamp);
 
-        // đợi token về (timeout)
+        // wait token
         float t = waitTokenTimeoutSeconds;
         while (t > 0f && !_loggedIn)
         {
@@ -236,13 +237,23 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     }
 
     // ===================== OPEN XHERO =====================
+    private string GetXHeroHostForPlatform()
+    {
+#if UNITY_IOS
+        return string.IsNullOrEmpty(xheroIosHost) ? xheroAndroidHost : xheroIosHost;
+#else
+        // default Android + Editor
+        return xheroAndroidHost;
+#endif
+    }
+
     private void OpenXHeroDeepLink(string code, string timestamp)
     {
         string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-        string tsEnc = UnityWebRequest.EscapeURL(timestamp ?? "");
-        string fnEnc = UnityWebRequest.EscapeURL(functionValue ?? "");
+        string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
+        string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
 
-        string host = xheroAndroidHost;
+        string host = GetXHeroHostForPlatform();
 
         string p = string.IsNullOrEmpty(xheroPath) ? "/" : xheroPath;
         if (!p.StartsWith("/")) p = "/" + p;
@@ -253,8 +264,13 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             $"&{timestampParamName}={tsEnc}" +
             $"&{functionParamName}={fnEnc}";
 
-        Debug.Log("[LmsDeepLinkAuthUI] Open deep link: " + deepLinkUrl);
+        Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+
+#if UNITY_IOS
         Application.OpenURL(deepLinkUrl);
+#else
+        Application.OpenURL(deepLinkUrl);
+#endif
     }
 
     // ===================== JSON =====================
