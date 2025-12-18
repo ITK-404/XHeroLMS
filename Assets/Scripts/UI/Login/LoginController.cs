@@ -26,6 +26,8 @@ public class LoginController : MonoBehaviour
     [Header("Options")]
     public bool autoFocusUsername = true;
 
+    public bool showSuccessPopup = false;
+
     bool autoRestoreOnStart = true;
 
     string verifyPath = "/users/me";
@@ -107,7 +109,6 @@ public class LoginController : MonoBehaviour
         bool restored = TokenStore.TryRestoreFromDisk();
         if (!restored || string.IsNullOrEmpty(TokenStore.AccessToken))
         {
-            // Không có session -> hiện login bình thường
             ApplyPrefillOrFocus();
             yield break;
         }
@@ -119,22 +120,26 @@ public class LoginController : MonoBehaviour
 
         Debug.Log("[LoginController] Found saved token. Verifying...");
 
-        // Verify token với server
         yield return StartCoroutine(VerifyTokenRoutine(
             onValid: () =>
             {
                 Debug.Log("[LoginController] Token valid -> auto login.");
-                // Token OK: coi như login xong
                 OnLoginComplete?.Invoke();
-
-                if (openClosePanel != null)
-                    openClosePanel.CloseUI();
+                if (openClosePanel != null) openClosePanel.CloseUI();
             },
-            onInvalid: (reason) =>
+            onInvalid401: (reason) =>
             {
-                Debug.LogWarning("[LoginController] Token invalid -> require login. Reason: " + reason);
-                TokenStore.Clear(); // clear runtime + disk
+                Debug.LogWarning("[LoginController] Token invalid (401/403) -> require login. " + reason);
+                TokenStore.Clear();            // CHỈ xoá khi chắc chắn invalid
                 ApplyPrefillOrFocus();
+            },
+            onNetworkOrServerError: (reason) =>
+            {
+                Debug.LogWarning("[LoginController] Verify failed (network/server). Keep token. Reason: " + reason);
+
+                OnLoginComplete?.Invoke();
+                if (openClosePanel != null) openClosePanel.CloseUI();
+
             }
         ));
 
@@ -144,13 +149,16 @@ public class LoginController : MonoBehaviour
             buttonLogin.interactable = true;
     }
 
-    private IEnumerator VerifyTokenRoutine(Action onValid, Action<string> onInvalid)
+    private IEnumerator VerifyTokenRoutine(
+        Action onValid,
+        Action<string> onInvalid401,
+        Action<string> onNetworkOrServerError
+    )
     {
-        // Build url
         string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
         if (string.IsNullOrEmpty(baseUrl))
         {
-            onInvalid?.Invoke("BaseUrl empty");
+            onNetworkOrServerError?.Invoke("BaseUrl empty");
             yield break;
         }
 
@@ -164,14 +172,11 @@ public class LoginController : MonoBehaviour
             www.downloadHandler = new DownloadHandlerBuffer();
             www.SetRequestHeader("Accept", "application/json");
 
-            // Bearer token
             string token = TokenStore.AccessToken?.Trim();
             if (!string.IsNullOrEmpty(token))
             {
-                // nếu token đã chứa "Bearer " thì không double
                 if (!token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                     token = "Bearer " + token;
-
                 www.SetRequestHeader("Authorization", token);
             }
 
@@ -179,36 +184,24 @@ public class LoginController : MonoBehaviour
 
             if (www.result == UnityWebRequest.Result.Success)
             {
-                // Token hợp lệ.
-                // (Tuỳ server) nếu response có user mới thì bạn parse và update TokenStore lại.
-                // Ở đây chỉ coi là OK.
                 onValid?.Invoke();
+                yield break;
+            }
+
+            long code = www.responseCode;
+            string serverText = www.downloadHandler != null ? www.downloadHandler.text : "";
+
+            if (code == 401 || code == 403)
+            {
+                onInvalid401?.Invoke($"HTTP {code} body: {serverText}");
             }
             else
             {
-                long code = www.responseCode;
-                string serverText = www.downloadHandler != null ? www.downloadHandler.text : "";
-
-                // Nếu 401/403 -> token hết hạn/không hợp lệ
-                if (code == 401 || code == 403)
-                {
-                    onInvalid?.Invoke($"HTTP {code}");
-                }
-                else
-                {
-                    // Lỗi mạng/500…: tuỳ bạn muốn giữ token hay bắt login
-                    // Mặc định: KHÔNG xoá token, nhưng cũng không auto login để tránh vào app khi server lỗi.
-                    // Bạn có thể đổi chiến lược nếu muốn.
-                    Debug.LogWarning($"[LoginController] Verify error: {www.error} HTTP {code} body: {serverText}");
-                    onInvalid?.Invoke($"VerifyFailed HTTP {code}");
-                }
+                onNetworkOrServerError?.Invoke($"HTTP {code} err={www.error} body={serverText}");
             }
         }
     }
 
-    // ============================================================
-    //  LOGIN SUCCESS (GIỮ NGUYÊN)
-    // ============================================================
     private void HandleLoginSuccess(AuthResponseRoot auth, string successMessage = "Đăng nhập thành công")
     {
         if (auth == null || auth.data == null || string.IsNullOrEmpty(auth.data.token))
@@ -218,11 +211,25 @@ public class LoginController : MonoBehaviour
         }
 
         TokenStore.SetData(auth);
-        Debug.Log("[LoginController] Token đã được lưu, chuẩn bị đóng UI login.");
+        Debug.Log("[LoginController] Token đã được lưu. Login success.");
 
         PlayerPrefs.DeleteKey(PREF_LOGIN_PREFILL);
         PlayerPrefs.Save();
 
+        // Nếu không muốn hiện popup thành công -> đóng UI + invoke luôn
+        if (!showSuccessPopup || successPopupPrefab == null)
+        {
+            OnLoginComplete?.Invoke();
+
+            if (openClosePanel != null)
+                openClosePanel.CloseUI();
+            else
+                Debug.LogWarning("[LoginController] Không tìm thấy OpenClosePanel để đóng login panel!");
+
+            return;
+        }
+
+        // (Giữ lại nếu bạn muốn bật popup trong một số trường hợp)
         ShowPopup(
             successPopupPrefab,
             "Thành công",
@@ -241,135 +248,136 @@ public class LoginController : MonoBehaviour
     /// <summary>
     /// Hàm static để các kênh khác (QR, OTP, v.v.) gọi vào khi đã có JWT token.
     /// </summary>
-public static void LoginWithQrToken(string raw)
-{
-    if (string.IsNullOrEmpty(raw))
+    public static void LoginWithQrToken(string raw)
     {
-        Debug.LogWarning("[LoginController] LoginWithQrToken: token rỗng.");
-        return;
+        if (string.IsNullOrEmpty(raw))
+        {
+            Debug.LogWarning("[LoginController] LoginWithQrToken: token rỗng.");
+            return;
+        }
+
+        // Trường hợp Firebase gửi cả JSON:
+        // {"status":true,"data":{"token":"<jwt>"}}
+        if (raw[0] == '{')
+        {
+            try
+            {
+                var resp = JsonUtility.FromJson<AuthResponseRoot>(raw);
+                if (resp != null && resp.data != null && !string.IsNullOrEmpty(resp.data.token))
+                {
+                    raw = resp.data.token;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[LoginController] Không parse được JSON token từ QR: " + e);
+            }
+        }
+
+        string jwt = raw;
+
+        // Decode JWT -> lấy user
+        AuthUser userFromJwt = null;
+        bool hasUser = TryGetUserFromJwt(jwt, out userFromJwt);
+
+        var auth = new AuthResponseRoot
+        {
+            status = true,
+            data = new AuthData
+            {
+                token = jwt,
+                user = hasUser ? userFromJwt : null,
+                totalUnread = null
+            }
+        };
+
+        if (Instance != null)
+        {
+            Instance.HandleLoginSuccess(auth, "Chào mừng bạn trở lại");
+        }
+        else
+        {
+            TokenStore.SetData(auth);
+            OnLoginComplete?.Invoke();
+        }
     }
 
-    // Trường hợp Firebase gửi cả JSON:
-    // {"status":true,"data":{"token":"<jwt>"}}
-    if (raw[0] == '{')
+    private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
     {
+        userOut = null;
+
+        if (string.IsNullOrEmpty(jwt))
+            return false;
+
+        var parts = jwt.Split('.');
+        if (parts.Length != 3)
+        {
+            Debug.LogWarning("[LoginController] JWT không đúng định dạng 3 phần.");
+            return false;
+        }
+
+        string payload = parts[1];
+
+        // Base64Url -> Base64
+        payload = payload.Replace('-', '+').Replace('_', '/');
+        switch (payload.Length % 4)
+        {
+            case 2: payload += "=="; break;
+            case 3: payload += "="; break;
+            case 0: break;
+            default:
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4), '=');
+                break;
+        }
+
+        byte[] jsonBytes;
         try
         {
-            var resp = JsonUtility.FromJson<AuthResponseRoot>(raw);
-            if (resp != null && resp.data != null && !string.IsNullOrEmpty(resp.data.token))
-            {
-                raw = resp.data.token;
-            }
+            jsonBytes = Convert.FromBase64String(payload);
         }
         catch (Exception e)
         {
-            Debug.LogError("[LoginController] Không parse được JSON token từ QR: " + e);
+            Debug.LogError("[LoginController] Base64 decode JWT payload fail: " + e);
+            return false;
         }
-    }
 
-    string jwt = raw;
+        string json = Encoding.UTF8.GetString(jsonBytes);
+        Debug.Log("[LoginController] JWT payload = " + json);
 
-    // Decode JWT -> lấy user
-    AuthUser userFromJwt = null;
-    bool hasUser = TryGetUserFromJwt(jwt, out userFromJwt);
-
-    var auth = new AuthResponseRoot
-    {
-        status = true,
-        data = new AuthData
+        JwtPayload payloadObj = null;
+        try
         {
-            token       = jwt,
-            user        = hasUser ? userFromJwt : null,
-            totalUnread = null
+            payloadObj = JsonUtility.FromJson<JwtPayload>(json);
         }
-    };
+        catch (Exception e)
+        {
+            Debug.LogError("[LoginController] Parse JWT payload JSON fail: " + e);
+            return false;
+        }
 
-    if (Instance != null)
-    {
-        Instance.HandleLoginSuccess(auth, "Chào mừng bạn trở lại");
-    }
-    else
-    {
-        TokenStore.SetData(auth);
-        OnLoginComplete?.Invoke();
-    }
-}
-private static bool TryGetUserFromJwt(string jwt, out AuthUser userOut)
-{
-    userOut = null;
+        if (payloadObj == null || payloadObj.user == null)
+        {
+            Debug.LogWarning("[LoginController] JWT payload không có field user.");
+            return false;
+        }
 
-    if (string.IsNullOrEmpty(jwt))
-        return false;
+        // Map sang AuthUser cho thống nhất với login thường
+        var u = payloadObj.user;
+        userOut = new AuthUser
+        {
+            id           = u.id,
+            username     = u.username,
+            fullName     = u.fullName,
+            gender       = u.gender,
+            role         = u.role,
+            email        = u.email,
+            status       = u.status,
+            avatar       = u.avatar,
+            referralCode = u.referralCode,
+            jit          = u.jit
+        };
 
-    var parts = jwt.Split('.');
-    if (parts.Length != 3)
-    {
-        Debug.LogWarning("[LoginController] JWT không đúng định dạng 3 phần.");
-        return false;
-    }
-
-    string payload = parts[1];
-
-    // Base64Url -> Base64
-    payload = payload.Replace('-', '+').Replace('_', '/');
-    switch (payload.Length % 4)
-    {
-        case 2: payload += "=="; break;
-        case 3: payload += "="; break;
-        case 0: break;
-        default:
-            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4), '=');
-            break;
-    }
-
-    byte[] jsonBytes;
-    try
-    {
-        jsonBytes = Convert.FromBase64String(payload);
-    }
-    catch (Exception e)
-    {
-        Debug.LogError("[LoginController] Base64 decode JWT payload fail: " + e);
-        return false;
-    }
-
-    string json = Encoding.UTF8.GetString(jsonBytes);
-    Debug.Log("[LoginController] JWT payload = " + json);
-
-    JwtPayload payloadObj = null;
-    try
-    {
-        payloadObj = JsonUtility.FromJson<JwtPayload>(json);
-    }
-    catch (Exception e)
-    {
-        Debug.LogError("[LoginController] Parse JWT payload JSON fail: " + e);
-        return false;
-    }
-
-    if (payloadObj == null || payloadObj.user == null)
-    {
-        Debug.LogWarning("[LoginController] JWT payload không có field user.");
-        return false;
-    }
-
-    // Map sang AuthUser cho thống nhất với login thường
-    var u = payloadObj.user;
-    userOut = new AuthUser
-    {
-        id           = u.id,
-        username     = u.username,
-        fullName     = u.fullName,
-        gender       = u.gender,
-        role         = u.role,
-        email        = u.email,
-        status       = u.status,
-        avatar       = u.avatar,
-        referralCode = u.referralCode,
-        jit          = u.jit
-    };
-
-    return true;
+        return true;
     }
 
     // ============================================================
