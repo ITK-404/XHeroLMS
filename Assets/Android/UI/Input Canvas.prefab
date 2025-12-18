@@ -265,6 +265,7 @@ GameObject:
   - component: {fileID: 7345498920462979562}
   - component: {fileID: 9029955878584992251}
   - component: {fileID: 5184057852223725053}
+  - component: {fileID: 2566882768599968498}
   m_Layer: 5
   m_Name: Input Canvas
   m_TagString: Untagged
@@ -368,6 +369,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputCanvas
   container: {fileID: 483753291220736883}
+--- !u!114 &2566882768599968498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2372543804150795552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71ec87ee643a013418b516b9a0985201, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TouchRotationView
+  rotationView: {fileID: 1297678869029906443}
+  isLooking: 0
+  touchID: 0
+  includeList:
+  - {fileID: 518506574887433380}
 --- !u!1 &5951662544702507275
 GameObject:
   m_ObjectHideFlags: 0
@@ -491,7 +509,6 @@ GameObject:
   - component: {fileID: 1297678869029906443}
   - component: {fileID: 3232580066478653589}
   - component: {fileID: 773048948089066496}
-  - component: {fileID: 7437369935505915990}
   m_Layer: 5
   m_Name: Rotate Handle
   m_TagString: Untagged
@@ -556,19 +573,3 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7437369935505915990
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8867666265549752710}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71ec87ee643a013418b516b9a0985201, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TouchRotationView
-  isLooking: 0
-  touchID: 0
-  includeList:
-  - {fileID: 518506574887433380}
