@@ -2,9 +2,11 @@ using UnityEngine;
 using UnityEngine.InputSystem.EnhancedTouch;
 using EnhancedTouch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
+
 public class TouchRotationView : MonoBehaviour
 {
-    private RectTransform rectTransform;
+    [FormerlySerializedAs("rectTransform")] [SerializeField] private RectTransform rotationView;
     [SerializeField] private bool isLooking;
     [SerializeField] private int touchID;
     
@@ -16,7 +18,6 @@ public class TouchRotationView : MonoBehaviour
     private void Awake()
     {
         EnhancedTouchSupport.Enable();
-        rectTransform = GetComponent<RectTransform>();
     }
 
     private void OnDisable()
@@ -49,6 +50,7 @@ public class TouchRotationView : MonoBehaviour
                             End(touch);
                             break;
                         case UnityEngine.InputSystem.TouchPhase.Canceled:
+                            Debug.Log("Cancel");
                             break;
                         case UnityEngine.InputSystem.TouchPhase.Stationary:
                             Static(touch);
@@ -68,7 +70,7 @@ public class TouchRotationView : MonoBehaviour
         if (isLooking == true) return;
         Vector2 localPoint;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            rectTransform,
+            rotationView,
             touch.screenPosition,
             null,
             out localPoint
@@ -79,7 +81,7 @@ public class TouchRotationView : MonoBehaviour
             return;
         }
 
-        if (rectTransform.rect.Contains(localPoint))
+        if (rotationView.rect.Contains(localPoint))
         {
             Debug.Log("Touched inside image!");
             isLooking = true;
