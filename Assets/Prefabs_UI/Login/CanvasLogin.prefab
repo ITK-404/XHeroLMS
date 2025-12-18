@@ -14306,6 +14306,7 @@ MonoBehaviour:
   failPopupPrefab: {fileID: 8635697060180763229, guid: 64d5553ad586b0f4b9f7694ab567ffcc, type: 3}
   popupParent: {fileID: 1603635343364897431}
   autoFocusUsername: 1
+  showSuccessPopup: 0
 --- !u!114 &1398922974649150710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14368,6 +14369,7 @@ MonoBehaviour:
   currentPanel: {fileID: 1864574192384713718}
   loginQrPanel: {fileID: 946667910942025854}
   loginQrUI: {fileID: 696347439246090079}
+  deepLinkAuthUI: {fileID: 0}
 --- !u!114 &196985437363407547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14526,6 +14528,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FirebaseLoginQrPerCode
   useDebugFixedCode: 0
   debugFixedCode: 
+  debugDumpParentLoginQr: 0
+  autoEncodeInvalidKey: 0
+  trimAndRemoveWhitespace: 1
   pathStep2: /auth-for-lms/request
   platform: pc
   requestTimeout: 10
@@ -18719,7 +18724,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8617764428530747381
 RectTransform:
   m_ObjectHideFlags: 0
