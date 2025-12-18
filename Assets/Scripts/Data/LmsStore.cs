@@ -280,7 +280,7 @@ public class LmsStore : MonoBehaviour
             RebuildIndexes();
             if (autoSaveAfterFetch) SaveToDisk();
             Debug.Log($"[LMS] Private fetched OK: {courseId} ({p._id})");
-        }, withXData: true); // <===== QUAN TRỌNG
+        }, withXData: true); 
     }
 
     // hỗ trợ nhiều dạng root

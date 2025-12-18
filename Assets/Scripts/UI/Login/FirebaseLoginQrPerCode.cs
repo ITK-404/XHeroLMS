@@ -18,36 +18,32 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
     private const string FIREBASE_APP_NAME = "XHeroLmsApp";
 
     [Header("DEBUG")]
-    [Tooltip("Nếu bật, luôn lắng nghe node /login-qr/{debugFixedCode} bất kể code truyền vào")]
+    // Nếu bật, luôn lắng nghe node /login-qr/{debugFixedCode} bất kể code truyền vào
     public bool useDebugFixedCode = false;
 
-    [Tooltip("Code debug để test, chỉ dùng khi useDebugFixedCode = true")]
+    // Code debug để test, chỉ dùng khi useDebugFixedCode = true
     public string debugFixedCode;
 
-    [Tooltip("Nếu bật, sẽ dump parent node /login-qr để kiểm tra backend có ghi đúng schema không (chỉ log, không ảnh hưởng flow)")]
+    // Nếu bật, sẽ dump parent node /login-qr để kiểm tra backend có ghi đúng schema không (chỉ log, không ảnh hưởng flow)
     public bool debugDumpParentLoginQr = false;
 
     [Header("Firebase Key Handling")]
-    [Tooltip("Nếu code có ký tự cấm trong Firebase key, script sẽ tự encode Base64Url để tạo key hợp lệ. Backend PHẢI ghi theo key đã encode thì mới match.")]
+    // Nếu code có ký tự cấm trong Firebase key, script sẽ tự encode Base64Url để tạo key hợp lệ. Backend PHẢI ghi theo key đã encode thì mới match.
     public bool autoEncodeInvalidKey = false;
 
-    [Tooltip("Nếu bật, sẽ chỉ trim + bỏ whitespace. Không thay đổi ký tự khác.")]
+    // Nếu bật, sẽ chỉ trim + bỏ whitespace. Không thay đổi ký tự khác.
     public bool trimAndRemoveWhitespace = true;
 
     [Header("API step=2 config")]
-    [Tooltip("Path cho API step=2 (trùng với step=1: /auth-for-lms/request)")]
+    // Path cho API step=2 (trùng với step=1: /auth-for-lms/request)
     public string pathStep2 = "/auth-for-lms/request";
     public string platform = "pc";
     public float requestTimeout = 10f;
 
     private Coroutine _step2Co;
 
-    // Event bắn ra accessToken khi backend trả về
     public event Action<string> OnAccessTokenReceived;
 
-    // ============================================================
-    //  Singleton
-    // ============================================================
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -59,12 +55,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ============================================================
-    //  BẮT ĐẦU LISTEN
-    // ============================================================
-    /// <summary>
-    /// Bắt đầu lắng nghe node login-qr/{code}
-    /// </summary>
     public void StartListen(string code)
     {
         string listenCode = code;
@@ -178,13 +168,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             });
     }
 
-    // ============================================================
-    //  FIREBASE APP
-    // ============================================================
-    /// <summary>
-    /// Tạo (hoặc lấy lại) FirebaseApp dựa trên config web (xhero-e1eee).
-    /// Không phụ thuộc google-services.json.
-    /// </summary>
     private FirebaseApp EnsureFirebaseApp()
     {
         if (_firebaseApp != null)
@@ -238,9 +221,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         return _firebaseApp;
     }
 
-    // ============================================================
-    //  CLEANUP
-    // ============================================================
     private void OnDestroy()
     {
         if (_currentRef != null)
@@ -263,9 +243,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  HANDLE VALUE CHANGED
-    // ============================================================
     private void OnQrNodeChanged(object sender, ValueChangedEventArgs args)
     {
         Debug.Log("[FirebaseLoginQrPerCode] OnQrNodeChanged CALLED");
@@ -417,9 +394,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  CALL STEP=2
-    // ============================================================
     private IEnumerator CoCallStep2(string code, string timestamp)
     {
         string baseUrl = LmsStore.Instance != null ? LmsStore.Instance.baseUrl : "";
@@ -496,9 +470,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  NOTIFY
-    // ============================================================
     private void NotifySuccess(string token)
     {
         if (_notifiedSuccess)
@@ -521,9 +492,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  HELPERS: Code normalize & key rules
-    // ============================================================
     private string NormalizeCode(string input)
     {
         if (string.IsNullOrEmpty(input)) return input;
@@ -551,8 +519,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
     {
         if (string.IsNullOrEmpty(key)) return false;
 
-        // RTDB key forbidden chars: . # $ [ ] /
-        // thêm chặn ký tự điều khiển để tránh key lỗi kỳ quặc
         for (int i = 0; i < key.Length; i++)
         {
             char c = key[i];
@@ -572,9 +538,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         return b64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
     }
 
-    // ============================================================
-    //  JSON STEP2
-    // ============================================================
     [Serializable]
     private class Step2Response
     {
