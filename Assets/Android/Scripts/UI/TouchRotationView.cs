@@ -9,6 +9,9 @@ public class TouchRotationView : MonoBehaviour
     [SerializeField] private int touchID;
     
     [SerializeField] private List<RectTransform> includeList = new();
+
+    public static bool IsLooking;
+    
     public static Vector2 deltaGlobal;
     private void Awake()
     {
@@ -19,6 +22,7 @@ public class TouchRotationView : MonoBehaviour
     private void OnDisable()
     {
         deltaGlobal = Vector2.zero;
+        IsLooking = false;
     }
 
     private void Update()
@@ -54,6 +58,8 @@ public class TouchRotationView : MonoBehaviour
                     }
                 }
             }
+
+        IsLooking = isLooking;
     }
 
 
@@ -68,7 +74,7 @@ public class TouchRotationView : MonoBehaviour
             out localPoint
         );
 
-        if (IsInsideNotInteractZone(touch))
+        if (IsTouchToNotInteractZone(touch))
         {
             return;
         }
@@ -82,7 +88,7 @@ public class TouchRotationView : MonoBehaviour
         }
     }
 
-    private bool IsInsideNotInteractZone(EnhancedTouch touch)
+    private bool IsTouchToNotInteractZone(EnhancedTouch touch)
     {
         foreach (var item in includeList)
         {
@@ -95,7 +101,7 @@ public class TouchRotationView : MonoBehaviour
             );
 
 
-            if (rectTransform.rect.Contains(localPoint))
+            if (item.rect.Contains(localPoint))
             {
                 return true;
             }
