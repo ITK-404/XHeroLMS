@@ -173,15 +173,16 @@ public class RegistrationController : MonoBehaviour
             registerPlatform  = "web",
             isFromGame        = false,
 
-            // Các field khác để trống (BE tùy chọn)
-            fullName          = "",
+            fullName          = phoneDigits,
             email             = "",
             province          = "",
-            gender            = ""
-            // referralCode có thể bổ sung sau khi BE hỗ trợ
+            gender            = "male"
         };
 
         StartCoroutine(RegisterRoutine(payload, username84));
+
+        Debug.Log($"[Register F] phoneRaw='{phoneRaw}', phoneDigits='{phoneDigits}', username84='{username84}'");
+
     }
 
     private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
@@ -253,6 +254,8 @@ public class RegistrationController : MonoBehaviour
         }
 
         btnRegister.interactable = true;
+        Debug.Log($"[Register F] POST {url} body={json}");
+
     }
 
     private void ResetForm()
