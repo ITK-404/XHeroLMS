@@ -78,6 +78,7 @@ GameObject:
   - component: {fileID: 2927364886016186299}
   - component: {fileID: 2689788196747608356}
   - component: {fileID: 7932066353138930289}
+  - component: {fileID: 328224466357948447}
   m_Layer: 0
   m_Name: CameraPlayer
   m_TagString: MainCamera
@@ -255,6 +256,15 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!1542919678 &328224466357948447
+StreamingController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 686075605066708800}
+  m_Enabled: 1
+  m_StreamingMipmapBias: 0.5
 --- !u!1 &869429735813485579
 GameObject:
   m_ObjectHideFlags: 0
@@ -924,6 +934,9 @@ MonoBehaviour:
   gravity: -9.81
   gravityMultiplier: 1
   moveVfxPrefab: {fileID: 4052651536205214080, guid: 9fcfed600e4484f4597ef6a8e46b193c, type: 3}
+  rotationTouchSpeed: 1
+  minPitch: -40
+  maxPitch: 60
 --- !u!114 &13269495743736937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1154,6 +1167,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PCInput
   IsClicked: 0
   MoveVector: {x: 0, y: 0}
+  isMobile: 0
+  delta: {x: 0, y: 0}
 --- !u!1 &5859534107883418354
 GameObject:
   m_ObjectHideFlags: 0
