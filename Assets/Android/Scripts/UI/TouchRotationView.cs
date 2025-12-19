@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem.EnhancedTouch;
 using EnhancedTouch = UnityEngine.InputSystem.EnhancedTouch.Touch;
@@ -21,6 +22,12 @@ public class TouchRotationView : MonoBehaviour
     }
 
     private void OnDisable()
+    {
+        deltaGlobal = Vector2.zero;
+        IsLooking = false;
+    }
+    
+    private void OnApplicationFocus(bool hasFocus)
     {
         deltaGlobal = Vector2.zero;
         IsLooking = false;
@@ -111,7 +118,9 @@ public class TouchRotationView : MonoBehaviour
 
         return false;
     }
-    
+
+  
+
     private void Move(EnhancedTouch touch)
     {
         if (isLooking && touch.touchId == touchID)
