@@ -26,7 +26,7 @@ public class PlayerChairManager : MonoBehaviour
     VideoPlayerControllerPro videoPlayerControllerPro;
     [SerializeField] PlayerStandUI playerStandUI;
     [SerializeField] InputCanvas inputCanvas;
-    [HideInInspector] public ChairCheckPoint currentCheckPoint;
+    public ChairCheckPoint currentCheckPoint;
 
     private TutorialBase TutorialBase;
 
@@ -60,11 +60,11 @@ public class PlayerChairManager : MonoBehaviour
     public void PlayerStandup()
     {
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
-        //if (TutorialHandler.Instance.IsPlayedBefore() == false && TutorialHandler.Instance.IsStep(2))
-        //{
-        //    TutorialHandler.Instance.ShowStep(3);
-        //    TutorialHandler.Instance.Save();
-        //}
+
+        if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
+        {
+            TutorialHandler.Instance.Save();
+        }
 
         videoPlayerControllerPro.TryToPauseVideo();
         Debug.Log("Stand up");
@@ -86,6 +86,8 @@ public class PlayerChairManager : MonoBehaviour
             InputBlocker.SetBlocked(false);
             playerStandUI.returnBtn.gameObject.SetActive(true);
             inputCanvas.Show();
+
+            
         }));
     }
 
@@ -154,9 +156,8 @@ public class PlayerChairManager : MonoBehaviour
                 playerStandUI.ShowLearningUI();
                 videoPlayerControllerPro.EnterFullscreenUI();
                 playerStandUI.returnBtn.gameObject.SetActive(false);
-                if (!TutorialHandler.Instance.IsPlayedBefore())
+                if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
                 {
-
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
             }));
