@@ -12470,7 +12470,7 @@ MonoBehaviour:
   m_KeyboardType: 0
   m_LineType: 0
   m_HideMobileInput: 0
-  m_HideSoftKeyboard: 1
+  m_HideSoftKeyboard: 0
   m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 14
@@ -14237,6 +14237,7 @@ GameObject:
   - component: {fileID: 1866119464941252551}
   - component: {fileID: 8700788233042091658}
   - component: {fileID: 696347439246090079}
+  - component: {fileID: 1632365846098568490}
   - component: {fileID: 7775143221065465437}
   - component: {fileID: 5974351511332282659}
   m_Layer: 5
@@ -14302,8 +14303,8 @@ MonoBehaviour:
   inputUsername: {fileID: 3356509657559557003}
   inputPassword: {fileID: 8871046507188282930}
   buttonLogin: {fileID: 4125913502679485929}
-  successPopupPrefab: {fileID: 9004701177802258429, guid: 6d0b19bd3b4ef244d802e729cbd6ff7d, type: 3}
-  failPopupPrefab: {fileID: 8635697060180763229, guid: 64d5553ad586b0f4b9f7694ab567ffcc, type: 3}
+  successPopupPrefab: {fileID: 9004701177802258429, guid: 88a0422f772f11d43845bd537cd9cfc4, type: 3}
+  failPopupPrefab: {fileID: 8635697060180763229, guid: f2af73a87a1fb8d4a88d0a8b900bbb26, type: 3}
   popupParent: {fileID: 1603635343364897431}
   autoFocusUsername: 1
   showSuccessPopup: 0
@@ -14364,12 +14365,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PanelSwitchController
   btnForgot: {fileID: 4597698840281326482}
-  btnLoginQR: {fileID: 0}
+  btnLoginQR: {fileID: 5111673711201116453}
   forgotPanel: {fileID: 1974337534395639105}
   currentPanel: {fileID: 1864574192384713718}
   loginQrPanel: {fileID: 946667910942025854}
   loginQrUI: {fileID: 696347439246090079}
-  deepLinkAuthUI: {fileID: 0}
+  deepLinkAuthUI: {fileID: 1632365846098568490}
 --- !u!114 &196985437363407547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14561,6 +14562,34 @@ MonoBehaviour:
   btnBack: {fileID: 1787477542443640356}
   currentPanel: {fileID: 946667910942025854}
   backPanel: {fileID: 1864574192384713718}
+--- !u!114 &1632365846098568490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531063588248528658}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423e81af47c5721448e7d597e5b5100a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LmsDeepLinkAuthUI
+  path: /auth-for-lms/request
+  platform: pc
+  requestTimeout: 10
+  xheroScheme: xhero
+  xheroAndroidHost: com.xhero_app
+  xheroIosHost: com.xhero.app
+  xheroPath: /
+  codeParamName: authLMSCode
+  timestampParamName: timestamp
+  functionParamName: function
+  functionValue: auth-for-lms
+  waitTokenTimeoutSeconds: 25
+  antiSpamSeconds: 3
+  onLoginSuccess:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &7775143221065465437
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21489,6 +21518,17 @@ PrefabInstance:
       addedObject: {fileID: 8416061170533242435}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+--- !u!114 &5111673711201116453 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 586262251226727352, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+  m_PrefabInstance: {fileID: 5679745296260620957}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &5398595694651932943 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
@@ -21830,19 +21870,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_SizeDelta.x
-      value: -36.955
+      value: 183.0985
       objectReference: {fileID: 0}
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_SizeDelta.y
-      value: -28.265
+      value: 81.462
       objectReference: {fileID: 0}
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -7.178
+      value: -7.500201
       objectReference: {fileID: 0}
     - target: {fileID: 8910893469124534820, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -1.678
+      value: -0.8
       objectReference: {fileID: 0}
     - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_Pivot.x
