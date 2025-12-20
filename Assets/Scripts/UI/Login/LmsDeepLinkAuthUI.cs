@@ -14,8 +14,14 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     [Header("XHero deeplink")]
     public string xheroScheme = "xhero";
 
-[Tooltip("Shared host used for both Android & iOS. Example: xherodeeplink")]
-public string xheroHost = "xherodeeplink";
+    [Tooltip("ANDROID host (as in AndroidManifest intent-filter host)")]
+    public string xheroAndroidHost = "com.xhero_app";
+
+    [Tooltip("iOS host (as in iOS URLTypes / associated host config if they use host)")]
+    public string xheroIosHost = "com.xhero.app";
+
+    [Tooltip("Deep link path. Example: '/', '/auth', ...")]
+    public string xheroPath = "/";
 
     public string codeParamName = "authLMSCode";
     public string timestampParamName = "timestamp";
@@ -231,25 +237,41 @@ public string xheroHost = "xherodeeplink";
     }
 
     // ===================== OPEN XHERO =====================
-private void OpenXHeroDeepLink(string code, string timestamp)
-{
-    string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-    string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
-    string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
+    private string GetXHeroHostForPlatform()
+    {
+#if UNITY_IOS
+        return string.IsNullOrEmpty(xheroIosHost) ? xheroAndroidHost : xheroIosHost;
+#else
+        // default Android + Editor
+        return xheroAndroidHost;
+#endif
+    }
 
-    // host dùng chung
-    string host = string.IsNullOrEmpty(xheroHost) ? "xherodeeplink" : xheroHost;
+    private void OpenXHeroDeepLink(string code, string timestamp)
+    {
+        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
+        string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
+        string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
 
-    // format chung: xhero://xherodeeplink?...
-    string deepLinkUrl =
-        $"{xheroScheme}://{host}" +
-        $"?{codeParamName}={codeEnc}" +
-        $"&{timestampParamName}={tsEnc}" +
-        $"&{functionParamName}={fnEnc}";
+        string host = GetXHeroHostForPlatform();
 
-    Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
-    Application.OpenURL(deepLinkUrl);
-}
+        string p = string.IsNullOrEmpty(xheroPath) ? "/" : xheroPath;
+        if (!p.StartsWith("/")) p = "/" + p;
+
+        string deepLinkUrl =
+            $"{xheroScheme}://{host}{p}" +
+            $"?{codeParamName}={codeEnc}" +
+            $"&{timestampParamName}={tsEnc}" +
+            $"&{functionParamName}={fnEnc}";
+
+        Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+
+#if UNITY_IOS
+        Application.OpenURL(deepLinkUrl);
+#else
+        Application.OpenURL(deepLinkUrl);
+#endif
+    }
 
     // ===================== JSON =====================
     [Serializable] private class LmsAuthResponse { public bool status; public LmsAuthData data; }
