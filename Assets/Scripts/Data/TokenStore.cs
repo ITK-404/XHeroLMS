@@ -40,7 +40,7 @@ public static class TokenStore
     {
         public string all, personal, system;
     }
-
+ 
     public static void SetData(AuthResponseRoot auth)
     {
         if (auth == null || auth.data == null)
