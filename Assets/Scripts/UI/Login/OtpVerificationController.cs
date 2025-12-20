@@ -643,8 +643,7 @@ public class OtpVerificationController : MonoBehaviour
         }
 
         textStatus.text =
-            $"Mã xác minh gồm 6 số vừa được gửi đến {channelLabel} {contactIdentifier}. " +
-            $"\nVui lòng nhập mã OTP để {purposeLabel}.";
+            $"Nhập xác minh gồm 6 số vừa được gửi đến \n {channelLabel} <color #ff7b00ff>{contactIdentifier}</color>. ";
     }
 
     // =============== CONFIG /config?key=otp-expired-time ===============
