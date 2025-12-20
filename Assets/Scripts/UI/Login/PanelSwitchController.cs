@@ -14,6 +14,7 @@ public class PanelSwitchController : MonoBehaviour
 
     [Header("QR UI")]
     public LmsQrAuthUI loginQrUI;   // <-- kéo thả LmsQrAuthUI vào đây trong Inspector
+    public LmsDeepLinkAuthUI deepLinkAuthUI;
 
     private void Start()
     {
@@ -21,7 +22,7 @@ public class PanelSwitchController : MonoBehaviour
             btnForgot.onClick.AddListener(ShowForgot);
 
         if (btnLoginQR != null)
-            btnLoginQR.onClick.AddListener(ShowLoginQr);
+            btnLoginQR.onClick.AddListener(OnClickLoginViaApp);
     }
 
     private void OnDestroy()
@@ -30,7 +31,7 @@ public class PanelSwitchController : MonoBehaviour
             btnForgot.onClick.RemoveListener(ShowForgot);
 
         if (btnLoginQR != null)
-            btnLoginQR.onClick.RemoveListener(ShowLoginQr);
+            btnLoginQR.onClick.RemoveListener(OnClickLoginViaApp);
     }
 
     private void ShowForgot()
@@ -65,6 +66,21 @@ public class PanelSwitchController : MonoBehaviour
         else
         {
             Debug.LogWarning("[PanelSwitchController] loginQrUI chưa được gán trong Inspector.");
+        }
+    }
+    private void OnClickLoginViaApp()
+    {
+        LoadingUI.Show();
+
+        if (deepLinkAuthUI != null)
+        {
+            deepLinkAuthUI.StartDeepLinkLogin();
+        }
+        else
+        {
+            LoadingUI.Hide();
+            Debug.LogWarning("[PanelSwitchController] deepLinkAuthUI chưa được gán trong Inspector.");
+            LoginController.ShowWarning("Thiếu cấu hình đăng nhập qua App (deepLinkAuthUI).");
         }
     }
 }

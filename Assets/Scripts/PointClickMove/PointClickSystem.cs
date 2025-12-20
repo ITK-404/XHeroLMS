@@ -26,7 +26,6 @@ public class PointClickSystem : MonoBehaviour
     private ChairCheckPoint currentCheckPoint;
 
     private PlayerCamera playerCamera;
-    private RotateLeftRightCamera rotateLeftRightCamera;
 
     // ===== Click focus config =====
     private float desiredDistanceFromTarget = 6f;   // player sẽ đứng cách điểm click khoảng này
@@ -49,7 +48,6 @@ public class PointClickSystem : MonoBehaviour
     public float maxPitch = 60f;
     private void Awake()
     {
-        rotateLeftRightCamera = GetComponent<RotateLeftRightCamera>();
         playerCamera = GetComponent<PlayerCamera>();
         baseInput = GetComponent<BaseInput>();
     }
@@ -103,10 +101,9 @@ public class PointClickSystem : MonoBehaviour
         //v = Input.GetAxisRaw("Vertical"); // W/S
         h = baseInput != null ? baseInput.MoveVector.x : 0;
         v = baseInput != null ? baseInput.MoveVector.y : 0;
-
+        Debug.Log($"movement vector {h} {v}");
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
-
         bool isMoving = Mathf.Abs(v) > 0.1f;
         bool isRotateInput = Mathf.Abs(h) > 0.1f;
 
@@ -136,6 +133,7 @@ public class PointClickSystem : MonoBehaviour
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
         var delta = TouchRotationView.deltaGlobal;
+        bool isRotationActive = delta.magnitude > 0.1f;
         if (delta != Vector2.zero)
         {
             float horizontalRotation = delta.x * rotationTouchSpeed * Time.deltaTime;
@@ -159,6 +157,11 @@ public class PointClickSystem : MonoBehaviour
         }
         else if (Mathf.Abs(h) > 0.1f && ai.isStopped && ai.canMove == false)
         {
+            if (isRotationActive || TouchRotationView.IsLooking)
+            {
+                return;
+            }
+
             Debug.Log("Đang xoay");
             float rotationAmount = h * rotationSpeed * Time.deltaTime;
             transform.Rotate(0, rotationAmount, 0);

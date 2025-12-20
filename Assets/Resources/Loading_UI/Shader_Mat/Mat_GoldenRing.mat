@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mat_GoldenRing
+  m_Shader: {fileID: 4800000, guid: f8ace3221f4fd47478345f9f73fb3e8a, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _AngularSpeed: -3.5
+    - _GlintChance: 0.12
+    - _GlintIntensity: 1
+    - _GlintSharpness: 14
+    - _GlowIntensity: 0.36
+    - _GlowSoftness: 0.0001
+    - _HeadBoost: 2.5
+    - _HeadCap: 1
+    - _HeadHeight: 1.43
+    - _HeadRound: 1.6
+    - _HeadSize: 0.11
+    - _HeadSoft: 0.1
+    - _Intensity: 6
+    - _NoiseAmount: 0
+    - _NoiseScale: 0.1
+    - _NoiseSpeed: 1.2
+    - _Radius: 0.35
+    - _Softness: 0.0001
+    - _SparkAngCells: 8
+    - _SparkDensity: 0.55
+    - _SparkFlicker: 12
+    - _SparkIntensity: 2
+    - _SparkRadCells: 14
+    - _SparkRadialSpread: 0.065
+    - _SparkScroll: 1.4
+    - _SparkSize: 0.015
+    - _SparkSizeRand: 0.4
+    - _SparkTailBias: 1.2
+    - _SparkleAmount: 0
+    - _SparkleFreq: 18
+    - _SparkleSpeed: 2
+    - _TailLength: 2.7
+    - _TailPower: 2.4
+    - _TailSoft: 0.22
+    - _TailTaper: 0.1
+    - _TailThicknessScale: 1
+    - _Thickness: 0.03
+    m_Colors:
+    - _MainColor: {r: 1, g: 0.75, b: 0.19999996, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
+--- !u!114 &9169017270686330349
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10

@@ -20,13 +20,15 @@ public class TutorialHandler : MonoBehaviour
     private int index = 0;
     public GameObject worldTutorialStep;
     public GameObject sitdownStandupUI;
+    public GameObject standStandupUI;
     public GameObject baiHocUI;
+    public GameObject closeBaiHocUI;
     public GameObject pauseAndResumeUI;
     public GameObject skipVideoUI;
     public GameObject scaleVideoUI;
     public static TutorialHandler Instance;
     private const string keyPlayedBefore = "TutorialPlayedBefore";
-    private bool isPlayedBefore = false;
+    [SerializeField] private bool isPlayedBefore = false;
 
     public TutorialStepType CurrentStep => (TutorialStepType)index;
     [SerializeField]private TutorialStepType debugStep;
@@ -37,6 +39,10 @@ public class TutorialHandler : MonoBehaviour
         Debug.Log("Save key");
         PlayerPrefs.SetInt(key, 1);
         isPlayedBefore = true;
+        foreach (var item in tutorialSteps)
+        {
+            item.gameObject.SetActive(false);
+        }
     }
 
     private void Load()
@@ -68,6 +74,10 @@ public class TutorialHandler : MonoBehaviour
         tutorialSteps.Add(pauseAndResumeUI);
         tutorialSteps.Add(skipVideoUI);
         tutorialSteps.Add(scaleVideoUI);
+       
+        // new add must set type for ui
+        tutorialSteps.Add(standStandupUI);
+        tutorialSteps.Add(closeBaiHocUI);
         foreach(var item in tutorialSteps)
         {
             item.SetActive(false);
@@ -83,15 +93,13 @@ public class TutorialHandler : MonoBehaviour
 
     public void SetCurrentStep(TutorialStepType index)
     {
+        Debug.Log("Set current step to: "+index);
         ShowStep((int)index);
     }
 
     private void ShowStep(int index)
     {
-        if (isPlayedBefore)
-        {
-            return;
-        }
+        if (isPlayedBefore) return;
         var tutorialStep = (TutorialStepType)index;
         switch (tutorialStep)
         {
@@ -107,7 +115,7 @@ public class TutorialHandler : MonoBehaviour
                 baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ MỞ BÀI HỌC";
                 break;
             case TutorialStepType.CloseLesson:
-                OpenUI(baiHocUI);
+                OpenUI(closeBaiHocUI);
                 baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐÓNG BÀI HỌC";
                 break;
             case TutorialStepType.PauseVideo:
@@ -122,8 +130,8 @@ public class TutorialHandler : MonoBehaviour
                 OpenUI(scaleVideoUI);
                 break;
             case TutorialStepType.Standup:
-                OpenUI(sitdownStandupUI);
-                sitdownStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐỨNG";
+                OpenUI(standStandupUI);
+                standStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐỨNG";
                 break;
             case TutorialStepType.Skip:
                 OpenUI(skipVideoUI);
@@ -149,7 +157,8 @@ public class TutorialHandler : MonoBehaviour
 
     public bool IsPlayedBefore()
     {
-        return isPlayedBefore;
+        return true;
+        //return isPlayedBefore;
     }
 
     private void Update()

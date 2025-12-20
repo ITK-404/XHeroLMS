@@ -12,32 +12,38 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
     public static FirebaseLoginQrPerCode Instance { get; private set; }
 
     private DatabaseReference _currentRef;
-    private bool _notifiedSuccess;   // tránh bắn event nhiều lần
+    private bool _notifiedSuccess;
     private FirebaseApp _firebaseApp;
 
-    private const string FIREBASE_APP_NAME = "XHeroLmsApp"; // tên app custom để dùng lại
+    private const string FIREBASE_APP_NAME = "XHeroLmsApp";
 
     [Header("DEBUG")]
-    [Tooltip("Nếu bật, luôn lắng nghe node /login-qr/{debugFixedCode} bất kể code truyền vào")]
-    public bool useDebugFixedCode = false;   // để false mặc định
+    // Nếu bật, luôn lắng nghe node /login-qr/{debugFixedCode} bất kể code truyền vào
+    public bool useDebugFixedCode = false;
 
-    [Tooltip("Code debug để test, chỉ dùng khi useDebugFixedCode = true")]
-    public string debugFixedCode;            // không gán mặc định trong code
+    // Code debug để test, chỉ dùng khi useDebugFixedCode = true
+    public string debugFixedCode;
+
+    // Nếu bật, sẽ dump parent node /login-qr để kiểm tra backend có ghi đúng schema không (chỉ log, không ảnh hưởng flow)
+    public bool debugDumpParentLoginQr = false;
+
+    [Header("Firebase Key Handling")]
+    // Nếu code có ký tự cấm trong Firebase key, script sẽ tự encode Base64Url để tạo key hợp lệ. Backend PHẢI ghi theo key đã encode thì mới match.
+    public bool autoEncodeInvalidKey = false;
+
+    // Nếu bật, sẽ chỉ trim + bỏ whitespace. Không thay đổi ký tự khác.
+    public bool trimAndRemoveWhitespace = true;
 
     [Header("API step=2 config")]
-    [Tooltip("Path cho API step=2 (trùng với step=1: /auth-for-lms/request)")]
+    // Path cho API step=2 (trùng với step=1: /auth-for-lms/request)
     public string pathStep2 = "/auth-for-lms/request";
-    public string platform  = "pc";
-    public float  requestTimeout = 10f;
+    public string platform = "pc";
+    public float requestTimeout = 10f;
 
     private Coroutine _step2Co;
 
-    // Event bắn ra accessToken khi backend trả về
     public event Action<string> OnAccessTokenReceived;
 
-    // ============================================================
-    //  Singleton
-    // ============================================================
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -49,27 +55,42 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ============================================================
-    //  BẮT ĐẦU LISTEN
-    // ============================================================
-    /// <summary>
-    /// Bắt đầu lắng nghe node login-qr/{code}
-    /// </summary>
     public void StartListen(string code)
     {
         string listenCode = code;
 
-        // DEBUG override nếu cần (chỉ khi bạn tick trong Inspector và nhập code)
+        // DEBUG override nếu cần
         if (useDebugFixedCode && !string.IsNullOrEmpty(debugFixedCode))
         {
             Debug.Log($"[FirebaseLoginQrPerCode] DEBUG: Override code '{code}' -> '{debugFixedCode}'");
             listenCode = debugFixedCode;
         }
 
+        listenCode = NormalizeCode(listenCode);
+
         if (string.IsNullOrEmpty(listenCode))
         {
             Debug.LogError("[FirebaseLoginQrPerCode] code rỗng, không listen được.");
             return;
+        }
+
+        // Nếu key không hợp lệ -> tuỳ chọn encode
+        if (!IsValidFirebaseKey(listenCode))
+        {
+            Debug.LogWarning($"[FirebaseLoginQrPerCode] listenCode INVALID for Firebase key: '{listenCode}'");
+
+            if (autoEncodeInvalidKey)
+            {
+                string encoded = ToBase64Url(listenCode);
+                Debug.LogWarning($"[FirebaseLoginQrPerCode] autoEncodeInvalidKey=TRUE -> encode '{listenCode}' => '{encoded}'");
+                listenCode = encoded;
+            }
+            else
+            {
+                Debug.LogError("[FirebaseLoginQrPerCode] autoEncodeInvalidKey=FALSE -> KHÔNG listen để tránh sai path. " +
+                               "Hãy sửa backend tạo key hợp lệ hoặc bật autoEncodeInvalidKey (và backend cũng phải ghi theo key đó).");
+                return;
+            }
         }
 
         Debug.Log("[FirebaseLoginQrPerCode] StartListen for code = " + listenCode);
@@ -100,6 +121,20 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 var db = FirebaseDatabase.GetInstance(app);
                 Debug.Log("[FirebaseLoginQrPerCode] Using DB URL = " + db.App.Options.DatabaseUrl);
 
+                // OPTIONAL: dump parent schema để biết backend có ghi đúng node không
+                if (debugDumpParentLoginQr)
+                {
+                    db.RootReference.Child("login-qr").GetValueAsync().ContinueWithOnMainThread(t =>
+                    {
+                        if (t.IsFaulted) Debug.LogError("[FirebaseLoginQrPerCode] debugDumpParentLoginQr error: " + t.Exception);
+                        else if (t.IsCompleted)
+                        {
+                            var s = t.Result;
+                            Debug.Log("[FirebaseLoginQrPerCode] debugDumpParentLoginQr /login-qr raw = " + s.GetRawJsonValue());
+                        }
+                    });
+                }
+
                 // login-qr/<code>
                 _currentRef = db.RootReference.Child("login-qr").Child(listenCode);
                 _currentRef.ValueChanged += OnQrNodeChanged;
@@ -122,7 +157,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                         var s = t.Result;
                         if (!s.Exists)
                         {
-                            Debug.LogWarning("[FirebaseLoginQrPerCode] GetValueAsync: node /login-qr/" + listenCode + " hiện KHÔNG tồn tại.");
+                            Debug.LogWarning("[FirebaseLoginQrPerCode] GetValueAsync: node /login-qr/" + listenCode + " hiện KHÔNG tồn tại (có thể backend chưa ghi hoặc bạn listen sai key/schema).");
                         }
                         else
                         {
@@ -133,13 +168,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             });
     }
 
-    // ============================================================
-    //  FIREBASE APP
-    // ============================================================
-    /// <summary>
-    /// Tạo (hoặc lấy lại) FirebaseApp dựa trên config web (xhero-e1eee).
-    /// Không phụ thuộc google-services.json.
-    /// </summary>
     private FirebaseApp EnsureFirebaseApp()
     {
         if (_firebaseApp != null)
@@ -160,15 +188,15 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             // ignore, sẽ tạo mới
         }
 
-        // ====== CONFIG MỚI TỪ firebaseConfig (xhero-e1eee) ======
         var options = new AppOptions
         {
-            ApiKey          = "AIzaSyCw9j5LCQuupiidpQ3nEplzujl7l2LfIc8",
-            AppId           = "1:934560089313:web:8edd540216d9dcd6ba63a0",
-            ProjectId       = "xhero-e1eee",
-            DatabaseUrl     = new Uri("https://xhero-e1eee-default-rtdb.firebaseio.com"),
+            ApiKey = "AIzaSyCw9j5LCQuupiidpQ3nEplzujl7l2LfIc8",
+            AppId = "1:934560089313:web:8edd540216d9dcd6ba63a0",
+            ProjectId = "xhero-e1eee",
+            // DatabaseUrl = new Uri("https://xhero-e1eee-default-rtdb.firebaseio.com"),   
+            DatabaseUrl = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),   
             MessageSenderId = "934560089313",
-            StorageBucket   = "xhero-e1eee.firebasestorage.app"
+            StorageBucket = "xhero-e1eee.firebasestorage.app"
         };
 
         try
@@ -193,9 +221,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         return _firebaseApp;
     }
 
-    // ============================================================
-    //  CLEANUP
-    // ============================================================
     private void OnDestroy()
     {
         if (_currentRef != null)
@@ -218,9 +243,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  HANDLE VALUE CHANGED
-    // ============================================================
     private void OnQrNodeChanged(object sender, ValueChangedEventArgs args)
     {
         Debug.Log("[FirebaseLoginQrPerCode] OnQrNodeChanged CALLED");
@@ -238,13 +260,12 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             return;
         }
 
-        // ===== RAW JSON (cả cục object) =====
         string rawJson = snap.GetRawJsonValue();
         Debug.Log($"[FirebaseLoginQrPerCode] Raw snapshot at /login-qr/{snap.Key} = {rawJson}");
 
         // ---- ĐỌC isScanned ----
         bool isScanned = false;
-        var  isScannedVal = snap.Child("isScanned").Value;
+        var isScannedVal = snap.Child("isScanned").Value;
 
         Debug.Log($"[FirebaseLoginQrPerCode] isScanned raw = {(isScannedVal == null ? "null" : isScannedVal + " (" + isScannedVal.GetType().Name + ")")}");
 
@@ -271,22 +292,22 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
 
         // Các field có thể có ở root
-        string browserSimple   = snap.Child("browser").Value?.ToString();
-        string browserName     = snap.Child("browserName").Value?.ToString();
+        string browserSimple = snap.Child("browser").Value?.ToString();
+        string browserName = snap.Child("browserName").Value?.ToString();
         string browserFullName = snap.Child("browserfullName").Value?.ToString();
-        string ip              = snap.Child("ip").Value?.ToString();
-        string expireAt        = snap.Child("expireAt").Value?.ToString();
-        string code            = snap.Child("code").Value?.ToString();
-        string token           = snap.Child("token").Value?.ToString();       // tuỳ backend
-        string accessToken     = snap.Child("accessToken").Value?.ToString(); // tuỳ backend
-        string timestamp       = snap.Child("timestamp").Value?.ToString();   // *** QUAN TRỌNG ***
+        string ip = snap.Child("ip").Value?.ToString();
+        string expireAt = snap.Child("expireAt").Value?.ToString();
+        string code = snap.Child("code").Value?.ToString();
+        string token = snap.Child("token").Value?.ToString();
+        string accessToken = snap.Child("accessToken").Value?.ToString();
+        string timestamp = snap.Child("timestamp").Value?.ToString();
 
-        var    browserNode      = snap.Child("browser");
-        string browserObjName   = browserNode.Exists ? browserNode.Child("name").Value?.ToString()      : null;
-        string browserObjFull   = browserNode.Exists ? browserNode.Child("fullName").Value?.ToString()  : null;
+        var browserNode = snap.Child("browser");
+        string browserObjName = browserNode.Exists ? browserNode.Child("name").Value?.ToString() : null;
+        string browserObjFull = browserNode.Exists ? browserNode.Child("fullName").Value?.ToString() : null;
         string browserUserAgent = browserNode.Exists ? browserNode.Child("userAgent").Value?.ToString() : null;
 
-        // ==== LOG THEO DẠNG CÂY ====
+        // ==== LOG TREE ====
         var sb = new StringBuilder();
         sb.AppendLine("[FirebaseLoginQrPerCode]");
         sb.AppendLine("login-qr");
@@ -305,34 +326,30 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             sb.AppendLine($"      userAgent: \"{browserUserAgent}\"");
         }
 
-        sb.AppendLine($"    browserName: \"{browserName}\"");
-        sb.AppendLine($"    browserfullName: \"{browserFullName}\"");
+        if (!string.IsNullOrEmpty(browserName)) sb.AppendLine($"    browserName: \"{browserName}\"");
+        if (!string.IsNullOrEmpty(browserFullName)) sb.AppendLine($"    browserfullName: \"{browserFullName}\"");
+
         sb.AppendLine($"    code: \"{code}\"");
         sb.AppendLine($"    timestamp(FB): {timestamp}");
         sb.AppendLine($"    expireAt: {expireAt}");
         sb.AppendLine($"    ip: \"{ip}\"");
 
-        if (!string.IsNullOrEmpty(token))
-            sb.AppendLine($"    token: \"{token}\"");
-        if (!string.IsNullOrEmpty(accessToken))
-            sb.AppendLine($"    accessToken: \"{accessToken}\"");
+        if (!string.IsNullOrEmpty(token)) sb.AppendLine($"    token: \"{token}\"");
+        if (!string.IsNullOrEmpty(accessToken)) sb.AppendLine($"    accessToken: \"{accessToken}\"");
 
         Debug.Log(sb.ToString());
-        // ==========================
+        // =================
 
-        // Nếu đã notify 1 lần rồi thì bỏ qua các update sau
         if (_notifiedSuccess)
         {
             Debug.Log("[FirebaseLoginQrPerCode] Already notified success, ignore further changes.");
             return;
         }
 
-        // Nếu backend có ghi sẵn token/accessToken vào node -> dùng luôn, khỏi gọi step=2
+        // Nếu node có sẵn token -> dùng luôn
         string finalTokenInNode = null;
-        if (!string.IsNullOrEmpty(accessToken))
-            finalTokenInNode = accessToken;
-        else if (!string.IsNullOrEmpty(token))
-            finalTokenInNode = token;
+        if (!string.IsNullOrEmpty(accessToken)) finalTokenInNode = accessToken;
+        else if (!string.IsNullOrEmpty(token)) finalTokenInNode = token;
 
         if (!string.IsNullOrEmpty(finalTokenInNode))
         {
@@ -341,12 +358,10 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             return;
         }
 
-        // Fallback timestamp từ LmsStore (step=1)
+        // fallback timestamp từ store
         string timestampFromStore = null;
         if (LmsStore.Instance != null)
-        {
             timestampFromStore = LmsStore.Instance.lastLoginQrTimestamp;
-        }
 
         if (string.IsNullOrEmpty(timestamp) && !string.IsNullOrEmpty(timestampFromStore))
         {
@@ -354,15 +369,14 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             timestamp = timestampFromStore;
         }
 
-        // Nếu vẫn rỗng thì không gọi step=2 nữa vì BE require cả code + timestamp
         if (string.IsNullOrEmpty(timestamp))
         {
             Debug.LogError("[FirebaseLoginQrPerCode] timestamp đang RỖNG (Firebase không có, LmsStore cũng không có). BE cần timestamp từ step=1 -> không gọi step=2 được.");
             return;
         }
 
-        // Nếu chưa có token trong node, nhưng isScanned = true -> gọi API step=2 để lấy JWT
-        string codeToUse = !string.IsNullOrEmpty(code) ? code : snap.Key; // fallback: dùng key nếu field code trống
+        string codeToUse = !string.IsNullOrEmpty(code) ? code : snap.Key;
+
         Debug.Log("[FirebaseLoginQrPerCode] isScanned = true nhưng chưa có token/accessToken -> gọi API step=2 với code = " + codeToUse + ", timestamp = " + timestamp);
 
         if (!string.IsNullOrEmpty(codeToUse))
@@ -380,12 +394,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  CALL STEP=2 (GET + timestamp)
-    // ============================================================
-    /// <summary>
-    /// Gọi API auth-for-lms/request?step=2&platform=pc&code=<code>&timestamp=<timestamp> để lấy JWT
-    /// </summary>
     private IEnumerator CoCallStep2(string code, string timestamp)
     {
         string baseUrl = LmsStore.Instance != null ? LmsStore.Instance.baseUrl : "";
@@ -417,21 +425,19 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             bool hasError = req.isNetworkError || req.isHttpError;
 #endif
 
-            long   statusCode = req.responseCode;
-            string body       = req.downloadHandler != null ? req.downloadHandler.text : "<null>";
+            long statusCode = req.responseCode;
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "<null>";
 
             if (hasError)
             {
                 Debug.LogError(
-                    $"[FirebaseLoginQrPerCode] step=2 request error: {req.error}, " +
-                    $"statusCode={statusCode}, body={body}"
+                    $"[FirebaseLoginQrPerCode] step=2 request error: {req.error}, statusCode={statusCode}, body={body}"
                 );
                 yield break;
             }
 
             Debug.Log($"[FirebaseLoginQrPerCode] step=2 response (status={statusCode}): {body}");
 
-            // Thử parse theo kiểu status + data.accessToken, hoặc token, hoặc đơn giản là raw JWT string
             string finalToken = null;
 
             try
@@ -440,13 +446,9 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 if (resp != null)
                 {
                     if (resp.data != null && !string.IsNullOrEmpty(resp.data.accessToken))
-                    {
                         finalToken = resp.data.accessToken;
-                    }
                     else if (!string.IsNullOrEmpty(resp.token))
-                    {
                         finalToken = resp.token;
-                    }
                 }
             }
             catch (Exception e)
@@ -454,11 +456,8 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 Debug.LogWarning("[FirebaseLoginQrPerCode] Parse step=2 JSON fail, dùng raw string: " + e);
             }
 
-            // Nếu vẫn không parse ra thì giả định backend trả thẳng JWT (plain text)
             if (string.IsNullOrEmpty(finalToken))
-            {
-                finalToken = body.Trim().Trim('"'); // phòng khi backend trả "jwt"
-            }
+                finalToken = body.Trim().Trim('"');
 
             if (string.IsNullOrEmpty(finalToken))
             {
@@ -471,12 +470,6 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  NOTIFY
-    // ============================================================
-    /// <summary>
-    /// Gửi token ra ngoài + stop listen
-    /// </summary>
     private void NotifySuccess(string token)
     {
         if (_notifiedSuccess)
@@ -499,16 +492,59 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  JSON STEP2
-    // ============================================================
+    private string NormalizeCode(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+
+        string s = input;
+
+        if (trimAndRemoveWhitespace)
+        {
+            s = s.Trim();
+            // remove whitespace inside too (space, tab, newline)
+            var sb = new StringBuilder(s.Length);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (!char.IsWhiteSpace(c))
+                    sb.Append(c);
+            }
+            s = sb.ToString();
+        }
+
+        return s;
+    }
+
+    private bool IsValidFirebaseKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return false;
+
+        for (int i = 0; i < key.Length; i++)
+        {
+            char c = key[i];
+            if (c == '.' || c == '#' || c == '$' || c == '[' || c == ']' || c == '/')
+                return false;
+            if (char.IsControl(c))
+                return false;
+        }
+        return true;
+    }
+
+    private string ToBase64Url(string s)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(s);
+        string b64 = Convert.ToBase64String(bytes);
+        // Base64Url: + -> -, / -> _, trim '='
+        return b64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
     [Serializable]
     private class Step2Response
     {
-        public bool   status;
-        public bool   step;
+        public bool status;
+        public bool step;
         public string message;
-        public int    statusCode;
+        public int statusCode;
         public string token;
         public Step2Data data;
     }

@@ -1,22 +1,36 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem.EnhancedTouch;
 using EnhancedTouch = UnityEngine.InputSystem.EnhancedTouch.Touch;
+using System.Collections.Generic;
+using UnityEngine.Serialization;
+
 public class TouchRotationView : MonoBehaviour
 {
-    private RectTransform rectTransform;
+    [FormerlySerializedAs("rectTransform")] [SerializeField] private RectTransform rotationView;
     [SerializeField] private bool isLooking;
     [SerializeField] private int touchID;
+    
+    [SerializeField] private List<RectTransform> includeList = new();
+
+    public static bool IsLooking;
+    
     public static Vector2 deltaGlobal;
     private void Awake()
     {
         EnhancedTouchSupport.Enable();
-        rectTransform = GetComponent<RectTransform>();
-
     }
 
     private void OnDisable()
     {
         deltaGlobal = Vector2.zero;
+        IsLooking = false;
+    }
+    
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        deltaGlobal = Vector2.zero;
+        IsLooking = false;
     }
 
     private void Update()
@@ -43,6 +57,7 @@ public class TouchRotationView : MonoBehaviour
                             End(touch);
                             break;
                         case UnityEngine.InputSystem.TouchPhase.Canceled:
+                            Debug.Log("Cancel");
                             break;
                         case UnityEngine.InputSystem.TouchPhase.Stationary:
                             Static(touch);
@@ -52,6 +67,8 @@ public class TouchRotationView : MonoBehaviour
                     }
                 }
             }
+
+        IsLooking = isLooking;
     }
 
 
@@ -60,12 +77,18 @@ public class TouchRotationView : MonoBehaviour
         if (isLooking == true) return;
         Vector2 localPoint;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            rectTransform,
+            rotationView,
             touch.screenPosition,
             null,
             out localPoint
         );
-        if (rectTransform.rect.Contains(localPoint))
+
+        if (IsTouchToNotInteractZone(touch))
+        {
+            return;
+        }
+
+        if (rotationView.rect.Contains(localPoint))
         {
             Debug.Log("Touched inside image!");
             isLooking = true;
@@ -73,6 +96,31 @@ public class TouchRotationView : MonoBehaviour
 
         }
     }
+
+    private bool IsTouchToNotInteractZone(EnhancedTouch touch)
+    {
+        foreach (var item in includeList)
+        {
+            Vector2 localPoint;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                item,
+                touch.screenPosition,
+                null,
+                out localPoint
+            );
+
+
+            if (item.rect.Contains(localPoint))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+  
+
     private void Move(EnhancedTouch touch)
     {
         if (isLooking && touch.touchId == touchID)

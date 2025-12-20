@@ -37,7 +37,7 @@ public class CourseListView : MonoBehaviour
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    // ====== FINAL EXAM (thêm mới) ======
+    // ====== FINAL EXAM ======
     [Header("Final Exam")]
     public string finalExamSectionTitle = "Bài thi cuối khóa";
 
@@ -49,15 +49,17 @@ public class CourseListView : MonoBehaviour
     private VideoPlayerControllerPro videoPlayerControllerPro;
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
+    [SerializeField] private LocalProxyAutoBoot proxyBoot;
     void Awake()
     {
+        proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
 
-  
     public void BuildListUI(LmsCoursePrivate p)
     {
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
@@ -133,7 +135,6 @@ public class CourseListView : MonoBehaviour
             }
         }
 
-
         // ====== Append “Bài thi cuối khóa” nếu course.settings.finalExam có ID hợp lệ ======
         var finalExamId = TryGetFinalExamId(p);
         if (!string.IsNullOrEmpty(finalExamId))
@@ -169,25 +170,29 @@ public class CourseListView : MonoBehaviour
 
     public Action<LessonUI> OnClickFinalExamEvt;
 
-    private void PlayVideo(string url)
-    {
-        if (string.IsNullOrEmpty(url))
-        {
-            Debug.LogWarning("[SceneLessonUI] Video URL rỗng.");
-            return;
-        }
+private void PlayVideo(string url)
+{
+    if (string.IsNullOrEmpty(url) || !videoPlayer) return;
 
-        if (!videoPlayer)
-        {
-            Debug.LogWarning("[SceneLessonUI] videoPlayer null.");
-            return;
-        }
+    if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
 
-        videoPlayer.source = VideoSource.Url;
-        videoPlayer.url = url;
-        videoPlayer.Play();
-        Debug.Log("[SceneLessonUI] Playing: " + url);
-    }
+    var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
+
+    Debug.Log("[PlayVideo] FINAL URL = " + finalUrl);
+
+    videoPlayer.source = VideoSource.Url;
+    videoPlayer.url = finalUrl;
+
+    videoPlayer.errorReceived -= OnVideoError;
+    videoPlayer.errorReceived += OnVideoError;
+
+    videoPlayer.Play();
+}
+
+private void OnVideoError(VideoPlayer vp, string msg)
+{
+    Debug.LogError("[VideoPlayer] error: " + msg);
+}
 
     private void EnsureListLayout(RectTransform rt)
     {
