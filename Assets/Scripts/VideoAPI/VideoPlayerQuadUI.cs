@@ -37,32 +37,23 @@ public class VideoPlayerQuadUI : MonoBehaviour
         btnPlayPause= btnPlayPause?? FindInChildren<Button>("PlayPause");
         btnBack5    = btnBack5    ?? FindInChildren<Button>("Back5");
         btnFwd5     = btnFwd5     ?? FindInChildren<Button>("Fwd5");
-        btnMute     = btnMute     ?? FindInChildren<Button>("Mute");
+        // btnMute     = btnMute     ?? FindInChildren<Button>("Mute");
         volSlider   = volSlider   ?? FindInChildren<Slider>("Volume");
 
         // Bind events
         if (btnPlayPause) btnPlayPause.onClick.AddListener(()=> { controller.TogglePlayPause(); Touch(); });
-        if (btnBack5)     btnBack5.onClick.AddListener(()=> { controller.SeekRelative(-controller.seekStepSeconds); Touch(); });
-        if (btnFwd5)      btnFwd5.onClick.AddListener(()=> { controller.SeekRelative(+controller.seekStepSeconds); Touch(); });
-        if (btnMute)      btnMute.onClick.AddListener(()=> { controller.ToggleMute(); Touch(); });
 
         if (progress)
             progress.onValueChanged.AddListener(v =>
             {
                 if (Input.GetMouseButton(0)) { _dragging = true; Touch(); }
-                else if (_dragging)
-                {
-                    var vp = controller.videoPlayer;
-                    if (vp && vp.isPrepared) controller.SeekRelative(vp.length * v - vp.time);
-                    _dragging = false;
-                }
             });
 
         if (volSlider)
         {
             volSlider.minValue = 0; volSlider.maxValue = 1;
-            volSlider.SetValueWithoutNotify(controller.volume);
-            volSlider.onValueChanged.AddListener(v => { controller.ChangeVolume(v - controller.volume); Touch(); });
+            // volSlider.SetValueWithoutNotify(controller.volume);
+            // volSlider.onValueChanged.AddListener(v => { controller.ChangeVolume(v - controller.volume); Touch(); });
         }
 
         FitUnderQuad();
