@@ -16,6 +16,9 @@ public class PlayerPanelUI : MonoBehaviour
     public GameObject defaultContainer;
     public PlayerInformationUI playerInformation;
 
+
+    public LogoutPopupUI LogoutPopupUI;
+    
     private void Awake()
     {
         defaultContainer.gameObject.SetActive(true);
@@ -31,10 +34,27 @@ public class PlayerPanelUI : MonoBehaviour
         {
             LoginController.OnLoginComplete += ShowLoginUI;
         }
+        
+        LogoutPopupUI.OnReturn += OnReturn;
+        TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
     }
+    
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;
+        
+        LogoutPopupUI.OnReturn -= OnReturn;
+        TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
+    }
+    
+    private void TryLogoutButtonOnOnTryLogout()
+    {
+        LogoutPopupUI.gameObject.SetActive(true);
+    }
+
+    private void OnReturn()
+    {
+        LogoutPopupUI.gameObject.SetActive(false);
     }
 
     public void ShowLoginUI()

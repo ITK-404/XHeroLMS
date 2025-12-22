@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class PlayerStandUI : MonoBehaviour
 {
-    public GameObject returnBtn;
+    public Button returnBtn;
     public Button standupButton;
     public Button sitdownButton;
     public RectTransform navigationBarUI;
@@ -28,6 +28,8 @@ public class PlayerStandUI : MonoBehaviour
         ShowSitdownButton();
 
         UILearnCanvas.onCourseListShow += CourseListShow;
+        
+        returnBtn.onClick.AddListener(ReturnMainScene);
     }
 
     private void OnDestroy()
@@ -39,8 +41,15 @@ public class PlayerStandUI : MonoBehaviour
         }
         UILearnCanvas.OnClickReturnBtn -= playerChairManager.PlayerStandup;
         UILearnCanvas.onCourseListShow -= CourseListShow;
+        returnBtn.onClick.RemoveListener(ReturnMainScene);
 
     }
+
+    private void ReturnMainScene()
+    {
+        LoadingTransition.Load("New Scene");
+    }
+    
     private bool localIsShow = false;
     public void CourseListShow(bool isShow)
     {
