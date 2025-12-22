@@ -37,7 +37,6 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
-        LogoutPopupUI.OnLogout += DoLogout;
 
         UpdateVisualState();
     }
@@ -48,7 +47,6 @@ public class OpenClosePanel : MonoBehaviour
         if (buttonOpen != null) buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
-        LogoutPopupUI.OnLogout -= DoLogout;
 
     }
 
