@@ -137,6 +137,14 @@ public class ChapterUI : ChapterBaseUI
     {
         foreach (var item in lessonList)
         {
+            // check if lesson is select then return
+            if (LessonProgressTracker.Instance.lessonUI != null)
+            {
+                if (LessonProgressTracker.Instance.lessonUI == item)
+                {
+                    continue;
+                }
+            }
             item.SetActive(false);
         }
     }
