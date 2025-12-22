@@ -26,5 +26,6 @@ public class UIAspectRatioMatcher : MonoBehaviour
             // Ưu tiên giữ chiều cao để không mất UI trên dưới
             scaler.matchWidthOrHeight = 0.5f;
         }
+        
     }
 }
