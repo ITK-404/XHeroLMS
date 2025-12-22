@@ -44,6 +44,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public Slider sliderVolume;
     public Slider sliderDuration;
     public TextMeshProUGUI textTime;
+    public Button btnNextCourse;
 
     [Tooltip("Quad/Transform hiển thị video ở chế độ thường (3D).")]
     public Transform videoQuad;
@@ -96,11 +97,21 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public bool hideVolumeSliderOnOutsideClick = true;
     public bool startVolumeSliderHidden = true;
 
+    public Func<bool> OnRequestNextCourse;
+    
+    public string endOfCourseMessage = "Đã hết bài học.";
+
     RectTransform _rtSliderVol;
     RectTransform _rtBtnVol;
 
+    [Header("Next Course")]
+    public CourseListView courseListView;   // kéo thả trong Inspector (hoặc auto-find)
+    private string _currentUrl;
+
     void Awake()
     {
+        if (!courseListView) courseListView = FindAnyObjectByType<CourseListView>();
+
         if (!videoPlayer) videoPlayer = GetComponent<VideoPlayer>();
         if (videoQuad) _quadRenderer = videoQuad.GetComponent<Renderer>();
 
@@ -236,6 +247,9 @@ public class VideoPlayerControllerPro : MonoBehaviour
             if (_rt && videoPlayer.targetTexture == _rt) videoPlayer.targetTexture = null;
         }
         if (_rt) { _rt.Release(); Destroy(_rt); }
+
+        if (btnNextCourse)
+            btnNextCourse.onClick.RemoveListener(ClickNextCourse);
     }
 
     // ---- UI wiring ----
@@ -289,6 +303,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (sliderVolume && startVolumeSliderHidden)
             sliderVolume.gameObject.SetActive(false);
 
+        if (btnNextCourse)
+        {
+            btnNextCourse.onClick.AddListener(ClickNextCourse); // KHÔNG dùng lambda
+        }
     }
 
     public void AddPointerEntry(EventTrigger et, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> cb)
@@ -761,6 +779,53 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (!sliderVolume) return;
         sliderVolume.gameObject.SetActive(visible);
+    }
+
+    public void ClickNextCourse()
+    {
+        RegisterInteraction();
+
+        try
+        {
+            if (!courseListView)
+                courseListView = FindAnyObjectByType<CourseListView>();
+
+            if (string.IsNullOrEmpty(_currentUrl) &&
+                videoPlayer != null &&
+                videoPlayer.source == VideoSource.Url)
+            {
+                _currentUrl = videoPlayer.url;
+            }
+
+            if (courseListView != null)
+            {
+                LessonUI nextLesson = courseListView.PlayNextFromUrl(_currentUrl);
+
+                if (nextLesson != null)
+                {
+                    SetCurrentUrl(nextLesson.linkVideo2);
+
+                    courseListView.PlayLesson(nextLesson);
+                    return;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[VideoPlayerControllerPro] NextCourse error: " + e);
+        }
+
+        // Không còn bài
+        LoadingUI.ShowErrorPopup(
+            message: endOfCourseMessage,
+            header: "Thông báo",
+            onReturn: null
+        );
+    }
+
+    public void SetCurrentUrl(string url)
+    {
+        _currentUrl = url;
     }
 }
 
