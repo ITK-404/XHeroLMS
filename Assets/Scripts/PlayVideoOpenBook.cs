@@ -7,7 +7,7 @@ public class PlayVideoOpenBook : MonoBehaviour
     public VideoPlayer videoPlayer;
     public AudioSource audioSource;
     public AutomaticTextPreview automaticTextPreview;
-
+    private bool isPlaying = false;
     private void Awake()
     {
         string url = "file://" + Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
@@ -20,6 +20,7 @@ public class PlayVideoOpenBook : MonoBehaviour
 
     public IEnumerator PlayCoroutine()
     {
+        isPlaying = true;
         // dừng phát nếu đang phát
         videoPlayer.Stop();
         audioSource.Stop();
@@ -44,15 +45,22 @@ public class PlayVideoOpenBook : MonoBehaviour
         // Wait until both conditions are met:
         // - the video finished playing, AND
         // - the configured timer has elapsed
+        float stopTime = 28f; // Giây thứ 28
+
         while (true)
         {
-            bool videoFinished = (videoPlayer != null) && !videoPlayer.isPlaying;
+            bool videoReachedTarget = (videoPlayer != null) && (videoPlayer.time >= stopTime);
+
+            if (videoReachedTarget && videoPlayer.isPlaying)
+            {
+                videoPlayer.Pause();
+            }
 
             bool timerCompleted = true;
             if (automaticTextPreview != null)
                 timerCompleted = automaticTextPreview.IsTimerCompleted();
 
-            if (videoFinished && timerCompleted)
+            if (videoReachedTarget && timerCompleted)
                 break;
 
             yield return null;
@@ -65,6 +73,8 @@ public class PlayVideoOpenBook : MonoBehaviour
             audioSource.Stop();
         if (automaticTextPreview != null)
             automaticTextPreview.StopText();
+        
+        isPlaying = false;
 
     }
     [ContextMenu("Play Test")]
@@ -78,11 +88,11 @@ public class PlayVideoOpenBook : MonoBehaviour
         videoPlayer.Stop();
         audioSource.Stop();
         automaticTextPreview.StopText();
+        isPlaying = false;
     }
 
-    public void Show()
+    public bool IsPlayingVideo()
     {
-        
+        return isPlaying;
     }
-    
 }
