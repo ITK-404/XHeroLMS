@@ -37,9 +37,7 @@ public class OpenClosePanel : MonoBehaviour
             buttonClose.onClick.RemoveListener(CloseUI);
             buttonClose.onClick.AddListener(CloseUI);
         }
-        TryLogoutButton.OnTryLogout += OnShowWarning;
         LogoutPopupUI.OnLogout += DoLogout;
-        LogoutPopupUI.OnReturn += HideWarning;
 
         UpdateVisualState();
     }
@@ -50,22 +48,9 @@ public class OpenClosePanel : MonoBehaviour
         if (buttonOpen != null) buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
-        TryLogoutButton.OnTryLogout -= OnShowWarning;
         LogoutPopupUI.OnLogout -= DoLogout;
-        LogoutPopupUI.OnReturn -= HideWarning;
 
     }
-    private void OnShowWarning()
-    {
-        warningPopup.gameObject.SetActive(true);
-    }
-
-    private void HideWarning()
-    {
-        warningPopup.gameObject.SetActive(false);
-    }
-
- 
 
     void Start()
     {
