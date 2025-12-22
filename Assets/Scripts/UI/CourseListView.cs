@@ -49,6 +49,9 @@ public class CourseListView : MonoBehaviour
     private VideoPlayerControllerPro videoPlayerControllerPro;
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
+    private readonly List<LessonUI> _videoLessons = new();
+    private LessonUI _currentLesson;
+
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
     void Awake()
     {
@@ -62,6 +65,8 @@ public class CourseListView : MonoBehaviour
 
     public void BuildListUI(LmsCoursePrivate p)
     {
+        _videoLessons.Clear();
+
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
 
         // Clear cũ
@@ -118,7 +123,14 @@ public class CourseListView : MonoBehaviour
                     lessonUI.chapterUI = headerChapter;
 
                     lessonUI.percent = lesson.completionCondition.percent;
-                    lessonUI.OnClickPlayVideo = PlayVideo;
+                    // lessonUI.OnClickPlayVideo = PlayVideo;
+                    lessonUI.OnClickPlayVideo = (url) =>
+                    {
+                        // lưu link gốc cho Next (không phải proxy url)
+                        if (videoPlayerControllerPro) videoPlayerControllerPro.SetCurrentUrl(url);
+                        PlayVideo(url);
+                    };
+
                     lessonUI.progressTime = lesson.progressTime;
 
 
@@ -127,6 +139,9 @@ public class CourseListView : MonoBehaviour
                     lessonUI.duration = duration;
                     // update progress time
                     // int.TryParse(lesson.progressTime, out int progressTime);
+                    if (lessonUI.type != "FINAL_EXAM" && !string.IsNullOrEmpty(lessonUI.linkVideo2))
+                        _videoLessons.Add(lessonUI);
+
 
                     Debug.Log(
                         $"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
@@ -170,60 +185,28 @@ public class CourseListView : MonoBehaviour
 
     public Action<LessonUI> OnClickFinalExamEvt;
 
-private void PlayVideo(string url)
-{
-    if (string.IsNullOrEmpty(url) || !videoPlayer) return;
-
-    if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
-
-    var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
-
-    Debug.Log("[PlayVideo] FINAL URL = " + finalUrl);
-
-    videoPlayer.source = VideoSource.Url;
-    videoPlayer.url = finalUrl;
-
-    videoPlayer.errorReceived -= OnVideoError;
-    videoPlayer.errorReceived += OnVideoError;
-
-    videoPlayer.Play();
-}
-
-private void OnVideoError(VideoPlayer vp, string msg)
-{
-    Debug.LogError("[VideoPlayer] error: " + msg);
-}
-
-    private void EnsureListLayout(RectTransform rt)
+    private void PlayVideo(string url)
     {
-        var vlg = rt.GetComponent<VerticalLayoutGroup>();
-        if (!vlg) vlg = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
-        vlg.spacing = verticalSpacing;
-        vlg.padding = new RectOffset(0, 0, 0, 0);
+        if (string.IsNullOrEmpty(url) || !videoPlayer) return;
 
-        var fitter = rt.GetComponent<ContentSizeFitter>();
-        if (!fitter) fitter = rt.gameObject.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
+
+        Debug.Log("[PlayVideo] FINAL URL = " + finalUrl);
+
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = finalUrl;
+
+        videoPlayer.errorReceived -= OnVideoError;
+        videoPlayer.errorReceived += OnVideoError;
+
+        videoPlayer.Play();
     }
 
-    private void EnsureItemLayout(RectTransform rt)
+    private void OnVideoError(VideoPlayer vp, string msg)
     {
-        var le = rt.GetComponent<LayoutElement>();
-        if (!le) le = rt.gameObject.AddComponent<LayoutElement>();
-
-        if (le.preferredHeight <= 0f)
-        {
-            float h = rt.sizeDelta.y;
-            le.preferredHeight = (h > 0f ? h : fallbackItemHeight);
-        }
-
-        le.minHeight = le.preferredHeight;
-        le.flexibleHeight = 0f;
+        Debug.LogError("[VideoPlayer] error: " + msg);
     }
 
     // ===== Set text theo Tag & tự ẩn nếu rỗng =====
@@ -369,6 +352,55 @@ private void OnVideoError(VideoPlayer vp, string msg)
 
         return IsLikelyId(id) ? id : null;
     }
+    public LessonUI PlayNextFromUrl(string currentUrl)
+    {
+        if (_videoLessons == null || _videoLessons.Count == 0) return null;
 
+        int startIndex = -1;
 
+        if (!string.IsNullOrEmpty(currentUrl))
+        {
+            for (int i = 0; i < _videoLessons.Count; i++)
+            {
+                if (_videoLessons[i] != null &&
+                    _videoLessons[i].linkVideo2 == currentUrl)
+                {
+                    startIndex = i;
+                    break;
+                }
+            }
+        }
+
+        int nextIndex = startIndex + 1;
+        if (nextIndex < 0) nextIndex = 0;
+        if (nextIndex >= _videoLessons.Count) return null;
+
+        return _videoLessons[nextIndex];
+    }
+
+    public void PlayLesson(LessonUI lesson)
+    {
+        if (lesson == null) return;
+
+        // Clear selection cũ (bài + chapter cũ)
+        if (_currentLesson != null && _currentLesson != lesson)
+        {
+            _currentLesson.SetActive(false);
+
+            if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
+            {
+                _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
+                _currentLesson.chapterUI.ResetLessonState();
+            }
+        }
+
+        if (_currentLesson != null && _currentLesson != lesson)
+        {
+            _currentLesson.SetActive(false); // tắt highlight cũ
+        }
+        _currentLesson = lesson;
+        lesson.chapterUI.SelectLesson(lesson); // bật highlight mới
+        PlayVideo(lesson.linkVideo2);
+
+    }
 }
