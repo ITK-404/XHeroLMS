@@ -68,13 +68,17 @@ public class LessonUI : MonoBehaviour
 
     public void TryUpdateProgress(float newProgressTime)
     {
-        int progress = (int)newProgressTime >= duration - 60 ? (int)duration : (int)progressTime;
-        if(progressTime >= duration - 60)
+        if(IsLessonDone())
         {
             progressTime = duration;
             return;
         }
         progressTime = Mathf.Clamp(newProgressTime + 1, progressTime, duration);
+    }
+
+    public bool IsLessonDone()
+    {
+        return progressTime >= duration - 60;
     }
 }
 
