@@ -187,6 +187,13 @@ public static class LoadingUI
             return;
         }
 
+        var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
+        if (headerTMP != null)
+        {
+            headerTMP.enableAutoSizing = false;
+            headerTMP.fontSize = 28;
+        }
+
         UnityAction combined = () =>
         {
             onReturn?.Invoke();
