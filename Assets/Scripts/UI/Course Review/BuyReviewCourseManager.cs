@@ -17,6 +17,9 @@ public class BuyReviewCourseManager : MonoBehaviour
     private bool autoSkipVideo = false;
     private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
     public AutomaticTextPreview automaticTextPreview;
+
+    private bool isPlaying = false;
+    
     private void Awake()
     {
         Instance = this;
@@ -35,6 +38,8 @@ public class BuyReviewCourseManager : MonoBehaviour
         playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
 
         playVideoHandleUI.skipButton.onClick.AddListener(Skip);
+
+        isPlaying = false;
     }
 
     private void SaveKey()

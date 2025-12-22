@@ -49,6 +49,7 @@ public class BookModel : MonoBehaviour
     {
     }
 
+    private float lastTimeClicked;
     private void OnMouseEnter()
     {
         if (!canHover) return;
@@ -97,6 +98,10 @@ public class BookModel : MonoBehaviour
 
     private void OnMouseUpAsButton()
     {
+        if (Time.time - lastTimeClicked > 0.2f)
+        {
+            return;
+        }
         OnPlayerClickBook?.Invoke();
     }
 
@@ -122,6 +127,7 @@ public class BookModel : MonoBehaviour
         Debug.Log("On Mouse Down");
         StopAllCoroutines();
         isMouseDown = true;
+        lastTimeClicked = Time.time;
     }
     
     private void OnMouseUp()

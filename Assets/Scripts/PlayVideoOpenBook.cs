@@ -44,15 +44,22 @@ public class PlayVideoOpenBook : MonoBehaviour
         // Wait until both conditions are met:
         // - the video finished playing, AND
         // - the configured timer has elapsed
+        float stopTime = 28f; // Giây thứ 28
+
         while (true)
         {
-            bool videoFinished = (videoPlayer != null) && !videoPlayer.isPlaying;
+            bool videoReachedTarget = (videoPlayer != null) && (videoPlayer.time >= stopTime);
+
+            if (videoReachedTarget && videoPlayer.isPlaying)
+            {
+                videoPlayer.Pause();
+            }
 
             bool timerCompleted = true;
             if (automaticTextPreview != null)
                 timerCompleted = automaticTextPreview.IsTimerCompleted();
 
-            if (videoFinished && timerCompleted)
+            if (videoReachedTarget && timerCompleted)
                 break;
 
             yield return null;
