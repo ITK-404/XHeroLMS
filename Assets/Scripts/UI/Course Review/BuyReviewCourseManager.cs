@@ -18,7 +18,6 @@ public class BuyReviewCourseManager : MonoBehaviour
     private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
     public AutomaticTextPreview automaticTextPreview;
 
-    private bool isPlaying = false;
     
     private void Awake()
     {
@@ -39,7 +38,6 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         playVideoHandleUI.skipButton.onClick.AddListener(Skip);
 
-        isPlaying = false;
     }
 
     private void SaveKey()
@@ -102,6 +100,11 @@ public class BuyReviewCourseManager : MonoBehaviour
             return;
         }
 
+        if (playVideoOpenBook.IsPlayingVideo())
+        {
+            return;
+        }
+        
         Debug.Log("Bắt đầu hiển thị UI sách preview");
         needFetchData = currentBookSelect != bookHandler;
         currentBookSelect = bookHandler;
