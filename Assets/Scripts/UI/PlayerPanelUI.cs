@@ -18,7 +18,7 @@ public class PlayerPanelUI : MonoBehaviour
 
 
     public LogoutPopupUI LogoutPopupUI;
-    
+    public string defaultLoadScene = "New Scene";
     private void Awake()
     {
         defaultContainer.gameObject.SetActive(true);
@@ -36,9 +36,24 @@ public class PlayerPanelUI : MonoBehaviour
         }
         
         LogoutPopupUI.OnReturn += OnReturn;
+        LogoutPopupUI.OnLogout += OnLogout;
         TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
     }
-    
+
+    private bool isLoaded = false;
+    private void OnLogout()
+    {
+        if(isLoaded) return;
+        
+        if (TokenStore.IsAuthenticated)
+        {
+            isLoaded = true;
+            TokenStore.Clear();
+            LoadingTransition.Load(defaultLoadScene);
+        }
+        
+    }
+
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;
