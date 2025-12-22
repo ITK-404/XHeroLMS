@@ -36,7 +36,8 @@ public class CourseListPageAllUI : MonoBehaviour
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    public string priceFormat = "{0:#,0}₫";
+    // public string priceFormat = "{0:#,0}₫";
+    public string priceFormat = "{0:#.0}'đ";
 
     [Header("Book model tuning (không ảnh hưởng kệ)")]
     [Range(0.1f, 2f)] public float bookModelScale = 0.85f;
