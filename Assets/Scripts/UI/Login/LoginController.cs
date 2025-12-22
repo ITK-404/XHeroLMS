@@ -416,13 +416,13 @@ public class LoginController : MonoBehaviour
 
         if (string.IsNullOrEmpty(usernameRaw) || string.IsNullOrEmpty(password))
         {
-            ShowPopup(failPopupPrefab, "Cảnh báo", "Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
+            ShowPopup(failPopupPrefab, "Đăng nhập thất bại", "Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
             return;
         }
 
         if (!IsValidEmail(usernameRaw) && !IsValidPhoneVN(usernameRaw))
         {
-            ShowPopup(failPopupPrefab, "Cảnh báo", "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ.");
+            ShowPopup(failPopupPrefab, "Đăng nhập thất bại", "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ.");
             return;
         }
 
@@ -484,7 +484,7 @@ public class LoginController : MonoBehaviour
                 }
                 else
                 {
-                    ShowPopup(failPopupPrefab, "Cảnh báo", "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.");
+                    ShowPopup(failPopupPrefab, "Đăng nhập thất bại", "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.");
                 }
             }
             else
@@ -493,7 +493,7 @@ public class LoginController : MonoBehaviour
                 Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {serverText}");
 
                 string errorMessage = ServerErrorConverter.Convert(serverText);
-                ShowPopup(failPopupPrefab, "Cảnh báo", errorMessage);
+                ShowPopup(failPopupPrefab, "Đăng nhập thất bại", errorMessage);
             }
         }
 
@@ -523,7 +523,7 @@ public class LoginController : MonoBehaviour
         popupInstance.Init(header, message, () => { onReturn?.Invoke(); });
     }
 
-    public static void ShowWarning(string message, string header = "Cảnh báo")
+    public static void ShowWarning(string message, string header = "Đăng nhập thất bại")
     {
         if (Instance == null)
         {
