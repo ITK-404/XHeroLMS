@@ -30,6 +30,8 @@ public class LessonUI : MonoBehaviour
     public float duration;
     public float progressTime;
 
+    public Action<LessonUI> OnSelected;
+
     private void Awake()
     {
         btn.onClick.AddListener(OnClickBtn);
@@ -44,12 +46,10 @@ public class LessonUI : MonoBehaviour
     private void OnClickBtn()
     {
         chapterUI.SelectLesson(this);
+        OnSelected?.Invoke(this);
         OnClickPlayVideo?.Invoke(linkVideo2);
-        // Gọi đến API để lưu tiến độ lesson trước
-        // Thay lesson đang học
-        
     }
- 
+
     public void SetActive(bool active)
     {
         Debug.Log("Set active lesson: " + active, gameObject);
