@@ -380,27 +380,40 @@ public class CourseListView : MonoBehaviour
 
     public void PlayLesson(LessonUI lesson)
     {
-        if (lesson == null) return;
+        if (lesson.IsLessonDone())
+        { 
+            if (lesson == null) return;
 
-        // Clear selection cũ (bài + chapter cũ)
-        if (_currentLesson != null && _currentLesson != lesson)
-        {
-            _currentLesson.SetActive(false);
-
-            if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
+            // Clear selection cũ (bài + chapter cũ)
+            if (_currentLesson != null && _currentLesson != lesson)
             {
-                _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
-                _currentLesson.chapterUI.ResetLessonState();
+                _currentLesson.SetActive(false);
+
+                if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
+                {
+                    _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
+                    _currentLesson.chapterUI.ResetLessonState();
+                }
+            }
+
+            if (_currentLesson != null && _currentLesson != lesson)
+            {
+                _currentLesson.SetActive(false); // tắt highlight cũ
+            }
+            _currentLesson = lesson;
+            lesson.chapterUI.SelectLesson(lesson); // bật highlight mới
+            PlayVideo(lesson.linkVideo2);
+        }
+        else
+        {
+            {
+                LoadingUI.ShowErrorPopup(
+                    message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
+                    header: "Thông báo",
+                    onReturn: null
+                );
             }
         }
-
-        if (_currentLesson != null && _currentLesson != lesson)
-        {
-            _currentLesson.SetActive(false); // tắt highlight cũ
-        }
-        _currentLesson = lesson;
-        lesson.chapterUI.SelectLesson(lesson); // bật highlight mới
-        PlayVideo(lesson.linkVideo2);
 
     }
 }
