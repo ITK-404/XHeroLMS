@@ -23,6 +23,18 @@ public class ResetPasswordController : MonoBehaviour
     public TMP_InputField passField;
     public TMP_InputField confirmField;
 
+    [Header("Password Show/Hide")]
+    public Button btnTogglePassword;
+    public Image  btnTogglePasswordIcon;
+    public Sprite iconShow;
+    public Sprite iconHide;
+
+    [Header("Password Show/Hide")]
+    public Button btnTogglePassword2;
+    public Image  btnTogglePasswordIcon2;
+    public Sprite iconShow2;
+    public Sprite iconHide2;
+
     [Header("Buttons")]
     public Button btnEnter;   // Gửi API reset
     public Button btnBack;
@@ -47,10 +59,22 @@ public class ResetPasswordController : MonoBehaviour
     // username (email hoặc 84...) nhận từ OTP
     private string usernameForReset = "";
 
+    private bool passShown1 = false;
+    private bool passShown2 = false;
+
     private void Awake()
     {
         // Lúc này Unity đã tạo xong object, gọi Instance an toàn hơn
         baseUrl = LmsStore.Instance.baseUrl;
+
+        if (passField != null)
+        {
+            passField.contentType = TMP_InputField.ContentType.Password;
+        }
+        if (confirmField != null)
+        {
+            confirmField.contentType = TMP_InputField.ContentType.Password;
+        }
     }
 
     public void SetUsername(string identifier)
@@ -77,6 +101,13 @@ public class ResetPasswordController : MonoBehaviour
         if (passField)    passField.onValueChanged.AddListener(_ => Validate());
         if (confirmField) confirmField.onValueChanged.AddListener(_ => Validate());
 
+        if (btnTogglePassword)  btnTogglePassword.onClick.AddListener(TogglePass1);
+        if (btnTogglePassword2) btnTogglePassword2.onClick.AddListener(TogglePass2);
+
+        // set icon ban đầu
+        ApplyMask1(false);
+        ApplyMask2(false);
+
         Validate();
     }
 
@@ -87,6 +118,9 @@ public class ResetPasswordController : MonoBehaviour
 
         if (passField)    passField.onValueChanged.RemoveAllListeners();
         if (confirmField) confirmField.onValueChanged.RemoveAllListeners();
+
+        if (btnTogglePassword)  btnTogglePassword.onClick.RemoveListener(TogglePass1);
+        if (btnTogglePassword2) btnTogglePassword2.onClick.RemoveListener(TogglePass2);
     }
 
     private void OnBack()
@@ -249,7 +283,6 @@ public class ResetPasswordController : MonoBehaviour
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
-    // ====== Popup warning ======
     private void ShowWarningPopup(string message)
     {
         if (warningPopupPrefab == null)
@@ -258,10 +291,57 @@ public class ResetPasswordController : MonoBehaviour
             return;
         }
 
-        Transform parent = popupParent != null ? popupParent : transform.root;
-        var popup = Instantiate(warningPopupPrefab, parent);
+        Transform parent = popupParent;
 
-        // Dùng Init để auto gán nút returnBtn tự đóng popup
+        if (parent == null)
+        {
+            var canvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
+            if (canvas != null) parent = canvas.transform;
+        }
+
+        if (parent == null)
+        {
+            Debug.LogWarning("[ResetPassword] Không tìm thấy Canvas để hiển thị popup. Hãy gán popupParent.");
+            return;
+        }
+
+        var popup = Instantiate(warningPopupPrefab, parent);
         popup.Init("Cảnh báo", message);
     }
+
+    private void TogglePass1()
+    {
+        passShown1 = !passShown1;
+        ApplyMask1(passShown1);
+    }
+
+    private void TogglePass2()
+    {
+        passShown2 = !passShown2;
+        ApplyMask2(passShown2);
+    }
+
+    private void ApplyMask1(bool showPlain)
+    {
+        SetTMPPasswordField(passField, showPlain);
+        if (btnTogglePasswordIcon)
+            btnTogglePasswordIcon.sprite = showPlain ? iconShow : iconHide;
+    }
+
+    private void ApplyMask2(bool showPlain)
+    {
+        SetTMPPasswordField(confirmField, showPlain);
+        if (btnTogglePasswordIcon2)
+            btnTogglePasswordIcon2.sprite = showPlain ? iconShow2 : iconHide2;
+    }
+
+    private static void SetTMPPasswordField(TMP_InputField field, bool showPlain)
+    {
+        if (field == null) return;
+        field.contentType = showPlain ? TMP_InputField.ContentType.Standard
+                                    : TMP_InputField.ContentType.Password;
+        field.asteriskChar = '*';
+        field.ForceLabelUpdate();
+    }
+
 }
