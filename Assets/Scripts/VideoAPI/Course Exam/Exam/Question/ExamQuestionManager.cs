@@ -21,8 +21,8 @@ public class ExamQuestionManager : MonoBehaviour
 
     [Header("Question Nav")]
     [SerializeField] private GameObject     navRoot;
-    [SerializeField] private Transform      navContent;
-    [SerializeField] private ExamInfoElement navItemPrefab;
+    [SerializeField] protected Transform      navContent;
+    [SerializeField] protected ExamInfoElement navItemPrefab;
 
     [Header("Buttons & Timer")]
     public TMP_Text textQuestionCounter; // "01/30"

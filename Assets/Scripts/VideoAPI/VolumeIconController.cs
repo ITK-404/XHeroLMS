@@ -6,7 +6,7 @@ using UnityEngine.Events;
 public class VolumeIconController : MonoBehaviour
 {
     [Header("UI")]
-    public Button btnVolume;          // (Optional) nếu bạn muốn nút này toggle mute
+    public Button btnVolume;          // nếu bạn muốn nút này toggle mute
     public Slider sliderVolume;       // 0..1 (UI)
     public Image imgVolumeIcon;       // icon
 
