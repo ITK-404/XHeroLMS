@@ -359,6 +359,12 @@ public class PointClickSystem : MonoBehaviour
             {
                 Debug.Log("Thử di chuyển tới cầu thang");
                 var stair = stairHit.collider.GetComponentInParent<StairZone>();
+
+                if (stair == null)
+                {
+                    return false;
+                }
+                
                 isClickMoving = false;
                 HideMoveVfx(); // VFX
 
