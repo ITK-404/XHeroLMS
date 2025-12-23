@@ -28,9 +28,8 @@ public class ExamQuestionManager : MonoBehaviour
     public TMP_Text textQuestionCounter; // "01/30"
     public Button   btnBack;
     public Button   btnNext;
-    public Button   btnNopBai;
-
-    public Image  multiple_hint;
+    public Button btnNopBai;
+    
     [Tooltip("Khi submit xong gọi GET result với đáp án đúng")]
     public bool getWithCorrectAnswer = true;
 
@@ -686,26 +685,20 @@ private IEnumerator SubmitExamRoutine(bool timeUp)
     {
         if (typeHintRoot == null || typeHintText == null) return;
 
-        switch (type)
+        // mặc định ẩn
+        typeHintRoot.SetActive(false);
+        typeHintText.text = "";
+
+        // chỉ hiện cho trắc nghiệm 1 đáp án / nhiều đáp án
+        if (type == ExamQuestionType.SINGLE_CHOICE)
         {
-            case ExamQuestionType.SINGLE_CHOICE:
-                typeHintRoot.SetActive(true);
-                typeHintText.text = "Chỉ chọn 1 đáp án";
-                break;
-
-            case ExamQuestionType.MULTIPLE_CHOICE:
-                typeHintRoot.SetActive(true);
-                typeHintText.text = "Có thể chọn nhiều đáp án";
-                break;
-
-            case ExamQuestionType.MATCHING:
-                typeHintRoot.SetActive(true);
-                typeHintText.text = "Nối các cặp tương ứng";
-                break;
-
-            default:
-                typeHintRoot.SetActive(false);
-                break;
+            typeHintRoot.SetActive(true);
+            typeHintText.text = "Chỉ chọn 1 đáp án";
+        }
+        else if (type == ExamQuestionType.MULTIPLE_CHOICE)
+        {
+            typeHintRoot.SetActive(true);
+            typeHintText.text = "Có thể chọn nhiều đáp án";
         }
     }
 
