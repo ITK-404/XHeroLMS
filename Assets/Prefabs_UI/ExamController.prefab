@@ -414,7 +414,6 @@ MonoBehaviour:
   btnBack: {fileID: 2888762735846875870}
   btnNext: {fileID: 2757915194988715941}
   btnNopBai: {fileID: 7656562230143428788}
-  multiple_hint: {fileID: 0}
   getWithCorrectAnswer: 1
   typeHintRoot: {fileID: 8292499577439358686}
   typeHintText: {fileID: 8777310133834259059}
@@ -491,10 +490,9 @@ MonoBehaviour:
   btnBack: {fileID: 2888762735846875870}
   btnNext: {fileID: 2757915194988715941}
   btnNopBai: {fileID: 4519759683432632993}
-  multiple_hint: {fileID: 0}
   getWithCorrectAnswer: 1
-  typeHintRoot: {fileID: 8292499577439358686}
-  typeHintText: {fileID: 8777310133834259059}
+  typeHintRoot: {fileID: 0}
+  typeHintText: {fileID: 0}
   confirmPanel: {fileID: 2559384182623403456}
   mainConfirmPanel: {fileID: 5645486288351158222}
   mainExamPanelRoot: {fileID: 6536000057799735895}
@@ -3132,6 +3130,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1327464053494413296, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_HorizontalAlignment
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1351362532909905101, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -3178,7 +3180,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2095738100759464831, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2264344646096928057, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_Pivot.x
@@ -3328,6 +3330,14 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3479092599887395024, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 105.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479092599887395024, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -20.5
+      objectReference: {fileID: 0}
     - target: {fileID: 3537531303703812052, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_Name
       value: Exam Canvas
@@ -3351,6 +3361,10 @@ PrefabInstance:
     - target: {fileID: 4103011858425214487, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4837428500215241970, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4927143080722865476, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3469,8 +3483,12 @@ PrefabInstance:
       value: 48.4189
       objectReference: {fileID: 0}
     - target: {fileID: 6259629176976651169, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 685
+      objectReference: {fileID: 0}
+    - target: {fileID: 6259629176976651169, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -134
+      value: -107.7
       objectReference: {fileID: 0}
     - target: {fileID: 6399984421000212517, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3591,6 +3609,14 @@ PrefabInstance:
     - target: {fileID: 8757921533157900357, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8978567606170085515, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 3.0957
+      objectReference: {fileID: 0}
+    - target: {fileID: 8978567606170085515, guid: 7cde1d9951f937e45a6a7bd2b3e045ea, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0.24613
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

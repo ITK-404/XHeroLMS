@@ -23,6 +23,12 @@ public class LoginController : MonoBehaviour
     public LoginPopupUI failPopupPrefab;
     public Transform popupParent;
 
+    [Header("Password Show/Hide")]
+    public Button btnTogglePassword;
+    public Image  btnTogglePasswordIcon;
+    public Sprite iconShow;
+    public Sprite iconHide;
+
     [Header("Options")]
     public bool autoFocusUsername = true;
 
@@ -39,6 +45,8 @@ public class LoginController : MonoBehaviour
 
     OpenClosePanel openClosePanel;
     private const string PREF_LOGIN_PREFILL = "LOGIN_PREFILL_USERNAME";
+
+    private bool _passShown = false;
 
     private void Awake()
     {
@@ -67,6 +75,11 @@ public class LoginController : MonoBehaviour
             buttonLogin.onClick.AddListener(OnLoginClicked);
 
         ApplyPrefillOrFocus();
+
+        if (btnTogglePassword != null)
+            btnTogglePassword.onClick.AddListener(TogglePassword);
+
+        ApplyPasswordMask(false); // mặc định ẩn mật khẩu
 
         // ===== AUTO CHECK LOGIN ON BOOT =====
         if (autoRestoreOnStart)
@@ -567,6 +580,37 @@ public class LoginController : MonoBehaviour
     public void RefreshLoginPrefill()
     {
         ApplyPrefillOrFocus();
+    }
+    private void TogglePassword()
+    {
+        _passShown = !_passShown;
+        ApplyPasswordMask(_passShown);
+
+        // Giữ con trỏ, tránh bị chọn bôi đen text khi toggle
+        ClearPasswordSelection();
+    }
+
+    private void ApplyPasswordMask(bool showPlain)
+    {
+        SetTMPPasswordField(inputPassword, showPlain);
+        if (btnTogglePasswordIcon != null)
+            btnTogglePasswordIcon.sprite = showPlain ? iconHide : iconShow;
+    }
+
+    private static void SetTMPPasswordField(TMP_InputField field, bool showPlain)
+    {
+        if (field == null) return;
+
+        // TMP cần set contentType rồi ForceLabelUpdate
+        field.contentType = showPlain
+            ? TMP_InputField.ContentType.Standard
+            : TMP_InputField.ContentType.Password;
+
+        field.asteriskChar = '*';
+        field.ForceLabelUpdate();
+        
+        if (field.isFocused)
+            field.ActivateInputField();
     }
 
 }
