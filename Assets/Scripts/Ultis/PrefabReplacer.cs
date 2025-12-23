@@ -1,4 +1,5 @@
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
 using System.Collections.Generic;
 
@@ -68,3 +69,4 @@ public class PrefabReplacer : EditorWindow
         Debug.Log($"Đã tạo xong {targetObjects.Count} clone của prefab.");
     }
 }
+#endif
