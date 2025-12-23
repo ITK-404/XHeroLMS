@@ -49,12 +49,15 @@ public class VideoPlayerQuadUI : MonoBehaviour
                 if (Input.GetMouseButton(0)) { _dragging = true; Touch(); }
             });
 
-        if (volSlider)
-        {
-            volSlider.minValue = 0; volSlider.maxValue = 1;
-            // volSlider.SetValueWithoutNotify(controller.volume);
-            // volSlider.onValueChanged.AddListener(v => { controller.ChangeVolume(v - controller.volume); Touch(); });
-        }
+if (volSlider)
+{
+    volSlider.minValue = 0f;
+    volSlider.maxValue = 1f;
+
+    // set value theo controller/system ngay khi awake
+    float sys = SystemVolumeBridge.GetNormalized();
+    volSlider.SetValueWithoutNotify(sys);
+}
 
         FitUnderQuad();
         Touch();

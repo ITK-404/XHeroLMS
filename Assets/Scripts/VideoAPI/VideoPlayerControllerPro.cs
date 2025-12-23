@@ -50,13 +50,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public Transform videoQuad;
 
     [Header("Fullscreen (UI RawImage)")]
-    public Canvas fullscreenCanvas;          // có thể để trống, script sẽ tự tạo
-    public RawImage fullscreenRawImage;      // có thể để trống, script sẽ tự tạo
+    public Canvas fullscreenCanvas;
+    public RawImage fullscreenRawImage;
     public bool useAspectFitter = true;
 
     [Header("RenderTexture (optional fixed size)")]
-    public bool useFixedRT = true;           // BẬT: luôn dùng RT cố định
-    public int fixedRTWidth = 3840;        // 4K
+    public bool useFixedRT = true;
+    public int fixedRTWidth = 3840;
     public int fixedRTHeight = 2160;
     public RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
     public int rtDepth = 0;
@@ -98,15 +98,23 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public bool startVolumeSliderHidden = true;
 
     public Func<bool> OnRequestNextCourse;
-    
     public string endOfCourseMessage = "Đã hết bài học.";
 
     RectTransform _rtSliderVol;
     RectTransform _rtBtnVol;
 
     [Header("Next Course")]
-    public CourseListView courseListView;   // kéo thả trong Inspector (hoặc auto-find)
+    public CourseListView courseListView;
     private string _currentUrl;
+
+    // ==== System volume sync (2-way) ====
+    [Header("System Volume Sync")]
+    [Tooltip("Polling interval when volume slider is visible.")]
+    public float systemPollInterval = 0.15f;
+
+    float _lastSysVol = -1f;
+    float _nextSysPollTime = 0f;
+    bool _isDraggingVolume = false;
 
     void Awake()
     {
@@ -114,13 +122,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         if (!videoPlayer) videoPlayer = GetComponent<VideoPlayer>();
         if (videoQuad) _quadRenderer = videoQuad.GetComponent<Renderer>();
-
-        // if (audioSource)
-        // {
-        //     audioSource.playOnAwake = false;
-        //     // audioSource.volume = startMuted ? 0f : volume;
-        // }
-        // _muted = startMuted;
 
         if (videoPlayer)
         {
@@ -135,7 +136,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         EnsureFullscreenUI();
 
-        // Nếu chọn dùng RT cố định, tạo & bind ngay từ đầu
         if (useFixedRT) EnsureFixedRT();
 
         WireUpUI();
@@ -143,6 +143,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
         _lastMousePos = Input.mousePosition;
         _lastInteractTime = Time.time;
         if (panelMenu) panelMenu.SetActive(true);
+
+        _muted = startMuted;
 
         ApplyVolume();
         ApplyPlaybackSpeed();
@@ -154,14 +156,8 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     void Start()
     {
-        // var volumeUI = FindAnyObjectByType<VolumeIconController>();
-        // if (volumeUI)
-        // {
-        //     volumeUI.OnVolumeChanged.AddListener((v) => { volume = v; ApplyVolume(); });
-        //     // volumeUI.OnMutedChanged.AddListener((m) => { _muted = m; ApplyVolume(); });
-        //     volumeUI.SetVolume(volume, updateSlider: true);
-        //     // volumeUI.SetMuted(_muted);
-        // }
+        // Sync initial with system volume (2-way baseline)
+        SyncFromSystemVolume(force: true);
 
         if (qualities != null && qualities.Length > 0)
         {
@@ -180,7 +176,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (!videoPlayer) return;
 
-        // Giữ binding luôn đúng
         if (useFixedRT)
         {
             if (videoPlayer.targetTexture != _rt) EnsureFixedRT();
@@ -190,14 +185,12 @@ public class VideoPlayerControllerPro : MonoBehaviour
             RebindIfNeeded();
         }
 
-        // Interaction detect
         if (Input.anyKeyDown) RegisterInteraction();
         if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0)) RegisterInteraction();
         if ((Input.mousePresent) && (Input.mousePosition != _lastMousePos))
         { _lastMousePos = Input.mousePosition; RegisterInteraction(); }
         if (Input.touchCount > 0) RegisterInteraction();
 
-        // auto hide
         if (autoHideMenu && panelMenu)
             if (panelMenu.activeSelf && (Time.time - _lastInteractTime) > autoHideSeconds)
                 panelMenu.SetActive(false);
@@ -236,6 +229,25 @@ public class VideoPlayerControllerPro : MonoBehaviour
             else
                 textTime.text = "00:00 / 00:00";
         }
+
+        // 2-way: while slider is visible, keep it synced with device/system volume
+        if (sliderVolume && sliderVolume.gameObject.activeSelf && !_isDraggingVolume)
+        {
+            if (Time.unscaledTime >= _nextSysPollTime)
+            {
+                _nextSysPollTime = Time.unscaledTime + systemPollInterval;
+                SyncFromSystemVolume(force: false);
+            }
+        }
+    }
+
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus) return;
+
+        // If user changed device volume while app lost focus, sync back
+        if (sliderVolume && sliderVolume.gameObject.activeSelf)
+            SyncFromSystemVolume(force: true);
     }
 
     void OnDestroy()
@@ -256,20 +268,19 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void WireUpUI()
     {
         if (btnPlayPause) btnPlayPause.onClick.AddListener(() => { RegisterInteraction(); TogglePlayPause(); });
+
         if (btnVolume)
         {
             btnVolume.onClick.AddListener(() =>
             {
                 RegisterInteraction();
-
                 if (!sliderVolume) return;
 
                 bool next = !sliderVolume.gameObject.activeSelf;
-
-                if (next)
-                    sliderVolume.SetValueWithoutNotify(volume); // SYNC TRƯỚC KHI SHOW
-
+                
                 SetVolumeSliderVisible(next);
+
+                if (next) SyncFromSystemVolume(force: true);
             });
         }
 
@@ -279,6 +290,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
             sliderVolume.maxValue = 1f;
             sliderVolume.wholeNumbers = false;
             sliderVolume.onValueChanged.AddListener(OnVolumeSliderChanged);
+
+            // Detect dragging to avoid polling overwrite
+            var etVol = sliderVolume.GetComponent<EventTrigger>();
+            if (!etVol) etVol = sliderVolume.gameObject.AddComponent<EventTrigger>();
+            AddPointerEntry(etVol, EventTriggerType.PointerDown, _ => _isDraggingVolume = true);
+            AddPointerEntry(etVol, EventTriggerType.PointerUp,   _ => _isDraggingVolume = false);
+            AddPointerEntry(etVol, EventTriggerType.PointerExit, _ => _isDraggingVolume = false);
         }
 
         if (sliderDuration)
@@ -296,17 +314,14 @@ public class VideoPlayerControllerPro : MonoBehaviour
             AddPointerEntry(et, EventTriggerType.Drag, OnDurationPointerDrag);
         }
 
-        // cache rects để check click ngoài vùng
         if (sliderVolume) _rtSliderVol = sliderVolume.GetComponent<RectTransform>();
-        if (btnVolume)    _rtBtnVol    = btnVolume.GetComponent<RectTransform>();
+        if (btnVolume) _rtBtnVol = btnVolume.GetComponent<RectTransform>();
 
         if (sliderVolume && startVolumeSliderHidden)
             sliderVolume.gameObject.SetActive(false);
 
         if (btnNextCourse)
-        {
-            btnNextCourse.onClick.AddListener(ClickNextCourse); // KHÔNG dùng lambda
-        }
+            btnNextCourse.onClick.AddListener(ClickNextCourse);
     }
 
     public void AddPointerEntry(EventTrigger et, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> cb)
@@ -319,6 +334,24 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void SyncUIFromState(bool initial = false)
     {
         if (sliderVolume) sliderVolume.SetValueWithoutNotify(volume);
+    }
+
+    // ---- System volume sync helpers ----
+    void SyncFromSystemVolume(bool force)
+    {
+        float sys = SystemVolumeBridge.GetNormalized();
+
+        if (!force && Mathf.Abs(sys - _lastSysVol) < 0.001f)
+            return;
+
+        _lastSysVol = sys;
+
+        volume = sys;
+
+        if (sliderVolume && sliderVolume.gameObject.activeSelf)
+            sliderVolume.SetValueWithoutNotify(sys);
+
+        ApplyVolume();
     }
 
     // ---- Controls ----
@@ -343,9 +376,13 @@ public class VideoPlayerControllerPro : MonoBehaviour
         { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
     }
 
+    // NOTE: ChangeVolume is "internal/app volume step" by hotkeys.
+    // It also writes to system volume to stay consistent.
     public void ChangeVolume(float delta)
     {
-        SetVolumeAbsolute(volume + delta, syncSlider: true);
+        float v = Mathf.Clamp01(volume + delta);
+        SystemVolumeBridge.SetNormalized(v);
+        SetVolumeAbsolute(v, syncSlider: true);
         FindAnyObjectByType<VolumeIconController>()?.SetVolume(volume, updateSlider: true);
     }
 
@@ -467,7 +504,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
         videoPlayer.Prepare();
         while (!videoPlayer.isPrepared) yield return null;
-        yield return null; // chờ 1 frame
+        yield return null;
 
         SetTimeSafely(_savedTimeOnSwitch);
 
@@ -520,7 +557,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         if (useFixedRT)
         {
-            EnsureFixedRT();  // luôn giữ RT cố định
+            EnsureFixedRT();
         }
         else
         {
@@ -557,10 +594,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     void OnVideoError(VideoPlayer vp, string msg)
     {
         Debug.LogError("[VideoPlayer] Error: " + msg);
-
-        // clear RT về đen để không bị rác lốm đốm
         ClearRT(Color.black);
-
         LoadingUI.Hide();
     }
 
@@ -584,8 +618,14 @@ public class VideoPlayerControllerPro : MonoBehaviour
     public void OnVolumeSliderChanged(float v)
     {
         RegisterInteraction();
+
+        // 2-way: write to system volume
+        SystemVolumeBridge.SetNormalized(v);
+
         if (_muted && v > 0f) _muted = false;
         SetVolumeAbsolute(v, syncSlider: false);
+
+        _lastSysVol = v; // avoid immediate poll overwrite
     }
 
     public void OnDurationSliderChangedContinuous(float vNorm)
@@ -704,7 +744,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
                 useDynamicScale = false
             };
             _rt.Create();
-            ClearRT(Color.black); // clear ngay khi tạo
+            ClearRT(Color.black);
         }
 
         videoPlayer.targetTexture = _rt;
@@ -765,7 +805,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
         }
     }
 
-    // Clear RT về 1 màu (dùng khi mới tạo hoặc khi lỗi video)
     void ClearRT(Color c)
     {
         if (_rt == null) return;
@@ -804,7 +843,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
                 if (nextLesson != null)
                 {
                     SetCurrentUrl(nextLesson.linkVideo2);
-
                     courseListView.PlayLesson(nextLesson);
                     return;
                 }
@@ -815,7 +853,6 @@ public class VideoPlayerControllerPro : MonoBehaviour
             Debug.LogError("[VideoPlayerControllerPro] NextCourse error: " + e);
         }
 
-        // Không còn bài
         LoadingUI.ShowErrorPopup(
             message: endOfCourseMessage,
             header: "Thông báo",
