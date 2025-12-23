@@ -2,20 +2,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 
-/// <summary>
-/// Quản lý icon âm lượng độc lập:
-/// - Thay icon theo mức volume (0 -> mute, <=low -> low, <=mid -> mid, >mid -> high)
-/// - Toggle mute bằng nút (btnVolume)
-/// - Kéo sliderVolume sẽ auto-unmute nếu > 0
-/// Gợi ý: Bắt sự kiện OnVolumeChanged / OnMutedChanged để set vào AudioSource/VideoPlayer bên ngoài.
-/// </summary>
 [DisallowMultipleComponent]
 public class VolumeIconController : MonoBehaviour
 {
     [Header("UI")]
-    public Button btnVolume;          // Nút toggle mute
-    public Slider sliderVolume;       // 0..1
-    public Image  imgVolumeIcon;      // Ảnh hiển thị icon
+    public Button btnVolume;          // (Optional) nếu bạn muốn nút này toggle mute
+    public Slider sliderVolume;       // 0..1 (UI)
+    public Image imgVolumeIcon;       // icon
 
     [Header("Sprites")]
     public Sprite spriteMute;         // volume == 0 (hoặc đang mute)
@@ -28,26 +21,35 @@ public class VolumeIconController : MonoBehaviour
     [Range(0f, 1f)] public float midThreshold = 0.75f;
 
     [Header("Behavior")]
-    [Tooltip("Khi bấm nút mute, nếu đang unmute sẽ lưu lại mức volume hiện tại để khôi phục khi unmute.")]
+    // TẮT mặc định: btnVolume sẽ KHÔNG toggle mute nữa. Tránh xung đột với VideoPlayerControllerPro (btnVolume chỉ show/hide slider).
+    public bool enableMuteToggleButton = false;
+
+    // Khi đang mute, kéo slider > 0 thì tự unmute.
+    public bool autoUnmuteOnSlider = true;
+
+    // Khi bấm mute, nếu đang unmute sẽ lưu lại mức volume hiện tại để khôi phục khi unmute.
     public bool restorePreviousOnUnmute = true;
-    [Tooltip("Mức tối thiểu khi unmute nếu mức cũ quá nhỏ (tránh unmute nhưng vẫn gần 0).")]
+
+    // Mức tối thiểu khi unmute nếu mức cũ quá nhỏ (tránh unmute nhưng vẫn gần 0).
     [Range(0f, 1f)] public float minimumRestoreVolume = 0.05f;
 
     [Header("Events")]
-    public UnityEvent<float> OnVolumeChanged;  // bắn ra giá trị 0..1 sau mỗi thay đổi slider hoặc mute
-    public UnityEvent<bool>  OnMutedChanged;   // bắn ra trạng thái mute
+    public UnityEvent<float> OnVolumeChanged;  // giá trị 0..1 (đã tính mute => muted -> 0)
+    public UnityEvent<bool> OnMutedChanged;
 
     // State
-    [SerializeField, Range(0f, 1f)] private float _volume = 1f;
+    [SerializeField, Range(0f, 1f)] private float _volume = 1f;  // volume gốc (không tính mute)
     [SerializeField] private bool _muted = false;
     private float _lastNonZeroVolume = 1f;
+
     const float EPS = 0.0001f;
+    bool _ignoreSliderCallback;
 
     void Reset()
     {
-        sliderVolume = GetComponentInChildren<Slider>();
-        imgVolumeIcon = GetComponentInChildren<Image>();
-        btnVolume = GetComponentInChildren<Button>();
+        sliderVolume = GetComponentInChildren<Slider>(true);
+        imgVolumeIcon = GetComponentInChildren<Image>(true);
+        btnVolume = GetComponentInChildren<Button>(true);
     }
 
     void Awake()
@@ -57,63 +59,93 @@ public class VolumeIconController : MonoBehaviour
             sliderVolume.minValue = 0f;
             sliderVolume.maxValue = 1f;
             sliderVolume.wholeNumbers = false;
+
+            _ignoreSliderCallback = true;
             sliderVolume.SetValueWithoutNotify(_volume);
+            _ignoreSliderCallback = false;
+
             sliderVolume.onValueChanged.AddListener(SliderChanged);
         }
 
-        if (btnVolume)
+        // FIX: mặc định KHÔNG add listener toggle mute vào btnVolume
+        if (btnVolume && enableMuteToggleButton)
             btnVolume.onClick.AddListener(ToggleMute);
 
-        // Đồng bộ icon lần đầu
         UpdateIcon();
-        // Phát sự kiện initial cho chắc (tùy nhu cầu, có thể bỏ)
+
+        // optional: bắn initial events
         OnVolumeChanged?.Invoke(CurrentVolume);
         OnMutedChanged?.Invoke(_muted);
     }
 
-    // ========== Public API ==========
-    /// <summary> Volume hiện tại có tính đến mute (nếu muted -> 0). </summary>
+    void OnDestroy()
+    {
+        if (sliderVolume)
+            sliderVolume.onValueChanged.RemoveListener(SliderChanged);
+
+        if (btnVolume && enableMuteToggleButton)
+            btnVolume.onClick.RemoveListener(ToggleMute);
+    }
+
+    // ===== Public API =====
+    /// <summary> Volume hiện tại có tính đến mute (muted -> 0). </summary>
     public float CurrentVolume => _muted ? 0f : _volume;
 
-    /// <summary> Set volume tuyệt đối (0..1). Nếu v>0 và đang mute -> tự unmute. </summary>
+    public bool IsMuted => _muted;
+    
     public void SetVolume(float v, bool updateSlider = true)
     {
         _volume = Mathf.Clamp01(v);
-        if (_volume > EPS && _muted)
+
+        if (_volume > EPS)
+            _lastNonZeroVolume = _volume;
+
+        if (autoUnmuteOnSlider && _muted && _volume > EPS)
         {
             _muted = false;
             OnMutedChanged?.Invoke(_muted);
         }
-        if (_volume > EPS) _lastNonZeroVolume = _volume;
 
         if (updateSlider && sliderVolume)
+        {
+            _ignoreSliderCallback = true;
             sliderVolume.SetValueWithoutNotify(_volume);
+            _ignoreSliderCallback = false;
+        }
 
         UpdateIcon();
         OnVolumeChanged?.Invoke(CurrentVolume);
     }
 
-    /// <summary> Bật/tắt mute. </summary>
-    public void SetMuted(bool muted)
+    public void SetMuted(bool muted, bool updateSlider = true)
     {
         if (_muted == muted) return;
+
         _muted = muted;
 
         if (_muted)
         {
-            // Lưu mức cũ để khôi phục
             if (_volume > EPS) _lastNonZeroVolume = _volume;
-            // Đưa slider về 0 để phản ánh mute
-            if (sliderVolume) sliderVolume.SetValueWithoutNotify(0f);
+
+            if (updateSlider && sliderVolume)
+            {
+                // phản ánh mute (slider 0)
+                _ignoreSliderCallback = true;
+                sliderVolume.SetValueWithoutNotify(0f);
+                _ignoreSliderCallback = false;
+            }
         }
         else
         {
-            // Khôi phục mức cũ (tối thiểu minimumRestoreVolume)
-            float restore = restorePreviousOnUnmute
-                ? Mathf.Max(_lastNonZeroVolume, minimumRestoreVolume)
-                : _volume; // hoặc giữ như cũ nếu không muốn restore
-            _volume = Mathf.Clamp01(restore);
-            if (sliderVolume) sliderVolume.SetValueWithoutNotify(_volume);
+            if (restorePreviousOnUnmute)
+                _volume = Mathf.Clamp01(Mathf.Max(_lastNonZeroVolume, minimumRestoreVolume));
+
+            if (updateSlider && sliderVolume)
+            {
+                _ignoreSliderCallback = true;
+                sliderVolume.SetValueWithoutNotify(_volume);
+                _ignoreSliderCallback = false;
+            }
         }
 
         UpdateIcon();
@@ -121,32 +153,32 @@ public class VolumeIconController : MonoBehaviour
         OnVolumeChanged?.Invoke(CurrentVolume);
     }
 
-    /// <summary> Toggle mute. </summary>
     public void ToggleMute()
     {
-        SetMuted(!_muted);
-        FindAnyObjectByType<VolumeIconController>()?.SetMuted(_muted);
-
+        SetMuted(!_muted, updateSlider: true);
     }
 
-    // ========== Handlers ==========
+    // ===== Internal =====
     private void SliderChanged(float v)
     {
-        // Kéo slider > 0 => auto unmute
-        if (_muted && v > EPS)
+        if (_ignoreSliderCallback) return;
+
+        _volume = Mathf.Clamp01(v);
+
+        if (_volume > EPS)
+            _lastNonZeroVolume = _volume;
+
+        // kéo slider > 0 thì auto-unmute (nếu bật)
+        if (autoUnmuteOnSlider && _muted && _volume > EPS)
         {
             _muted = false;
             OnMutedChanged?.Invoke(_muted);
         }
 
-        _volume = Mathf.Clamp01(v);
-        if (_volume > EPS) _lastNonZeroVolume = _volume;
-
         UpdateIcon();
         OnVolumeChanged?.Invoke(CurrentVolume);
     }
 
-    // ========== Icon Logic ==========
     private void UpdateIcon()
     {
         if (!imgVolumeIcon) return;
