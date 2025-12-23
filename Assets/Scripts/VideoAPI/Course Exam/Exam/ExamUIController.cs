@@ -427,7 +427,8 @@ public partial class ExamUIController : MonoBehaviour
             if (resp != null && resp.data != null)
             {
                 // Name/Title của BÀI THI
-                examName = resp.data.title ?? "";
+                // examName = resp.data.title ?? "";
+                examName = CleanExamName(resp.data.title);
 
                 // Description HTML -> giữ pipeline vệ sinh HTML cũ
                 string descHtml = resp.data.description ?? "";
@@ -555,6 +556,22 @@ public partial class ExamUIController : MonoBehaviour
             return new Dictionary<string, Dictionary<int, int>>();
 
         return _examQuestionManager.GetMatchingUserPairsSnapshot();
+    }
+    private string CleanExamName(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return "";
+
+        string s = raw.Trim();
+
+        // chuẩn hoá so sánh không phân biệt hoa thường
+        if (s.StartsWith("đề:", StringComparison.OrdinalIgnoreCase))
+        {
+            // cắt đúng 4 ký tự: "đề: "
+            s = s.Length > 4 ? s.Substring(4) : "";
+        }
+
+        return s.Trim();
     }
 
 }
