@@ -119,8 +119,6 @@ public class TouchRotationView : MonoBehaviour
         return false;
     }
 
-  
-
     private void Move(EnhancedTouch touch)
     {
         if (isLooking && touch.touchId == touchID)
