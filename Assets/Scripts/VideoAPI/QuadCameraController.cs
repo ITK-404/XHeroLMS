@@ -115,6 +115,9 @@ public class QuadCinemachineController : MonoBehaviour
             case ViewState.Player:
                 quadCamManager.ChangeToPlayerCamera();
                 SetQuadZ(originalQuadPos.z);
+
+                if (videoPlayerController)
+                    videoPlayerController.PauseVideo(); // hoặc PauseVideo()
                 break;
             case ViewState.Sitdown:
                 quadCamManager.ChangeToSitdownCameraState();

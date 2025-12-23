@@ -864,6 +864,28 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         _currentUrl = url;
     }
+
+    public void StopVideo()
+    {
+        if (videoPlayer && videoPlayer.isPlaying)
+        {
+            videoPlayer.Stop();
+        }
+
+        if (audioSource)
+            audioSource.Stop();
+    }
+
+    public void PauseVideo()
+    {
+        if (videoPlayer && videoPlayer.isPlaying)
+        {
+            videoPlayer.Pause();
+        }
+
+        if (audioSource)
+            audioSource.Pause();
+    }
 }
 
 public class VideoContainerManager : MonoBehaviour
