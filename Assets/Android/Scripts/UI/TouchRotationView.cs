@@ -50,8 +50,6 @@ public class TouchRotationView : MonoBehaviour
     private void Update()
     {
         var activeTouches = EnhancedTouch.activeTouches;
-        for (var i = 0; i < activeTouches.Count; ++i)
-            //Debug.Log("Active touch: " + activeTouches[i]);
 
             if (activeTouches.Count > 0)
             {
