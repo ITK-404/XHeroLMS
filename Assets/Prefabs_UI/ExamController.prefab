@@ -936,6 +936,7 @@ GameObject:
   - component: {fileID: 1540718761307488283}
   - component: {fileID: 3453691334841899093}
   - component: {fileID: 7043050518893487765}
+  - component: {fileID: 3260184017579607326}
   m_Layer: 5
   m_Name: ExamController
   m_TagString: Untagged
@@ -1008,7 +1009,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -1031,6 +1032,18 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &3260184017579607326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8817009957161620695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1eb297f4ae84f3385d8a6c05fcfbe8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIAspectRatioMatcher
 --- !u!1001 &745825172588998746
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1042,66 +1055,6 @@ PrefabInstance:
     - target: {fileID: 4688992573702431598, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
       propertyPath: m_Name
       value: Exam Result UI
-      objectReference: {fileID: 0}
-    - target: {fileID: 4688992573702431598, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_colorMode
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_enableVertexGradient
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topLeft.b
-      value: 0.7529412
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topLeft.g
-      value: 0.92941177
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topLeft.r
-      value: 0.98039216
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topRight.b
-      value: 0.7529412
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topRight.g
-      value: 0.92941177
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.topRight.r
-      value: 0.98039216
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomLeft.b
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomLeft.g
-      value: 0.8745098
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomLeft.r
-      value: 0.9764706
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomRight.b
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomRight.g
-      value: 0.8745098
-      objectReference: {fileID: 0}
-    - target: {fileID: 5411170534542486900, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
-      propertyPath: m_fontColorGradient.bottomRight.r
-      value: 0.9764706
       objectReference: {fileID: 0}
     - target: {fileID: 7292621736771799539, guid: 6037eaca0f6b5634d8976d88bf8d4e42, type: 3}
       propertyPath: m_Pivot.x
