@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 public enum TutorialStepType
 {
     GoToChair = 0,
@@ -15,9 +17,37 @@ public enum TutorialStepType
     Skip = 8,
 
 }
+[Serializable]
+public class TutorialUIObject
+{
+    public TutorialStepType type;
+    public Transform oldParent;
+    public RectTransform currentItem;
+    public Transform newParent;
+    private Vector3 oldAnchorPosition;
+
+    private bool isChangedParent = false;
+    public void ShowTutorial()
+    {
+        currentItem.transform.SetParent(newParent,true);
+        isChangedParent = true;
+    }
+
+    public void HideTutorial()
+    {
+        if (!isChangedParent)
+        {
+            return;
+        }
+
+        isChangedParent = false;
+        currentItem.transform.SetParent(oldParent,true);
+    }
+}
 public class TutorialHandler : MonoBehaviour
 {
     private int index = 0;
+    [Header("Tutorial Hand")]
     public GameObject worldTutorialStep;
     public GameObject sitdownStandupUI;
     public GameObject standStandupUI;
@@ -32,6 +62,9 @@ public class TutorialHandler : MonoBehaviour
 
     public TutorialStepType CurrentStep => (TutorialStepType)index;
     [SerializeField]private TutorialStepType debugStep;
+
+    [SerializeField] private List<TutorialUIObject> _tutorialUIObjects = new();
+    [SerializeField] private Image backgroundImg;
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
     public void Save()
@@ -63,6 +96,11 @@ public class TutorialHandler : MonoBehaviour
 
     private void Awake()
     {
+        backgroundImg.gameObject.SetActive(false);
+        backgroundImg.DOFade(0, 0);
+        
+        InitFocusItems();
+        
         Instance = this;
         worldTutorialStep.gameObject.SetActive(false);
         sitdownStandupUI.gameObject.SetActive(false);
@@ -82,9 +120,41 @@ public class TutorialHandler : MonoBehaviour
         {
             item.SetActive(false);
         }
+
+        if (isPlayedBefore)
+        {
+            return;
+        }
+        backgroundImg.gameObject.SetActive(true);
+        backgroundImg.DOFade(0.95f, 1);
+        
         SetCurrentStep(TutorialStepType.GoToChair);
     }
 
+    [SerializeField] private GameObject player;
+    [SerializeField] private Transform newParent;
+    
+    private void InitFocusItems()
+    {
+        foreach (var item in _tutorialUIObjects)
+        {
+            item.oldParent = item.currentItem.transform.parent; 
+            item.newParent = newParent;
+        }
+    }
+    
+
+    [SerializeField] private Camera mainCamera;
+    private void HandleFollowWorldPosition()
+    {
+        var screenPosition = mainCamera.WorldToScreenPoint(worldTutorialStep.transform.position);
+        Debug.Log($"Screen Position: {screenPosition}");
+        followWorldItem.position = screenPosition;
+
+    }
+
+    [SerializeField] private RectTransform followWorldItem;
+    
     public bool IsStep(int index)
     {
         return this.index == index;
@@ -108,23 +178,23 @@ public class TutorialHandler : MonoBehaviour
                 break;
             case TutorialStepType.Sitdown:
                 OpenUI(sitdownStandupUI);
-                sitdownStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ NGỒI XUỐNG";
+                sitdownStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ NGỒI";
                 break;
             case TutorialStepType.OpenLesson:
                 OpenUI(baiHocUI);
-                baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ MỞ BÀI HỌC";
+                baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ XEM BÀI HỌC";
                 break;
             case TutorialStepType.CloseLesson:
                 OpenUI(closeBaiHocUI);
-                baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐÓNG BÀI HỌC";
+                baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ẨN BÀI HỌC";
                 break;
             case TutorialStepType.PauseVideo:
                 OpenUI(pauseAndResumeUI);
-                pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ DỪNG BÀI HỌC";
+                pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "DỪNG BÀI HỌC";
                 break;
             case TutorialStepType.ResumeVideo:
                 OpenUI(pauseAndResumeUI);
-                pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ TIẾP TỤC BÀI HỌC";
+                pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "TIẾP TỤC BÀI HỌC";
                 break;
             case TutorialStepType.ScaleVideo:
                 OpenUI(scaleVideoUI);
@@ -137,9 +207,28 @@ public class TutorialHandler : MonoBehaviour
                 OpenUI(skipVideoUI);
                 break;
         }
+
+        FocusCorrectItem(tutorialStep);
         this.index = index;
     }
 
+   
+    
+    private void FocusCorrectItem(TutorialStepType type)
+    {
+        foreach (var item in _tutorialUIObjects)
+        {
+            if (item.type == type)
+            {
+                item.ShowTutorial();
+            }
+            else
+            {
+                item.HideTutorial();
+            }
+        }
+    }
+    
     private void OpenUI(GameObject UIObject)
     {
         foreach (var item in tutorialSteps)
@@ -164,5 +253,6 @@ public class TutorialHandler : MonoBehaviour
     private void Update()
     {
         debugStep = (TutorialStepType)index;
+        HandleFollowWorldPosition();
     }
 }
