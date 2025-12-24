@@ -56,11 +56,11 @@ public class ExamTitleManager : MonoBehaviour
         }
 
         if (textTotalQuestions)
-            textTotalQuestions.text = total.ToString();
+            textTotalQuestions.text = total + " câu";
 
         if (textTotalDuration)
             textTotalDuration.text = duration > 0
-                ? string.Format(timeFormat, mm, ss)
+                ? string.Format(timeFormat, mm, ss) + " phút"
                 : "--:--";
 
         if (textPassNeed)
