@@ -64,11 +64,13 @@ public class ExamResultUI : MonoBehaviour
     public void SetTotalAnswerPass(int score, int maxScore, int passPercent = 80)
     {
         int required = Mathf.CeilToInt(maxScore * Mathf.Clamp(passPercent, 0, 100) / 100f);
-        string color = "#F4A42B";
+        // string color = "#F4A42B";
+        // $"BÀI THI CỦA BẠN: <color={color}>{score}/{maxScore}</color>\n" +
         textTotalPass.text =
-            $"BÀI THI CỦA BẠN: <color={color}>{score}/{maxScore}</color>\n" +
+            $" \n" +
             (score >= required
-                ? "CHÚC MỪNG! BẠN ĐÃ HOÀN THÀNH XUẤT SẮC!"
-                : $"Bài thi cần đạt tối thiểu {required}/{maxScore}. Hãy ôn lại và thử lại nhé!");
+                ? "Chúc mừng quý học viên đã hoàn thành bài thi. Hãy xem kết quả chi tiết ngay"
+                : $"Bạn đã KHÔNG hoàn thành bài thi. BÀI THI CỦA BẠN CẦN ĐẠT TỐI THIỂU {required}/{maxScore} ĐIỂM \n HÃY ÔN LẠI KIẾN THỨC TRONG BÀI HỌC VÀ THỰC HIỆN BÀI THI VÀO LẦN SAU NHÉ !!!;");
+
     }
 }
