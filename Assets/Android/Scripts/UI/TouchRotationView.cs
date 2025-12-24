@@ -23,14 +23,28 @@ public class TouchRotationView : MonoBehaviour
 
     private void OnDisable()
     {
-        deltaGlobal = Vector2.zero;
-        IsLooking = false;
+        ResetState();
     }
     
     private void OnApplicationFocus(bool hasFocus)
     {
+        ResetState();
+    }
+    
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        // Xử lý khi app bị pause (về màn hình chính)
+        if (pauseStatus)
+        {
+            ResetState();
+        }
+    }
+
+    private void ResetState()
+    {
         deltaGlobal = Vector2.zero;
-        IsLooking = false;
+        isLooking = false;
+        touchID = -1;
     }
 
     private void Update()
@@ -130,9 +144,7 @@ public class TouchRotationView : MonoBehaviour
     {
         if (isLooking && touch.touchId == touchID)
         {
-            deltaGlobal = Vector2.zero;
-            isLooking = false;
-            touchID = -1;
+            ResetState();
         }
     }
     private void Static(EnhancedTouch touch)
