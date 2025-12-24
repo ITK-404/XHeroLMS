@@ -480,60 +480,70 @@ public class PointClickSystem : MonoBehaviour
                 // hardcode
                 if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
                     return false;
+                // set to global variable
                 currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
 
-
-                if (currentCheckPoint != null)
-                {
-                    if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
-                    {
-                        var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
-
-                        if (isTutorialChair)
-                        {
-                            Debug.Log($"haha");
-                            return true;
-                        }
-
-                        TutorialHandler.Instance.worldTutorialStep.SetActive(false);
-                    }
-                }
-
-                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                {
-                    Debug.Log("Hiện UI Xem bước chân");
-                    PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
-                    //TutorialHandler.Instance.ShowStep(1);
-                }));
-
-                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
-
-                // moving logic
-                StopWaitToMoveChair();
-                Debug.Log("Đánh dính check point");
-                var position = chairHit.transform.position;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-                Vector3 groundPos = (Vector3)node.position;
-
-                if (ai != null)
-                {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-                    ai.destination = groundPos;
-                }
-
-                lastPickPosition = groundPos;
-
-                return true;
+                return MoveToChairCheckPoint(currentCheckPoint);
             }
         }
 
         return false;
     }
 
+    public void MoveToChair(ChairCheckPoint chairCheckPoint)
+    {
+        MoveToChairCheckPoint(chairCheckPoint);
+    }
+    
+    public bool MoveToChairCheckPoint(ChairCheckPoint chairCheckPoint)
+    {
+        if (chairCheckPoint != null)
+        {
+            if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
+            {
+                var isNotTutorialChair = chairCheckPoint.GetComponent<TutorialChair>() == null;
+
+                if (isNotTutorialChair)
+                {
+                    Debug.Log($"Player is in tutorial state and check point hit not tutorial chair");
+                    return true;
+                }
+
+                TutorialHandler.Instance.worldTutorialStep.SetActive(false);
+            }
+        }
+
+        waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+        {
+            Debug.Log("Hiện UI Xem bước chân");
+            PlayerChairManager.Instance.currentCheckPoint = chairCheckPoint;
+            //TutorialHandler.Instance.ShowStep(1);
+        }));
+
+        // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+
+        // moving logic
+        StopWaitToMoveChair();
+        Debug.Log("Đánh dính check point");
+        var position = chairCheckPoint.spriteCheckPoint.transform.position;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+        Vector3 groundPos = (Vector3)node.position;
+
+        if (ai != null)
+        {
+            ai.isStopped = false;
+            ai.canMove = true;
+            ai.destination = groundPos;
+        }
+
+        lastPickPosition = groundPos;
+
+        return true;
+    }
+    
     private void RotateToVelocity()
     {
         if (ai != null && ai.canMove && !ai.isStopped)

@@ -116,6 +116,7 @@ public class TutorialHandler : MonoBehaviour
         // new add must set type for ui
         tutorialSteps.Add(standStandupUI);
         tutorialSteps.Add(closeBaiHocUI);
+        
         foreach(var item in tutorialSteps)
         {
             item.SetActive(false);
