@@ -16,7 +16,9 @@ public class PointClickSystem : MonoBehaviour
     public LayerMask checkPointLayerMask;
     private CharacterController characterController;
     public float moveSpeed = 5;
+
     public float rotationSpeed = 70;
+
     // gravity
     public float gravity = -9.81f;
     public float gravityMultiplier = 1f;
@@ -28,24 +30,23 @@ public class PointClickSystem : MonoBehaviour
     private PlayerCamera playerCamera;
 
     // ===== Click focus config =====
-    private float desiredDistanceFromTarget = 6f;   // player sẽ đứng cách điểm click khoảng này
-    private float minDistanceFromTarget = 3f;       // khoảng cách tối thiểu
-    private float rotationLerpSpeed = 2f;           // độ mượt xoay
+    private float desiredDistanceFromTarget = 6f; // player sẽ đứng cách điểm click khoảng này
+    private float minDistanceFromTarget = 3f; // khoảng cách tối thiểu
+    private float rotationLerpSpeed = 2f; // độ mượt xoay
 
     private bool isClickMoving = false;
     private Vector3 lookTargetWorldPos;
     private float defaultSpeed;
 
     // ===== VFX move indicator =====
-    [Header("Move VFX")]
-    [SerializeField] private GameObject moveVfxPrefab;   // drag prefab vào đây
+    [Header("Move VFX")] [SerializeField] private GameObject moveVfxPrefab; // drag prefab vào đây
     private GameObject moveVfxInstance;
     private BaseInput baseInput;
-    [Header("Mobile")]
-    public float rotationTouchSpeed = 1;
+    [Header("Mobile")] public float rotationTouchSpeed = 1;
     private float cameraPitch = 0f;
     public float minPitch = -40f;
     public float maxPitch = 60f;
+
     private void Awake()
     {
         playerCamera = GetComponent<PlayerCamera>();
@@ -60,10 +61,12 @@ public class PointClickSystem : MonoBehaviour
         if (ai != null)
             defaultSpeed = ai.maxSpeed;
     }
+
     private bool IsBlendingCamera()
     {
         return brain != null && brain.IsBlending && BuildingCameraManager.Instance.IsFocus();
     }
+
     private float protectionTimer = 0f;
 
     void Update()
@@ -115,6 +118,7 @@ public class PointClickSystem : MonoBehaviour
                 ai.isStopped = true;
                 ai.canMove = false;
             }
+
             isClickMoving = false;
             HideMoveVfx(); // VFX
 
@@ -256,6 +260,7 @@ public class PointClickSystem : MonoBehaviour
             Debug.LogError("Player camera is null");
             return;
         }
+
         bool isPlayerClick = false;
         isPlayerClick = baseInput != null ? baseInput.IsClicked : false;
 
@@ -312,6 +317,7 @@ public class PointClickSystem : MonoBehaviour
                         ai.isStopped = true;
                         ai.canMove = false;
                     }
+
                     return;
                 }
 
@@ -353,8 +359,7 @@ public class PointClickSystem : MonoBehaviour
     {
         if (Physics.Raycast(ray, out var stairHit, 1000f, checkPointLayerMask, QueryTriggerInteraction.Collide))
         {
-
-            Debug.Log("bắn dính cầu thang",stairHit.collider.gameObject);
+            Debug.Log("bắn dính cầu thang", stairHit.collider.gameObject);
             if (stairHit.collider.CompareTag("CheckPoint"))
             {
                 Debug.Log("Thử di chuyển tới cầu thang");
@@ -364,7 +369,7 @@ public class PointClickSystem : MonoBehaviour
                 {
                     return false;
                 }
-                
+
                 isClickMoving = false;
                 HideMoveVfx(); // VFX
 
@@ -394,7 +399,8 @@ public class PointClickSystem : MonoBehaviour
         var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
         foreach (var hit in results)
         {
-            if (hit.collider.CompareTag("CheckPoint") && hit.collider.TryGetComponent(out BuildingInteractable interactable))
+            if (hit.collider.CompareTag("CheckPoint") &&
+                hit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
                 BuildingCameraManager.Instance.FocusOnBuilding(interactable);
                 Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
@@ -436,7 +442,6 @@ public class PointClickSystem : MonoBehaviour
         Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
 
         characterController.enabled = true;
-
     }
 
     public void TeleportDelay(Transform hitTransform)
@@ -464,8 +469,6 @@ public class PointClickSystem : MonoBehaviour
         transform.DORotateQuaternion(hitTransform.rotation, 1);
 
         characterController.enabled = true;
-
-
     }
 
     private bool MoveToChairHandle(Ray ray)
@@ -475,66 +478,72 @@ public class PointClickSystem : MonoBehaviour
             if (chairHit.collider.CompareTag("CheckPoint"))
             {
                 // hardcode
-
-
-
                 if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
                     return false;
-
-
-
+                // set to global variable
                 currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
-                if (currentCheckPoint != null)
 
-                    if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
-                    {
-                        var isTutorialChair = chairHit.collider.GetComponentInParent<TutorialChair>() == null;
-
-                        if (isTutorialChair)
-
-                        {
-                            Debug.Log($"haha");
-                            return true;
-                        }
-
-                        TutorialHandler.Instance.worldTutorialStep.SetActive(false);
-                    }
-
-                waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
-                    {
-                        Debug.Log("Hiện UI Xem bước chân");
-                        PlayerChairManager.Instance.currentCheckPoint = currentCheckPoint;
-                        //TutorialHandler.Instance.ShowStep(1);
-                    }));
-
-                // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
-
-                // moving logic
-                StopWaitToMoveChair();
-                Debug.Log("Đánh dính check point");
-                var position = chairHit.transform.position;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-                Vector3 groundPos = (Vector3)node.position;
-
-                if (ai != null)
-                {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-                    ai.destination = groundPos;
-                }
-
-                lastPickPosition = groundPos;
-
-                return true;
+                return MoveToChairCheckPoint(currentCheckPoint);
             }
         }
 
         return false;
     }
 
+    public void MoveToChair(ChairCheckPoint chairCheckPoint)
+    {
+        MoveToChairCheckPoint(chairCheckPoint);
+    }
+    
+    public bool MoveToChairCheckPoint(ChairCheckPoint chairCheckPoint)
+    {
+        if (chairCheckPoint != null)
+        {
+            if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
+            {
+                var isNotTutorialChair = chairCheckPoint.GetComponent<TutorialChair>() == null;
+
+                if (isNotTutorialChair)
+                {
+                    Debug.Log($"Player is in tutorial state and check point hit not tutorial chair");
+                    return true;
+                }
+
+                TutorialHandler.Instance.worldTutorialStep.SetActive(false);
+            }
+        }
+
+        waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
+        {
+            Debug.Log("Hiện UI Xem bước chân");
+            PlayerChairManager.Instance.currentCheckPoint = chairCheckPoint;
+            //TutorialHandler.Instance.ShowStep(1);
+        }));
+
+        // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+
+        // moving logic
+        StopWaitToMoveChair();
+        Debug.Log("Đánh dính check point");
+        var position = chairCheckPoint.spriteCheckPoint.transform.position;
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+        Vector3 groundPos = (Vector3)node.position;
+
+        if (ai != null)
+        {
+            ai.isStopped = false;
+            ai.canMove = true;
+            ai.destination = groundPos;
+        }
+
+        lastPickPosition = groundPos;
+
+        return true;
+    }
+    
     private void RotateToVelocity()
     {
         if (ai != null && ai.canMove && !ai.isStopped)
