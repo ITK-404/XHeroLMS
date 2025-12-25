@@ -65,6 +65,12 @@ public class TutorialHandler : MonoBehaviour
 
     [SerializeField] private List<TutorialUIObject> _tutorialUIObjects = new();
     [SerializeField] private Image backgroundImg;
+
+    [Header("World Space Item")] 
+    [SerializeField]
+    private PointClickSystem _pointClickSystem;
+    
+
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
     public void Save()
@@ -72,13 +78,17 @@ public class TutorialHandler : MonoBehaviour
         Debug.Log("Save key");
         PlayerPrefs.SetInt(key, 1);
         isPlayedBefore = true;
-        foreach (var item in tutorialSteps)
+        
+        
+        backgroundImg.DOFade(0, 2f).OnComplete(() =>
         {
-            item.gameObject.SetActive(false);
-        }
+            backgroundImg.gameObject.SetActive(false);
+        });
+        
+        HideAllTutorialHand();
     }
 
-    private void Load()
+    private void LoadSave()
     {
         if (!PlayerPrefs.HasKey(key))
         {
@@ -94,18 +104,40 @@ public class TutorialHandler : MonoBehaviour
         PlayerPrefs.SetInt(key, 0);
     }
 
-    private void Awake()
+    private void Start()
     {
+        Instance = this;
+        
+        // start setup
         backgroundImg.gameObject.SetActive(false);
         backgroundImg.DOFade(0, 0);
-        
-        InitFocusItems();
-        
-        Instance = this;
+                
         worldTutorialStep.gameObject.SetActive(false);
         sitdownStandupUI.gameObject.SetActive(false);
-        Load();
+        // this
+        SetupForChangeParentUI();
 
+        LoadSave();
+
+        CreateHandList();
+        // if player is played tutorial before
+        if (isPlayedBefore)
+        {
+            return;
+        }
+
+        SetupStartingClick();
+        // if player not play tutorial then fade background
+        
+        backgroundImg.gameObject.SetActive(true);
+        backgroundImg.DOFade(0.95f, 1);
+        // then showing first step of tutorial
+        SetCurrentStep(TutorialStepType.GoToChair);
+    }
+
+    private void CreateHandList()
+    {
+        tutorialSteps.Add(followWorldItem.gameObject);
         tutorialSteps.Add(worldTutorialStep);
         tutorialSteps.Add(sitdownStandupUI);
         tutorialSteps.Add(baiHocUI);
@@ -116,26 +148,46 @@ public class TutorialHandler : MonoBehaviour
         // new add must set type for ui
         tutorialSteps.Add(standStandupUI);
         tutorialSteps.Add(closeBaiHocUI);
-        
+
+        HideAllTutorialHand();
+    }
+
+    private void HideAllTutorialHand()
+    {
         foreach(var item in tutorialSteps)
         {
             item.SetActive(false);
         }
-
-        if (isPlayedBefore)
-        {
-            return;
-        }
-        backgroundImg.gameObject.SetActive(true);
-        backgroundImg.DOFade(0.95f, 1);
-        
-        SetCurrentStep(TutorialStepType.GoToChair);
     }
+    
 
+    private void SetupStartingClick()
+    {
+        var container = PlayerChairManager.Instance.transform;
+        var tutorialChair = container.GetComponentInChildren<TutorialChair>();
+        var chairCheckPoint = tutorialChair.GetComponent<ChairCheckPoint>();
+        // assign event
+        var btn = followWorldItem.GetComponent<Button>();
+        btn.onClick.AddListener(() =>
+        {
+            // make sure this check point have tutorial chair
+            _pointClickSystem.MoveToChair(chairCheckPoint);
+        });
+
+        // look to target item
+        
+        var direction = tutorialChair.transform.position - _pointClickSystem.transform.position;
+        direction.y = 0;
+        direction.Normalize();
+        var targetRotation = Quaternion.LookRotation(direction);
+        _pointClickSystem.transform.DORotateQuaternion(targetRotation, 3f);
+    }
+    
+    
     [SerializeField] private GameObject player;
     [SerializeField] private Transform newParent;
     
-    private void InitFocusItems()
+    private void SetupForChangeParentUI()
     {
         foreach (var item in _tutorialUIObjects)
         {
@@ -175,37 +227,38 @@ public class TutorialHandler : MonoBehaviour
         switch (tutorialStep)
         {
             case TutorialStepType.GoToChair:
-                OpenUI(worldTutorialStep);
+                ShowSpecifyGameObject(followWorldItem.gameObject);
                 break;
             case TutorialStepType.Sitdown:
-                OpenUI(sitdownStandupUI);
+                ShowSpecifyGameObject(sitdownStandupUI);
                 sitdownStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ NGỒI";
                 break;
             case TutorialStepType.OpenLesson:
-                OpenUI(baiHocUI);
+                ShowSpecifyGameObject(baiHocUI);
                 baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ XEM BÀI HỌC";
                 break;
             case TutorialStepType.CloseLesson:
-                OpenUI(closeBaiHocUI);
+                ShowSpecifyGameObject(closeBaiHocUI);
                 baiHocUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ẨN BÀI HỌC";
                 break;
             case TutorialStepType.PauseVideo:
-                OpenUI(pauseAndResumeUI);
+                ShowSpecifyGameObject(pauseAndResumeUI);
                 pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "DỪNG BÀI HỌC";
                 break;
             case TutorialStepType.ResumeVideo:
-                OpenUI(pauseAndResumeUI);
+                ShowSpecifyGameObject(pauseAndResumeUI);
                 pauseAndResumeUI.GetComponentInChildren<TextMeshProUGUI>().text = "TIẾP TỤC BÀI HỌC";
                 break;
             case TutorialStepType.ScaleVideo:
-                OpenUI(scaleVideoUI);
+                ShowSpecifyGameObject(scaleVideoUI);
                 break;
             case TutorialStepType.Standup:
-                OpenUI(standStandupUI);
+                ShowSpecifyGameObject(standStandupUI);
                 standStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐỨNG";
+         
                 break;
             case TutorialStepType.Skip:
-                OpenUI(skipVideoUI);
+                ShowSpecifyGameObject(skipVideoUI);
                 break;
         }
 
@@ -230,7 +283,7 @@ public class TutorialHandler : MonoBehaviour
         }
     }
     
-    private void OpenUI(GameObject UIObject)
+    private void ShowSpecifyGameObject(GameObject UIObject)
     {
         foreach (var item in tutorialSteps)
         {
@@ -247,8 +300,8 @@ public class TutorialHandler : MonoBehaviour
 
     public bool IsPlayedBefore()
     {
-        return true;
-        //return isPlayedBefore;
+        // return true;
+        return isPlayedBefore;
     }
 
     private void Update()
