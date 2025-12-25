@@ -63,6 +63,26 @@ android {
         noCompress = **BUILTIN_NOCOMPRESS** + unityStreamingAssets.tokenize(', ')
         ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
     }**PACKAGING**
+
+    afterEvaluate {
+    tasks.matching { it.name == 'preBuild' }.all { t ->
+        t.doFirst {
+            def xmlDir = file("${projectDir}/src/main/res/xml")
+            if (!xmlDir.exists()) xmlDir.mkdirs()
+
+            def fp = new File(xmlDir, "file_paths.xml")
+fp.text = """<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
+    <external-files-path name="ext_files" path="." />
+</paths>
+"""
+
+        }
+    }
+}
+
 }
 **IL_CPP_BUILD_SETUP**
 **SOURCE_BUILD_SETUP**

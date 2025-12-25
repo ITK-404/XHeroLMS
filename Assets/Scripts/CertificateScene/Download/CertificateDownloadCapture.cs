@@ -1,18 +1,24 @@
+#if UNITY_ANDROID
+using UnityEngine.Android;
+#endif
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Networking;
+
+#if UNITY_STANDALONE || UNITY_EDITOR
 using SFB;
+#endif
 
 public class CertificateDownloadCapture : MonoBehaviour
 {
-    [Header("Button tải về")]
+    [Header("Button tải về / share")]
     public Button downloadButton;
 
-    [Header("Share Buttons")]
+    [Header("Share Buttons (optional)")]
     public Button shareFacebookButton;
     public Button shareZaloButton;
 
@@ -24,131 +30,166 @@ public class CertificateDownloadCapture : MonoBehaviour
     [Header("Nội dung share")]
     public string shareMessage = "Chúc mừng đã nhận bằng tốt nghiệp!";
 
-    [Header("Trạng thái khung (link từ Certificate2DPreviewUI)")]
+    [Header("Trạng thái khung")]
     public Toggle toggleWithFrame;
     public Toggle toggleWithoutFrame;
 
+    [Header("Android target packages")]
+    [SerializeField] private string zaloPackage = "com.zing.zalo";
+    [SerializeField] private string facebookPackage = "com.facebook.katana";
+
+    [Header("Download/Save settings")]
+    [Tooltip("Tên album trong Gallery (Android/iOS)")]
+    public string albumName = "ĐÀO TẠO - PHONG THỦY ĐẠI NAM";
+
+    [Tooltip("iOS: Sau khi Save, mở Share Sheet để user xem/tiếp tục share (gần nhất với OpenWith)")]
+    public bool iosShowShareSheetAfterSave = true;
+
+    private enum MobileAction { Download, ShareToZalo, ShareToFacebook }
+
     private void Awake()
     {
-        if (downloadButton != null)
-            downloadButton.onClick.AddListener(OnClickDownload);
-
-        if (shareFacebookButton != null)
-            shareFacebookButton.onClick.AddListener(OnClickShareFacebook);
-
-        if (shareZaloButton != null)
-            shareZaloButton.onClick.AddListener(OnClickShareZalo);
+        if (downloadButton) downloadButton.onClick.AddListener(() => StartCapture(MobileAction.Download));
+        if (shareZaloButton) shareZaloButton.onClick.AddListener(() => StartCapture(MobileAction.ShareToZalo));
+        if (shareFacebookButton) shareFacebookButton.onClick.AddListener(() => StartCapture(MobileAction.ShareToFacebook));
     }
 
-    private void OnClickDownload()
+    private void OnDestroy()
+    {
+        if (downloadButton) downloadButton.onClick.RemoveAllListeners();
+        if (shareZaloButton) shareZaloButton.onClick.RemoveAllListeners();
+        if (shareFacebookButton) shareFacebookButton.onClick.RemoveAllListeners();
+    }
+
+    private void StartCapture(MobileAction action)
     {
         if (!gameObject.activeInHierarchy)
         {
             Debug.LogWarning("[CertificateDownloadCapture] GameObject chưa active, không thể chụp.");
             return;
         }
-
-        StartCoroutine(CaptureAndSaveCoroutine());
+        StartCoroutine(CaptureAndHandleCoroutine(action));
     }
 
-    /// <summary>Cho script khác gọi chụp mà không cần bấm nút.</summary>
-    public void CaptureNow()
-    {
-        if (!gameObject.activeInHierarchy)
-        {
-            Debug.LogWarning("[CertificateDownloadCapture] GameObject chưa active, không thể chụp.");
-            return;
-        }
-
-        StartCoroutine(CaptureAndSaveCoroutine());
-    }
-
-    /// <summary>
-    /// Đang chọn chế độ có khung hay không khung?
-    /// - Nếu toggleWithoutFrame đang bật => không khung
-    /// - Các trường hợp còn lại coi như "có khung"
-    /// </summary>
     private bool IsWithFrame()
     {
-        if (toggleWithoutFrame != null && toggleWithoutFrame.isOn)
-            return false;
+        if (toggleWithoutFrame != null && toggleWithoutFrame.isOn) return false;
         return true;
     }
 
-    private IEnumerator CaptureAndSaveCoroutine()
+    private string BuildShareMessage()
     {
-        // Lưu + ẩn các UI không cần thiết
-        var states = new List<bool>();
+        string msg = string.IsNullOrEmpty(shareMessage) ? "Chúc mừng đã nhận bằng tốt nghiệp!" : shareMessage;
+        string modeLabel = IsWithFrame() ? "có khung" : "không khung";
+        return $"{msg} ({modeLabel})";
+    }
+
+    private IEnumerator CaptureAndHandleCoroutine(MobileAction action)
+    {
+        var states = new List<bool>(objectsToHide.Count);
         foreach (var go in objectsToHide)
         {
-            if (go == null)
-            {
-                states.Add(false);
-                continue;
-            }
-
+            if (go == null) { states.Add(false); continue; }
             states.Add(go.activeSelf);
             go.SetActive(false);
         }
 
-        // Chờ render UI xong
-        yield return new WaitForEndOfFrame();
-
-        // Chụp full màn hình
-        int w = Screen.width;
-        int h = Screen.height;
-
-        if (w <= 0 || h <= 0)
+        try
         {
-            Debug.LogWarning("[CertificateDownloadCapture] Kích thước màn hình không hợp lệ.");
-            RestoreObjects(states);
-            yield break;
-        }
+            yield return new WaitForEndOfFrame();
 
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-        tex.Apply();
+            int w = Screen.width;
+            int h = Screen.height;
+            if (w <= 0 || h <= 0)
+            {
+                Debug.LogWarning("[CertificateDownloadCapture] Screen size invalid.");
+                yield break;
+            }
 
-        // Restore UI lại
-        RestoreObjects(states);
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
 
-        // Encode PNG
-        byte[] pngBytes = tex.EncodeToPNG();
-        Destroy(tex);
+            byte[] pngBytes = tex.EncodeToPNG();
+            Destroy(tex);
 
-        // Tạo tên file tự động theo thời gian
-        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string modeSuffix = IsWithFrame() ? "with-frame" : "no-frame";
+            string fileName = $"{fileNamePrefix}{modeSuffix}_{timestamp}.png";
 
-        // thêm hậu tố theo trạng thái khung
-        string modeSuffix = IsWithFrame() ? "with-frame" : "no-frame";
-        string defaultFileName = $"{fileNamePrefix}{modeSuffix}_{timestamp}.png";
+#if UNITY_ANDROID || UNITY_IOS
+            // Local file để Share/OpenWith dùng (Android cần FileProvider, iOS share cũng cần file)
+            string dir = Path.Combine(Application.persistentDataPath, "ShareTemp");
+            Directory.CreateDirectory(dir);
 
-        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string localPath = Path.Combine(dir, fileName);
+            File.WriteAllBytes(localPath, pngBytes);
 
-        var extensions = new[]
-        {
-            new ExtensionFilter("PNG Image", "png")
-        };
+            Debug.Log($"[CertificateDownloadCapture] Saved local: {localPath}");
 
-#if !UNITY_WEBGL
-        string path = StandaloneFileBrowser.SaveFilePanel(
-            "Lưu chứng chỉ",
-            desktopPath,
-            defaultFileName,
-            extensions
-        );
+#if UNITY_ANDROID
+            if (action == MobileAction.Download)
+            {
+                AndroidJavaObject savedUri;
+                bool saved = SaveToGallery_Android(localPath, fileName, albumName, out savedUri);
 
-        if (string.IsNullOrEmpty(path))
-        {
-            Debug.Log("[CertificateDownloadCapture] Người dùng huỷ lưu.");
-            yield break;
-        }
+                AndroidOpenWithImage_FileProvider(localPath);
+            }
+            else
+            {
+                using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
+                {
+                    AndroidJavaObject uri = GetContentUriFromFileProvider(localPath, context);
+                    if (uri == null)
+                    {
+                        Debug.LogError("[Share] uri == null. Check FileProvider config.");
+                        yield break;
+                    }
 
-        File.WriteAllBytes(path, pngBytes);
-        Debug.Log($"[CertificateDownloadCapture] Đã lưu: {path} (mode = {modeSuffix})");
-#else
-        Debug.LogWarning("[CertificateDownloadCapture] Không hỗ trợ SaveFilePanel trên WebGL.");
+                    string text = BuildShareMessage();
+
+                    if (action == MobileAction.ShareToZalo)
+                        AndroidShareImageToPackage(uri, "image/png", text, zaloPackage, chooserTitle: "Chia sẻ Zalo");
+                    else if (action == MobileAction.ShareToFacebook)
+                        AndroidShareImageToPackage(uri, "image/png", text, facebookPackage, chooserTitle: "Chia sẻ Facebook", fallbackChooserIfFail: true);
+                }
+            }
+#elif UNITY_IOS
+            // iOS: Download => lưu vào Photos + mở share sheet (gần nhất với OpenWith)
+            if (action == MobileAction.Download)
+            {
+                yield return IOS_SaveToPhotos(localPath, albumName);
+
+                if (iosShowShareSheetAfterSave)
+                {
+                    // share sheet cho user xem/tiếp tục share
+                    ShareSheetNativePreferTarget(localPath, BuildShareMessage(), null);
+                }
+            }
+            else
+            {
+                // iOS share: không ép đích app như Android (trừ khi dùng SDK riêng)
+                ShareSheetNativePreferTarget(localPath, BuildShareMessage(), null);
+            }
 #endif
+
+#else
+            // PC
+            var extensions = new[] { new ExtensionFilter("PNG Image", "png") };
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string savePath = StandaloneFileBrowser.SaveFilePanel("Lưu chứng chỉ", desktopPath, fileName, extensions);
+            if (string.IsNullOrEmpty(savePath)) yield break;
+
+            File.WriteAllBytes(savePath, pngBytes);
+            Debug.Log($"[CertificateDownloadCapture] Saved: {savePath}");
+#endif
+        }
+        finally
+        {
+            RestoreObjects(states);
+        }
     }
 
     private void RestoreObjects(List<bool> states)
@@ -161,40 +202,322 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
     }
 
-    // ================== COMMON: COPY CLIPBOARD ==================
-    private void CopyShareMessageToClipboard()
+    // ===== Share sheet (NativeShare) =====
+    private void ShareSheetNativePreferTarget(string filePath, string text, string targetPackageOrNull)
     {
-        string msg = string.IsNullOrEmpty(shareMessage)
-            ? "Chúc mừng đã nhận bằng tốt nghiệp!"
-            : shareMessage;
+        try
+        {
+            var ns = new NativeShare()
+                .AddFile(filePath, "image/png")
+                .SetText(text)
+                .SetSubject("Certificate");
 
-        // thêm thông tin mode khung vào cuối cho rõ ràng
-        string modeLabel = IsWithFrame() ? "có khung" : "không khung";
-        msg = $"{msg} ({modeLabel})";
-
-        GUIUtility.systemCopyBuffer = msg;
-        Debug.Log("[CertificateDownloadCapture] Copied share message to clipboard: " + msg);
+#if UNITY_ANDROID
+            if (!string.IsNullOrEmpty(targetPackageOrNull))
+                TryCallNativeShareSetTarget(ns, targetPackageOrNull);
+#endif
+            ns.Share();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[CertificateDownloadCapture] NativeShare.Share failed: " + e);
+        }
     }
 
-    // ================== SHARE FACEBOOK: mở trang cá nhân ==================
-    private void OnClickShareFacebook()
+    private void TryCallNativeShareSetTarget(object nativeShareInstance, string pkg)
     {
-        CopyShareMessageToClipboard();
-
-        string fbProfileUrl = "https://www.facebook.com/me/";
-        Application.OpenURL(fbProfileUrl);
-
-        Debug.Log("[CertificateDownloadCapture] Open Facebook profile: " + fbProfileUrl +
-                  $" | mode = {(IsWithFrame() ? "with-frame" : "no-frame")}");
+        if (nativeShareInstance == null) return;
+        try
+        {
+            MethodInfo mi = nativeShareInstance.GetType().GetMethod("SetTarget", new[] { typeof(string) });
+            if (mi != null) mi.Invoke(nativeShareInstance, new object[] { pkg });
+        }
+        catch { }
     }
 
-    // ================== SHARE ZALO: ưu tiên app, fallback web ==================
-    private void OnClickShareZalo()
+#if UNITY_IOS
+    // ==========================
+    //  iOS: SAVE TO PHOTOS
+    // ==========================
+    private IEnumerator IOS_SaveToPhotos(string localPath, string album)
     {
-        CopyShareMessageToClipboard();
-        Application.OpenURL("zalo://");
+#if NATIVE_GALLERY
+        // xin quyền
+        var perm = NativeGallery.CheckPermission(NativeGallery.PermissionType.Write);
+        if (perm != NativeGallery.Permission.Granted)
+            perm = NativeGallery.RequestPermission(NativeGallery.PermissionType.Write);
 
-        Debug.Log("[CertificateDownloadCapture] Tried open Zalo app via zalo:// " +
-                  $"| mode = {(IsWithFrame() ? "with-frame" : "no-frame")}");
+        if (perm != NativeGallery.Permission.Granted)
+        {
+            Debug.LogWarning("[iOS SaveToPhotos] Permission not granted. Fallback share sheet.");
+            yield break;
+        }
+
+        // save
+        string savedPath = NativeGallery.SaveImageToGallery(localPath, string.IsNullOrEmpty(album) ? "Certificates" : album, Path.GetFileName(localPath));
+        Debug.Log("[iOS SaveToPhotos] SavedPath=" + savedPath);
+
+        yield break;
+#else
+        Debug.LogWarning("[iOS SaveToPhotos] NativeGallery not found. Cannot auto-save to Photos. Use share sheet -> Save Image.");
+        yield break;
+#endif
     }
+#endif
+
+#if UNITY_ANDROID
+    // ==========================
+    //  ANDROID: SAVE TO GALLERY
+    // ==========================
+    private bool SaveToGallery_Android(string localPath, string displayName, string albumName, out AndroidJavaObject outUri)
+    {
+        outUri = null;
+
+        Debug.Log($"[SaveToGallery] BEGIN localPath={localPath} displayName={displayName} album={albumName}");
+
+        try
+        {
+            int sdkInt = GetAndroidSdkInt();
+            Debug.Log($"[SaveToGallery] sdkInt={sdkInt}");
+
+            if (sdkInt <= 28)
+            {
+                if (!HasAndroidPermission("android.permission.WRITE_EXTERNAL_STORAGE"))
+                {
+                    Debug.Log("[SaveToGallery] Request WRITE_EXTERNAL_STORAGE");
+                    RequestAndroidPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+                }
+            }
+
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
+            using (var cr = context.Call<AndroidJavaObject>("getContentResolver"))
+            using (var mediaStoreImages = new AndroidJavaClass("android.provider.MediaStore$Images$Media"))
+            using (var extContentUri = mediaStoreImages.GetStatic<AndroidJavaObject>("EXTERNAL_CONTENT_URI"))
+            using (var values = new AndroidJavaObject("android.content.ContentValues"))
+            {
+                long nowSec = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                string safeAlbum = string.IsNullOrEmpty(albumName) ? "Certificates" : albumName;
+
+                CV_PutString(values, "_display_name", displayName);
+                CV_PutString(values, "mime_type", "image/png");
+                CV_PutLong(values, "date_added", nowSec);
+                CV_PutLong(values, "date_modified", nowSec);
+
+                if (sdkInt >= 29)
+                {
+                    CV_PutString(values, "relative_path", $"Pictures/{safeAlbum}");
+                    CV_PutInt(values, "is_pending", 1);
+                }
+
+                Debug.Log("[SaveToGallery] insert...");
+                AndroidJavaObject uri = cr.Call<AndroidJavaObject>("insert", extContentUri, values);
+                if (uri == null)
+                {
+                    Debug.LogError("[SaveToGallery] insert returned null uri");
+                    return false;
+                }
+
+                Debug.Log("[SaveToGallery] openOutputStream...");
+                using (var os = cr.Call<AndroidJavaObject>("openOutputStream", uri))
+                {
+                    if (os == null)
+                    {
+                        Debug.LogError("[SaveToGallery] openOutputStream returned null");
+                        return false;
+                    }
+
+                    byte[] bytes = File.ReadAllBytes(localPath);
+                    os.Call("write", bytes);
+                    os.Call("flush");
+                }
+
+                if (sdkInt >= 29)
+                {
+                    values.Call("clear");
+                    CV_PutInt(values, "is_pending", 0);
+                    cr.Call<int>("update", uri, values, null, null);
+                }
+
+                TryMediaScannerScanUri(context, uri);
+
+                outUri = uri;
+                Debug.Log("[SaveToGallery] OK uri=" + uri.Call<string>("toString"));
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SaveToGallery] FAILED: " + e);
+            return false;
+        }
+    }
+
+    private void CV_PutString(AndroidJavaObject values, string key, string val) => values.Call("put", key, val);
+
+    private void CV_PutLong(AndroidJavaObject values, string key, long val)
+    {
+        using (var jLong = new AndroidJavaObject("java.lang.Long", val))
+            values.Call("put", key, jLong);
+    }
+
+    private void CV_PutInt(AndroidJavaObject values, string key, int val)
+    {
+        using (var jInt = new AndroidJavaObject("java.lang.Integer", val))
+            values.Call("put", key, jInt);
+    }
+
+    private void TryMediaScannerScanUri(AndroidJavaObject context, AndroidJavaObject uri)
+    {
+        try
+        {
+            using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.MEDIA_SCANNER_SCAN_FILE"))
+            {
+                intent.Call<AndroidJavaObject>("setData", uri);
+                context.Call("sendBroadcast", intent);
+            }
+        }
+        catch { }
+    }
+
+    private int GetAndroidSdkInt()
+    {
+        try
+        {
+            using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
+                return version.GetStatic<int>("SDK_INT");
+        }
+        catch { return 0; }
+    }
+
+    private bool HasAndroidPermission(string perm)
+    {
+        try { return Permission.HasUserAuthorizedPermission(perm); }
+        catch { return true; }
+    }
+
+    private void RequestAndroidPermission(string perm)
+    {
+        try { Permission.RequestUserPermission(perm); }
+        catch { }
+    }
+
+    // ==========================
+    //  ANDROID: OPENWITH + SHARE
+    // ==========================
+    private void AndroidOpenWithImage_FileProvider(string filePath)
+    {
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
+            {
+                AndroidJavaObject uri = GetContentUriFromFileProvider(filePath, context);
+                if (uri == null) return;
+
+                using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.VIEW"))
+                using (var intentClass = new AndroidJavaClass("android.content.Intent"))
+                {
+                    intent.Call<AndroidJavaObject>("setDataAndType", uri, "image/png");
+
+                    int FLAG_GRANT_READ_URI_PERMISSION = intentClass.GetStatic<int>("FLAG_GRANT_READ_URI_PERMISSION");
+                    intent.Call<AndroidJavaObject>("addFlags", FLAG_GRANT_READ_URI_PERMISSION);
+
+                    TrySetClipData(intent, uri);
+
+                    using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, "Mở chứng chỉ bằng"))
+                        activity.Call("startActivity", chooser);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[OpenWith] failed: " + e);
+        }
+    }
+
+    private void AndroidShareImageToPackage(
+        AndroidJavaObject contentUri,
+        string mimeType,
+        string text,
+        string targetPackage,
+        string chooserTitle,
+        bool fallbackChooserIfFail = false)
+    {
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var intentClass = new AndroidJavaClass("android.content.Intent"))
+            using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.SEND"))
+            {
+                intent.Call<AndroidJavaObject>("setType", mimeType);
+                intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_STREAM"), contentUri);
+                if (!string.IsNullOrEmpty(text))
+                    intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_TEXT"), text);
+
+                int FLAG_GRANT_READ_URI_PERMISSION = intentClass.GetStatic<int>("FLAG_GRANT_READ_URI_PERMISSION");
+                intent.Call<AndroidJavaObject>("addFlags", FLAG_GRANT_READ_URI_PERMISSION);
+                TrySetClipData(intent, contentUri);
+
+                if (!string.IsNullOrEmpty(targetPackage))
+                    intent.Call<AndroidJavaObject>("setPackage", targetPackage);
+
+                bool canResolve = CanResolveIntent(activity, intent);
+                if (!canResolve)
+                {
+                    if (!fallbackChooserIfFail) return;
+                    intent.Call<AndroidJavaObject>("setPackage", (string)null);
+                }
+
+                if (!string.IsNullOrEmpty(targetPackage) && canResolve)
+                    activity.Call("startActivity", intent);
+                else
+                {
+                    using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, chooserTitle ?? "Chia sẻ"))
+                        activity.Call("startActivity", chooser);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[Share] Failed: " + e);
+        }
+    }
+
+    private bool CanResolveIntent(AndroidJavaObject activity, AndroidJavaObject intent)
+    {
+        try
+        {
+            using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
+                return intent.Call<AndroidJavaObject>("resolveActivity", pm) != null;
+        }
+        catch { return false; }
+    }
+
+    private AndroidJavaObject GetContentUriFromFileProvider(string filePath, AndroidJavaObject context)
+    {
+        string pkg = context.Call<string>("getPackageName");
+        string authority = pkg + ".fileprovider";
+
+        using (var fileObj = new AndroidJavaObject("java.io.File", filePath))
+        using (var fileProvider = new AndroidJavaClass("androidx.core.content.FileProvider"))
+        {
+            return fileProvider.CallStatic<AndroidJavaObject>("getUriForFile", context, authority, fileObj);
+        }
+    }
+
+    private void TrySetClipData(AndroidJavaObject intent, AndroidJavaObject uri)
+    {
+        try
+        {
+            using (var clipDataClass = new AndroidJavaClass("android.content.ClipData"))
+            using (var clipData = clipDataClass.CallStatic<AndroidJavaObject>("newRawUri", "certificate", uri))
+                intent.Call<AndroidJavaObject>("setClipData", clipData);
+        }
+        catch { }
+    }
+#endif
 }
