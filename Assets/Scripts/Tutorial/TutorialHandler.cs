@@ -126,7 +126,8 @@ public class TutorialHandler : MonoBehaviour
         // this
         SetupForChangeParentUI();
 
-        LoadSave();
+        // LoadSave();
+        isPlayedBefore = false; // ép luôn là chưa chơi
 
         CreateHandList();
         // if player is played tutorial before
