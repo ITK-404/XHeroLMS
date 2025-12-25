@@ -39,8 +39,11 @@ public class CertificateDownloadCapture : MonoBehaviour
     [SerializeField] private string facebookPackage = "com.facebook.katana";
 
     [Header("Download/Save settings")]
-    [Tooltip("Tên album trong Gallery (Android)")]
-    public string androidAlbumName = "XHero Certificates";
+    [Tooltip("Tên album trong Gallery (Android/iOS)")]
+    public string albumName = "ĐÀO TẠO - PHONG THỦY ĐẠI NAM";
+
+    [Tooltip("iOS: Sau khi Save, mở Share Sheet để user xem/tiếp tục share (gần nhất với OpenWith)")]
+    public bool iosShowShareSheetAfterSave = true;
 
     private enum MobileAction { Download, ShareToZalo, ShareToFacebook }
 
@@ -115,7 +118,7 @@ public class CertificateDownloadCapture : MonoBehaviour
             string fileName = $"{fileNamePrefix}{modeSuffix}_{timestamp}.png";
 
 #if UNITY_ANDROID || UNITY_IOS
-            // Local file để OpenWith/Share dùng FileProvider
+            // Local file để Share/OpenWith dùng (Android cần FileProvider, iOS share cũng cần file)
             string dir = Path.Combine(Application.persistentDataPath, "ShareTemp");
             Directory.CreateDirectory(dir);
 
@@ -128,9 +131,8 @@ public class CertificateDownloadCapture : MonoBehaviour
             if (action == MobileAction.Download)
             {
                 AndroidJavaObject savedUri;
-                bool saved = SaveToGallery_Android(localPath, fileName, androidAlbumName, out savedUri);
+                bool saved = SaveToGallery_Android(localPath, fileName, albumName, out savedUri);
 
-                // Dù save fail vẫn OpenWith
                 AndroidOpenWithImage_FileProvider(localPath);
             }
             else
@@ -154,12 +156,27 @@ public class CertificateDownloadCapture : MonoBehaviour
                         AndroidShareImageToPackage(uri, "image/png", text, facebookPackage, chooserTitle: "Chia sẻ Facebook", fallbackChooserIfFail: true);
                 }
             }
-#else
-            // iOS: NativeShare
-            ShareSheetNativePreferTarget(localPath, BuildShareMessage(), null);
+#elif UNITY_IOS
+            // iOS: Download => lưu vào Photos + mở share sheet (gần nhất với OpenWith)
+            if (action == MobileAction.Download)
+            {
+                yield return IOS_SaveToPhotos(localPath, albumName);
+
+                if (iosShowShareSheetAfterSave)
+                {
+                    // share sheet cho user xem/tiếp tục share
+                    ShareSheetNativePreferTarget(localPath, BuildShareMessage(), null);
+                }
+            }
+            else
+            {
+                // iOS share: không ép đích app như Android (trừ khi dùng SDK riêng)
+                ShareSheetNativePreferTarget(localPath, BuildShareMessage(), null);
+            }
 #endif
 
 #else
+            // PC
             var extensions = new[] { new ExtensionFilter("PNG Image", "png") };
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string savePath = StandaloneFileBrowser.SaveFilePanel("Lưu chứng chỉ", desktopPath, fileName, extensions);
@@ -185,7 +202,7 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
     }
 
-    // ===== iOS / fallback share (NativeShare) =====
+    // ===== Share sheet (NativeShare) =====
     private void ShareSheetNativePreferTarget(string filePath, string text, string targetPackageOrNull)
     {
         try
@@ -217,6 +234,36 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
         catch { }
     }
+
+#if UNITY_IOS
+    // ==========================
+    //  iOS: SAVE TO PHOTOS
+    // ==========================
+    private IEnumerator IOS_SaveToPhotos(string localPath, string album)
+    {
+#if NATIVE_GALLERY
+        // xin quyền
+        var perm = NativeGallery.CheckPermission(NativeGallery.PermissionType.Write);
+        if (perm != NativeGallery.Permission.Granted)
+            perm = NativeGallery.RequestPermission(NativeGallery.PermissionType.Write);
+
+        if (perm != NativeGallery.Permission.Granted)
+        {
+            Debug.LogWarning("[iOS SaveToPhotos] Permission not granted. Fallback share sheet.");
+            yield break;
+        }
+
+        // save
+        string savedPath = NativeGallery.SaveImageToGallery(localPath, string.IsNullOrEmpty(album) ? "Certificates" : album, Path.GetFileName(localPath));
+        Debug.Log("[iOS SaveToPhotos] SavedPath=" + savedPath);
+
+        yield break;
+#else
+        Debug.LogWarning("[iOS SaveToPhotos] NativeGallery not found. Cannot auto-save to Photos. Use share sheet -> Save Image.");
+        yield break;
+#endif
+    }
+#endif
 
 #if UNITY_ANDROID
     // ==========================
@@ -253,7 +300,6 @@ public class CertificateDownloadCapture : MonoBehaviour
                 long nowSec = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 string safeAlbum = string.IsNullOrEmpty(albumName) ? "Certificates" : albumName;
 
-                // put values (CHÚ Ý: Call(...) không generic)
                 CV_PutString(values, "_display_name", displayName);
                 CV_PutString(values, "mime_type", "image/png");
                 CV_PutLong(values, "date_added", nowSec);
@@ -308,11 +354,7 @@ public class CertificateDownloadCapture : MonoBehaviour
         }
     }
 
-    // Helper: ÉP ĐÚNG overload ContentValues.put (đừng generic)
-    private void CV_PutString(AndroidJavaObject values, string key, string val)
-    {
-        values.Call("put", key, val);
-    }
+    private void CV_PutString(AndroidJavaObject values, string key, string val) => values.Call("put", key, val);
 
     private void CV_PutLong(AndroidJavaObject values, string key, long val)
     {
@@ -335,12 +377,8 @@ public class CertificateDownloadCapture : MonoBehaviour
                 intent.Call<AndroidJavaObject>("setData", uri);
                 context.Call("sendBroadcast", intent);
             }
-            Debug.Log("[SaveToGallery] Sent MEDIA_SCANNER_SCAN_FILE broadcast");
         }
-        catch (Exception e)
-        {
-            Debug.LogWarning("[SaveToGallery] MediaScanner broadcast failed: " + e.Message);
-        }
+        catch { }
     }
 
     private int GetAndroidSdkInt()
@@ -377,11 +415,7 @@ public class CertificateDownloadCapture : MonoBehaviour
             using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
             {
                 AndroidJavaObject uri = GetContentUriFromFileProvider(filePath, context);
-                if (uri == null)
-                {
-                    Debug.LogError("[OpenWith] uri == null. Check FileProvider config.");
-                    return;
-                }
+                if (uri == null) return;
 
                 using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.VIEW"))
                 using (var intentClass = new AndroidJavaClass("android.content.Intent"))
@@ -394,17 +428,13 @@ public class CertificateDownloadCapture : MonoBehaviour
                     TrySetClipData(intent, uri);
 
                     using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, "Mở chứng chỉ bằng"))
-                    {
                         activity.Call("startActivity", chooser);
-                    }
                 }
-
-                Debug.Log("[OpenWith] ACTION_VIEW launched OK");
             }
         }
         catch (Exception e)
         {
-            Debug.LogError("[OpenWith] ACTION_VIEW failed: " + e);
+            Debug.LogError("[OpenWith] failed: " + e);
         }
     }
 
@@ -438,15 +468,12 @@ public class CertificateDownloadCapture : MonoBehaviour
                 bool canResolve = CanResolveIntent(activity, intent);
                 if (!canResolve)
                 {
-                    Debug.LogWarning($"[Share] Cannot resolve package={targetPackage}.");
                     if (!fallbackChooserIfFail) return;
                     intent.Call<AndroidJavaObject>("setPackage", (string)null);
                 }
 
                 if (!string.IsNullOrEmpty(targetPackage) && canResolve)
-                {
                     activity.Call("startActivity", intent);
-                }
                 else
                 {
                     using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, chooserTitle ?? "Chia sẻ"))
@@ -465,10 +492,7 @@ public class CertificateDownloadCapture : MonoBehaviour
         try
         {
             using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
-            {
-                AndroidJavaObject resolved = intent.Call<AndroidJavaObject>("resolveActivity", pm);
-                return resolved != null;
-            }
+                return intent.Call<AndroidJavaObject>("resolveActivity", pm) != null;
         }
         catch { return false; }
     }
@@ -491,9 +515,7 @@ public class CertificateDownloadCapture : MonoBehaviour
         {
             using (var clipDataClass = new AndroidJavaClass("android.content.ClipData"))
             using (var clipData = clipDataClass.CallStatic<AndroidJavaObject>("newRawUri", "certificate", uri))
-            {
                 intent.Call<AndroidJavaObject>("setClipData", clipData);
-            }
         }
         catch { }
     }
