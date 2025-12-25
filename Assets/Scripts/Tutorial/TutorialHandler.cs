@@ -67,18 +67,22 @@ public class TutorialHandler : MonoBehaviour
     [SerializeField] private Image backgroundImg;
 
     [Header("World Space Item")] 
-    [SerializeField]
-    private PointClickSystem _pointClickSystem;
-    
+
+    [SerializeField] private PointClickSystem _pointClickSystem;
+    [SerializeField] private GameObject player;
+    [SerializeField] private Transform newParent;
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private RectTransform followWorldItem;
+    private bool isPlayAllStep = false;
 
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
     public void Save()
     {
-        Debug.Log("Save key");
-        PlayerPrefs.SetInt(key, 1);
+        // Debug.Log("Save key");
+        // PlayerPrefs.SetInt(key, 1);
         isPlayedBefore = true;
-        
+        isPlayAllStep = true;
         
         backgroundImg.DOFade(0, 2f).OnComplete(() =>
         {
@@ -86,6 +90,11 @@ public class TutorialHandler : MonoBehaviour
         });
         
         HideAllTutorialHand();
+
+        foreach (var item in _tutorialUIObjects)
+        {
+            item.HideTutorial();
+        }
     }
 
     private void LoadSave()
@@ -183,10 +192,8 @@ public class TutorialHandler : MonoBehaviour
         _pointClickSystem.transform.DORotateQuaternion(targetRotation, 3f);
     }
     
-    
-    [SerializeField] private GameObject player;
-    [SerializeField] private Transform newParent;
-    
+
+
     private void SetupForChangeParentUI()
     {
         foreach (var item in _tutorialUIObjects)
@@ -197,7 +204,7 @@ public class TutorialHandler : MonoBehaviour
     }
     
 
-    [SerializeField] private Camera mainCamera;
+
     private void HandleFollowWorldPosition()
     {
         var screenPosition = mainCamera.WorldToScreenPoint(worldTutorialStep.transform.position);
@@ -206,7 +213,6 @@ public class TutorialHandler : MonoBehaviour
 
     }
 
-    [SerializeField] private RectTransform followWorldItem;
     
     public bool IsStep(int index)
     {
@@ -255,7 +261,6 @@ public class TutorialHandler : MonoBehaviour
             case TutorialStepType.Standup:
                 ShowSpecifyGameObject(standStandupUI);
                 standStandupUI.GetComponentInChildren<TextMeshProUGUI>().text = "CLICK ĐỂ ĐỨNG";
-         
                 break;
             case TutorialStepType.Skip:
                 ShowSpecifyGameObject(skipVideoUI);
@@ -266,10 +271,11 @@ public class TutorialHandler : MonoBehaviour
         this.index = index;
     }
 
-   
     
     private void FocusCorrectItem(TutorialStepType type)
     {
+        if (isPlayAllStep) return;
+        
         foreach (var item in _tutorialUIObjects)
         {
             if (item.type == type)

@@ -822,6 +822,10 @@ public class VideoPlayerControllerPro : MonoBehaviour
 
     public void ClickNextCourse()
     {
+        if (!TutorialHandler.Instance.IsPlayedBefore())
+        {
+            return;
+        }
         RegisterInteraction();
 
         try
