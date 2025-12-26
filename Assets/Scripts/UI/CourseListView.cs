@@ -159,7 +159,7 @@ public class CourseListView : MonoBehaviour
             headerFinal.chapterID = null; // không cần id chương
             headerFinal.SetFinalExam();
             ChapterUIManager.Instance.AddToList(headerFinal);
-
+            ChapterUIManager.Instance.finalExamChapter = headerFinal;
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
             finalItem.titleTMP.text = finalExamItemTitle;
             finalItem.linkVideo2 = ""; // không dùng video
@@ -402,6 +402,8 @@ public class CourseListView : MonoBehaviour
             }
             _currentLesson = lesson;
             lesson.chapterUI.SelectLesson(lesson); // bật highlight mới
+            lesson.chapterUI.SelectThisChapter();
+            
             PlayVideo(lesson.linkVideo2);
         }
         else

@@ -7,6 +7,7 @@ public class ChapterUIManager : MonoBehaviour
     public static ChapterUIManager Instance;
     private List<ChapterUI> chaptersList = new();
     public ChapterUI currentChapter;
+    public ChapterUI finalExamChapter;
     private void Awake()
     {
         Instance = this;

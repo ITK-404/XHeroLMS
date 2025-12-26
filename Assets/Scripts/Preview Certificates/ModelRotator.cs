@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class ModelRotator : MonoBehaviour
 {
@@ -15,8 +16,8 @@ public class ModelRotator : MonoBehaviour
     bool dragging = false;
 
     private Quaternion originalQuaternion;
-    
-    void Start()
+
+    private void Awake()
     {
         if (model)
         {
@@ -29,10 +30,12 @@ public class ModelRotator : MonoBehaviour
 
         yaw = yawDefault;
         pitch = pitchDefault;
+        
     }
 
     void Update()
     {
+
         if (Input.GetMouseButtonDown(0))
         {
             dragging = true;
@@ -54,10 +57,16 @@ public class ModelRotator : MonoBehaviour
         }
         else
         {
-            model.rotation = Quaternion.Lerp(model.rotation,originalQuaternion,Time.deltaTime * 5);
+            model.rotation = Quaternion.Lerp(model.rotation, originalQuaternion, Time.deltaTime * 5);
 
             yaw = yawDefault;
             pitch = pitchDefault;
         }
+    }
+
+    private void OnDisable()
+    {
+        dragging = false;
+        model.rotation = originalQuaternion;
     }
 }
