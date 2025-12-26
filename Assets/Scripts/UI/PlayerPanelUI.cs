@@ -64,12 +64,12 @@ public class PlayerPanelUI : MonoBehaviour
     
     private void TryLogoutButtonOnOnTryLogout()
     {
-        LogoutPopupUI.gameObject.SetActive(true);
+        LogoutPopupUI.Show();
     }
 
     private void OnReturn()
     {
-        LogoutPopupUI.gameObject.SetActive(false);
+        LogoutPopupUI.Hide();
     }
 
     public void ShowLoginUI()
