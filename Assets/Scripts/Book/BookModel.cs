@@ -116,7 +116,7 @@ public class BookModel : MonoBehaviour
         rotationY += horizontal * rotationSpeed;
         if (horizontal != 0)
         {
-            container.transform.rotation = Quaternion.Euler(0, rotationY, 0);
+            container.transform.localRotation = Quaternion.Euler(0, rotationY, 0);
         }
 
         Debug.Log("Horizontal: " + horizontal);
@@ -146,9 +146,9 @@ public class BookModel : MonoBehaviour
     {
         if (isTweenDone || isMouseDown == false)
         {
-            container.transform.rotation = Quaternion.Lerp(container.transform.rotation, Quaternion.Euler(0, 0, 0),
+            container.transform.localRotation = Quaternion.Lerp(container.transform.localRotation, Quaternion.Euler(0, 0, 0),
                 Time.deltaTime * 5);
-            rotationY = container.transform.eulerAngles.y;
+            rotationY = container.transform.localEulerAngles.y;
         }
     }
 
