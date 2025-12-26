@@ -148,6 +148,7 @@ public class FinalExamHandler : MonoBehaviour
         playerPanelUI.ShowLoginUI();
         
         ChapterUIManager.Instance.finalExamChapter?.ToggleOff();
+        ChapterUIManager.Instance.finalExamChapter.ResetLessonState();
     }
 
     private IEnumerator ResetExamRoutine()
