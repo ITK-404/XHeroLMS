@@ -146,6 +146,9 @@ public class FinalExamHandler : MonoBehaviour
         yield return null;
         playerStandUI.ShowLearningUI();
         playerPanelUI.ShowLoginUI();
+        
+        ChapterUIManager.Instance.finalExamChapter?.ToggleOff();
+        ChapterUIManager.Instance.finalExamChapter.ResetLessonState();
     }
 
     private IEnumerator ResetExamRoutine()
@@ -159,7 +162,7 @@ public class FinalExamHandler : MonoBehaviour
         playerStandUI.ShowLearningUI();
         videoPlayerControllerPro.EnterFullscreenUI();
         playerStandUI.ShowSitdownButton();
-
+        // try reset when go back to lession
         Debug.Log("[CourseListView] ResetFromExam -> quay lại chế độ học (camera đã lerp về chỗ cũ).");
     }
 

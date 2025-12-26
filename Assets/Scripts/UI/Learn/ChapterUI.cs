@@ -70,7 +70,7 @@ public class ChapterUI : ChapterBaseUI
         base.OnDestroy();
     }
 
-    private void SelectThisChapter()
+    public void SelectThisChapter()
     {
         Debug.Log("On Select This Chapter");
         if (chapterState == ChapterState.Lock)
