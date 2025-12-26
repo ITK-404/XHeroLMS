@@ -161,6 +161,7 @@ public class ExamConfirmPanel : MonoBehaviour
 
     private void ShowResultPanelOnTop()
     {
+        confirmPanelRoot.gameObject.SetActive(false);
         var result = resultUIPanelRoot ? resultUIPanelRoot : gameObject;
         //result.transform.SetAsLastSibling();
 
