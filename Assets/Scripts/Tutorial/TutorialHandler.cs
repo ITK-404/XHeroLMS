@@ -80,7 +80,7 @@ public class TutorialHandler : MonoBehaviour
     public void Save()
     {
         // Debug.Log("Save key");
-        // PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.SetInt(key, 1);
         isPlayedBefore = true;
         isPlayAllStep = true;
         
