@@ -16,7 +16,7 @@ public class AutoRedirectCountdown : MonoBehaviour
     [Min(0)] public int startSeconds = 5;
     [Tooltip("Chuỗi template, dùng {0} cho số giây")]
     [TextArea(2, 3)]
-    public string messageTemplate = "Chúng tôi sẽ tự động chuyển hướng\nđến trang chủ sau {0} giây.";
+    public string messageTemplate = "Tuyệt vời! Quý học viên đã đổi mật khẩu thành công.\nGiờ thì đăng nhập lại để trải nghiệm tiếp nhé.";
 
     [Tooltip("Tự chạy đếm ngược ngay khi bật script")]
     public bool autoStart = true;
@@ -74,7 +74,7 @@ public class AutoRedirectCountdown : MonoBehaviour
     {
         if (messageText != null)
         {
-            messageText.text = string.Format(messageTemplate, secondsLeft);
+            messageText.text = string.Format(messageTemplate);
         }
     }
 
