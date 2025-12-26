@@ -9,14 +9,14 @@ using TMPro;
 public class Certificate2DPreviewUI : MonoBehaviour
 {
     [Header("API")]
-    [Tooltip("Relative path từ baseUrl của LMS")]
+    // Relative path từ baseUrl của LMS
     public string path = "/users/certificates";
     public int skip = 0;
-    public int limit = 1;   // chỉ cần 1 certificate để preview
+    public int limit = 1;
 
     [Header("Preview 2D")]
     public RawImage certificateImage;
-    public Image    frameObject;
+    public Image frameObject;
 
     [Header("Texts")]
     public TMP_Text nameText;
@@ -26,7 +26,22 @@ public class Certificate2DPreviewUI : MonoBehaviour
     public Toggle toggleWithFrame;
     public Toggle toggleWithoutFrame;
 
+    [Header("Root")]
     public GameObject previewRoot;
+
+    [Header("Delay / Retry (server sync)")]
+    public float initialDelaySeconds = 2f;
+
+    public int maxRetries = 5;
+
+    // Khoảng cách giữa mỗi lần retry
+    public float retryDelaySeconds = 1.5f;
+
+    [Header("Debug")]
+    public bool logRawJson = false;
+    public bool logRetry = true;
+
+    private Coroutine _fetchCo;
 
     private void Awake()
     {
@@ -44,34 +59,88 @@ public class Certificate2DPreviewUI : MonoBehaviour
 
         if (toggleWithoutFrame != null)
             toggleWithoutFrame.onValueChanged.RemoveListener(OnToggleWithoutFrameChanged);
+
+        StopFetch();
     }
 
     private void Start()
     {
-        if (toggleWithFrame != null)    toggleWithFrame.isOn    = true;
+        if (toggleWithFrame != null) toggleWithFrame.isOn = true;
         if (toggleWithoutFrame != null) toggleWithoutFrame.isOn = false;
 
         ApplyFrameState();
+        ClearPreviewUI(true); // mặc định ẩn
+    }
 
-        if (previewRoot != null)
-            previewRoot.SetActive(false);
-
-        // StartCoroutine(FetchAndShowCertificate());
+    public void StartFetchAfterPassed()
+    {
+        StopFetch();
+        ClearPreviewUI(true);
+        _fetchCo = StartCoroutine(FetchAfterPassedWithDelayAndRetry());
     }
 
     public void OnClickPreviewButton()
     {
-        StartCoroutine(FetchAndShowCertificate());
+        StartFetchAfterPassed();
     }
 
-    // ================== MAIN FLOW ==================
-
-    private IEnumerator FetchAndShowCertificate()
+    private IEnumerator FetchAfterPassedWithDelayAndRetry()
     {
+        if (initialDelaySeconds > 0f)
+            yield return new WaitForSeconds(initialDelaySeconds);
+
+        // Retry check vài lần để chờ server sync
+        for (int attempt = 0; attempt < Mathf.Max(1, maxRetries); attempt++)
+        {
+            bool hasCert = false;
+            CertificateItem cert = null;
+
+            yield return StartCoroutine(TryFetchCertificateFirstItem(result =>
+            {
+                hasCert = result.hasCert;
+                cert = result.cert;
+            }));
+
+            if (hasCert && cert != null && !string.IsNullOrEmpty(cert.certImg))
+            {
+                // Có bằng -> bắt đầu tải ảnh và chỉ khi thành công mới bật previewRoot
+                yield return StartCoroutine(DownloadAndShowCertificate(cert));
+                yield break;
+            }
+
+            // Chưa có bằng -> retry
+            if (attempt < maxRetries - 1)
+            {
+                if (logRetry)
+                    Debug.Log($"[Certificate2DPreviewUI] Chưa có certificate, retry {attempt + 1}/{maxRetries} sau {retryDelaySeconds}s...");
+                if (retryDelaySeconds > 0f)
+                    yield return new WaitForSeconds(retryDelaySeconds);
+            }
+        }
+
+        // Hết retry vẫn không có -> giữ ẩn, không bật previewRoot
+        if (logRetry)
+            Debug.LogWarning("[Certificate2DPreviewUI] Hết retry nhưng vẫn chưa có certificate. Giữ ẩn previewRoot.");
+        ClearPreviewUI(true);
+    }
+
+    // ================== FETCH JSON (KHÔNG BẬT UI) ==================
+
+    private struct FetchResult
+    {
+        public bool hasCert;
+        public CertificateItem cert;
+    }
+
+    private IEnumerator TryFetchCertificateFirstItem(Action<FetchResult> onDone)
+    {
+        var result = new FetchResult { hasCert = false, cert = null };
+
         string baseUrl = GetBaseUrl();
         if (string.IsNullOrEmpty(baseUrl))
         {
-            Debug.LogWarning("[Certificate2DPreviewUI] baseUrl rỗng, kiểm tra LmsStore.Instance.baseUrl.");
+            Debug.LogWarning("[Certificate2DPreviewUI] baseUrl rỗng.");
+            onDone?.Invoke(result);
             yield break;
         }
 
@@ -84,11 +153,12 @@ public class Certificate2DPreviewUI : MonoBehaviour
         string token = GetAccessToken();
         if (string.IsNullOrEmpty(token))
         {
-            Debug.LogWarning("[Certificate2DPreviewUI] Token rỗng, không gọi API.");
+            Debug.LogWarning("[Certificate2DPreviewUI] Token rỗng.");
+            onDone?.Invoke(result);
             yield break;
         }
 
-        Debug.Log($"[Certificate2DPreviewUI] GET {url}");
+        if (logRetry) Debug.Log($"[Certificate2DPreviewUI] GET {url}");
 
         using (UnityWebRequest req = UnityWebRequest.Get(url))
         {
@@ -109,14 +179,18 @@ public class Certificate2DPreviewUI : MonoBehaviour
             if (hasErr)
             {
                 Debug.LogWarning($"[Certificate2DPreviewUI] ERROR: {req.responseCode} {req.error}\nBody: {raw}");
+                onDone?.Invoke(result);
                 yield break;
             }
 
             if (string.IsNullOrEmpty(raw))
             {
-                Debug.LogWarning("[Certificate2DPreviewUI] Response rỗng.");
+                onDone?.Invoke(result);
                 yield break;
             }
+
+            if (logRawJson)
+                Debug.Log("[Certificate2DPreviewUI] RAW JSON: " + raw);
 
             CertificateRoot root = null;
             try
@@ -126,40 +200,47 @@ public class Certificate2DPreviewUI : MonoBehaviour
             catch (Exception e)
             {
                 Debug.LogWarning("[Certificate2DPreviewUI] FromJson FAILED: " + e);
+                onDone?.Invoke(result);
                 yield break;
             }
 
-            if (root?.data == null || root.data.data == null || root.data.data.Length == 0)
+            if (root == null || root.data == null || root.data.data == null || root.data.data.Length == 0)
             {
-                Debug.LogWarning("[Certificate2DPreviewUI] Không có certificate nào trong data.");
+                onDone?.Invoke(result);
                 yield break;
             }
 
-            // lấy certificate đầu tiên
-            CertificateItem cert = root.data.data[0];
-
-            string imgUrl = cert.certImg;
-
-            // Nếu server trả về path tương đối thì ghép với baseUrl
-            if (!string.IsNullOrEmpty(imgUrl) && !imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                imgUrl = baseUrl.TrimEnd('/') + "/" + imgUrl.TrimStart('/');
-            }
-
-            Debug.Log("[Certificate2DPreviewUI] Download image: " + imgUrl);
-
-            // tải ảnh
-            yield return StartCoroutine(DownloadTextureAndShow(imgUrl, cert.fullName, cert.createdAt));
+            result.hasCert = true;
+            result.cert = root.data.data[0];
+            onDone?.Invoke(result);
         }
     }
 
-    private IEnumerator DownloadTextureAndShow(string imgUrl, string fullName, string createdAt)
+    // ================== DOWNLOAD + SHOW (CHỈ BẬT UI KHI OK) ==================
+
+    private IEnumerator DownloadAndShowCertificate(CertificateItem cert)
     {
-        if (string.IsNullOrEmpty(imgUrl))
+        // vẫn giữ ẩn trong lúc tải để tránh khung trắng
+        ClearPreviewUI(true);
+
+        string baseUrl = GetBaseUrl();
+        if (string.IsNullOrEmpty(baseUrl))
         {
-            Debug.LogWarning("[Certificate2DPreviewUI] imgUrl rỗng.");
             yield break;
         }
+        if (!baseUrl.EndsWith("/")) baseUrl += "/";
+
+        string imgUrl = cert.certImg;
+
+        if (string.IsNullOrEmpty(imgUrl))
+        {
+            yield break;
+        }
+
+        if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            imgUrl = baseUrl.TrimEnd('/') + "/" + imgUrl.TrimStart('/');
+
+        if (logRetry) Debug.Log("[Certificate2DPreviewUI] Download image: " + imgUrl);
 
         using (UnityWebRequest req = UnityWebRequestTexture.GetTexture(imgUrl))
         {
@@ -175,14 +256,20 @@ public class Certificate2DPreviewUI : MonoBehaviour
             if (hasErr)
             {
                 Debug.LogWarning($"[Certificate2DPreviewUI] ERROR tải ảnh: {req.responseCode} {req.error}");
+                ClearPreviewUI(true);
                 yield break;
             }
 
             Texture2D tex = DownloadHandlerTexture.GetContent(req);
-            Debug.Log("[Certificate2DPreviewUI] Texture downloaded: " +
-                      (tex == null ? "NULL" : tex.width + "x" + tex.height));
+            if (tex == null || tex.width <= 2 || tex.height <= 2)
+            {
+                Debug.LogWarning("[Certificate2DPreviewUI] Texture không hợp lệ -> không show.");
+                ClearPreviewUI(true);
+                yield break;
+            }
 
-            SetCertificate(tex, fullName, createdAt);
+            // Tải OK -> show UI
+            SetCertificate(tex, cert.fullName, cert.createdAt);
         }
     }
 
@@ -190,10 +277,16 @@ public class Certificate2DPreviewUI : MonoBehaviour
 
     private void SetCertificate(Texture2D tex, string userName, string dateString)
     {
+        if (tex == null)
+        {
+            ClearPreviewUI(true);
+            return;
+        }
+
         if (certificateImage != null)
         {
             certificateImage.texture = tex;
-            certificateImage.color = tex != null ? Color.white : Color.clear;
+            certificateImage.color = Color.white;
         }
 
         if (nameText != null)
@@ -205,7 +298,7 @@ public class Certificate2DPreviewUI : MonoBehaviour
         if (previewRoot != null)
             previewRoot.SetActive(true);
     }
-    
+
     private string FormatDate(string raw)
     {
         if (string.IsNullOrEmpty(raw))
@@ -217,12 +310,34 @@ public class Certificate2DPreviewUI : MonoBehaviour
                 DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
                 out DateTime dt))
         {
-            string verbose = $"{dt:dd} tháng {dt:MM} năm {dt:yyyy}";
-
-            return verbose;
+            return $"{dt:dd} tháng {dt:MM} năm {dt:yyyy}";
         }
 
         return raw;
+    }
+
+    private void ClearPreviewUI(bool hideRoot = true)
+    {
+        if (certificateImage != null)
+        {
+            certificateImage.texture = null;
+            certificateImage.color = Color.clear;
+        }
+
+        if (nameText != null) nameText.text = "";
+        if (dateText != null) dateText.text = "";
+
+        if (hideRoot && previewRoot != null)
+            previewRoot.SetActive(false);
+    }
+
+    private void StopFetch()
+    {
+        if (_fetchCo != null)
+        {
+            StopCoroutine(_fetchCo);
+            _fetchCo = null;
+        }
     }
 
     // ================== TOGGLES ==================
@@ -253,8 +368,8 @@ public class Certificate2DPreviewUI : MonoBehaviour
 
     public void HidePreview()
     {
-        if (previewRoot != null)
-            previewRoot.SetActive(false);
+        StopFetch();
+        ClearPreviewUI(true);
     }
 
     // ================== BASE URL & TOKEN ==================
@@ -263,7 +378,7 @@ public class Certificate2DPreviewUI : MonoBehaviour
     {
         try
         {
-            var t = Type.GetType("LmsStore");
+            var t = Type.GetType("LmsStore, Assembly-CSharp");
             var inst = t?.GetProperty("Instance")?.GetValue(null, null);
             if (inst == null) return null;
 
@@ -273,7 +388,10 @@ public class Certificate2DPreviewUI : MonoBehaviour
             var prop = t.GetProperty("baseUrl");
             if (prop != null) return prop.GetValue(inst, null) as string;
         }
-        catch { }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[Certificate2DPreviewUI] GetBaseUrl error: " + e.Message);
+        }
 
         return null;
     }
@@ -282,7 +400,7 @@ public class Certificate2DPreviewUI : MonoBehaviour
     {
         try
         {
-            var t = Type.GetType("TokenStore");
+            var t = Type.GetType("TokenStore, Assembly-CSharp");
             if (t != null)
             {
                 var prop = t.GetProperty("AccessToken");
@@ -290,7 +408,10 @@ public class Certificate2DPreviewUI : MonoBehaviour
                     return prop.GetValue(null) as string;
             }
         }
-        catch { }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[Certificate2DPreviewUI] GetAccessToken error: " + e.Message);
+        }
 
         return null;
     }
