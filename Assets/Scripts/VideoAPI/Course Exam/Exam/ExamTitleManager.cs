@@ -59,9 +59,18 @@ public class ExamTitleManager : MonoBehaviour
             textTotalQuestions.text = total + " câu";
 
         if (textTotalDuration)
-            textTotalDuration.text = duration > 0
-                ? string.Format(timeFormat, mm, ss) + " phút"
-                : "--:--";
+        {
+            if (duration > 0)
+            {
+                // Hiển thị tổng thời gian theo phút (30 phút)
+                int totalMinutes = Mathf.CeilToInt(duration / 60f);
+                textTotalDuration.text = $"{totalMinutes} phút";
+            }
+            else
+            {
+                textTotalDuration.text = "--:--";
+            }
+        }
 
         if (textPassNeed)
         {
