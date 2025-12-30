@@ -83,5 +83,10 @@ public class PlayerPanelUI : MonoBehaviour
     {
         container.gameObject.SetActive(false);
     }
+
+    public void ShowAll()
+    {
+        container.gameObject.SetActive(true);
+    }
     
 }

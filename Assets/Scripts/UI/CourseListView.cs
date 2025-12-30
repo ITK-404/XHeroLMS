@@ -142,7 +142,7 @@ public class CourseListView : MonoBehaviour
                     if (lessonUI.type != "FINAL_EXAM" && !string.IsNullOrEmpty(lessonUI.linkVideo2))
                         _videoLessons.Add(lessonUI);
 
-
+                    lessonUI.SetActive(false);
                     Debug.Log(
                         $"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
                     headerChapter.AddToList(lessonUI);
@@ -164,14 +164,14 @@ public class CourseListView : MonoBehaviour
             finalItem.titleTMP.text = finalExamItemTitle;
             finalItem.linkVideo2 = ""; // không dùng video
             finalItem.lessonID = finalExamId; // giữ examId để xử lý sau
-            finalItem.type = "FINAL_EXAM"; // đánh dấu loại
+            finalItem.type = FinalExamType; // đánh dấu loại
             finalItem.chapterUI = headerFinal;
             headerFinal.AddToList(finalItem);
 
             // Click = chuyển sang scene thi (lưu prefs)
             // finalItem.OnClickPlayVideo = (_) => OnClickFinalExam(finalItem);
             finalItem.OnClickPlayVideo = (_) => OnClickFinalExamEvt?.Invoke(finalItem);
-
+            finalItem.SetActive(false);
             ChapterUIManager.Instance.AddToList(headerFinal);
         }
 
@@ -183,6 +183,7 @@ public class CourseListView : MonoBehaviour
         if (scrollRect) scrollRect.verticalNormalizedPosition = 1f;
     }
 
+    public const string FinalExamType = "FINAL_EXAM";
     public Action<LessonUI> OnClickFinalExamEvt;
 
     private void PlayVideo(string url)
@@ -412,9 +413,9 @@ public class CourseListView : MonoBehaviour
         }
 
         _currentLesson = lesson;
-        lesson.chapterUI.SelectLesson(lesson);
-        lesson.chapterUI.SelectThisChapter();
+        _currentLesson.chapterUI.SelectThisChapter();
+        _currentLesson.chapterUI.SelectLesson(_currentLesson);
 
-        PlayVideo(lesson.linkVideo2);
+        PlayVideo(_currentLesson.linkVideo2);
     }
 }

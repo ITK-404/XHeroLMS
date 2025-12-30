@@ -35,7 +35,7 @@ public class LessonUI : MonoBehaviour
     private void Awake()
     {
         btn.onClick.AddListener(OnClickBtn);
-        SetActive(false);
+        // SetActive(false);
     }
 
     private void OnDestroy()
