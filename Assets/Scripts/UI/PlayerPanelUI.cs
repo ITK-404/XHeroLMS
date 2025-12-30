@@ -17,7 +17,7 @@ public class PlayerPanelUI : MonoBehaviour
     public PlayerInformationUI playerInformation;
 
 
-    public LogoutPopupUI LogoutPopupUI;
+    public LogoutPopupUI logoutPopupUI;
     public string defaultLoadScene = "New Scene";
     private void Awake()
     {
@@ -34,7 +34,7 @@ public class PlayerPanelUI : MonoBehaviour
         {
             LoginController.OnLoginComplete += ShowLoginUI;
         }
-        
+        logoutPopupUI.gameObject.SetActive(false);
         LogoutPopupUI.OnReturn += OnReturn;
         LogoutPopupUI.OnLogout += OnLogout;
         TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
