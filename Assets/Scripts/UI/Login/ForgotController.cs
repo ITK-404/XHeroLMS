@@ -23,11 +23,11 @@ public class ForgotController : MonoBehaviour
 
     [Header("Payload flags")]
     public string functionName = "forgot-password"; // theo Swagger
-    public string platform     = "web";
-    public bool   isApp        = false;
+    public string platform = "web";
+    public bool isApp = false;
 
     // PlayerPrefs key dùng liên thông với màn OTP
-    private const string PREF_OTP_BY         = "REG_OTP_BY";         
+    private const string PREF_OTP_BY = "REG_OTP_BY";
     private const string PREF_OTP_IDENTIFIER = "REG_OTP_IDENTIFIER";
 
     [Header("Toggles (Chỉ chọn 1)")]
@@ -54,13 +54,19 @@ public class ForgotController : MonoBehaviour
     public LoginPopupUI warningPopupPrefab;
     public Transform popupParent;
 
+    public Image methodIconImage;
+
+    public Sprite smsIconSprite;
+    public Sprite emailIconSprite;
+    // ===================================================================
+
     [System.Serializable]
     private class ErrorResponse
     {
-        public bool   status;
+        public bool status;
         public string message;
-        public int    remaining;
-        public int    statusCode;
+        public int remaining;
+        public int statusCode;
     }
 
     private static readonly Dictionary<string, string> ForgotErrorMessageMap =
@@ -82,37 +88,63 @@ public class ForgotController : MonoBehaviour
 
     private void Start()
     {
-        if (toggleSms)   toggleSms.onValueChanged.AddListener(OnSmsToggleChanged);
+        if (toggleSms) toggleSms.onValueChanged.AddListener(OnSmsToggleChanged);
         if (toggleEmail) toggleEmail.onValueChanged.AddListener(OnEmailToggleChanged);
-        if (btnBack)     btnBack.onClick.AddListener(OnBack);
-        if (btnEnter)    btnEnter.onClick.AddListener(OnEnter);
+        if (btnBack) btnBack.onClick.AddListener(OnBack);
+        if (btnEnter) btnEnter.onClick.AddListener(OnEnter);
 
         // mặc định chọn Email
-        if (toggleSms)   toggleSms.isOn = false;
+        if (toggleSms) toggleSms.isOn = false;
         if (toggleEmail) toggleEmail.isOn = true;
 
         UpdatePlaceholder();
+        UpdateMethodIcon();
+
         if (errorText) errorText.text = "";
     }
 
     private void OnDestroy()
     {
-        if (toggleSms)   toggleSms.onValueChanged.RemoveListener(OnSmsToggleChanged);
+        if (toggleSms) toggleSms.onValueChanged.RemoveListener(OnSmsToggleChanged);
         if (toggleEmail) toggleEmail.onValueChanged.RemoveListener(OnEmailToggleChanged);
-        if (btnBack)     btnBack.onClick.RemoveListener(OnBack);
-        if (btnEnter)    btnEnter.onClick.RemoveListener(OnEnter);
+        if (btnBack) btnBack.onClick.RemoveListener(OnBack);
+        if (btnEnter) btnEnter.onClick.RemoveListener(OnEnter);
     }
 
     private void OnSmsToggleChanged(bool isOn)
     {
         if (isOn && toggleEmail) toggleEmail.isOn = false;
         UpdatePlaceholder();
+        UpdateMethodIcon();
     }
 
     private void OnEmailToggleChanged(bool isOn)
     {
         if (isOn && toggleSms) toggleSms.isOn = false;
         UpdatePlaceholder();
+        UpdateMethodIcon();
+    }
+
+    private void UpdateMethodIcon()
+    {
+        if (methodIconImage == null) return;
+
+        bool viaSms = toggleSms != null && toggleSms.isOn;
+
+        // SMS -> sprite1, Email -> sprite2
+        var sp = viaSms ? smsIconSprite : emailIconSprite;
+
+        if (sp != null)
+        {
+            methodIconImage.sprite = sp;
+            methodIconImage.enabled = true;
+            methodIconImage.preserveAspect = true;
+        }
+        else
+        {
+            // nếu chưa gán sprite thì ẩn icon cho khỏi lỗi UI
+            methodIconImage.enabled = false;
+        }
     }
 
     private void UpdatePlaceholder()
@@ -129,7 +161,7 @@ public class ForgotController : MonoBehaviour
     private void OnBack()
     {
         if (currentPanel) currentPanel.SetActive(false);
-        if (backPanel)    backPanel.SetActive(true);
+        if (backPanel) backPanel.SetActive(true);
     }
 
     private void OnEnter()
@@ -137,8 +169,7 @@ public class ForgotController : MonoBehaviour
         if (inputField == null) return;
 
         string raw = (inputField.text ?? "").Trim();
-        bool viaSms   = toggleSms != null && toggleSms.isOn;
-        bool viaEmail = toggleEmail == null ? !viaSms : toggleEmail.isOn;
+        bool viaSms = toggleSms != null && toggleSms.isOn;
 
         string otpBy = viaSms ? "phone" : "email";
         string identifier;
@@ -219,28 +250,23 @@ public class ForgotController : MonoBehaviour
                 {
                     Debug.Log("[Forgot] OTP requested OK: " + req.downloadHandler.text);
 
-                    // Lưu info OTP
                     PlayerPrefs.SetString(PREF_OTP_BY, otpBy);
                     PlayerPrefs.SetString(PREF_OTP_IDENTIFIER, identifier);
                     PlayerPrefs.Save();
 
-                    AuthFlowSession.LastOtpBy         = otpBy;
+                    AuthFlowSession.LastOtpBy = otpBy;
                     AuthFlowSession.LastOtpIdentifier = identifier;
-                    AuthFlowSession.LastOtpPurpose    = functionName;
+                    AuthFlowSession.LastOtpPurpose = functionName;
 
-                    // Chuyển panel
-                    if (otpPanel)     otpPanel.SetActive(true);
+                    if (otpPanel) otpPanel.SetActive(true);
                     if (currentPanel) currentPanel.SetActive(false);
 
                     if (otpController)
                     {
-                        // set contact để label trên màn OTP đúng
                         otpController.SetContact(identifier, otpBy, functionName);
-                        // bắt đầu đếm ngược khi BE đã gửi OTP thành công
                         otpController.BeginCountdown();
                     }
 
-                    // Nếu không có panel OTP riêng thì show text thông báo
                     if (errorText && otpPanel == null)
                     {
                         errorText.text = otpBy == "email"
@@ -252,18 +278,15 @@ public class ForgotController : MonoBehaviour
                     yield break;
                 }
 
-                // 404 -> thử route tiếp theo
                 if (req.responseCode == 404)
                 {
-                    lastErrLog =
-                        $"OTP request 404 at path '{path}': {req.error}\n{req.downloadHandler.text}";
+                    lastErrLog = $"OTP request 404 at path '{path}': {req.error}\n{req.downloadHandler.text}";
                     Debug.LogWarning("[Forgot] " + lastErrLog);
                     continue;
                 }
 
                 string raw = req.downloadHandler.text;
-                lastErrLog =
-                    $"OTP request FAIL ({req.responseCode}) at path '{path}': {req.error}\n{raw}";
+                lastErrLog = $"OTP request FAIL ({req.responseCode}) at path '{path}': {req.error}\n{raw}";
                 Debug.LogWarning("[Forgot] " + lastErrLog);
 
                 string friendly = BuildForgotFriendlyMessage(req, raw);
@@ -310,9 +333,7 @@ public class ForgotController : MonoBehaviour
                 if (err != null && !string.IsNullOrEmpty(err.message))
                 {
                     if (ForgotErrorMessageMap.TryGetValue(err.message, out var mapped))
-                    {
                         return mapped;
-                    }
 
                     Debug.LogWarning("[Forgot] Unmapped backend error code: " + err.message);
                 }
@@ -325,9 +346,7 @@ public class ForgotController : MonoBehaviour
         }
 
         if (req.responseCode >= 400 && req.responseCode < 500)
-        {
             return "Gửi mã OTP thất bại. Bạn vui lòng kiểm tra lại thông tin và thử lại.";
-        }
 
         return "Gửi mã OTP thất bại. Bạn vui lòng thử lại sau giây lát.";
     }
@@ -346,7 +365,7 @@ public class ForgotController : MonoBehaviour
         phone = Regex.Replace(phone, @"\D", "");
 
         if (phone.StartsWith("84")) return phone;
-        if (phone.StartsWith("0"))  return "84" + phone[1..];
+        if (phone.StartsWith("0")) return "84" + phone[1..];
         return "84" + phone;
     }
 
