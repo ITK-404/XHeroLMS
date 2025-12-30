@@ -206,6 +206,8 @@ public class ExamConfirmPanel : MonoBehaviour
                 return selectedMap.ContainsKey(q.id) && selectedMap[q.id].Count > 0;
             case ExamQuestionType.ESSAY:
                 return essayMap.ContainsKey(q.id) && !string.IsNullOrWhiteSpace(essayMap[q.id]);
+            case ExamQuestionType.MATCHING:
+                return selectedMap.ContainsKey(q.id) && selectedMap[q.id].Count > 0;
             default:
                 return false;
         }
