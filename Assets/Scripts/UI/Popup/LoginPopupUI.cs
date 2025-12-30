@@ -12,33 +12,19 @@ public class LoginPopupUI : PopupBaseUI
     [Header("Buttons")]
     public Button returnBtn;
 
-    public enum PopupIconType
-    {
-        None,
-        Info,
-        Warning,
-        Error,
-        Success
-    }
+    public enum PopupIconType { None, Info, Warning, Error, Success }
 
-    [Header("Header Icon (Drag & Drop)")]
-    [Tooltip("Sprite Asset mà TextHeader sẽ dùng để render icon inline.")]
     [SerializeField] private TMP_SpriteAsset headerSpriteAsset;
 
-    [Tooltip("Kéo icon (Sprite) vào từng field. Sprite phải nằm trong headerSpriteAsset.")]
     [SerializeField] private Sprite iconInfo;
     [SerializeField] private Sprite iconWarning;
     [SerializeField] private Sprite iconError;
     [SerializeField] private Sprite iconSuccess;
 
-    [Tooltip("Scale icon so với font (1.0 = theo size chữ).")]
-    [SerializeField] private float headerIconSize = 1.05f;
+    private int iconSizePercent = 90;
 
-    [Tooltip("Nâng/hạ icon theo px để canh baseline. (vd: 1~3px)")]
-    [SerializeField] private float headerIconVOffsetPx = 1.5f;
-
-    [Tooltip("Thêm khoảng trắng sau icon")]
-    [SerializeField] private bool addSpaceAfterIcon = true;
+    private float iconVOffsetPx = 10f;
+    private float spaceEm = 0.5f;
 
     // ========================= PUBLIC API =========================
 
@@ -54,8 +40,13 @@ public class LoginPopupUI : PopupBaseUI
         if (textHeader == null) return;
         EnsureSpriteAssetBound();
 
-        string iconTag = BuildHeaderIconTag(iconType);
-        textHeader.text = $"{iconTag}{(header ?? "")}";
+        header ??= "";
+
+        string iconTag = BuildInlineIconTag(iconType);
+
+        textHeader.text = string.IsNullOrEmpty(iconTag)
+            ? header
+            : $"{header}{iconTag}";
     }
 
     public void SetTextDescription(string description)
@@ -82,12 +73,12 @@ public class LoginPopupUI : PopupBaseUI
 
     private void EnsureSpriteAssetBound()
     {
-        // Nếu bạn muốn “kéo sprite asset vào code”, mình cũng tự set vào TMP để khỏi quên.
-        if (textHeader != null && headerSpriteAsset != null && textHeader.spriteAsset != headerSpriteAsset)
+        if (textHeader == null) return;
+
+        if (headerSpriteAsset != null && textHeader.spriteAsset != headerSpriteAsset)
             textHeader.spriteAsset = headerSpriteAsset;
 
-        // RichText thường bật sẵn, nhưng nếu project bạn tắt thì bật lại
-        if (textHeader != null) textHeader.richText = true;
+        textHeader.richText = true;
     }
 
     private void BindReturn(UnityAction onReturn)
@@ -102,32 +93,27 @@ public class LoginPopupUI : PopupBaseUI
         returnBtn.onClick.AddListener(() => Destroy(gameObject));
     }
 
-    private string BuildHeaderIconTag(PopupIconType iconType)
+    private string BuildInlineIconTag(PopupIconType iconType)
     {
         if (iconType == PopupIconType.None) return "";
-        if (headerSpriteAsset == null) return ""; // chưa gán asset thì thôi
+        if (headerSpriteAsset == null) return "";
 
         Sprite sp = GetIconSprite(iconType);
         if (sp == null) return "";
 
-        // TMP chỉ render được sprite nằm trong TMP Sprite Asset.
-        // Ta sẽ lấy đúng spriteName (trong spriteCharacterTable) dựa theo sprite textureName.
-        string spriteNameInAsset = FindSpriteNameInAsset(sp, headerSpriteAsset);
-        if (string.IsNullOrEmpty(spriteNameInAsset))
+        int spriteIndex = FindSpriteIndexInAsset(sp, headerSpriteAsset);
+        if (spriteIndex < 0)
         {
-            // Không tìm thấy -> khả năng sprite bạn kéo vào không nằm trong SpriteAsset này
-            Debug.LogWarning($"[LoginPopupUI] Sprite '{sp.name}' không nằm trong SpriteAsset '{headerSpriteAsset.name}'. " +
-                             $"Hãy đảm bảo icon được pack vào TMP Sprite Asset.");
+            Debug.LogWarning($"[LoginPopupUI] Sprite '{sp.name}' không tìm thấy trong SpriteAsset '{headerSpriteAsset.name}'.");
             return "";
         }
 
-        string tag = $"<sprite name=\"{spriteNameInAsset}\" size={headerIconSize}>";
+        float em = Mathf.Max(0f, spaceEm);
 
-        if (headerIconVOffsetPx != 0f)
-            tag = $"<voffset={headerIconVOffsetPx}px>{tag}</voffset>";
-
-        if (addSpaceAfterIcon)
-            tag += " ";
+        // icon luôn là ký tự cuối chuỗi
+        string tag = $"<space={em}em><size={iconSizePercent}%><sprite={spriteIndex}></size>";
+        if (!Mathf.Approximately(iconVOffsetPx, 0f))
+            tag = $"<space={em}em><voffset={iconVOffsetPx}px><size={iconSizePercent}%><sprite={spriteIndex}></size></voffset>";
 
         return tag;
     }
@@ -144,50 +130,22 @@ public class LoginPopupUI : PopupBaseUI
         };
     }
 
-    private static string FindSpriteNameInAsset(Sprite sprite, TMP_SpriteAsset asset)
+    private static int FindSpriteIndexInAsset(Sprite sprite, TMP_SpriteAsset asset)
     {
-        if (sprite == null || asset == null) return null;
+        if (sprite == null || asset == null) return -1;
 
-        // TMP store sprite entries as TMP_SpriteCharacter with name=textureName
-        // textureName thường trùng sprite.name, nhưng không phải lúc nào cũng vậy (tuỳ lúc tạo asset).
-        // Ta match theo texture rect/name tốt nhất là dùng textureName.
         var table = asset.spriteCharacterTable;
-        if (table == null) return null;
+        if (table == null) return -1;
 
-        // 1) thử match theo sprite.name
         for (int i = 0; i < table.Count; i++)
         {
             var ch = table[i];
             if (ch == null) continue;
-            if (string.Equals(ch.name, sprite.name, System.StringComparison.Ordinal))
-                return ch.name;
+
+            if (string.Equals(ch.name, sprite.name, System.StringComparison.OrdinalIgnoreCase))
+                return i;
         }
 
-        // 2) fallback: match theo textureName nếu có
-        // (Một số version TMP set textureName ở spriteGlyph)
-        var glyphTable = asset.spriteGlyphTable;
-        if (glyphTable != null)
-        {
-            // thử match dựa trên rect gần đúng (ít khi cần)
-            var r = sprite.rect;
-            for (int i = 0; i < glyphTable.Count; i++)
-            {
-                var g = glyphTable[i];
-                if (g == null) continue;
-                var gr = g.glyphRect;
-                if (Mathf.Approximately(gr.x, r.x) &&
-                    Mathf.Approximately(gr.y, r.y) &&
-                    Mathf.Approximately(gr.width, r.width) &&
-                    Mathf.Approximately(gr.height, r.height))
-                {
-                    // lấy character tương ứng index
-                    // (thường spriteCharacterTable và spriteGlyphTable cùng thứ tự)
-                    if (i < table.Count && table[i] != null)
-                        return table[i].name;
-                }
-            }
-        }
-
-        return null;
+        return -1;
     }
 }

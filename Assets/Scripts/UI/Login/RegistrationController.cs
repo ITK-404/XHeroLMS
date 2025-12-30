@@ -315,7 +315,7 @@ string core = @"(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])";
 
         Transform parent = popupParent != null ? popupParent : transform.root;
         var popup = Instantiate(warningPopupPrefab, parent);
-        popup.Init("Cảnh báo", message);
+        popup.Init("Cảnh báo", message, LoginPopupUI.PopupIconType.Warning);
     }
 
     // ---------- Payload ----------
