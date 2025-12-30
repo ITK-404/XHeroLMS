@@ -360,6 +360,6 @@ public class ForgotController : MonoBehaviour
 
         Transform parent = popupParent != null ? popupParent : transform.root;
         var popup = Instantiate(warningPopupPrefab, parent);
-        popup.Init("Cảnh báo", message);
+        popup.Init("Cảnh báo", message, LoginPopupUI.PopupIconType.Warning);
     }
 }

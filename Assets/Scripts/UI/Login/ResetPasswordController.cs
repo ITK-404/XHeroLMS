@@ -306,7 +306,7 @@ public class ResetPasswordController : MonoBehaviour
         }
 
         var popup = Instantiate(warningPopupPrefab, parent);
-        popup.Init("Cảnh báo", message);
+        popup.Init("Cảnh báo", message, LoginPopupUI.PopupIconType.Warning);
     }
 
     private void TogglePass1()

@@ -433,7 +433,7 @@ public class LoginController : MonoBehaviour
                 failPopupPrefab,
                 "Đăng nhập thất bại",
                 "Vui lòng nhập đầy đủ tài khoản và mật khẩu.",
-                icon: LoginPopupUI.PopupIconType.Error
+                icon: LoginPopupUI.PopupIconType.Warning
             );
             return;
         }
@@ -444,7 +444,7 @@ public class LoginController : MonoBehaviour
                 failPopupPrefab,
                 "Đăng nhập thất bại",
                 "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng nhập email hoặc số điện thoại hợp lệ.",
-                icon: LoginPopupUI.PopupIconType.Error
+                icon: LoginPopupUI.PopupIconType.Warning
             );
             return;
         }
@@ -516,7 +516,7 @@ public class LoginController : MonoBehaviour
                 Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {serverText}");
 
                 string errorMessage = ServerErrorConverter.Convert(serverText);
-                ShowPopup(failPopupPrefab, "Đăng nhập thất bại", errorMessage, icon: LoginPopupUI.PopupIconType.Error);
+                ShowPopup(failPopupPrefab, "Đăng nhập thất bại", errorMessage, icon: LoginPopupUI.PopupIconType.Warning);
             }
         }
 
@@ -559,7 +559,7 @@ public class LoginController : MonoBehaviour
             Debug.LogWarning("[LoginController] ShowWarning được gọi nhưng Instance == null. Message: " + message);
             return;
         }
-        Instance.ShowPopup(Instance.failPopupPrefab, header, message, icon: LoginPopupUI.PopupIconType.Error);
+        Instance.ShowPopup(Instance.failPopupPrefab, header, message, icon: LoginPopupUI.PopupIconType.Warning);
     }
 
     [Serializable]
