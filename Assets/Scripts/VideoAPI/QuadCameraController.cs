@@ -59,6 +59,7 @@ public class QuadCinemachineController : MonoBehaviour
         if (!mainRenderCamera) mainRenderCamera = Camera.main;
         if (quad) originalQuadPos = quad.transform.position;
         // assign event
+        toggleVideoList[0].ChangeState(ToggleBaseUI.State.Active);
         foreach (var item in toggleVideoList)
         {
             item.OnClickVideoAction += ChangeState;
