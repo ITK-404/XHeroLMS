@@ -257,7 +257,7 @@ public class ResetPasswordController : MonoBehaviour
         bool strong = IsValidPassword(p1, minLength);
         bool ok = match && strong;
 
-        if (btnEnter) btnEnter.interactable = ok;
+        // if (btnEnter) btnEnter.interactable = ok;
 
         if (errorText)
         {
