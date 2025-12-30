@@ -383,42 +383,38 @@ public class CourseListView : MonoBehaviour
 
     public void PlayLesson(LessonUI lesson)
     {
-        if (lesson.IsLessonDone())
-        { 
-            if (lesson == null) return;
+        if (lesson == null) return;
 
-            // Clear selection cũ (bài + chapter cũ)
-            if (_currentLesson != null && _currentLesson != lesson)
-            {
-                _currentLesson.SetActive(false);
-
-                if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
-                {
-                    _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
-                    _currentLesson.chapterUI.ResetLessonState();
-                }
-            }
-
-            if (_currentLesson != null && _currentLesson != lesson)
-            {
-                _currentLesson.SetActive(false); // tắt highlight cũ
-            }
-            _currentLesson = lesson;
-            lesson.chapterUI.SelectLesson(lesson); // bật highlight mới
-            lesson.chapterUI.SelectThisChapter();
-            
-            PlayVideo(lesson.linkVideo2);
-        }
-        else
+        if (_currentLesson != null && _currentLesson != lesson)
         {
+            // Check bài HIỆN TẠI đã done chưa
+            if (!_currentLesson.IsLessonDone())
             {
                 LoadingUI.ShowErrorPopup(
                     message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
                     header: "Thông báo",
                     onReturn: null
                 );
+                return;
             }
         }
 
+        // Clear selection cũ
+        if (_currentLesson != null && _currentLesson != lesson)
+        {
+            _currentLesson.SetActive(false);
+
+            if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
+            {
+                _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
+                _currentLesson.chapterUI.ResetLessonState();
+            }
+        }
+
+        _currentLesson = lesson;
+        lesson.chapterUI.SelectLesson(lesson);
+        lesson.chapterUI.SelectThisChapter();
+
+        PlayVideo(lesson.linkVideo2);
     }
 }
