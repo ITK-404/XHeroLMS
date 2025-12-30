@@ -24,7 +24,7 @@ public class LoginPopupUI : PopupBaseUI
     private int iconSizePercent = 90;
 
     private float iconVOffsetPx = 10f;
-    private float spaceEm = 0.5f;
+    private float spaceEm = 1f;
 
     // ========================= PUBLIC API =========================
 
