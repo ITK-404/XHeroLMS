@@ -59,6 +59,7 @@ public class PlayerPanelUI : MonoBehaviour
         LoginController.OnLoginComplete -= ShowLoginUI;
         
         LogoutPopupUI.OnReturn -= OnReturn;
+        LogoutPopupUI.OnLogout -= OnLogout;
         TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
     }
     
