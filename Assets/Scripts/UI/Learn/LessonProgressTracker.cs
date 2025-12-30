@@ -85,6 +85,13 @@ public class LessonProgressTracker : MonoBehaviour
     {
         if (newLessonUI == null) return;
 
+        
+        if (newLessonUI.type == CourseListView.FinalExamType)
+        {
+            Debug.Log("Ban da chon final exam, khong can update progress time");
+            return;
+        }
+        
         // stop cũ
         if (postCoroutine != null)
         {

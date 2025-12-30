@@ -128,6 +128,7 @@ public class FinalExamHandler : MonoBehaviour
         }
         
         QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+        // QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
         if (examCamRoutine != null)
         {
             StopCoroutine(examCamRoutine);
@@ -145,10 +146,10 @@ public class FinalExamHandler : MonoBehaviour
         //ResetExamCamera();
         yield return null;
         playerStandUI.ShowLearningUI();
-        playerPanelUI.ShowLoginUI();
+        playerPanelUI.ShowAll();
         
         ChapterUIManager.Instance.finalExamChapter?.ToggleOff();
-        ChapterUIManager.Instance.finalExamChapter.ResetLessonState();
+        ChapterUIManager.Instance.finalExamChapter?.ResetLessonState();
     }
 
     private IEnumerator ResetExamRoutine()
@@ -161,7 +162,7 @@ public class FinalExamHandler : MonoBehaviour
 
         playerStandUI.ShowLearningUI();
         videoPlayerControllerPro.EnterFullscreenUI();
-        playerStandUI.ShowSitdownButton();
+        playerStandUI.ShowStandUpButton();
         // try reset when go back to lession
         Debug.Log("[CourseListView] ResetFromExam -> quay lại chế độ học (camera đã lerp về chỗ cũ).");
     }

@@ -70,7 +70,7 @@ public class ExamResultUI : MonoBehaviour
             $" \n" +
             (score >= required
                 ? "Chúc mừng quý học viên đã hoàn thành bài thi. Hãy xem kết quả chi tiết ngay"
-                : $"Bạn đã KHÔNG hoàn thành bài thi. BÀI THI CỦA BẠN CẦN ĐẠT TỐI THIỂU {required}/{maxScore} ĐIỂM \n HÃY ÔN LẠI KIẾN THỨC TRONG BÀI HỌC VÀ THỰC HIỆN BÀI THI VÀO LẦN SAU NHÉ !!!");
+                : $"Bạn đã KHÔNG hoàn thành bài thi. Bài thi của bạn cần đạt tối thiểu  {required}/{maxScore} điểm \n Hãy ôn lại kiến thức trong bài học và thực hiện bài thi vào lần sau nhé!");
 
     }
 }
