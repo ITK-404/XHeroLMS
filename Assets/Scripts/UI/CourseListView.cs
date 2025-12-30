@@ -200,8 +200,11 @@ public class CourseListView : MonoBehaviour
 
         videoPlayer.errorReceived -= OnVideoError;
         videoPlayer.errorReceived += OnVideoError;
-
         videoPlayer.Play();
+        
+        // for testing
+        
+        learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
     }
 
     private void OnVideoError(VideoPlayer vp, string msg)
