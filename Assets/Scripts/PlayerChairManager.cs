@@ -26,6 +26,7 @@ public class PlayerChairManager : MonoBehaviour
     VideoPlayerControllerPro videoPlayerControllerPro;
     [SerializeField] PlayerStandUI playerStandUI;
     [SerializeField] InputCanvas inputCanvas;
+    [SerializeField] private CourseExitWayHandler courseExitWayHandler;
     public ChairCheckPoint currentCheckPoint;
 
     private TutorialBase TutorialBase;
@@ -40,6 +41,7 @@ public class PlayerChairManager : MonoBehaviour
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
+        courseExitWayHandler.Show();
     }
 
     private void OnDestroy()
@@ -87,7 +89,7 @@ public class PlayerChairManager : MonoBehaviour
             playerStandUI.returnBtn.gameObject.SetActive(true);
             inputCanvas.Show();
 
-            
+            courseExitWayHandler.Show();
         }));
     }
 
@@ -147,6 +149,8 @@ public class PlayerChairManager : MonoBehaviour
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
+            
+            courseExitWayHandler.Hide();
 
             StartCoroutine(WaitForBlendDone(() =>
             {
@@ -160,6 +164,7 @@ public class PlayerChairManager : MonoBehaviour
                 {
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
+
             }));
         }
     }
