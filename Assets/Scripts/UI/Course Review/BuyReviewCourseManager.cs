@@ -1,94 +1,122 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class BuyReviewCourseManager : MonoBehaviour
 {
     public static BuyReviewCourseManager Instance;
+
     [SerializeField] private CourseReviewUI courseReviewUI;
     [SerializeField] private TabItemManagerUI tabItemManagerUI;
 
     [SerializeField] private PlayVideoOpenBook playVideoOpenBook;
     [SerializeField] private PlayVideoHandleUI playVideoHandleUI;
+
     [SerializeField] private Button replayButton;
     [SerializeField] private Button enterCourseBtn;
+
     private BookHandler currentBookSelect;
 
     private bool autoSkipVideo = false;
     private const string AUTO_SKIP_SAVE_KEY = "autoSkipVideo";
+
     public AutomaticTextPreview automaticTextPreview;
 
-    
+    private bool needFetchData;
+    private Coroutine previewCoroutine;
+
+    private Coroutine ttsCoroutine;
+
     private void Awake()
     {
         Instance = this;
         ShowBuyCourseUI();
 
-        courseReviewUI.returnBtn.onClick.AddListener(ShowBuyCourseUI);
-        replayButton.onClick.AddListener(() =>
-        {
-            playVideoHandleUI.autoSkipToggle.isOn = false;
-            ShowBookPreviewUI(currentBookSelect);
-        });
-        enterCourseBtn.onClick.AddListener(EnterCourse);
+        if (courseReviewUI != null && courseReviewUI.returnBtn != null)
+            courseReviewUI.returnBtn.onClick.AddListener(ShowBuyCourseUI);
+
+        if (replayButton != null)
+            replayButton.onClick.AddListener(OnReplayClicked);
+
+        if (enterCourseBtn != null)
+            enterCourseBtn.onClick.AddListener(EnterCourse);
 
         LoadKey();
-        playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener((value) => { autoSkipVideo = value; });
-        playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
 
-        playVideoHandleUI.skipButton.onClick.AddListener(Skip);
+        if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
+        {
+            playVideoHandleUI.autoSkipToggle.onValueChanged.AddListener(OnAutoSkipChanged);
+            playVideoHandleUI.autoSkipToggle.isOn = autoSkipVideo;
+        }
 
+        if (playVideoHandleUI != null && playVideoHandleUI.skipButton != null)
+            playVideoHandleUI.skipButton.onClick.AddListener(Skip);
+
+        if (playVideoOpenBook != null && automaticTextPreview != null)
+            playVideoOpenBook.automaticTextPreview = automaticTextPreview;
+    }
+
+    private void OnDestroy()
+    {
+        if (courseReviewUI != null && courseReviewUI.returnBtn != null)
+            courseReviewUI.returnBtn.onClick.RemoveListener(ShowBuyCourseUI);
+
+        if (replayButton != null)
+            replayButton.onClick.RemoveListener(OnReplayClicked);
+
+        if (enterCourseBtn != null)
+            enterCourseBtn.onClick.RemoveListener(EnterCourse);
+
+        if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
+            playVideoHandleUI.autoSkipToggle.onValueChanged.RemoveListener(OnAutoSkipChanged);
+
+        if (playVideoHandleUI != null && playVideoHandleUI.skipButton != null)
+            playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
+
+        SaveKey();
+    }
+
+    private void OnReplayClicked()
+    {
+        if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
+            playVideoHandleUI.autoSkipToggle.isOn = false;
+
+        ShowBookPreviewUI(currentBookSelect);
+    }
+
+    private void OnAutoSkipChanged(bool value)
+    {
+        autoSkipVideo = value;
     }
 
     private void SaveKey()
     {
-        PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY,autoSkipVideo ? 1 : 0);
+        PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY, autoSkipVideo ? 1 : 0);
     }
 
     private void LoadKey()
     {
         if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
-        {
             autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
-        }
-    }
-
-
-    private void OnDestroy()
-    {
-        courseReviewUI.returnBtn.onClick.RemoveListener(ShowBuyCourseUI);
-        enterCourseBtn.onClick.RemoveListener(EnterCourse);
-
-        replayButton.onClick.RemoveListener(() =>
-        {
-            playVideoHandleUI.autoSkipToggle.isOn = false;
-            ShowBookPreviewUI(currentBookSelect);
-        });
-        playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
-        SaveKey();
     }
 
     private void EnterCourse()
     {
-        Debug.Log("Enter course "+SeoResolver.IsContainData());
-        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
-        {
-            LoadingTransition.Load("dai_dao_chi_gian_2");
+        if (currentBookSelect == null) return;
 
-        }
+        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+            LoadingTransition.Load("dai_dao_chi_gian_2");
         else if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i")
-        {
             LoadingTransition.Load(SeoResolver.DefaultScene);
-        }
         else
         {
-            LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                    "Thông báo", () =>
-                    {
-                        // cho phép chọn sách tiếp
-                        BookHandler.CanSelectBook = true;
-                    });
-            return;
+            LoadingUI.ShowErrorPopup(
+                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
         }
     }
 
@@ -100,98 +128,248 @@ public class BuyReviewCourseManager : MonoBehaviour
             return;
         }
 
-        if (playVideoOpenBook.IsPlayingVideo())
-        {
+        if (playVideoOpenBook != null && playVideoOpenBook.IsPlayingVideo())
             return;
-        }
-        
-        Debug.Log("Bắt đầu hiển thị UI sách preview");
+
         needFetchData = currentBookSelect != bookHandler;
         currentBookSelect = bookHandler;
-        if (currentBookSelect == null)
+
+        StopAllPreviewRuntime();
+
+        if (previewCoroutine != null)
         {
-            Debug.LogError("Sách bị null không thể load");
-            return;
+            StopCoroutine(previewCoroutine);
+            previewCoroutine = null;
         }
-        automaticTextPreview.seoUrl = currentBookSelect.book_seo;
-        
 
-        StopCoroutine(ShowPreviewCoroutine());
-        StartCoroutine(ShowPreviewCoroutine());
+        previewCoroutine = StartCoroutine(ShowPreviewCoroutine());
     }
-
-    private bool needFetchData;
 
     private IEnumerator ShowPreviewCoroutine()
     {
-        // cần handling lỗi
-        // create logic for turn off and of loading data
-        playVideoHandleUI.Hide();
+        if (playVideoHandleUI != null) playVideoHandleUI.Hide();
+
         SeoResolver.seoCourse = currentBookSelect.book_seo;
-        Debug.Log("Load book by seo: " + currentBookSelect.book_seo);
+
         ShowBuyCourseUI();
+
         LoadingUI.Show(
-                timeoutSeconds: 60f,
-                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
-                timeoutHeader:  "Lỗi Mạng"
-            );
-        // hiển thị loading UI
+            timeoutSeconds: 60f,
+            timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+            timeoutHeader: "Lỗi Mạng"
+        );
+
         if (needFetchData)
         {
             yield return SeoResolver.LoadPrivateAndFillData();
-            yield return new WaitForSecondsRealtime(1);
+            yield return new WaitForSecondsRealtime(0.2f);
         }
-        
 
         LoadingUI.Hide();
 
-        // không có data không hiển thị nữa
         if (!SeoResolver.IsContainData())
         {
             BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup("Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                    "Thông báo", () =>
-                    {
-                        // cho phép chọn sách tiếp
-                        BookHandler.CanSelectBook = true;
-                    });
-            Debug.Log("Không có data");
+            LoadingUI.ShowErrorPopup(
+                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
+            previewCoroutine = null;
             yield break;
         }
 
-        Debug.Log("Có data hiển thị đi");
-        courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
+        if (courseReviewUI != null)
+            courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
+
+        string apiText = GetApiFullTextFromCourse();
+
         if (!autoSkipVideo)
         {
-            Debug.Log("Skip Video");
-            playVideoHandleUI.Show();
+            if (playVideoHandleUI != null) playVideoHandleUI.Show();
 
-            yield return playVideoOpenBook.PlayCoroutine();
+            if (playVideoOpenBook != null)
+                yield return playVideoOpenBook.PlayCoroutine(apiText);
+
+            // chạy xong video -> reset lại (để lần sau chạy ngon)
+            ResetAfterPreviewFinished();
+        }
+        else
+        {
+            StartShowAndSpeak(apiText);
         }
 
+        if (courseReviewUI != null) courseReviewUI.Show();
+        if (tabItemManagerUI != null) tabItemManagerUI.Hide();
+        if (playVideoHandleUI != null) playVideoHandleUI.Hide();
 
-        Debug.Log("Đã Play xong video");
+        previewCoroutine = null;
+    }
 
-        // Hiển thị UI preview ban đầu
-        courseReviewUI.Show();
-        tabItemManagerUI.Hide();
-        playVideoHandleUI.Hide();
+    private void ResetAfterPreviewFinished()
+    {
+        // stop chunk reader nếu có
+        if (ttsCoroutine != null)
+        {
+            StopCoroutine(ttsCoroutine);
+            ttsCoroutine = null;
+        }
+
+        // reset text preview state
+        if (automaticTextPreview != null)
+            automaticTextPreview.ResetRuntimeState(stopTTS: true);
+
+        // đảm bảo TTS cũng tắt
+        if (TTSManager.I != null)
+            TTSManager.I.Stop();
+    }
+
+    private void StartShowAndSpeak(string fullText)
+    {
+        if (string.IsNullOrWhiteSpace(fullText)) return;
+
+        if (automaticTextPreview != null)
+            automaticTextPreview.PlayTextAndSpeak(fullText);
+
+        if (ttsCoroutine != null) StopCoroutine(ttsCoroutine);
+        ttsCoroutine = StartCoroutine(SpeakLongTextCoroutine(fullText));
+    }
+
+    private void StopAllPreviewRuntime()
+    {
+        if (ttsCoroutine != null)
+        {
+            StopCoroutine(ttsCoroutine);
+            ttsCoroutine = null;
+        }
+
+        if (automaticTextPreview != null)
+            automaticTextPreview.ResetRuntimeState(stopTTS: true);
+
+        if (TTSManager.I != null)
+            TTSManager.I.Stop();
+
+        if (playVideoOpenBook != null)
+            playVideoOpenBook.Stop();
+    }
+
+    private string GetApiFullTextFromCourse()
+    {
+        string text = null;
+
+        if (SeoResolver.IsContainData() && SeoResolver.LmsCoursePrivate != null)
+        {
+            text = SeoResolver.LmsCoursePrivate.description;
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                text = ExamFormat.CleanHtmlToPlainText(text);
+                text = text.Replace("\u00A0", " ");
+                text = Regex.Replace(text, @"[ \t]+", " ").Trim();
+                text = Regex.Replace(text, @"\n{3,}", "\n\n").Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(text))
+                text = SeoResolver.LmsCoursePrivate.title;
+        }
+
+        if (string.IsNullOrWhiteSpace(text) && currentBookSelect != null)
+            text = currentBookSelect.book_name;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return "";
+
+        Debug.Log($"[API_TEXT_FULL] len={text.Length}");
+        return text;
+    }
+
+    private IEnumerator SpeakLongTextCoroutine(string fullText)
+    {
+        if (TTSManager.I == null) yield break;
+        if (string.IsNullOrWhiteSpace(fullText)) yield break;
+
+        TTSManager.I.SetRatePitch(0.95f, 1.05f);
+
+        foreach (var chunk in SplitToChunks(fullText, maxChars: 220))
+        {
+            if (string.IsNullOrWhiteSpace(chunk))
+                continue;
+
+            TTSManager.I.Speak(chunk);
+
+            float estimated = Mathf.Clamp(chunk.Length / 14f, 1.2f, 12f);
+            yield return new WaitForSecondsRealtime(estimated);
+        }
+
+        ttsCoroutine = null;
+    }
+
+    private static IEnumerable<string> SplitToChunks(string text, int maxChars)
+    {
+        if (string.IsNullOrEmpty(text)) yield break;
+
+        var parts = Regex.Split(text, @"(?<=[\.\!\?])\s+");
+        var sb = new System.Text.StringBuilder();
+
+        foreach (var p in parts)
+        {
+            var s = (p ?? "").Trim();
+            if (s.Length == 0) continue;
+
+            if (sb.Length + s.Length + 1 <= maxChars)
+            {
+                if (sb.Length > 0) sb.Append(" ");
+                sb.Append(s);
+            }
+            else
+            {
+                if (sb.Length > 0)
+                {
+                    yield return sb.ToString();
+                    sb.Clear();
+                }
+
+                if (s.Length <= maxChars)
+                {
+                    sb.Append(s);
+                }
+                else
+                {
+                    int idx = 0;
+                    while (idx < s.Length)
+                    {
+                        int len = Mathf.Min(maxChars, s.Length - idx);
+                        yield return s.Substring(idx, len);
+                        idx += len;
+                    }
+                }
+            }
+        }
+
+        if (sb.Length > 0)
+            yield return sb.ToString();
     }
 
     public void Skip()
     {
-        // must wait for 
-        StopCoroutine(ShowPreviewCoroutine());
-        courseReviewUI.Show();
-        tabItemManagerUI.Hide();
-        playVideoHandleUI.Hide();
-        playVideoOpenBook.Stop();
-    }
+        if (previewCoroutine != null)
+        {
+            StopCoroutine(previewCoroutine);
+            previewCoroutine = null;
+        }
 
+        StopAllPreviewRuntime();
+
+        if (courseReviewUI != null) courseReviewUI.Show();
+        if (tabItemManagerUI != null) tabItemManagerUI.Hide();
+        if (playVideoHandleUI != null) playVideoHandleUI.Hide();
+    }
 
     public void ShowBuyCourseUI()
     {
-        courseReviewUI.Hide();
-        tabItemManagerUI.Show();
+        StopAllPreviewRuntime();
+
+        if (courseReviewUI != null) courseReviewUI.Hide();
+        if (tabItemManagerUI != null) tabItemManagerUI.Show();
     }
 }

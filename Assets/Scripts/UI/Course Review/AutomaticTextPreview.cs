@@ -1,326 +1,203 @@
 ﻿using DG.Tweening;
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class AutomaticTextPreview : MonoBehaviour
 {
+    [Header("UI")]
     public ScrollRect scrollRect;
     public TextMeshProUGUI textPrefab;
     public RectTransform container;
 
-    [SerializeField] private SRTCourseData[] sourcesData;
-    [SerializeField] private AudioSource audioSource;
-    private Coroutine playCoroutine;
-    private Coroutine currentWordCoroutine;
-
-    private SRTCourseData currentSourceData;
+    [Header("Legacy (not used for API sync)")]
     public string seoUrl;
 
-    // Track whether any word has been spawned
+    [Header("TTS")]
+    public bool useTTS = true;
+    [Range(0.2f, 2f)] public float ttsRate = 0.95f;
+    [Range(0.5f, 2f)] public float ttsPitch = 1.05f;
+
+    [Header("Spawn Words")]
+    public float startDelay = 0.05f;
+    public float fadeTime = 0.08f;
+
+    [Tooltip("Tốc độ cơ bản (từ/giây). Sẽ scale theo ttsRate.")]
+    public float baseWordsPerSecond = 7.5f;
+
+    [Header("Pause by punctuation (ms)")]
+    public int pauseCommaMs = 180;      // ,
+    public int pauseSemicolonMs = 220;  // ; :
+    public int pausePeriodMs = 380;     // . ! ?
+    public int pauseEllipsisMs = 520;   // ...
+    public int pauseLineBreakMs = 420;  // \n
+
+    private Coroutine playCoroutine;
+    private bool isShowTextDone = true;
     private bool hasSpawned = false;
 
-    // Timer fields
-    private Coroutine timerCoroutine;
-    private bool timerCompleted = false;
-    private float timerElapsed = 0f;
+    public bool IsPlaying() => isShowTextDone == false;
+    public bool HasSpawned() => hasSpawned;
 
-    private void Start()
+    public void PlayTextAndSpeak(string text)
     {
-        audioSource = GetComponent<AudioSource>();
-    }
+        ResetRuntimeState(stopTTS: true);
 
-    [ContextMenu("Create Text")]
-    public void CreateText()
-    {
-        currentSourceData = null;
-        hasSpawned = false; // reset when creating
-        StopTimer();
-
-        if (string.IsNullOrEmpty(seoUrl))
-        {
-            Debug.Log("Không có seo url");
+        if (string.IsNullOrWhiteSpace(text))
             return;
-        }
 
-        foreach (var item in sourcesData)
-        {
-            if (item.seoUrl == seoUrl)
-            {
-                Debug.Log("Đã tìm thấy url");
-                currentSourceData = item;
-                break;
-            }
-        }
-
-        if (currentSourceData == null) return;
-
-        scrollRect.gameObject.SetActive(true);
-
-        // Stop any running playback
-        if (playCoroutine != null)
-        {
-            StopCoroutine(playCoroutine);
-            playCoroutine = null;
-        }
-
-        if (currentWordCoroutine != null)
-        {
-            StopCoroutine(currentWordCoroutine);
-            currentWordCoroutine = null;
-        }
-
-        // Clear previous items
-        if (container != null)
-        {
-            for (int i = container.childCount - 1; i >= 0; i--)
-                Destroy(container.GetChild(i).gameObject);
-        }
+        ShowUI(true);
+        ClearContainer();
+        ResetScrollPos();
 
         isShowTextDone = false;
-        playCoroutine = StartCoroutine(PlaySubtitlesCoroutine());
+        hasSpawned = false;
+
+        if (useTTS && TTSManager.I != null)
+        {
+            TTSManager.I.SetRatePitch(ttsRate, ttsPitch);
+            TTSManager.I.Speak(text);
+        }
+
+        playCoroutine = StartCoroutine(SpawnWordsEstimated(text));
     }
 
     public void StopText()
     {
-        // Stop known coroutines only
+        ResetRuntimeState(stopTTS: true);
+        ShowUI(false);
+    }
+
+    public void ResetRuntimeState(bool stopTTS)
+    {
         if (playCoroutine != null)
         {
             StopCoroutine(playCoroutine);
             playCoroutine = null;
         }
 
-        if (currentWordCoroutine != null)
+        KillTweensSafe();
+        ClearContainer();
+        ResetScrollPos();
+
+        isShowTextDone = true;
+        hasSpawned = false;
+
+        if (stopTTS && TTSManager.I != null)
+            TTSManager.I.Stop();
+    }
+
+    private IEnumerator SpawnWordsEstimated(string text)
+    {
+        yield return new WaitForSeconds(startDelay);
+
+        if (scrollRect == null || scrollRect.viewport == null || container == null || textPrefab == null)
         {
-            StopCoroutine(currentWordCoroutine);
-            currentWordCoroutine = null;
+            isShowTextDone = true;
+            yield break;
         }
 
-        if (timerCoroutine != null)
+        var words = text.Split(new[] { ' ', '\t', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
         {
-            StopCoroutine(timerCoroutine);
-            timerCoroutine = null;
+            isShowTextDone = true;
+            yield break;
         }
-        
-        // Kill DOTween tweens that may target the UI elements
-        // This prevents tweens from accessing destroyed/disabled objects
+
+        hasSpawned = true;
+
+        float speed = Mathf.Max(1f, baseWordsPerSecond * Mathf.Clamp(ttsRate, 0.6f, 1.6f));
+        float baseDelay = 1f / speed;
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            string w = words[i];
+
+            var inst = Instantiate(textPrefab, container);
+            inst.text = w;
+            inst.alpha = 0f;
+            inst.DOFade(1f, fadeTime);
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(container);
+
+            float contentWidth = container.rect.width;
+            float viewportWidth = scrollRect.viewport.rect.width;
+            if (contentWidth > viewportWidth)
+                scrollRect.DOHorizontalNormalizedPos(1f, 0.1f);
+
+            float extra = GetExtraPauseSeconds(w);
+            yield return new WaitForSeconds(baseDelay + extra);
+        }
+
+        playCoroutine = null;
+        isShowTextDone = true;
+    }
+
+    private float GetExtraPauseSeconds(string word)
+    {
+        if (string.IsNullOrEmpty(word)) return 0f;
+
+        if (word.Contains("\n")) return pauseLineBreakMs / 1000f;
+        if (word.Contains("...")) return pauseEllipsisMs / 1000f;
+
+        char last = word[word.Length - 1];
+        switch (last)
+        {
+            case ',': return pauseCommaMs / 1000f;
+            case ';':
+            case ':': return pauseSemicolonMs / 1000f;
+            case '.':
+            case '!':
+            case '?': return pausePeriodMs / 1000f;
+            default: return 0f;
+        }
+    }
+
+    private void ShowUI(bool active)
+    {
+        if (scrollRect != null && scrollRect.gameObject != null)
+            scrollRect.gameObject.SetActive(active);
+    }
+
+    private void ResetScrollPos()
+    {
+        if (scrollRect == null) return;
+        scrollRect.horizontalNormalizedPosition = 0f;
+        scrollRect.verticalNormalizedPosition = 1f;
+    }
+
+    private void ClearContainer()
+    {
+        if (container == null) return;
+
+        for (int i = container.childCount - 1; i >= 0; i--)
+        {
+            var child = container.GetChild(i);
+            if (child != null)
+                Destroy(child.gameObject);
+        }
+    }
+
+    private void KillTweensSafe()
+    {
         try
         {
-            if (scrollRect != null)
-                DOTween.Kill(scrollRect);
+            if (scrollRect != null) DOTween.Kill(scrollRect);
+            if (container != null) DOTween.Kill(container);
 
-            if (container != null)
-                DOTween.Kill(container);
-
-            // Also kill tweens on children before destroying them
             if (container != null)
             {
                 for (int i = container.childCount - 1; i >= 0; i--)
                 {
                     var child = container.GetChild(i);
-                    if (child != null)
-                        DOTween.Kill(child);
+                    if (child != null) DOTween.Kill(child);
                 }
             }
         }
         catch (System.Exception ex)
         {
-            Debug.LogWarning($"DOTween.Kill encountered an exception: {ex}");
+            Debug.LogWarning($"[AutomaticTextPreview] DOTween.Kill exception: {ex}");
         }
-
-        // Destroy child items safely
-        if (container != null)
-        {
-            for (int i = container.childCount - 1; i >= 0; i--)
-            {
-                var childGo = container.GetChild(i)?.gameObject;
-                if (childGo != null)
-                    Destroy(childGo);
-            }
-        }
-
-        // Deactivate UI and stop audio
-        if (scrollRect != null && scrollRect.gameObject != null)
-            scrollRect.gameObject.SetActive(false);
-
-        if (audioSource != null)
-            audioSource.Stop();
-
-        // Reset flags and timer state
-        isShowTextDone = true;
-        hasSpawned = false;
-        timerCompleted = false;
-        timerElapsed = 0f;
-    }
-
-    private IEnumerator PlaySubtitlesCoroutine()
-    {
-        yield return new WaitForSeconds(6);
-
-        if (textPrefab == null || container == null)
-            yield break;
-
-        SRTCourseData sourceData = currentSourceData;
-
-        var entries = new List<SrtEntry>();
-        entries = sourceData.srtEntries;
-        
-        if (entries.Count == 0)
-        {
-            Debug.Log($"No entries found: {entries.Count}");
-            yield break;
-        }
-        audioSource.clip = sourceData.voiceClip;
-        audioSource.Play();
-
-        // Sort by start time
-        entries.Sort((a, b) => a.Start.CompareTo(b.Start));
-
-        int currentIndex = 0;
-
-        while (audioSource.isPlaying && currentIndex < entries.Count)
-        {
-            float audioTime = audioSource.time;
-
-            // Check if we need to display the current entry
-            if (audioTime >= entries[currentIndex].Start)
-            {
-                // Stop previous word spawn if any
-                if (currentWordCoroutine != null)
-                {
-                    StopCoroutine(currentWordCoroutine);
-                }
-
-                // Start spawning words for this entry
-                currentWordCoroutine = StartCoroutine(SpawnWordsForEntry(entries[currentIndex]));
-                currentIndex++;
-            }
-
-            yield return null;
-        }
-
-        // Wait for the last word coroutine to finish
-        if (currentWordCoroutine != null)
-        {
-            yield return currentWordCoroutine;
-        }
-
-        yield return new WaitForSeconds(1);
-
-        // Clear all text
-        for (int i = container.childCount - 1; i >= 0; i--)
-            Destroy(container.GetChild(i).gameObject);
-
-        playCoroutine = null;
-        isShowTextDone = true;
-        hasSpawned = false;
-        // Note: timerCompleted is not modified here; timer lifecycle handled by StartTimer/StopTimer
-    }
-
-    private IEnumerator SpawnWordsForEntry(SrtEntry entry)
-    {
-        var description = entry.Text;
-        var duration = entry.End - entry.Start;
-        var words = description.Split(new[] { ' ', '\t', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-        if (words.Length == 0)
-            yield break;
-
-        float totalSeconds = Mathf.Max(0, duration);
-        float timePerWord = totalSeconds / words.Length;
-
-        // Mark that spawning has begun for this entry
-        hasSpawned = true;
-
-        for (int i = 0; i < words.Length; i++)
-        {
-            var textInstance = Instantiate(textPrefab, container);
-            textInstance.text = words[i];
-            textInstance.alpha = 0;
-            textInstance.DOFade(1, 0.1f);
-            // Force layout rebuild to get correct width
-            LayoutRebuilder.ForceRebuildLayoutImmediate(container);
-
-            float contentWidth = container.rect.width;
-            float viewportWidth = scrollRect.viewport.rect.width;
-
-            // Auto scroll to the right if content exceeds viewport
-            if (contentWidth > viewportWidth)
-            {
-                scrollRect.DOHorizontalNormalizedPos(1, 0.1f);
-            }
-
-            yield return new WaitForSeconds(timePerWord);
-        }
-
-        currentWordCoroutine = null;
-    }
-
-    private bool isShowTextDone = false;
-
-    public bool IsPlaying()
-    {
-        if (currentSourceData == null)
-        {
-            return false;
-        }
-        if(audioSource.clip == null)
-        {
-            return false;
-        }
-        return isShowTextDone == false;
-    }
-
-    // Public accessor to check if any word has been spawned
-    public bool HasSpawned()
-    {
-        return hasSpawned;
-    }
-
-    public float GetPlayTime() { return currentSourceData ? currentSourceData.time : 0; }
-
-    // Timer API
-    public void StartTimer()
-    {
-        StopTimer();
-        timerCompleted = false;
-        timerElapsed = 0f;
-        timerCoroutine = StartCoroutine(TimerCoroutine());
-    }
-
-    public void StopTimer()
-    {
-        if (timerCoroutine != null)
-        {
-            StopCoroutine(timerCoroutine);
-            timerCoroutine = null;
-        }
-        timerElapsed = 0f;
-    }
-
-    private IEnumerator TimerCoroutine()
-    {
-        float required = GetPlayTime();
-        if (required <= 0f)
-        {
-            timerCompleted = true;
-            yield break;
-        }
-
-        while (timerElapsed < required)
-        {
-            timerElapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        timerCompleted = true;
-        timerCoroutine = null;
-    }
-
-    public bool IsTimerCompleted()
-    {
-        return timerCompleted;
     }
 }
