@@ -51,8 +51,16 @@ public class TouchRotationView : MonoBehaviour
     {
         var activeTouches = EnhancedTouch.activeTouches;
 
+        
+        
             if (activeTouches.Count > 0)
             {
+                if (activeTouches.Count >= 5)
+                {
+                    ResetState();
+                    return;
+                }
+                
                 foreach (var touch in activeTouches)
                 {
                     switch (touch.phase)
