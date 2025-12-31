@@ -375,18 +375,7 @@ public class PointClickSystem : MonoBehaviour
 
                 Debug.Log("Đánh dính check point");
                 var position = stair.transform.position + stair.standPoint;
-                var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-                Vector3 groundPos = (Vector3)node.position;
-
-                if (ai != null)
-                {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-                    ai.destination = groundPos;
-                }
-
-                lastPickPosition = groundPos;
+                MoveToPosition(position);
                 return true;
             }
         }
@@ -394,6 +383,22 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
+    public void MoveToPosition(Vector3 position)
+    {
+        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
+
+        Vector3 groundPos = (Vector3)node.position;
+
+        if (ai != null)
+        {
+            ai.isStopped = false;
+            ai.canMove = true;
+            ai.destination = groundPos;
+        }
+
+        lastPickPosition = groundPos;
+    }
+    
     private bool TryHandleMoveToHouse(Ray ray)
     {
         var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
@@ -527,20 +532,9 @@ public class PointClickSystem : MonoBehaviour
         // moving logic
         StopWaitToMoveChair();
         Debug.Log("Đánh dính check point");
+
         var position = chairCheckPoint.spriteCheckPoint.transform.position;
-        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
-
-        Vector3 groundPos = (Vector3)node.position;
-
-        if (ai != null)
-        {
-            ai.isStopped = false;
-            ai.canMove = true;
-            ai.destination = groundPos;
-        }
-
-        lastPickPosition = groundPos;
-
+        MoveToPosition(position);
         return true;
     }
     
