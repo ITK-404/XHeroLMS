@@ -6,93 +6,81 @@ public class PlayVideoOpenBook : MonoBehaviour
 {
     public VideoPlayer videoPlayer;
     public AudioSource audioSource;
+
+    [Header("Text + TTS")]
     public AutomaticTextPreview automaticTextPreview;
+
     private bool isPlaying = false;
+
+    [Header("Config")]
+    public float stopTime = 28f;
+
     private void Awake()
     {
         string url = "file://" + Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
 #if !UNITY_EDITOR && UNITY_ANDROID
-             url = Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
+        url = Application.streamingAssetsPath + "/" + "SACH LAT V2_nosound.mp4";
 #endif
-        videoPlayer.source = VideoSource.Url;
-        videoPlayer.url = url;
+        if (videoPlayer != null)
+        {
+            videoPlayer.source = VideoSource.Url;
+            videoPlayer.url = url;
+        }
     }
 
-    public IEnumerator PlayCoroutine()
+    public IEnumerator PlayCoroutine(string fullText)
     {
         isPlaying = true;
-        // dừng phát nếu đang phát
-        videoPlayer.Stop();
-        audioSource.Stop();
 
-        // tua cả hai về 0
-        videoPlayer.time = 0;
-        audioSource.time = 0;
-        videoPlayer.Prepare();
-        while (!videoPlayer.isPrepared)
-            yield return null;
+        // reset sạch trước khi play
+        Stop();
 
-        videoPlayer.Play();
-        audioSource.Play();
-        
-        // Start creating text (if assigned)
-        if (automaticTextPreview != null)
+        if (videoPlayer != null) videoPlayer.time = 0;
+        if (audioSource != null) audioSource.time = 0;
+
+        if (videoPlayer != null)
         {
-            automaticTextPreview.CreateText();
-            automaticTextPreview.StartTimer();
+            videoPlayer.Prepare();
+            while (!videoPlayer.isPrepared)
+                yield return null;
+
+            videoPlayer.Play();
         }
 
-        // Wait until both conditions are met:
-        // - the video finished playing, AND
-        // - the configured timer has elapsed
-        float stopTime = 28f; // Giây thứ 28
+        if (audioSource != null)
+            audioSource.Play();
+
+        if (automaticTextPreview != null)
+            automaticTextPreview.PlayTextAndSpeak(fullText);
 
         while (true)
         {
-            bool videoReachedTarget = (videoPlayer != null) && (videoPlayer.time >= stopTime);
+            bool reached = (videoPlayer != null) && (videoPlayer.time >= stopTime);
 
-            if (videoReachedTarget && videoPlayer.isPlaying)
-            {
+            if (reached && videoPlayer.isPlaying)
                 videoPlayer.Pause();
-            }
 
-            bool timerCompleted = true;
-            if (automaticTextPreview != null)
-                timerCompleted = automaticTextPreview.IsTimerCompleted();
-
-            if (videoReachedTarget && timerCompleted)
-                break;
-
+            if (reached) break;
             yield return null;
         }
 
-        // Stop everything
-        if (videoPlayer != null)
-            videoPlayer.Stop();
-        if (audioSource != null)
-            audioSource.Stop();
-        if (automaticTextPreview != null)
-            automaticTextPreview.StopText();
-        
+        // DONE -> reset sạch sau khi chạy xong
+        Stop();
         isPlaying = false;
-
-    }
-    [ContextMenu("Play Test")]
-    public void PlayTest()
-    {
-        StartCoroutine(PlayCoroutine());
     }
 
     public void Stop()
     {
-        videoPlayer.Stop();
-        audioSource.Stop();
-        automaticTextPreview.StopText();
+        if (videoPlayer != null) videoPlayer.Stop();
+        if (audioSource != null) audioSource.Stop();
+
+        if (automaticTextPreview != null)
+        {
+            automaticTextPreview.ResetRuntimeState(stopTTS: true);
+        }
+
         isPlaying = false;
     }
 
-    public bool IsPlayingVideo()
-    {
-        return isPlaying;
-    }
+    public bool IsPlayingVideo() => isPlaying;
 }
