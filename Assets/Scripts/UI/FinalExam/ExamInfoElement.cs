@@ -76,6 +76,8 @@ public class ExamInfoElement : MonoBehaviour
         if (coloredTmp)  coloredTmp.text  = t;
         if (grayTmp)     grayTmp.text     = t;
         if (gradientTmp) gradientTmp.text = t;
+        if (correctTmp) correctTmp.text = t;
+        if (inCorrectTmp) inCorrectTmp.text = t;
     }
 
     public void SetAnsweredButton()        => ApplyState(State.Answered);
