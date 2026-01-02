@@ -189,6 +189,7 @@ public class CourseListPageMyUI : MonoBehaviour
             page++;
         }
 
+        SortCoursesByIdAscending();
         RenderAccordingToCurrentGroup();
     }
 
@@ -633,4 +634,26 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         }
         return false;
     }
+
+void SortCoursesByIdAscending()
+{
+    _courses.Sort((a, b) =>
+    {
+        // null-safe
+        string sa = a?.id ?? "";
+        string sb = b?.id ?? "";
+
+        // cố parse số
+        bool pa = long.TryParse(sa, out var ia);
+        bool pb = long.TryParse(sb, out var ib);
+
+        if (pa && pb) return ia.CompareTo(ib);     // số tăng dần
+        if (pa) return -1;                         // số đứng trước chuỗi
+        if (pb) return 1;
+
+        // so sánh chữ
+        return string.CompareOrdinal(sa, sb);
+    });
+}
+
 }
