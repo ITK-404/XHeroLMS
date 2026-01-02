@@ -84,14 +84,23 @@ public class ExamInfoElement : MonoBehaviour
     public void ShowCorrectButton() => ApplyState(State.Correct);
     public void ShowInCorrectButton() => ApplyState(State.InCorrect);
     private State currentState;
+
+    [SerializeField] private State forTestState;
+    [ContextMenu("ForTest")]
+    private void ForTest()
+    {
+        ApplyState(forTestState);
+    }
+    
+    
     public void ApplyState(State s)
     {
         // text layers
         if (coloredTmp) coloredTmp.gameObject.SetActive(s == State.Answered);
         if (grayTmp) grayTmp.gameObject.SetActive(s == State.Unanswered);
         if (gradientTmp) gradientTmp.gameObject.SetActive(s == State.Selected);
-        if (gradientTmp) correctTmp.gameObject.SetActive(s == State.Correct);
-        if (gradientTmp) inCorrectTmp.gameObject.SetActive(s == State.InCorrect);
+        if (correctTmp) correctTmp.gameObject.SetActive(s == State.Correct);
+        if (inCorrectTmp) inCorrectTmp.gameObject.SetActive(s == State.InCorrect);
 
         // đổi sprite trên Image chính
         if (!rootButtonImage) return;
