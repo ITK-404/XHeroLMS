@@ -110,7 +110,7 @@ public class PointClickSystem : MonoBehaviour
         bool isMoving = Mathf.Abs(v) > 0.1f;
         bool isRotateInput = Mathf.Abs(h) > 0.1f;
 
-        if (isMoving || isRotateInput)
+        if (isMoving || isRotateInput || TouchRotationView.IsLooking)
         {
             // Điều khiển bằng phím => tắt AI + tắt click-move
             if (ai != null)
@@ -132,7 +132,7 @@ public class PointClickSystem : MonoBehaviour
         else
         {
             // when AI is moving the transform, still apply vertical movement for gravity
-            characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+            characterController.Move(Vector3.up * (verticalVelocity * Time.deltaTime));
         }
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
@@ -180,23 +180,6 @@ public class PointClickSystem : MonoBehaviour
         HandleClickMoveRotation();
     }
 
-    private void RotationByVelocity()
-    {
-        Vector3 moveDir = ai.velocity;
-        moveDir.y = 0f; // Ignore vertical component for rotation
-
-        if (moveDir.sqrMagnitude > 0.001f)
-        {
-            Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRot,
-                rotationLerpSpeed * Time.deltaTime
-            );
-        }
-    }
-
-    // ===== vừa move vừa xoay mượt về lookTargetWorldPos =====
     private void HandleClickMoveRotation()
     {
         if (!isClickMoving || playerCamera == null)
@@ -412,16 +395,7 @@ public class PointClickSystem : MonoBehaviour
                 return true;
             }
         }
-        //if (Physics.Raycast(ray, out var checkPointHit, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide))
-        //{
-        //    if (checkPointHit.collider.CompareTag("CheckPoint") && checkPointHit.collider.TryGetComponent(out BuildingInteractable interactable))
-        //    {
-        //        BuildingCameraManager.Instance.FocusOnBuilding(interactable);
-        //        Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
-
-        //        return true;
-        //    }
-        //}
+     
         return false;
     }
 
@@ -437,7 +411,6 @@ public class PointClickSystem : MonoBehaviour
             ai.isStopped = true;
             ai.canMove = false;
 
-            ai.maxSpeed = defaultSpeed * 2f;
             ai.Teleport(groundPos);
         }
 
@@ -461,7 +434,6 @@ public class PointClickSystem : MonoBehaviour
             ai.isStopped = true;
             ai.canMove = false;
 
-            ai.maxSpeed = defaultSpeed * 2f;
             ai.Teleport(groundPos);
             ai.rotation = hitTransform.rotation;
         }
