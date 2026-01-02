@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class HoverButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class HoverButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     [SerializeField] protected Image normalImg;
     [SerializeField] protected Image hoverImg;
@@ -53,5 +53,20 @@ public class HoverButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         normalImg = transform.Find("Normal").GetComponent<Image>();
         hoverImg = transform.Find("Hover").GetComponent<Image>();
+    }
+
+    public virtual void OnPointerClick(PointerEventData eventData)
+    {
+        ResetHoverState();
+    }
+    
+    protected void ResetHoverState()
+    {
+        isPointerOver = false;
+        if (hoverImg != null)
+        {
+            hoverImg.DOKill();
+            hoverImg.DOFade(0, fadeTime);
+        }
     }
 }
