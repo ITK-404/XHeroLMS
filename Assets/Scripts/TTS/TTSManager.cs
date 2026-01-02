@@ -7,9 +7,14 @@ public class TTSManager : MonoBehaviour
 {
     public static TTSManager I;
 
-    [Header("Default Vietnamese tone")]
-    [Range(0.2f, 2.0f)] public float rate = 1.0f;   // iOS: ~0.4..0.6 là dễ nghe; Android tùy máy
-    [Range(0.5f, 2.0f)] public float pitch = 1.0f;  // 1.0 = bình thường
+    [Range(0.2f, 2.0f)] float rate = 1.0f;   // Android scale
+    [Range(0.5f, 2.0f)] float pitch = 1.0f;
+
+    [Range(0.3f, 1.0f)] float iosRateMultiplier = 0.6f;
+
+    [Range(0.2f, 0.9f)] float iosRateMin = 0.40f;
+
+    [Range(0.2f, 0.9f)] float iosRateMax = 0.60f;
 
     void Awake()
     {
@@ -24,18 +29,41 @@ public class TTSManager : MonoBehaviour
 #elif UNITY_IOS && !UNITY_EDITOR
         iOSTTS_Init();
         iOSTTS_SetVoice("vi-VN");
-        iOSTTS_SetRatePitch(rate, pitch);
+        ApplyIOSRatePitch(); // dùng mapping riêng cho iOS
 #endif
     }
 
     public void SetRatePitch(float newRate, float newPitch)
     {
-        rate = newRate; pitch = newPitch;
+        rate = newRate;
+        pitch = newPitch;
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         AndroidTTS.SetRatePitch(rate, pitch);
 #elif UNITY_IOS && !UNITY_EDITOR
-        iOSTTS_SetRatePitch(rate, pitch);
+        ApplyIOSRatePitch();
 #endif
+    }
+
+    void ApplyIOSRatePitch()
+    {
+#if UNITY_IOS && !UNITY_EDITOR
+        // rate (Android-like 0.2..2.0) -> iOS AVSpeechUtteranceRate-ish 0.4..0.6 (dễ nghe)
+        float r = MapAndroidRateToIOS(rate) * iosRateMultiplier;
+        r = Mathf.Clamp(r, iosRateMin, iosRateMax);
+
+        float p = Mathf.Clamp(pitch, 0.5f, 2.0f); // iOS pitchMultiplier thường ok 0.5..2.0
+
+        iOSTTS_SetRatePitch(r, p);
+#endif
+    }
+
+    // Map thô: Android 0.2..2.0 -> iOS 0.35..0.70 (sau đó multiplier + clamp)
+    static float MapAndroidRateToIOS(float androidRate)
+    {
+        float a = Mathf.Clamp(androidRate, 0.2f, 2.0f);
+        float t = Mathf.InverseLerp(0.2f, 2.0f, a);
+        return Mathf.Lerp(0.35f, 0.70f, t);
     }
 
     public void Stop()
@@ -51,7 +79,8 @@ public class TTSManager : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        var parts = ParseTextWithPauses(text); // list of (string segment, int pauseMsAfter)
+        var parts = ParseTextWithPauses(text);
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         AndroidTTS.SpeakParts(parts);
 #elif UNITY_IOS && !UNITY_EDITOR
@@ -73,7 +102,6 @@ public class TTSManager : MonoBehaviour
     {
         var parts = new List<SpeakPart>();
 
-        // First split by explicit [pause=ms]
         var rx = new Regex(@"\[pause\s*=\s*(\d+)\s*\]", RegexOptions.IgnoreCase);
         int last = 0;
         foreach (Match m in rx.Matches(input))
@@ -82,7 +110,6 @@ public class TTSManager : MonoBehaviour
             AddChunkWithImplicitPauses(chunk, parts);
 
             int p = int.Parse(m.Groups[1].Value);
-            // attach pause to previous part if exists
             if (parts.Count > 0)
             {
                 var prev = parts[parts.Count - 1];
@@ -95,7 +122,6 @@ public class TTSManager : MonoBehaviour
         var tail = input.Substring(last);
         AddChunkWithImplicitPauses(tail, parts);
 
-        // remove empty
         parts.RemoveAll(p => string.IsNullOrWhiteSpace(p.text));
         return parts;
     }
@@ -104,8 +130,6 @@ public class TTSManager : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(chunk)) return;
 
-        // Split into sentences-ish while keeping punctuation
-        // Very simple approach: walk char by char
         string acc = "";
         for (int i = 0; i < chunk.Length; i++)
         {
@@ -113,19 +137,18 @@ public class TTSManager : MonoBehaviour
             acc += c;
 
             int pause = 0;
-            if (c == ',') pause = 200;
-            if (c == ';' || c == ':') pause = 250;
+            if (c == ',') pause = 100;
+            if (c == ';' || c == ':') pause = 125;
 
-            // handle ellipsis ...
             if (c == '.' && i + 2 < chunk.Length && chunk[i + 1] == '.' && chunk[i + 2] == '.')
             {
                 acc += "..";
                 i += 2;
-                pause = 600;
+                pause = 300;
             }
             else if (c == '.' || c == '!' || c == '?' || c == '\n')
             {
-                pause = 400;
+                pause = 200;
             }
 
             if (pause > 0)
@@ -140,7 +163,6 @@ public class TTSManager : MonoBehaviour
     }
 
 #if UNITY_IOS && !UNITY_EDITOR
-    // iOS native bindings
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern void iOSTTS_Init();
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern void iOSTTS_SetVoice(string locale);
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern void iOSTTS_SetRatePitch(float rate, float pitch);

@@ -32414,6 +32414,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TTSManager
   rate: 1
   pitch: 1
+  viLanguage: vi
+  viCountry: VN
+  viLocaleIOS: vi-VN
+  showPopupIfMissingVietnamese: 1
+  popupCooldownSeconds: 0.75
 --- !u!1 &249032933 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 546261488087448717, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -178764,6 +178769,18 @@ PrefabInstance:
     - target: {fileID: 6959989677017097986, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7540910596032517877, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMax.y
