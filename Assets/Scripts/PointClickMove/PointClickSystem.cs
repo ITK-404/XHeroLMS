@@ -437,7 +437,6 @@ public class PointClickSystem : MonoBehaviour
             ai.isStopped = true;
             ai.canMove = false;
 
-            ai.maxSpeed = defaultSpeed * 2f;
             ai.Teleport(groundPos);
         }
 
@@ -461,7 +460,6 @@ public class PointClickSystem : MonoBehaviour
             ai.isStopped = true;
             ai.canMove = false;
 
-            ai.maxSpeed = defaultSpeed * 2f;
             ai.Teleport(groundPos);
             ai.rotation = hitTransform.rotation;
         }

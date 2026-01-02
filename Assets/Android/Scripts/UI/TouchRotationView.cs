@@ -55,7 +55,7 @@ public class TouchRotationView : MonoBehaviour
         
             if (activeTouches.Count > 0)
             {
-                if (activeTouches.Count >= 5)
+                if (activeTouches.Count >= 3)
                 {
                     ResetState();
                     return;
