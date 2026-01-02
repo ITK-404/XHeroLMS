@@ -10,22 +10,22 @@ using UnityEngine.UI;
 [ExecuteAlways] // để OnValidate chạy trong Editor
 public class ExamInfoElement : MonoBehaviour 
 {
-    public enum State { Unanswered, Answered, Selected }
+    public enum State { Unanswered, Answered, Selected, Correct, InCorrect }
 
     [Header("Sprites")]
     [SerializeField] private CanvasGroup sprUnanswered;
     [SerializeField] private CanvasGroup sprAnswered;
     [SerializeField] private CanvasGroup sprSelected;
-
+    [SerializeField] private CanvasGroup sprCorrect;
+    [SerializeField] private CanvasGroup sprInCorrect;
     [Header("UI Refs")]
     [SerializeField] private Image  rootButtonImage;   // Image của Button
     [SerializeField] private Button clickable;         // chính Button
     [SerializeField] private TextMeshProUGUI coloredTmp;
     [SerializeField] private TextMeshProUGUI grayTmp;
     [SerializeField] private TextMeshProUGUI gradientTmp;
-    [Header("Hoevr")]
-    public HoverNavigationUI hoverUnanswered;
-    public HoverNavigationUI hoverAnswered;
+    [SerializeField] private TextMeshProUGUI correctTmp;
+    [SerializeField] private TextMeshProUGUI inCorrectTmp;
     // ===== lifecycle =====
     private void Reset()
     {
@@ -52,12 +52,13 @@ public class ExamInfoElement : MonoBehaviour
         activeList.Add(sprUnanswered);
         activeList.Add(sprAnswered);
         activeList.Add(sprSelected);
+        activeList.Add(sprCorrect);
+        activeList.Add(sprInCorrect);
 
         foreach (var item in activeList)
         {
             item.DOFade(0, 0);
         }
-        ActiveHover(false);
     }
 
     // private void OnEnable()
@@ -80,6 +81,8 @@ public class ExamInfoElement : MonoBehaviour
     public void SetAnsweredButton()        => ApplyState(State.Answered);
     public void SetUnansweredButton()      => ApplyState(State.Unanswered);
     public void ShowSelectedAnswerButton() => ApplyState(State.Selected);
+    public void ShowCorrectButton() => ApplyState(State.Correct);
+    public void ShowInCorrectButton() => ApplyState(State.InCorrect);
     private State currentState;
     public void ApplyState(State s)
     {
@@ -87,6 +90,8 @@ public class ExamInfoElement : MonoBehaviour
         if (coloredTmp) coloredTmp.gameObject.SetActive(s == State.Answered);
         if (grayTmp) grayTmp.gameObject.SetActive(s == State.Unanswered);
         if (gradientTmp) gradientTmp.gameObject.SetActive(s == State.Selected);
+        if (gradientTmp) correctTmp.gameObject.SetActive(s == State.Correct);
+        if (gradientTmp) inCorrectTmp.gameObject.SetActive(s == State.InCorrect);
 
         // đổi sprite trên Image chính
         if (!rootButtonImage) return;
@@ -102,6 +107,12 @@ public class ExamInfoElement : MonoBehaviour
             case State.Selected:
                 ActiveImage(sprSelected);
                 // turn off hover when selected
+                break;
+            case State.Correct: 
+                ActiveImage(sprCorrect);
+                break;
+            case State.InCorrect: 
+                ActiveImage(sprInCorrect);
                 break;
         }
         currentState = s;
@@ -121,28 +132,6 @@ public class ExamInfoElement : MonoBehaviour
             {
                 item.DOFade(0, 0.3f);
             }
-        }
-    }
-
-    public void ActiveHover(bool isHover)
-    {
-        // show hover đi
-        switch (currentState)
-        {
-            case State.Unanswered:
-                hoverUnanswered.SetHoverAndHideNormal(isHover);
-                hoverAnswered.SetHoverAndHideNormal(false);
-                break;
-            case State.Answered:
-                hoverAnswered.SetHoverAndHideNormal(isHover);
-                hoverUnanswered.SetHoverAndHideNormal(false);
-                break;
-            case State.Selected:
-                hoverUnanswered.SetHoverAndHideNormal(false);
-                hoverAnswered.SetHoverAndHideNormal(false);
-                break;
-            default:
-                break;
         }
     }
 }
