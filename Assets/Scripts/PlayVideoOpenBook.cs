@@ -98,7 +98,8 @@ public class PlayVideoOpenBook : MonoBehaviour
             audioSource.Stop();
 
         if (automaticTextPreview != null)
-            automaticTextPreview.ResetRuntimeState(stopTTS: true);
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
+
     }
 
     private void StopInternal()
@@ -110,7 +111,7 @@ public class PlayVideoOpenBook : MonoBehaviour
             audioSource.Stop();
 
         if (automaticTextPreview != null)
-            automaticTextPreview.ResetRuntimeState(stopTTS: true);
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
 
         isPlaying = false;
     }

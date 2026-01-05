@@ -27,8 +27,6 @@ public class BuyReviewCourseManager : MonoBehaviour
     private bool needFetchData;
     private Coroutine previewCoroutine;
 
-    private Coroutine ttsCoroutine;
-
     private void Awake()
     {
         Instance = this;
@@ -86,15 +84,9 @@ public class BuyReviewCourseManager : MonoBehaviour
         ShowBookPreviewUI(currentBookSelect);
     }
 
-    private void OnAutoSkipChanged(bool value)
-    {
-        autoSkipVideo = value;
-    }
+    private void OnAutoSkipChanged(bool value) => autoSkipVideo = value;
 
-    private void SaveKey()
-    {
-        PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY, autoSkipVideo ? 1 : 0);
-    }
+    private void SaveKey() => PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY, autoSkipVideo ? 1 : 0);
 
     private void LoadKey()
     {
@@ -149,7 +141,12 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         if (playVideoHandleUI != null) playVideoHandleUI.Hide();
 
+        // set course seo globally (existing logic)
         SeoResolver.seoCourse = currentBookSelect.book_seo;
+
+        // IMPORTANT: truyền seo xuống AutomaticTextPreview để nó load audio theo seo hiện tại
+        if (automaticTextPreview != null)
+            automaticTextPreview.seoCourse = SeoResolver.seoCourse; // fallback nếu bạn chưa gắn seoProvider
 
         ShowBuyCourseUI();
 
@@ -196,7 +193,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         }
         else
         {
-            StartShowAndSpeak(apiText);
+            StartShowAndPlayCourseAudio(apiText);
         }
 
         if (courseReviewUI != null) courseReviewUI.Show();
@@ -208,46 +205,28 @@ public class BuyReviewCourseManager : MonoBehaviour
 
     private void ResetAfterPreviewFinished()
     {
-        // stop chunk reader nếu có
-        if (ttsCoroutine != null)
-        {
-            StopCoroutine(ttsCoroutine);
-            ttsCoroutine = null;
-        }
-
-        // reset text preview state
+        // reset text preview state + stop audio (nếu đang chạy)
         if (automaticTextPreview != null)
-            automaticTextPreview.ResetRuntimeState(stopTTS: true);
-
-        // đảm bảo TTS cũng tắt
-        if (TTSManager.I != null)
-            TTSManager.I.Stop();
+        {
+            // dùng stopAudio (tên mới). Nếu class bạn chưa đổi param name thì đổi lại cho khớp.
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
+        }
     }
 
-    private void StartShowAndSpeak(string fullText)
+    private void StartShowAndPlayCourseAudio(string fullText)
     {
         if (string.IsNullOrWhiteSpace(fullText)) return;
 
+        // AutomaticTextPreview tự load audio theo seoCourse (đã set ở trên)
         if (automaticTextPreview != null)
             automaticTextPreview.PlayTextAndSpeak(fullText);
-
-        if (ttsCoroutine != null) StopCoroutine(ttsCoroutine);
-        ttsCoroutine = StartCoroutine(SpeakLongTextCoroutine(fullText));
     }
 
     private void StopAllPreviewRuntime()
     {
-        if (ttsCoroutine != null)
-        {
-            StopCoroutine(ttsCoroutine);
-            ttsCoroutine = null;
-        }
-
+        // stop text preview + stop audio
         if (automaticTextPreview != null)
-            automaticTextPreview.ResetRuntimeState(stopTTS: true);
-
-        if (TTSManager.I != null)
-            TTSManager.I.Stop();
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
 
         if (playVideoOpenBook != null)
             playVideoOpenBook.Stop();
@@ -281,73 +260,6 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         Debug.Log($"[API_TEXT_FULL] len={text.Length}");
         return text;
-    }
-
-    private IEnumerator SpeakLongTextCoroutine(string fullText)
-    {
-        if (TTSManager.I == null) yield break;
-        if (string.IsNullOrWhiteSpace(fullText)) yield break;
-
-        TTSManager.I.SetRatePitch(0.95f, 1.05f);
-
-        foreach (var chunk in SplitToChunks(fullText, maxChars: 220))
-        {
-            if (string.IsNullOrWhiteSpace(chunk))
-                continue;
-
-            TTSManager.I.Speak(chunk);
-
-            float estimated = Mathf.Clamp(chunk.Length / 14f, 1.2f, 12f);
-            yield return new WaitForSecondsRealtime(estimated);
-        }
-
-        ttsCoroutine = null;
-    }
-
-    private static IEnumerable<string> SplitToChunks(string text, int maxChars)
-    {
-        if (string.IsNullOrEmpty(text)) yield break;
-
-        var parts = Regex.Split(text, @"(?<=[\.\!\?])\s+");
-        var sb = new System.Text.StringBuilder();
-
-        foreach (var p in parts)
-        {
-            var s = (p ?? "").Trim();
-            if (s.Length == 0) continue;
-
-            if (sb.Length + s.Length + 1 <= maxChars)
-            {
-                if (sb.Length > 0) sb.Append(" ");
-                sb.Append(s);
-            }
-            else
-            {
-                if (sb.Length > 0)
-                {
-                    yield return sb.ToString();
-                    sb.Clear();
-                }
-
-                if (s.Length <= maxChars)
-                {
-                    sb.Append(s);
-                }
-                else
-                {
-                    int idx = 0;
-                    while (idx < s.Length)
-                    {
-                        int len = Mathf.Min(maxChars, s.Length - idx);
-                        yield return s.Substring(idx, len);
-                        idx += len;
-                    }
-                }
-            }
-        }
-
-        if (sb.Length > 0)
-            yield return sb.ToString();
     }
 
     public void Skip()
