@@ -36,6 +36,8 @@ public class CourseButtonsExitPathfinder : MonoBehaviour
             Debug.LogError("Player is null cannot move to it");
             return;
         }
+
+        Debug.Log("Try to find node");
         player.GetComponent<PointClickSystem>().MoveToPosition(target.transform.position);
     }
 
