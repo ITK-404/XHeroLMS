@@ -79,9 +79,11 @@ public class CertificateDownloadCapture : MonoBehaviour
 
     private string BuildShareMessage()
     {
-        string msg = string.IsNullOrEmpty(shareMessage) ? "Chúc mừng đã nhận bằng tốt nghiệp!" : shareMessage;
+        string name =
+        !string.IsNullOrEmpty(TokenStore.FullName) ? TokenStore.FullName : TokenStore.Username;
+        string msg = !string.IsNullOrEmpty(shareMessage) ? "Chúc mừng " + name + " đã nhận bằng tốt nghiệp!" : shareMessage;
         string modeLabel = IsWithFrame() ? "có khung" : "không khung";
-        return $"{msg} ({modeLabel})";
+        return $"{msg}";
     }
 
     private IEnumerator CaptureAndHandleCoroutine(MobileAction action)
