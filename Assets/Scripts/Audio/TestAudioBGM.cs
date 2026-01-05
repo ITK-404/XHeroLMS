@@ -12,12 +12,21 @@ public class TestAudioBGM : MonoBehaviour
     private Button btn;
     private bool isOn = true; // mặc định BGM đang bật
 
-    private void Awake()
+    private void Start()
     {
         btn = GetComponent<Button>();
         btn.onClick.AddListener(ToggleBGMAudio);
-
+        LoadByData();
         UpdateIcon();
+    }
+
+    private void LoadByData()
+    {
+        if (!AudioManager.Instance)
+        {
+            return;
+        }
+        isOn = AudioManager.Instance.settings.MusicVolume >= 0.5f;
     }
 
     private void OnDestroy()
