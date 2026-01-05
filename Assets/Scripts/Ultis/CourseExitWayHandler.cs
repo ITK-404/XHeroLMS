@@ -7,6 +7,7 @@ public class CourseExitWayHandler : MonoBehaviour
     [SerializeField] private GameObject target;
     [SerializeField] private RectTransform leftSign;
     [SerializeField] private RectTransform rightSign;
+    [SerializeField] private RectTransform findTargetSign;
     [SerializeField] private GameObject container;
     [Header("Other")]
     [SerializeField] private Camera playerCamera;
@@ -24,6 +25,7 @@ public class CourseExitWayHandler : MonoBehaviour
         
         var screenPosition = playerCamera.WorldToScreenPoint(targetPos);
 
+        findTargetSign.position = screenPosition;
         if (IsPositionInsideScreen(screenPosition) && screenPosition.z > 0)
         {
             Debug.Log("Target is inside screen");
