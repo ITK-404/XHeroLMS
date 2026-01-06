@@ -104,7 +104,7 @@ public class PointClickSystem : MonoBehaviour
         //v = Input.GetAxisRaw("Vertical"); // W/S
         h = baseInput != null ? baseInput.MoveVector.x : 0;
         v = baseInput != null ? baseInput.MoveVector.y : 0;
-        Debug.Log($"movement vector {h} {v}");
+        // Debug.Log($"movement vector {h} {v}");
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
         bool isMoving = Mathf.Abs(v) > 0.1f;

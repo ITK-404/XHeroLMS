@@ -96,20 +96,22 @@ public class BuyReviewCourseManager : MonoBehaviour
 
     private void EnterCourse()
     {
-        if (currentBookSelect == null) return;
-
-        if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
-            LoadingTransition.Load("dai_dao_chi_gian_2");
-        else if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i")
-            LoadingTransition.Load(SeoResolver.DefaultScene);
-        else
-        {
-            LoadingUI.ShowErrorPopup(
-                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
-        }
+        if(currentBookSelect)
+            StartCoroutine(currentBookSelect.TryEnterCourse());
+        // if (currentBookSelect == null) return;
+        //
+        // if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
+        //     LoadingTransition.Load("dai_dao_chi_gian_2");
+        // else if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i")
+        //     LoadingTransition.Load(SeoResolver.DefaultScene);
+        // else
+        // {
+        //     LoadingUI.ShowErrorPopup(
+        //         "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+        //         "Thông báo",
+        //         () => { BookHandler.CanSelectBook = true; }
+        //     );
+        // }
     }
 
     public void ShowBookPreviewUI(BookHandler bookHandler)

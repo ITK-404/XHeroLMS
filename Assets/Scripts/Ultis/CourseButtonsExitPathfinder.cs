@@ -37,7 +37,7 @@ public class CourseButtonsExitPathfinder : MonoBehaviour
             return;
         }
 
-        Debug.Log("Try to find node");
+        Debug.LogError("Try to find node exit");
         player.GetComponent<PointClickSystem>().MoveToPosition(target.transform.position);
     }
 
