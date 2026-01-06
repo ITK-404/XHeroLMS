@@ -6,7 +6,7 @@ public class MinimapUI : MonoBehaviour
     [SerializeField] private GameObject container;
     public Button turnOnBtn;
     public Button turnOffBtn;
-
+    public GameObject maskView;
     private void Start()
     {
         if (TokenStore.IsAuthenticated)
@@ -17,6 +17,7 @@ public class MinimapUI : MonoBehaviour
         {
             LoginController.OnLoginComplete += Show;
         }
+        ShowBottomViewUI();
     }
 
     private void OnDestroy()
@@ -32,6 +33,20 @@ public class MinimapUI : MonoBehaviour
     public void Hide()
     {
         container.gameObject.SetActive(false);
+    }
+
+    public void ShowBottomViewUI()
+    {
+        turnOnBtn.gameObject.SetActive(true);
+        turnOffBtn.gameObject.SetActive(false);
+        maskView.gameObject.SetActive(true);
+    }
+
+    public void ShowTopViewUI()
+    {
+        turnOnBtn.gameObject.SetActive(false);
+        turnOffBtn.gameObject.SetActive(true);
+        maskView.gameObject.SetActive(false);
     }
     
 }
