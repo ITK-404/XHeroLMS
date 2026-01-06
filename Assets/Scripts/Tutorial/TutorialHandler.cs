@@ -209,7 +209,7 @@ public class TutorialHandler : MonoBehaviour
     private void HandleFollowWorldPosition()
     {
         var screenPosition = mainCamera.WorldToScreenPoint(worldTutorialStep.transform.position);
-        Debug.Log($"Screen Position: {screenPosition}");
+        // Debug.Log($"Screen Position: {screenPosition}");
         followWorldItem.position = screenPosition;
 
     }
