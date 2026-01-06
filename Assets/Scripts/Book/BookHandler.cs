@@ -53,12 +53,12 @@ public class BookHandler : MonoBehaviour
 
     }
 
-    private void EnterCourse()
+    public void EnterCourse()
     {
         StartCoroutine(TryEnterCourse());
     }
 
-    private IEnumerator TryEnterCourse()
+    public IEnumerator TryEnterCourse()
     {
         LoadingUI.Show(
                 timeoutSeconds: 60f,
@@ -75,11 +75,13 @@ public class BookHandler : MonoBehaviour
         {
             if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-ii")
             {
+                AudioManager.Instance.Resume();
                 LoadingTransition.Load("dai_dao_chi_gian_2");
 
             }else if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-i")
             {
                 LoadingTransition.Load(SeoResolver.DefaultScene);
+                AudioManager.Instance.Resume();
             }
         else
         {
