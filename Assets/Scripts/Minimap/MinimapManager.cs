@@ -26,23 +26,15 @@ public class MinimapManager : MonoBehaviour
     {
         minimapCamera.Priority.Value = 0;
         player.GetComponent<PlayerCamera>().playerCinemachineCamera.Priority.Value = 10;
+        
+        minimapUI.ShowBottomViewUI();
     }
 
     private void ToggleOn()
     {
         minimapCamera.Priority.Value = 10;
         player.GetComponent<PlayerCamera>().playerCinemachineCamera.Priority.Value = 0;
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            ToggleOn();
-        }
-        else if (Input.GetKeyDown(KeyCode.H))
-        {
-            ToggleOff();
-        }
+        
+        minimapUI.ShowTopViewUI();
     }
 }
