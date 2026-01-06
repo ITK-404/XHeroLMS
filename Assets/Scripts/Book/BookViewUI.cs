@@ -18,14 +18,20 @@ public class BookViewUI : MonoBehaviour
     }
     private void OnEnable()
     {
-        if (priceText != null)
-            priceText.RegisterDirtyVerticesCallback(LocalRefreshColor);
+        TMPro_EventManager.TEXT_CHANGED_EVENT.Add(OnTextChanged);
     }
 
     private void OnDisable()
     {
-        if (priceText != null)
-            priceText.UnregisterDirtyVerticesCallback(LocalRefreshColor);
+        TMPro_EventManager.TEXT_CHANGED_EVENT.Remove(OnTextChanged);
+        
+    }
+    
+    private void OnTextChanged(Object obj){
+        if (obj == priceText)
+        {
+            RefreshColor();
+        }
     }
 
     [ContextMenu("Refresh Color")]
@@ -41,7 +47,7 @@ public class BookViewUI : MonoBehaviour
         LocalRefreshColor();
     }
 
-    public void LocalRefreshColor()
+    private void LocalRefreshColor()
     {
         var tmp = priceText;
         tmp.ForceMeshUpdate();
