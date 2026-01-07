@@ -10,6 +10,7 @@ public class MinimapManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private MinimapUI minimapUI;
     [SerializeField] private CameraZoomSlider cameraZoomSlider;
+    [SerializeField] private AreaDisplayManager areaDisplayManager;
     private void Awake()
     {
         minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
@@ -50,6 +51,7 @@ public class MinimapManager : MonoBehaviour
             UIManager.Instance.CourseMenuButtons.Hide();
             TeleMapController._mapActive = true;
             cameraZoomSlider.Show();
+            areaDisplayManager.Show();
         }
         else
         {
@@ -62,6 +64,7 @@ public class MinimapManager : MonoBehaviour
             InputBlocker.SetBlocked(false);
             TeleMapController._mapActive = false;
             cameraZoomSlider.Hide();
+            areaDisplayManager.Hide();
         }
     }
 }
