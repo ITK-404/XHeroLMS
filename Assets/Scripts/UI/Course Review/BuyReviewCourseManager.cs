@@ -241,6 +241,7 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (SeoResolver.IsContainData() && SeoResolver.LmsCoursePrivate != null)
         {
             text = SeoResolver.LmsCoursePrivate.description;
+            Debug.Log("Description: " + text);
 
             if (!string.IsNullOrWhiteSpace(text))
             {

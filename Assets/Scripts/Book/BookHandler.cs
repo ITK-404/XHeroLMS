@@ -78,7 +78,7 @@ public class BookHandler : MonoBehaviour
                 AudioManager.Instance.Resume();
                 LoadingTransition.Load("dai_dao_chi_gian_2");
 
-            }else if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-i")
+            }else if(book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-i" || book_seo=="dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" || book_seo=="cong-dong-phong-thuy-khoa-hoc" || book_seo=="tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
             {
                 LoadingTransition.Load(SeoResolver.DefaultScene);
                 AudioManager.Instance.Resume();
