@@ -6,7 +6,9 @@ public class AreaDisplayManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private BigArea[] bigAreasLocation;
     [SerializeField] private BigMapUI bigMapUIPrefab;
-    [Header("Others")]
+    [SerializeField] private RectTransform playerMarker;
+    [Header("Others")] 
+    [SerializeField] private GameObject player;
     [SerializeField] private GameObject uiAreaContainer;
     [SerializeField] private GameObject locationAreaContainer;
     [SerializeField] private Camera wrapperCamera;
@@ -41,5 +43,14 @@ public class AreaDisplayManager : MonoBehaviour
     public void Hide()
     {
         uiAreaContainer.gameObject.SetActive(false);
+    }
+
+    private void LateUpdate()
+    {
+        if (playerMarker && player && wrapperCamera)
+        {
+            var screenPosition = wrapperCamera.WorldToScreenPoint(player.transform.position);
+            playerMarker.position = screenPosition;
+        }
     }
 }
