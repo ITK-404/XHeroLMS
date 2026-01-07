@@ -14,6 +14,8 @@ public class PlayVideoOpenBook : MonoBehaviour
     [Header("Config")]
     public float stopTime = 28f;
 
+    public float extraEndDelay = 2f;
+
     private bool isPlaying = false;
 
     private void Awake()
@@ -32,14 +34,14 @@ public class PlayVideoOpenBook : MonoBehaviour
     public IEnumerator PlayCoroutine(string fullText)
     {
         if (isPlaying)
-            yield break; // đang chạy thì không cho chạy lại
+            yield break;
 
         isPlaying = true;
 
         // reset trước khi play (KHÔNG đụng isPlaying)
         ResetForNewPlay();
 
-        // ---- Prepare video ----
+        // ---- Prepare + Play video ----
         if (videoPlayer != null)
         {
             videoPlayer.time = 0;
@@ -50,27 +52,50 @@ public class PlayVideoOpenBook : MonoBehaviour
             videoPlayer.Play();
         }
 
+        // ---- Play extra audio (nếu có) ----
         if (audioSource != null)
         {
             audioSource.time = 0;
+            audioSource.loop = false;
             audioSource.Play();
         }
 
-        // ---- Text + TTS ----
+        // ---- Text + Course audio (AutomaticTextPreview) ----
         if (automaticTextPreview != null)
             automaticTextPreview.PlayTextAndSpeak(fullText);
 
-        // ---- Wait until reach stopTime ----
-        while (true)
+        // ---- Nếu có stopTime: chỉ PAUSE video tại mốc, KHÔNG stop mô tả ----
+        if (stopTime > 0f && videoPlayer != null)
         {
-            if (videoPlayer != null && videoPlayer.time >= stopTime)
+            while (isPlaying)
             {
-                if (videoPlayer.isPlaying)
-                    videoPlayer.Pause();
-                break;
+                if (videoPlayer.time >= stopTime)
+                {
+                    if (videoPlayer.isPlaying)
+                        videoPlayer.Pause(); // chỉ pause video
+                    break;
+                }
+                yield return null;
             }
-            yield return null;
         }
+
+        // ---- Chờ mô tả chạy xong + audio mô tả chạy xong ----
+        if (automaticTextPreview != null)
+        {
+            // chờ spawn text xong (AutomaticTextPreview đặt isShowTextDone = true ở cuối coroutine)
+            yield return new WaitUntil(() => !isPlaying || !automaticTextPreview.IsPlaying());
+
+            // chờ audio mô tả xong (nếu có clip)
+            yield return new WaitUntil(() =>
+                !isPlaying ||
+                automaticTextPreview.audioSource == null ||
+                !automaticTextPreview.audioSource.isPlaying
+            );
+        }
+
+        // ---- Đợi thêm +2s tránh cắt đột ngột ----
+        if (isPlaying && extraEndDelay > 0f)
+            yield return new WaitForSecondsRealtime(extraEndDelay);
 
         // ---- Finish ----
         StopInternal();
@@ -99,7 +124,6 @@ public class PlayVideoOpenBook : MonoBehaviour
 
         if (automaticTextPreview != null)
             automaticTextPreview.ResetRuntimeState(stopAudio: true);
-
     }
 
     private void StopInternal()
