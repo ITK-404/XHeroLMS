@@ -19,6 +19,11 @@ public class PlayerMarker : MonoBehaviour
 
     private void SyncRotation()
     {
+        if (player == null)
+        {
+            Debug.LogError("This player is null",gameObject);
+            return;
+        }
         float yRotation = player.transform.eulerAngles.y;
         yRotation -= normalizeValue;
         marker.transform.eulerAngles = new Vector3(0, 0, -yRotation);
