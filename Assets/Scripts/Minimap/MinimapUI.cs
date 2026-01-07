@@ -3,20 +3,23 @@ using UnityEngine.UI;
 
 public class MinimapUI : MonoBehaviour
 {
+    [Header("Minimap UI")]
     [SerializeField] private GameObject container;
+    [SerializeField] private GameObject maskView;
     public Button turnOnBtn;
     public Button turnOffBtn;
-    public GameObject maskView;
+    public Button showAreaList;
     private void Start()
     {
-        if (TokenStore.IsAuthenticated)
-        {
-            Show();
-        }
-        else
-        {
-            LoginController.OnLoginComplete += Show;
-        }
+        // if (TokenStore.IsAuthenticated)
+        // {
+        //     Show();
+        // }
+        // else
+        // {
+        //     LoginController.OnLoginComplete += Show;
+        // }
+        Show();
         ShowBottomViewUI();
     }
 
