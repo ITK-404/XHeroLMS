@@ -4,12 +4,11 @@ using UnityEngine.SceneManagement;
 
 public class CourseMenuButtons : MonoBehaviour
 {
-    [Header("UI")]
-    public Button btnAllCourses;
+    [Header("UI")] public Button btnAllCourses;
     public Button btnMyCourses;
     public Transform container;
-    [Header("Destination")]
-    [Tooltip("Tên scene đích")]
+
+    [Header("Destination")] [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
 
     // Khóa lưu tạm key giữa các scene
@@ -17,11 +16,12 @@ public class CourseMenuButtons : MonoBehaviour
 
     // Hằng số để dùng thống nhất
     public const string KEY_ALL = "All Courses";
-    public const string KEY_MY  = "My Courses";
+    public const string KEY_MY = "My Courses";
     public Transform player;
+
     void Awake()
     {
-        
+
         if (TokenStore.IsAuthenticated)
         {
             Show();
@@ -30,7 +30,7 @@ public class CourseMenuButtons : MonoBehaviour
         {
             LoginController.OnLoginComplete += Show;
         }
-        
+
         if (btnAllCourses != null)
             btnAllCourses.onClick.AddListener(() =>
             {
@@ -51,10 +51,16 @@ public class CourseMenuButtons : MonoBehaviour
         LoginController.OnLoginComplete -= Show;
     }
 
-    private void Show()
+    public void Show()
     {
         container.gameObject.SetActive(true);
     }
+
+    public void Hide()
+    {
+        container.gameObject.SetActive(false);
+    }
+
     void Go(string key)
     {
         PlayerPrefs.SetString(COURSE_KEY_PREF, key);
