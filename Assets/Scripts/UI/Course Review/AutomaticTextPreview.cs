@@ -12,14 +12,10 @@ public class AutomaticTextPreview : MonoBehaviour
     public RectTransform container;
 
     [Header("Course SEO (runtime)")]
-    // BuyReviewCourseManager sẽ set seoCourse mỗi lần chọn khoá học.
     public string seoCourse;
 
     [Header("Course Audio (Resources)")]
-    // AudioSource để play audio mô tả khoá học. Nếu null sẽ tự AddComponent.
     public AudioSource audioSource;
-
-    // Thư mục trong Resources. Mặc định: Resources/Audio_Course/<seo>.*
     public string resourcesAudioFolder = "Audio_Course";
 
     [Header("Spawn Words")]
@@ -27,55 +23,43 @@ public class AutomaticTextPreview : MonoBehaviour
     public float fadeTime = 0.08f;
 
     [Header("Auto Fit Text To Audio")]
-    // Nếu bật: tự tính delay để tổng thời gian spawn text ~ bằng audio.length (có ngắt câu theo dấu).
     public bool autoFitTextToAudio = true;
-
-    // Trừ bớt phần im lặng đầu audio (nếu audio có lead-in).
     public float audioLeadInSeconds = 0.25f;
 
-    // Clamp giây/chữ để tránh quá nhanh/quá chậm.
-    public float minSecondsPerWord = 0.06f;
-    public float maxSecondsPerWord = 0.60f;
+    [Tooltip("Clamp giây/word để tránh quá nhanh/quá chậm (nếu thấy tụt audio -> giảm max).")]
+    public float minSecondsPerWord = 0.04f;
+    public float maxSecondsPerWord = 0.35f;
 
-    [Header("Timing Units (for auto-fit)")]
-    // Base unit cho mỗi chữ (tỷ lệ), không phải giây.
-    public float baseUnitPerWord = 1f;
+    [Header("Character-weighted (recommended for AI/TTS)")]
+    [Tooltip("Hệ số units theo độ dài từ. Từ dài sẽ có units lớn hơn.")]
+    public float charUnitScale = 0.22f;
 
-    // Extra unit cho dấu phẩy ',' (tỷ lệ).
+    [Tooltip("Min/Max units cho 1 từ (tránh từ quá ngắn/quá dài phá timing).")]
+    public float minUnitsPerWord = 0.6f;
+    public float maxUnitsPerWord = 3.0f;
+
+    [Header("Extra Units (auto-fit)")]
     public float extraUnitComma = 0.5f;
+    public float extraUnitStrongPunc = 1.4f;   // giảm bớt cho hợp TTS
+    public float extraUnitEllipsis = 2.0f;
+    public float extraUnitLineBreak = 1.2f;    // nếu có line-break pause
 
-    // Extra unit cho dấu mạnh . ! ? ; : (tỷ lệ).
-    public float extraUnitStrongPunc = 2.0f;
-
-    // Extra unit cho dấu '...' (tỷ lệ).
-    public float extraUnitEllipsis = 2.5f;
-
-    // Extra unit cho xuống dòng \\n (tỷ lệ).
-    public float extraUnitLineBreak = 2.0f;
-
-    [Header("Fixed Timing Fallback (when no audio or auto-fit OFF)")]
-    // Mỗi chữ (giây)")]
-    public float fixedPerWordSeconds = 0.5f;
-
-    // Dấu ',' thêm (giây)")]
-    public float fixedCommaExtraSeconds = 0.25f;
-
-    // Các dấu còn lại (. ! ? ; : ... \\n) thêm (giây)
-    public float fixedStrongExtraSeconds = 1.0f;
+    [Header("Fixed Timing Fallback (no audio / auto-fit OFF)")]
+    public float fixedPerWordSeconds = 0.22f;
+    public float fixedCommaExtraSeconds = 0.15f;
+    public float fixedStrongExtraSeconds = 0.55f;
 
     private Coroutine playCoroutine;
     private bool isShowTextDone = true;
     private bool hasSpawned = false;
-
     private AudioClip _currentClip;
 
     public bool IsPlaying() => isShowTextDone == false;
     public bool HasSpawned() => hasSpawned;
 
-    /// <summary>
-    /// Spawn text + play course audio by seoCourse (if exists).
-    /// Nếu không có audio -> vẫn spawn text, chỉ silent.
-    /// </summary>
+    // Cho PlayVideoOpenBook chờ
+    public bool IsTextDone() => isShowTextDone;
+
     public void PlayTextAndSpeak(string text)
     {
         ResetRuntimeState(stopAudio: true);
@@ -92,7 +76,6 @@ public class AutomaticTextPreview : MonoBehaviour
 
         EnsureAudioSource();
 
-        // Load + play audio by SEO
         _currentClip = LoadCourseClip(seoCourse);
         if (_currentClip != null)
         {
@@ -102,7 +85,6 @@ public class AutomaticTextPreview : MonoBehaviour
         }
         else
         {
-            // Không có audio -> silent
             if (audioSource != null)
             {
                 audioSource.Stop();
@@ -145,7 +127,7 @@ public class AutomaticTextPreview : MonoBehaviour
 
     private IEnumerator SpawnWordsAutoFit(string text, AudioClip clip)
     {
-        yield return new WaitForSeconds(startDelay);
+        yield return new WaitForSecondsRealtime(startDelay);
 
         if (scrollRect == null || scrollRect.viewport == null || container == null || textPrefab == null)
         {
@@ -153,7 +135,9 @@ public class AutomaticTextPreview : MonoBehaviour
             yield break;
         }
 
-        var words = text.Split(new[] { ' ', '\t', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
+        // Split theo space/tab thôi (tránh mất newline token kiểu cũ).
+        // Nếu text có \n thì nó sẽ nằm trong word -> ta sẽ tính pause linebreak bằng Contains("\n").
+        var words = text.Split(new[] { ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0)
         {
             isShowTextDone = true;
@@ -162,25 +146,21 @@ public class AutomaticTextPreview : MonoBehaviour
 
         hasSpawned = true;
 
-        // ====== TÍNH TIMING ======
-        float baseDelaySeconds = fixedPerWordSeconds; // fallback
-        float unitSeconds = 0f;
         bool useAuto = autoFitTextToAudio && clip != null && clip.length > 0.25f;
+
+        // ====== AUTO-FIT: character-weighted ======
+        float unitSeconds = 0f;
 
         if (useAuto)
         {
-            // tính total units
             float totalUnits = 0f;
             for (int i = 0; i < words.Length; i++)
-                totalUnits += (baseUnitPerWord + GetExtraPauseUnits(words[i]));
+                totalUnits += GetWordUnits(words[i]);
 
             totalUnits = Mathf.Max(1f, totalUnits);
 
             float effectiveLen = Mathf.Max(0.1f, clip.length - Mathf.Max(0f, audioLeadInSeconds));
             unitSeconds = effectiveLen / totalUnits;
-
-            baseDelaySeconds = baseUnitPerWord * unitSeconds;
-            baseDelaySeconds = Mathf.Clamp(baseDelaySeconds, minSecondsPerWord, maxSecondsPerWord);
         }
 
         // ====== SPAWN LOOP ======
@@ -200,81 +180,82 @@ public class AutomaticTextPreview : MonoBehaviour
             if (contentWidth > viewportWidth)
                 scrollRect.DOHorizontalNormalizedPos(1f, 0.1f);
 
-            float extraSeconds;
+            float waitSeconds;
 
             if (useAuto && unitSeconds > 0f)
             {
-                extraSeconds = GetExtraPauseUnits(w) * unitSeconds;
+                // WordUnits * unitSeconds => delay theo độ dài từ + dấu câu
+                float wordUnits = GetWordUnits(w);
+
+                // đổi units -> seconds, rồi clamp theo giây/word để không quá chậm/quá nhanh
+                waitSeconds = wordUnits * unitSeconds;
+                waitSeconds = Mathf.Clamp(waitSeconds, minSecondsPerWord, maxSecondsPerWord);
             }
             else
             {
-                extraSeconds = GetExtraPauseSeconds_Fixed(w);
+                // fallback cố định
+                waitSeconds = fixedPerWordSeconds + GetExtraPauseSeconds_Fixed(w);
             }
 
-            yield return new WaitForSeconds(baseDelaySeconds + extraSeconds);
+            yield return new WaitForSecondsRealtime(waitSeconds);
         }
 
         playCoroutine = null;
         isShowTextDone = true;
     }
 
-    private void EnsureAudioSource()
+    // ======= Units: theo độ dài từ + dấu câu =======
+private float GetWordUnits(string word)
+{
+    if (string.IsNullOrEmpty(word)) return 1f;
+
+    // 1) Extra pause: chỉ tính 1 lần và cap
+    float extra = 0f;
+
+    // ellipsis: nếu có 3 chấm trở lên coi như 1 ellipsis
+    if (word.Contains("...")) extra += extraUnitEllipsis;
+
+    // line break
+    if (word.Contains("\n")) extra += extraUnitLineBreak;
+
+    // dấu câu cuối: nếu có nhiều dấu liên tiếp, vẫn coi như 1 lần
+    char last = word[word.Length - 1];
+    if (last == ',') extra += extraUnitComma;
+    else if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':')
+        extra += extraUnitStrongPunc;
+
+    // CAP: tránh token bị pause quá nhiều
+    extra = Mathf.Min(extra, extraUnitStrongPunc); // hoặc 1.6f tuỳ bạn
+
+    // 2) Length units: bỏ hết cụm dấu cuối (kể cả '-')
+    int pureLen = GetApproxPureLength(word);
+    float lenUnits = Mathf.Clamp(pureLen * charUnitScale, minUnitsPerWord, maxUnitsPerWord);
+
+    return lenUnits + extra;
+}
+
+    // Đếm “độ dài tương đối” (bỏ bớt ký tự dấu câu cuối) để units ổn định hơn
+private int GetApproxPureLength(string w)
+{
+    if (string.IsNullOrEmpty(w)) return 1;
+
+    w = w.Replace("\n", "").Replace("\r", "");
+
+    // trim hàng loạt dấu câu ở cuối (kể cả '-')
+    while (w.Length > 0)
     {
-        if (audioSource != null) return;
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-    }
-
-    private AudioClip LoadCourseClip(string seo)
-    {
-        if (string.IsNullOrWhiteSpace(seo)) return null;
-
-        seo = seo.Trim();
-        seo = StripExtension(seo);
-
-        string path = $"{resourcesAudioFolder}/{seo}";
-        var clip = Resources.Load<AudioClip>(path);
-
-        // Không có clip -> ok, silent mode
-        if (clip == null)
-            Debug.Log($"[AutomaticTextPreview] No audio for seo='{seo}' at Resources/{path}.*");
-
-        return clip;
-    }
-
-    private string StripExtension(string s)
-    {
-        int dot = s.LastIndexOf('.');
-        if (dot > 0 && dot > s.LastIndexOf('/') && dot > s.LastIndexOf('\\'))
-            return s.Substring(0, dot);
-        return s;
-    }
-
-    // ======= AUTO-FIT: UNITS =======
-    private float GetExtraPauseUnits(string word)
-    {
-        if (string.IsNullOrEmpty(word)) return 0f;
-
-        if (word.Contains("\n")) return extraUnitLineBreak;
-        if (word.Contains("...")) return extraUnitEllipsis;
-
-        char last = word[word.Length - 1];
-        switch (last)
+        char c = w[w.Length - 1];
+        if (c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':' || c == '-' || c == '—' || c == '–' ||
+            c == ')' || c == ']' || c == '}' || c == '"' || c == '\'' )
         {
-            case ',': return extraUnitComma;
-
-            case '.':
-            case '!':
-            case '?':
-            case ';':
-            case ':':
-                return extraUnitStrongPunc;
-
-            default:
-                return 0f;
+            w = w.Substring(0, w.Length - 1);
         }
+        else break;
     }
+
+    // nếu token chỉ còn toàn dấu (ví dụ "----") thì pureLen sẽ thành 0 => ép về 1
+    return Mathf.Max(1, w.Length);
+}
 
     // ======= FALLBACK: FIXED SECONDS =======
     private float GetExtraPauseSeconds_Fixed(string word)
@@ -300,6 +281,38 @@ public class AutomaticTextPreview : MonoBehaviour
             default:
                 return 0f;
         }
+    }
+
+    private void EnsureAudioSource()
+    {
+        if (audioSource != null) return;
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+    }
+
+    private AudioClip LoadCourseClip(string seo)
+    {
+        if (string.IsNullOrWhiteSpace(seo)) return null;
+
+        seo = seo.Trim();
+        seo = StripExtension(seo);
+
+        string path = $"{resourcesAudioFolder}/{seo}";
+        var clip = Resources.Load<AudioClip>(path);
+
+        if (clip == null)
+            Debug.Log($"[AutomaticTextPreview] No audio for seo='{seo}' at Resources/{path}.*");
+
+        return clip;
+    }
+
+    private string StripExtension(string s)
+    {
+        int dot = s.LastIndexOf('.');
+        if (dot > 0 && dot > s.LastIndexOf('/') && dot > s.LastIndexOf('\\'))
+            return s.Substring(0, dot);
+        return s;
     }
 
     private void ShowUI(bool active)

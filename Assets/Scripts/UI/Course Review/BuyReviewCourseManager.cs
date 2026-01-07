@@ -241,7 +241,6 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (SeoResolver.IsContainData() && SeoResolver.LmsCoursePrivate != null)
         {
             text = SeoResolver.LmsCoursePrivate.description;
-            Debug.Log("Description: " + text);
 
             if (!string.IsNullOrWhiteSpace(text))
             {
@@ -250,6 +249,7 @@ public class BuyReviewCourseManager : MonoBehaviour
                 text = Regex.Replace(text, @"[ \t]+", " ").Trim();
                 text = Regex.Replace(text, @"\n{3,}", "\n\n").Trim();
             }
+            Debug.Log("Description: " + text);
 
             if (string.IsNullOrWhiteSpace(text))
                 text = SeoResolver.LmsCoursePrivate.title;
