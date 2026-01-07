@@ -26,15 +26,12 @@ public class AutomaticTextPreview : MonoBehaviour
     public bool autoFitTextToAudio = true;
     public float audioLeadInSeconds = 0.25f;
 
-    [Tooltip("Clamp giây/word để tránh quá nhanh/quá chậm (nếu thấy tụt audio -> giảm max).")]
     public float minSecondsPerWord = 0.04f;
     public float maxSecondsPerWord = 0.35f;
 
     [Header("Character-weighted (recommended for AI/TTS)")]
-    [Tooltip("Hệ số units theo độ dài từ. Từ dài sẽ có units lớn hơn.")]
     public float charUnitScale = 0.22f;
 
-    [Tooltip("Min/Max units cho 1 từ (tránh từ quá ngắn/quá dài phá timing).")]
     public float minUnitsPerWord = 0.6f;
     public float maxUnitsPerWord = 3.0f;
 
@@ -135,8 +132,6 @@ public class AutomaticTextPreview : MonoBehaviour
             yield break;
         }
 
-        // Split theo space/tab thôi (tránh mất newline token kiểu cũ).
-        // Nếu text có \n thì nó sẽ nằm trong word -> ta sẽ tính pause linebreak bằng Contains("\n").
         var words = text.Split(new[] { ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0)
         {
@@ -148,7 +143,6 @@ public class AutomaticTextPreview : MonoBehaviour
 
         bool useAuto = autoFitTextToAudio && clip != null && clip.length > 0.25f;
 
-        // ====== AUTO-FIT: character-weighted ======
         float unitSeconds = 0f;
 
         if (useAuto)
@@ -204,58 +198,55 @@ public class AutomaticTextPreview : MonoBehaviour
         isShowTextDone = true;
     }
 
-    // ======= Units: theo độ dài từ + dấu câu =======
-private float GetWordUnits(string word)
-{
-    if (string.IsNullOrEmpty(word)) return 1f;
-
-    // 1) Extra pause: chỉ tính 1 lần và cap
-    float extra = 0f;
-
-    // ellipsis: nếu có 3 chấm trở lên coi như 1 ellipsis
-    if (word.Contains("...")) extra += extraUnitEllipsis;
-
-    // line break
-    if (word.Contains("\n")) extra += extraUnitLineBreak;
-
-    // dấu câu cuối: nếu có nhiều dấu liên tiếp, vẫn coi như 1 lần
-    char last = word[word.Length - 1];
-    if (last == ',') extra += extraUnitComma;
-    else if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':')
-        extra += extraUnitStrongPunc;
-
-    // CAP: tránh token bị pause quá nhiều
-    extra = Mathf.Min(extra, extraUnitStrongPunc); // hoặc 1.6f tuỳ bạn
-
-    // 2) Length units: bỏ hết cụm dấu cuối (kể cả '-')
-    int pureLen = GetApproxPureLength(word);
-    float lenUnits = Mathf.Clamp(pureLen * charUnitScale, minUnitsPerWord, maxUnitsPerWord);
-
-    return lenUnits + extra;
-}
-
-    // Đếm “độ dài tương đối” (bỏ bớt ký tự dấu câu cuối) để units ổn định hơn
-private int GetApproxPureLength(string w)
-{
-    if (string.IsNullOrEmpty(w)) return 1;
-
-    w = w.Replace("\n", "").Replace("\r", "");
-
-    // trim hàng loạt dấu câu ở cuối (kể cả '-')
-    while (w.Length > 0)
+    private float GetWordUnits(string word)
     {
-        char c = w[w.Length - 1];
-        if (c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':' || c == '-' || c == '—' || c == '–' ||
-            c == ')' || c == ']' || c == '}' || c == '"' || c == '\'' )
-        {
-            w = w.Substring(0, w.Length - 1);
-        }
-        else break;
+        if (string.IsNullOrEmpty(word)) return 1f;
+
+        // Extra pause: chỉ tính 1 lần và cap
+        float extra = 0f;
+
+        if (word.Contains("...")) extra += extraUnitEllipsis;
+
+        // line break
+        if (word.Contains("\n")) extra += extraUnitLineBreak;
+
+        // dấu câu cuối: nếu có nhiều dấu liên tiếp, vẫn coi như 1 lần
+        char last = word[word.Length - 1];
+        if (last == ',') extra += extraUnitComma;
+        else if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':')
+            extra += extraUnitStrongPunc;
+
+        // tránh token bị pause quá nhiều
+        extra = Mathf.Min(extra, extraUnitStrongPunc); // hoặc 1.6f tuỳ bạn
+
+        int pureLen = GetApproxPureLength(word);
+        float lenUnits = Mathf.Clamp(pureLen * charUnitScale, minUnitsPerWord, maxUnitsPerWord);
+
+        return lenUnits + extra;
     }
 
-    // nếu token chỉ còn toàn dấu (ví dụ "----") thì pureLen sẽ thành 0 => ép về 1
-    return Mathf.Max(1, w.Length);
-}
+    // Đếm “độ dài tương đối” (bỏ bớt ký tự dấu câu cuối) để units ổn định hơn
+    private int GetApproxPureLength(string w)
+    {
+        if (string.IsNullOrEmpty(w)) return 1;
+
+        w = w.Replace("\n", "").Replace("\r", "");
+
+        // trim hàng loạt dấu câu ở cuối (kể cả '-')
+        while (w.Length > 0)
+        {
+            char c = w[w.Length - 1];
+            if (c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':' || c == '-' || c == '—' || c == '–' ||
+                c == ')' || c == ']' || c == '}' || c == '"' || c == '\'')
+            {
+                w = w.Substring(0, w.Length - 1);
+            }
+            else break;
+        }
+
+        // nếu token chỉ còn toàn dấu (ví dụ "----") thì pureLen sẽ thành 0 => ép về 1
+        return Mathf.Max(1, w.Length);
+    }
 
     // ======= FALLBACK: FIXED SECONDS =======
     private float GetExtraPauseSeconds_Fixed(string word)
