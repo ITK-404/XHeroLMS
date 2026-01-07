@@ -9,7 +9,6 @@ using UnityEngine.Networking;
 public class CourseListPageAllUI : MonoBehaviour
 {
     [Header("API")]
-    // private string baseUrl = LmsStore.Instance.baseUrl; // Tự động đồng bộ baseUrl với LmsStore (DEV/PROD đổi 1 chỗ duy nhất)
     private string baseUrl;
 
     [Header("Auth")]
@@ -18,7 +17,6 @@ public class CourseListPageAllUI : MonoBehaviour
     public bool useTokenFromStore = true;
 
     [Header("Auto-run gate (optional)")]
-    [Tooltip("Chỉ chạy khi key scene khớp (đọc từ CourseMenuButtons)")]
     public bool runOnlyWhenKeyMatches = true;
     public string requiredKey = CourseMenuButtons.KEY_ALL;
 
@@ -26,28 +24,18 @@ public class CourseListPageAllUI : MonoBehaviour
     public int limitPerPage = 100;
     public string keyword = "";
     public string category = "";
-    // public string tag = "";
-    public string sortBy = "";   // ví dụ "createdAt"
-    public string order = "";    // "asc" | "desc"
+    public string sortBy = "";
+    public string order = "";
 
     [Header("UI – Kệ sách (global default)")]
-    [Tooltip("Kệ mặc định dùng nếu view cụ thể không chỉ định shelfPrefab riêng")]
     public BookShelfUI globalShelfPrefab;
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    // public string priceFormat = "{0:#,0}₫";
     public string priceFormat = "{0:#.0}'đ";
 
-    [Header("Book model tuning (không ảnh hưởng kệ)")]
-    [Range(0.1f, 2f)] public float bookModelScale = 0.85f;
-    public Vector3 bookModelLocalOffset = Vector3.zero;
-    public Vector3 bookModelLocalEulerOffset = Vector3.zero;
-
     [Header("Layout (cho mỗi view)")]
-    [Tooltip("Khoảng cách dọc giữa các kệ (anchoredPosition)")]
     public float shelfSpacingY = 260f;
-    [Tooltip("Offset X,Y cho kệ đầu tiên (anchoredPosition)")]
     public Vector2 firstShelfOffset = Vector2.zero;
     public bool clearOldOnReload = true;
     public bool autoRunOnStart = true;
@@ -55,24 +43,20 @@ public class CourseListPageAllUI : MonoBehaviour
     [Serializable]
     public class GroupView
     {
-        [Tooltip("Root ScrollView / Panel của view để bật/tắt")]
         public GameObject root;
-        [Tooltip("Content RectTransform bên trong ScrollView")]
         public RectTransform contentParent;
-        [Tooltip("Kệ riêng cho view này (optional). Để trống sẽ dùng globalShelfPrefab")]
         public BookShelfUI shelfPrefabOverride;
     }
 
     [Header("4 View tương ứng 4 group")]
-    public GroupView basicView;     // group = "basic"
-    public GroupView advancedView;  // group = "advanced"
-    public GroupView intensiveView; // group = "intensive"
-    public GroupView businessView;  // group = "business"
+    public GroupView basicView;
+    public GroupView advancedView;
+    public GroupView intensiveView;
+    public GroupView businessView;
 
-    // cache
     private readonly List<CourseData> _courses = new List<CourseData>();
     private TabUI tabUI;
-    private string _currentDesiredGroup = null; // "basic" | "advanced" | "intensive" | "business"
+    private string _currentDesiredGroup = null;
 
     [Serializable]
     public class CourseData
@@ -81,20 +65,25 @@ public class CourseListPageAllUI : MonoBehaviour
         public string title;
         public string sku;
         public string seoUrl;
+
         public float? originalPrice;
         public float? currentPrice;
-        // group info
-        public string group;          // "basic" | "advanced" | "intensive" | "business" ...
-        public List<string> groups;   // optional array fallback
+
+        public bool? isFree;    // coursePrice.isFree
+        public bool? needLogin; // settings.needLogin
+
+        public string group;
+        public List<string> groups;
     }
-public bool defaultOpenBasic = true;
+
+    public bool defaultOpenBasic = true;
 
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
 
         ToggleAllRoots(false);
-        
+
         if (defaultOpenBasic)
             _currentDesiredGroup = "basic";
     }
@@ -110,14 +99,13 @@ public bool defaultOpenBasic = true;
 
         if (ok) StartCoroutine(LoadAndSpawnAll());
     }
-    
+
     public void RefreshForTab(CourseLessonTabID id)
     {
         _currentDesiredGroup = MapGroup(id);
         RenderAccordingToCurrentGroup();
     }
 
-    /// Map enum tab -> group string
     public static string MapGroup(CourseLessonTabID id)
     {
         switch (id)
@@ -130,17 +118,12 @@ public bool defaultOpenBasic = true;
         }
     }
 
-    /// Fetch toàn bộ rồi render
     public IEnumerator LoadAndSpawnAll()
     {
         _courses.Clear();
 
+        // token có thể null, vẫn gọi /lms/courses để show chợ
         string token = GetToken();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            Debug.LogWarning("[CourseList/ALL] No token. Set overrideAccessToken or TokenStore.AccessToken.");
-            yield break;
-        }
 
         int nextSkip = 0;
         int page = 0;
@@ -171,7 +154,6 @@ public bool defaultOpenBasic = true;
             page++;
         }
 
-        // Nếu người dùng đã bấm tab trước khi fetch xong thì _currentDesiredGroup đã có
         if (string.IsNullOrEmpty(_currentDesiredGroup) && tabUI != null)
             _currentDesiredGroup = MapGroup(tabUI.tabID);
 
@@ -183,7 +165,6 @@ public bool defaultOpenBasic = true;
 
     void RenderAccordingToCurrentGroup()
     {
-        // Nếu có group hiện tại -> chỉ bật view tương ứng + render group đó
         if (!string.IsNullOrEmpty(_currentDesiredGroup))
         {
             ToggleAllRoots(false);
@@ -202,7 +183,7 @@ public bool defaultOpenBasic = true;
             SpawnShelvesInto(view, list);
             return;
         }
-        
+
         RenderAllGroupsToTheirViews();
     }
 
@@ -227,10 +208,10 @@ public bool defaultOpenBasic = true;
 
     void ToggleAllRoots(bool active)
     {
-        if (basicView != null && basicView.root != null)         basicView.root.SetActive(active);
-        if (advancedView != null && advancedView.root != null)   advancedView.root.SetActive(active);
+        if (basicView != null && basicView.root != null) basicView.root.SetActive(active);
+        if (advancedView != null && advancedView.root != null) advancedView.root.SetActive(active);
         if (intensiveView != null && intensiveView.root != null) intensiveView.root.SetActive(active);
-        if (businessView != null && businessView.root != null)   businessView.root.SetActive(active);
+        if (businessView != null && businessView.root != null) businessView.root.SetActive(active);
     }
 
     GroupView GetViewByGroup(string groupKey)
@@ -277,7 +258,7 @@ public bool defaultOpenBasic = true;
             }
 
             int start = shelfIndex * BOOKS_PER_SHELF;
-            int take  = Mathf.Min(BOOKS_PER_SHELF, list.Count - start);
+            int take = Mathf.Min(BOOKS_PER_SHELF, list.Count - start);
             var slice = list.GetRange(start, take);
 
             ApplyDataToShelf(shelf, slice);
@@ -301,90 +282,194 @@ public bool defaultOpenBasic = true;
             var data = slice[i];
 
             slot.book_name = data.title ?? "(no title)";
-            slot.book_sku  = data.sku ?? "";
-            slot.book_seo  = data.seoUrl ?? "";
+            slot.book_sku = data.sku ?? "";
+            slot.book_seo = data.seoUrl ?? "";
             slot.RefreshBookCover();
-            if (slot.bookHandleUI != null)
+
+            // GATE enter course
+            slot.OnRequestEnterCourse = HandleEnterCourseRequest;
+        }
+    }
+
+    // ================== ENTER COURSE GATE ==================
+    private void HandleEnterCourseRequest(BookHandler book)
+    {
+        if (book == null) return;
+        StartCoroutine(CoHandleEnterCourse(book));
+    }
+
+    CourseData FindCourseDataForBook(BookHandler book)
+    {
+        if (book == null) return null;
+
+        if (!string.IsNullOrEmpty(book.book_seo))
+        {
+            var d = _courses.Find(c =>
+                !string.IsNullOrEmpty(c.seoUrl) &&
+                string.Equals(c.seoUrl, book.book_seo, StringComparison.OrdinalIgnoreCase)
+            );
+            if (d != null) return d;
+        }
+
+        if (!string.IsNullOrEmpty(book.book_sku))
+        {
+            var d = _courses.Find(c =>
+                !string.IsNullOrEmpty(c.sku) &&
+                string.Equals(c.sku, book.book_sku, StringComparison.OrdinalIgnoreCase)
+            );
+            if (d != null) return d;
+        }
+
+        return null;
+    }
+
+    IEnumerator CoHandleEnterCourse(BookHandler book)
+    {
+        string token = GetToken(); // token raw (đã NormalizeBearer)
+        bool loggedIn = !string.IsNullOrWhiteSpace(token);
+
+        CourseData data = FindCourseDataForBook(book);
+
+        if (data == null)
+        {
+            Debug.LogWarning("[CourseGate] Không tìm thấy CourseData theo SEO/SKU -> fallback vào TryEnterCourse()");
+            yield return book.TryEnterCourse();
+            yield break;
+        }
+
+        // Nếu BE có needLogin=true thì dù free vẫn phải login
+        bool needLogin = data.needLogin ?? false;
+        bool isFree = data.isFree ?? false;
+
+        // ===== CHƯA LOGIN: CHỈ VÀO ĐƯỢC COURSE FREE (và needLogin phải false) =====
+        if (!loggedIn)
+        {
+            if (needLogin)
             {
-                if (slot.bookHandleUI.priceText != null)
-                {
-                    float? price = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)
-                                                        : (data.originalPrice ?? data.currentPrice);
-                    slot.bookHandleUI.priceText.text = price.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, price.Value)
-                        : "";
-                }
-
-                if (slot.bookHandleUI.fullPriceText != null)
-                {
-                    slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
-                        : "";
-                }
-
-                slot.bookHandleUI.RefreshColor();
+                Debug.Log($"[CourseGate] Guest + needLogin=true => BLOCK. seo={data.seoUrl}");
+                yield break;
             }
 
-            bool showBuy = (data.currentPrice ?? data.originalPrice) > 0;
-            slot.SetBuyCourse(showBuy);
+            if (!isFree)
+            {
+                Debug.Log($"[CourseGate] Guest + isFree=false => BLOCK. seo={data.seoUrl}");
+                yield break;
+            }
+
+            Debug.Log($"[CourseGate] Guest + isFree=true => ALLOW. seo={data.seoUrl}");
+            yield return book.TryEnterCourse();
+            yield break;
+        }
+
+        // ===== ĐÃ LOGIN: VÀO BÌNH THƯỜNG =====
+        // Nếu course free: thử grant, nhưng chấp nhận 409 như OK
+        if (isFree)
+        {
+            if (string.IsNullOrEmpty(data.id))
+            {
+                Debug.LogError($"[CourseGate] isFree=true nhưng thiếu courseId. seo={data.seoUrl} sku={data.sku}");
+                // vẫn cho vào thử theo flow cũ nếu bạn muốn:
+                yield return book.TryEnterCourse();
+                yield break;
+            }
+
+            bool ok = false;
+            yield return GrantFreeCourse(data.id, token, done => ok = done);
+
+            if (!ok)
+            {
+                // OPTION A (khuyên dùng): vẫn cho vào TryEnterCourse() để tránh “login lại bị chặn”
+                Debug.LogWarning($"[CourseGate] Grant FREE failed but LOGIN => fallback ALLOW. courseId={data.id} seo={data.seoUrl}");
+                yield return book.TryEnterCourse();
+                yield break;
+
+                // OPTION B: nếu muốn strict thì block:
+                // Debug.LogError($"[CourseGate] Grant FREE failed => BLOCK. courseId={data.id} seo={data.seoUrl}");
+                // yield break;
+            }
+        }
+
+        Debug.Log($"[CourseGate] LOGIN OK => vào TryEnterCourse(). seo={data.seoUrl}");
+        yield return book.TryEnterCourse();
+    }
+
+    IEnumerator GrantFreeCourse(string courseId, string token, Action<bool> onDone)
+    {
+        if (onDone == null) onDone = _ => { };
+
+        token = NormalizeBearer(token);
+
+        if (string.IsNullOrEmpty(courseId) || string.IsNullOrWhiteSpace(token))
+        {
+            onDone(false);
+            yield break;
+        }
+
+        string url = $"{baseUrl}/users/lms/courses/{courseId}/free";
+
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            req.uploadHandler = new UploadHandlerRaw(Array.Empty<byte>());
+            req.downloadHandler = new DownloadHandlerBuffer();
+
+            req.SetRequestHeader("Authorization", "Bearer " + token);
+            req.SetRequestHeader("Accept", "application/json");
+            req.SetRequestHeader("Content-Type", "application/json");
+
+            string xData = LmsSecurityHeader.BuildXDataHeader();
+            req.SetRequestHeader("x-data", xData);
+
+            Debug.Log($"[Course/FREE] POST {url} tokenLen={token.Length}");
+            yield return req.SendWebRequest();
+
+            long code = req.responseCode;
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
+
+            Debug.Log($"[Course/FREE] Status={code} Result={req.result} Error={req.error} Body={body}");
+
+            // CHỐT: coi 409 (already granted) là OK
+            bool ok = (code == 200 || code == 201 || code == 204 || code == 409);
+            onDone(ok);
         }
     }
 
-// ================== NETWORK ==================
-IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
-{
-    using (var req = UnityWebRequest.Get(url))
+    // ================== NETWORK ==================
+    IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
     {
-        // --- Header auth + accept ---
-        req.SetRequestHeader("Authorization", "Bearer " + token);
-        req.SetRequestHeader("Accept", "application/json");
+        using (var req = UnityWebRequest.Get(url))
+        {
+            token = NormalizeBearer(token);
 
-        // --- Thêm header x-data ---
-        string xData = LmsSecurityHeader.BuildXDataHeader();
-        req.SetRequestHeader("x-data", xData);
+            if (!string.IsNullOrWhiteSpace(token))
+                req.SetRequestHeader("Authorization", "Bearer " + token);
 
-        Debug.Log($"[CourseList/ALL] URL: {url}");
-        Debug.Log($"[CourseList/ALL] x-data (sent): {xData}");
+            req.SetRequestHeader("Accept", "application/json");
 
-        yield return req.SendWebRequest();
+            string xData = LmsSecurityHeader.BuildXDataHeader();
+            req.SetRequestHeader("x-data", xData);
+
+            yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-        bool error = req.result == UnityWebRequest.Result.ConnectionError ||
-                     req.result == UnityWebRequest.Result.ProtocolError;
+            bool error = req.result == UnityWebRequest.Result.ConnectionError ||
+                         req.result == UnityWebRequest.Result.ProtocolError;
 #else
-        bool error = req.isNetworkError || req.isHttpError;
+            bool error = req.isNetworkError || req.isHttpError;
 #endif
 
-        string body = req.downloadHandler.text;
+            string body = req.downloadHandler.text;
 
-        Debug.Log(
-            $"[CourseList/ALL] RESPONSE\n" +
-            $"- Status: {req.responseCode}\n" +
-            $"- Error: {req.error}\n" +
-            $"- Body: {body}\n" +
-            $"- x-data used: {xData}\n" +
-            $"- URL: {url}"
-        );
-
-        if (error)
-        {
-            Debug.LogError($"[CourseList/ALL] ERROR RESPONSE ({req.responseCode})");
-            onErrorBody?.Invoke(body);
-        }
-        else
-        {
-            onSuccess?.Invoke(body);
+            if (error) onErrorBody?.Invoke(body);
+            else onSuccess?.Invoke(body);
         }
     }
-}
 
     string BuildUrl(int skip, int limit)
     {
-        var sb = new StringBuilder(string.Format("{0}/lms/courses?skip={1}&limit={2}", baseUrl, skip, limit));
-        if (!string.IsNullOrEmpty(keyword))  sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy))   sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
-        if (!string.IsNullOrEmpty(order))    sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
-        // if (!string.IsNullOrEmpty(tag))      sb.Append("&tag=").Append(UnityWebRequest.EscapeURL(tag));
+        var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
+        if (!string.IsNullOrEmpty(keyword)) sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
+        if (!string.IsNullOrEmpty(sortBy)) sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
+        if (!string.IsNullOrEmpty(order)) sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
         if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
         return sb.ToString();
     }
@@ -393,8 +478,10 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
     {
         if (!string.IsNullOrWhiteSpace(overrideAccessToken))
             return NormalizeBearer(overrideAccessToken);
+
         if (useTokenFromStore && !string.IsNullOrWhiteSpace(TokenStore.AccessToken))
             return NormalizeBearer(TokenStore.AccessToken);
+
         return null;
     }
 
@@ -406,7 +493,7 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         return t;
     }
 
-    // ---------------- Minimal JSON ----------------
+    // ---------------- Minimal JSON parse ----------------
     string ExtractItemsArray(string raw)
     {
         if (string.IsNullOrEmpty(raw)) return "[]";
@@ -468,7 +555,7 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         if (string.IsNullOrEmpty(arrJson)) return list;
 
         int start = arrJson.IndexOf('[');
-        int end   = arrJson.LastIndexOf(']');
+        int end = arrJson.LastIndexOf(']');
         if (start < 0 || end <= start) return list;
 
         int i = start + 1;
@@ -508,9 +595,11 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         float? p1 = TryParseFloat(MatchNestedNumberField(objJson, "coursePrice", "originalPrice"));
         float? p2 = TryParseFloat(MatchNestedNumberField(objJson, "coursePrice", "currentPrice"));
 
-        // parse group / groups
-        string group = MatchStringField(objJson, "group"); // string
-        var groups = MatchStringArrayField(objJson, "groups"); // ["basic","advanced"]
+        bool? isFree = TryParseBool(MatchNestedBoolField(objJson, "coursePrice", "isFree"));
+        bool? needLogin = TryParseBool(MatchNestedBoolField(objJson, "settings", "needLogin"));
+
+        string group = MatchStringField(objJson, "group");
+        var groups = MatchStringArrayField(objJson, "groups");
 
         return new CourseData
         {
@@ -520,6 +609,8 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
             seoUrl = seoUrl,
             originalPrice = p1,
             currentPrice = p2,
+            isFree = isFree,
+            needLogin = needLogin,
             group = string.IsNullOrEmpty(group) ? null : group.Trim(),
             groups = groups
         };
@@ -531,6 +622,13 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         float v;
         if (float.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v))
             return v;
+        return null;
+    }
+
+    bool? TryParseBool(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return null;
+        if (bool.TryParse(s, out var b)) return b;
         return null;
     }
 
@@ -578,7 +676,24 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         return MatchNumberField(sub, child);
     }
 
-    // parse array of strings for field name (e.g., "groups": ["basic","advanced"])
+    string MatchNestedBoolField(string objJson, string parent, string child)
+    {
+        int pIdx = objJson.IndexOf("\"" + parent + "\"", StringComparison.OrdinalIgnoreCase);
+        if (pIdx < 0) return null;
+
+        int braceIdx = objJson.IndexOf('{', pIdx);
+        if (braceIdx < 0) return null;
+
+        int end = FindMatchingBracket(objJson, braceIdx, '{', '}');
+        if (end <= braceIdx) return null;
+
+        string sub = objJson.Substring(braceIdx, end - braceIdx + 1);
+
+        var rx = new Regex("\"" + Regex.Escape(child) + "\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
+        var m = rx.Match(sub);
+        return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
+    }
+
     List<string> MatchStringArrayField(string objJson, string field)
     {
         int fIdx = objJson.IndexOf("\"" + field + "\"", StringComparison.OrdinalIgnoreCase);
@@ -601,7 +716,6 @@ IEnumerator GET(string url, string token, Action<string> onSuccess, Action<strin
         return list.Count > 0 ? list : null;
     }
 
-    // ================== GROUP FILTER ==================
     bool MatchesGroup(CourseData c, string desired)
     {
         if (string.IsNullOrEmpty(desired) || c == null) return true;

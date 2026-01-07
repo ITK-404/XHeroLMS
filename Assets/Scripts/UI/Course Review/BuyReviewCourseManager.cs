@@ -76,54 +76,18 @@ public class BuyReviewCourseManager : MonoBehaviour
         SaveKey();
     }
 
-    private void OnReplayClicked()
-    {
-        if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
-            playVideoHandleUI.autoSkipToggle.isOn = false;
-
-        ShowBookPreviewUI(currentBookSelect);
-    }
-
-    private void OnAutoSkipChanged(bool value) => autoSkipVideo = value;
-
-    private void SaveKey() => PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY, autoSkipVideo ? 1 : 0);
-
-    private void LoadKey()
-    {
-        if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
-            autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
-    }
-
     private void EnterCourse()
     {
-        if(currentBookSelect)
-            StartCoroutine(currentBookSelect.TryEnterCourse());
-        // if (currentBookSelect == null) return;
-        //
-        // if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
-        //     LoadingTransition.Load("dai_dao_chi_gian_2");
-        // else if (currentBookSelect.book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i")
-        //     LoadingTransition.Load(SeoResolver.DefaultScene);
-        // else
-        // {
-        //     LoadingUI.ShowErrorPopup(
-        //         "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-        //         "Thông báo",
-        //         () => { BookHandler.CanSelectBook = true; }
-        //     );
-        // }
+        if (!currentBookSelect) return;
+
+        // đi qua gate của BookHandler (nếu CourseListPageAllUI đã gắn OnRequestEnterCourse)
+        currentBookSelect.EnterCourse();
     }
 
     public void ShowBookPreviewUI(BookHandler bookHandler)
     {
-        if (bookHandler == null)
-        {
-            Debug.Log("Book handler is null");
-            return;
-        }
-
-        if (playVideoOpenBook != null && playVideoOpenBook.IsPlayingVideo())
-            return;
+        if (bookHandler == null) return;
+        if (playVideoOpenBook != null && playVideoOpenBook.IsPlayingVideo()) return;
 
         needFetchData = currentBookSelect != bookHandler;
         currentBookSelect = bookHandler;
@@ -143,12 +107,10 @@ public class BuyReviewCourseManager : MonoBehaviour
     {
         if (playVideoHandleUI != null) playVideoHandleUI.Hide();
 
-        // set course seo globally (existing logic)
         SeoResolver.seoCourse = currentBookSelect.book_seo;
 
-        // IMPORTANT: truyền seo xuống AutomaticTextPreview để nó load audio theo seo hiện tại
         if (automaticTextPreview != null)
-            automaticTextPreview.seoCourse = SeoResolver.seoCourse; // fallback nếu bạn chưa gắn seoProvider
+            automaticTextPreview.seoCourse = SeoResolver.seoCourse;
 
         ShowBuyCourseUI();
 
@@ -161,16 +123,18 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (needFetchData)
         {
             yield return SeoResolver.LoadPrivateAndFillData();
-            yield return new WaitForSecondsRealtime(0.2f);
+            yield return new WaitForSecondsRealtime(0.1f);
         }
 
         LoadingUI.Hide();
 
-        if (!SeoResolver.IsContainData())
+        // CHANGED: Preview không còn bắt buộc private
+        // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
+        if (!SeoResolver.canEnterCourse)
         {
             BookHandler.CanSelectBook = false;
             LoadingUI.ShowErrorPopup(
-                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Bạn cần đăng nhập để xem/ vào khóa học này.",
                 "Thông báo",
                 () => { BookHandler.CanSelectBook = true; }
             );
@@ -178,19 +142,23 @@ public class BuyReviewCourseManager : MonoBehaviour
             yield break;
         }
 
+        // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
         if (courseReviewUI != null)
-            courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
+        {
+            if (SeoResolver.LmsCoursePrivate != null)
+                courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
+            else
+                courseReviewUI.RefreshCourseUI(null); // nếu hàm không support null thì bỏ dòng này
+        }
 
         string apiText = GetApiFullTextFromCourse();
 
         if (!autoSkipVideo)
         {
             if (playVideoHandleUI != null) playVideoHandleUI.Show();
-
             if (playVideoOpenBook != null)
                 yield return playVideoOpenBook.PlayCoroutine(apiText);
 
-            // chạy xong video -> reset lại (để lần sau chạy ngon)
             ResetAfterPreviewFinished();
         }
         else
@@ -205,40 +173,11 @@ public class BuyReviewCourseManager : MonoBehaviour
         previewCoroutine = null;
     }
 
-    private void ResetAfterPreviewFinished()
-    {
-        // reset text preview state + stop audio (nếu đang chạy)
-        if (automaticTextPreview != null)
-        {
-            // dùng stopAudio (tên mới). Nếu class bạn chưa đổi param name thì đổi lại cho khớp.
-            automaticTextPreview.ResetRuntimeState(stopAudio: true);
-        }
-    }
-
-    private void StartShowAndPlayCourseAudio(string fullText)
-    {
-        if (string.IsNullOrWhiteSpace(fullText)) return;
-
-        // AutomaticTextPreview tự load audio theo seoCourse (đã set ở trên)
-        if (automaticTextPreview != null)
-            automaticTextPreview.PlayTextAndSpeak(fullText);
-    }
-
-    private void StopAllPreviewRuntime()
-    {
-        // stop text preview + stop audio
-        if (automaticTextPreview != null)
-            automaticTextPreview.ResetRuntimeState(stopAudio: true);
-
-        if (playVideoOpenBook != null)
-            playVideoOpenBook.Stop();
-    }
-
     private string GetApiFullTextFromCourse()
     {
         string text = null;
 
-        if (SeoResolver.IsContainData() && SeoResolver.LmsCoursePrivate != null)
+        if (SeoResolver.LmsCoursePrivate != null)
         {
             text = SeoResolver.LmsCoursePrivate.description;
 
@@ -249,20 +188,38 @@ public class BuyReviewCourseManager : MonoBehaviour
                 text = Regex.Replace(text, @"[ \t]+", " ").Trim();
                 text = Regex.Replace(text, @"\n{3,}", "\n\n").Trim();
             }
-            Debug.Log("Description: " + text);
 
             if (string.IsNullOrWhiteSpace(text))
                 text = SeoResolver.LmsCoursePrivate.title;
         }
 
+        // fallback khi không có private (guest free)
         if (string.IsNullOrWhiteSpace(text) && currentBookSelect != null)
             text = currentBookSelect.book_name;
 
-        if (string.IsNullOrWhiteSpace(text))
-            return "";
+        return text ?? "";
+    }
 
-        Debug.Log($"[API_TEXT_FULL] len={text.Length}");
-        return text;
+    private void ResetAfterPreviewFinished()
+    {
+        if (automaticTextPreview != null)
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
+    }
+
+    private void StartShowAndPlayCourseAudio(string fullText)
+    {
+        if (string.IsNullOrWhiteSpace(fullText)) return;
+        if (automaticTextPreview != null)
+            automaticTextPreview.PlayTextAndSpeak(fullText);
+    }
+
+    private void StopAllPreviewRuntime()
+    {
+        if (automaticTextPreview != null)
+            automaticTextPreview.ResetRuntimeState(stopAudio: true);
+
+        if (playVideoOpenBook != null)
+            playVideoOpenBook.Stop();
     }
 
     public void Skip()
@@ -286,5 +243,23 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         if (courseReviewUI != null) courseReviewUI.Hide();
         if (tabItemManagerUI != null) tabItemManagerUI.Show();
+    }
+
+    private void OnReplayClicked()
+    {
+        if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
+            playVideoHandleUI.autoSkipToggle.isOn = false;
+
+        ShowBookPreviewUI(currentBookSelect);
+    }
+
+    private void OnAutoSkipChanged(bool value) => autoSkipVideo = value;
+
+    private void SaveKey() => PlayerPrefs.SetInt(AUTO_SKIP_SAVE_KEY, autoSkipVideo ? 1 : 0);
+
+    private void LoadKey()
+    {
+        if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
+            autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
     }
 }

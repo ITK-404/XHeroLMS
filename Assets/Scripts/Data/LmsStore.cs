@@ -392,7 +392,7 @@ public class LmsStore : MonoBehaviour
 
     IEnumerator GET(string url, Action<string> onSuccess, bool withXData = false)
     {
-        if (!EnsureToken()) yield break;
+        // if (!EnsureToken()) yield break;
 
         using (var req = UnityWebRequest.Get(url))
         {
@@ -403,7 +403,9 @@ public class LmsStore : MonoBehaviour
             Debug.Log($"[LMS] Token length = {token?.Length}");
 
             // JWT
-            req.SetRequestHeader("Authorization", "Bearer " + token);
+            if (!string.IsNullOrWhiteSpace(token))
+                req.SetRequestHeader("Authorization", "Bearer " + token);
+
             req.SetRequestHeader("Accept", "application/json");
 
             // === THÊM HEADER x-data KHI CẦN ===
@@ -558,6 +560,7 @@ public class LmsStore : MonoBehaviour
 public class LmsSettings
 {
     public string finalExam;   // BE có thể trả "finalExam": "<examId>"
+    public bool needLogin;
 }
 
 [Serializable]
