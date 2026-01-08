@@ -1,16 +1,15 @@
 using System;
-using Unity.Cinemachine;
 using UnityEngine;
 
 public class MinimapManager : MonoBehaviour
 {
     [Header("Others")]
-    [SerializeField] private CinemachineCamera minimapCamera;
     [SerializeField] private GameObject player;
     [Header("UI")]
     [SerializeField] private MinimapUI minimapUI;
     [SerializeField] private CameraZoomSlider cameraZoomSlider;
     [SerializeField] private AreaDisplayManager areaDisplayManager;
+    [SerializeField] private MinimapCameraHandler minimapCameraHandler;
     private void Awake()
     {
         minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
@@ -26,18 +25,17 @@ public class MinimapManager : MonoBehaviour
 
     private void ToggleOff()
     {
-        minimapCamera.Priority.Value = 0;
-        player.GetComponent<PlayerCamera>().playerCinemachineCamera.Priority.Value = 10;
-        
         UpdateState(false);
+        minimapCameraHandler.FocusPlayerCamera();
+        areaDisplayManager.ResetArea();
+        Debug.Log($"Toggle vao player camera");
     }
     
     private void ToggleOn()
     {
-        minimapCamera.Priority.Value = 10;
-        player.GetComponent<PlayerCamera>().playerCinemachineCamera.Priority.Value = 0;
-        
+        Debug.Log($"Toggle vao minimap camera");
         UpdateState(true);
+        minimapCameraHandler.FocusMinimapCamera();
     }
 
     private void UpdateState(bool isEnable)

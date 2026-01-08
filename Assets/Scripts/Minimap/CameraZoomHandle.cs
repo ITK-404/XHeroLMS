@@ -22,6 +22,6 @@ public class CameraZoomHandle : MonoBehaviour
 
     public void Zoom(float normalize)
     {
-        minimapCamera.Lens.FieldOfView = Mathf.Lerp(minZoom, maxZoom, normalize);
+        minimapCamera.Lens.FieldOfView = Mathf.Lerp(maxZoom, minZoom, normalize);
     }
 }

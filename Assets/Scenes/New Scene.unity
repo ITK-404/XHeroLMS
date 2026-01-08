@@ -11261,6 +11261,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 55
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -11904,6 +11912,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[11].Rotation.value.z
       value: -0.03580289
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -22864,6 +22880,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 12.37
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 38.29
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -23091,6 +23115,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[3].Rotation.value.z
       value: 0.000389132
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -33049,6 +33081,7 @@ GameObject:
   m_Component:
   - component: {fileID: 247433863}
   - component: {fileID: 247433864}
+  - component: {fileID: 247433865}
   m_Layer: 0
   m_Name: Minimap
   m_TagString: Untagged
@@ -33090,11 +33123,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4d0242e07d3a427b9bee614ad1e3ad9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MinimapManager
-  minimapCamera: {fileID: 1633920236}
   player: {fileID: 8692491915194145231}
   minimapUI: {fileID: 1159425343}
   cameraZoomSlider: {fileID: 2125026010}
   areaDisplayManager: {fileID: 714706946}
+  minimapCameraHandler: {fileID: 247433865}
+--- !u!114 &247433865
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 247433862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a63a7b842794cc78fbdf07c134dfa23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MinimapCameraHandler
+  minimapCamera: {fileID: 1633920236}
+  playerCmCamera: {fileID: 2063354179}
+  areaContainer: {fileID: 452795056}
 --- !u!115 &247860831
 MonoScript:
   m_ObjectHideFlags: 0
@@ -59284,6 +59332,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -8.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 36.4
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -59483,6 +59539,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[3].Rotation.value.y
       value: 0.39394757
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -64380,6 +64444,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 35
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -64799,6 +64867,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[7].Rotation.value.z
       value: 0.84859794
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -65892,6 +65968,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -66239,6 +66319,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[1].m_Knots.Array.data[0].Rotation.value.z
       value: -0.03835788
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -85824,6 +85912,7 @@ MonoBehaviour:
   uiAreaContainer: {fileID: 506354662}
   locationAreaContainer: {fileID: 452795056}
   wrapperCamera: {fileID: 413529770562562033}
+  minimapCameraHandler: {fileID: 247433865}
   minimapLayerMask:
     serializedVersion: 2
     m_Bits: 1024
@@ -95275,7 +95364,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_RaycastPadding: {x: -20, y: -20, z: -20, w: -40}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -142778,6 +142867,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.06
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 35
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -143005,6 +143102,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[3].Rotation.value.z
       value: -0.049379237
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -160388,6 +160493,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -160675,6 +160784,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[4].Rotation.value.z
       value: -0.09544692
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -163922,6 +164039,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -164341,6 +164462,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[7].Rotation.value.z
       value: 0.19773018
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -175032,6 +175161,17 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -4545423930167495100, guid: e65c81d6b39371e439e970b1c56870fd, type: 3}
+--- !u!114 &2063354179 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2194130746621988607, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+  m_PrefabInstance: {fileID: 887599357988543951}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
 --- !u!114 &2065592117
 MonoBehaviour:
   m_ObjectHideFlags: 2
@@ -178965,6 +179105,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 56.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 48.8
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -179172,6 +179320,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[3].Rotation.value.z
       value: 0.31382984
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6596280669808720977, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: mapData
@@ -182781,6 +182937,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 452795057}
     m_Modifications:
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 70
+      objectReference: {fileID: 0}
+    - target: {fileID: 144917626913955878, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 100
+      objectReference: {fileID: 0}
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.size
       value: 1
@@ -183856,6 +184020,14 @@ PrefabInstance:
     - target: {fileID: 2052382581694674060, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_Splines.Array.data[1].m_Knots.Array.data[11].Rotation.value.z
       value: -0.04643019
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5317822573653170505, guid: d96412b75fac347eb8d01fc461572645, type: 3}
+      propertyPath: Priority.m_Value
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7197887144541603677, guid: d96412b75fac347eb8d01fc461572645, type: 3}
       propertyPath: m_LocalPosition.x

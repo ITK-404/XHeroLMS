@@ -14,7 +14,8 @@ public class AreaDisplayManager : MonoBehaviour
     [SerializeField] private GameObject uiAreaContainer;
     [SerializeField] private GameObject locationAreaContainer;
     [SerializeField] private Camera wrapperCamera;
-
+    
+    [SerializeField] private MinimapCameraHandler minimapCameraHandler;
     private List<BigMapUI> bigMapUIList = new(); 
 
     private void Awake()
@@ -89,13 +90,16 @@ public class AreaDisplayManager : MonoBehaviour
         {
             return;
         }
-        
-        var ray = wrapperCamera.ScreenPointToRay(Input.mousePosition);
 
-        if (Physics.Raycast(ray, out var raycastHit, minimapLayerMask))
+        if (Input.GetMouseButtonDown(0))
         {
-            if (raycastHit.collider.TryGetComponent(out BigArea bigArea))
+            var ray = wrapperCamera.ScreenPointToRay(Input.mousePosition);
+            
+            if (Physics.Raycast(ray, out var raycastHit,Mathf.Infinity, minimapLayerMask))
             {
+                Debug.Log("Hit something in highlight area");
+                var bigArea = raycastHit.collider.GetComponentInParent<BigArea>();
+                Debug.Log($"Hit Area: {raycastHit.collider.gameObject}",raycastHit.collider.gameObject);
                 HighlightSingleArea(bigArea);
             }
         }
@@ -105,14 +109,23 @@ public class AreaDisplayManager : MonoBehaviour
     {
         foreach (var area in bigAreasLocation)
         {
-            if(area == selectArea)
-            {
-                area.Highlight();
-            }
-            else
+            if (area != selectArea)
             {
                 area.UnHighlight();
-            }     
+            }
         }
+
+        if (selectArea != null)
+        {
+            selectArea.Highlight();
+            
+            var focusCam = selectArea.GetFocusCamera();
+            minimapCameraHandler.TryFocusCamera(focusCam);
+        }
+    }
+
+    public void ResetArea()
+    {
+        HighlightSingleArea(null);
     }
 }
