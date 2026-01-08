@@ -40,7 +40,6 @@ Shader "Custom/AlwaysOnTop3D_HiddenByUI"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             fixed4 _Color;
-
             v2f vert (appdata v) {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
@@ -52,7 +51,6 @@ Shader "Custom/AlwaysOnTop3D_HiddenByUI"
 
             fixed4 frag (v2f i) : SV_Target {
                 fixed4 col = tex2D(_MainTex, i.uv) * i.color;
-                
                 // Loại bỏ ảnh hưởng của sương mù bằng cách ép màu về đúng col ban đầu
                 // Hoặc đơn giản là không áp dụng UNITY_APPLY_FOG
                 return col;
