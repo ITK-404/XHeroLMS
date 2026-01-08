@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Splines;
 
 public class BigArea : MonoBehaviour
 {
@@ -6,12 +7,17 @@ public class BigArea : MonoBehaviour
     public AreaMapLocation Location => location;
     [SerializeField] private AreaMapData mapData;
     public AreaMapData Data => mapData;
+    [Header("Highlight")] 
+    [SerializeField] private SplineContainer spline;
+    [SerializeField] private LineRenderer lineRenderer;
+    
     private void Awake()
     {
         location = GetComponent<AreaMapLocation>();
         LoadForDebug();
     }
-
+    
+    [ContextMenu("Load For Debug")]
     private void LoadForDebug()
     {
         if (mapData != null)
