@@ -69,6 +69,8 @@ public class CourseListPageAllUI : MonoBehaviour
         public float? originalPrice;
         public float? currentPrice;
 
+        public bool? isJoined;
+
         public bool? isFree;    // coursePrice.isFree
         public bool? needLogin; // settings.needLogin
 
@@ -122,7 +124,6 @@ public class CourseListPageAllUI : MonoBehaviour
     {
         _courses.Clear();
 
-        // token có thể null, vẫn gọi /lms/courses để show chợ
         string token = GetToken();
 
         int nextSkip = 0;
@@ -282,11 +283,47 @@ public class CourseListPageAllUI : MonoBehaviour
             var data = slice[i];
 
             slot.book_name = data.title ?? "(no title)";
-            slot.book_sku = data.sku ?? "";
-            slot.book_seo = data.seoUrl ?? "";
+            slot.book_sku  = data.sku ?? "";
+            slot.book_seo  = data.seoUrl ?? "";
             slot.RefreshBookCover();
 
-            // GATE enter course
+            float? displayPrice = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)
+                                                       : (data.originalPrice ?? data.currentPrice);
+
+            if (slot.bookHandleUI != null)
+            {
+                if (slot.bookHandleUI.priceText != null)
+                {
+                    slot.bookHandleUI.priceText.text = displayPrice.HasValue
+                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
+                        : "";
+                }
+
+                if (slot.bookHandleUI.fullPriceText != null)
+                {
+                    slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
+                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
+                        : "";
+                }
+
+                slot.bookHandleUI.RefreshColor();
+            }
+
+            bool joined = data.isJoined ?? false;
+            float priceVal = displayPrice ?? 0f;
+
+            var viewUI = slot.bookHandleUI as BookViewUI;
+            if (viewUI != null)
+            {
+                viewUI.ApplyCourseState(joined, priceVal);
+            }
+            else
+            {
+                // Fallback theo logic cũ: mua nếu price > 0
+                bool showBuy = priceVal > 0;
+                slot.SetBuyCourse(showBuy);
+            }
+
             slot.OnRequestEnterCourse = HandleEnterCourseRequest;
         }
     }
@@ -325,7 +362,7 @@ public class CourseListPageAllUI : MonoBehaviour
 
     IEnumerator CoHandleEnterCourse(BookHandler book)
     {
-        string token = GetToken(); // token raw (đã NormalizeBearer)
+        string token = GetToken();
         bool loggedIn = !string.IsNullOrWhiteSpace(token);
 
         CourseData data = FindCourseDataForBook(book);
@@ -337,38 +374,29 @@ public class CourseListPageAllUI : MonoBehaviour
             yield break;
         }
 
-        // Nếu BE có needLogin=true thì dù free vẫn phải login
-        bool needLogin = data.needLogin ?? false;
-        bool isFree = data.isFree ?? false;
-
-        // ===== CHƯA LOGIN: CHỈ VÀO ĐƯỢC COURSE FREE (và needLogin phải false) =====
-        if (!loggedIn)
+        // đã joined thì vào học luôn
+        if (data.isJoined ?? false)
         {
-            if (needLogin)
-            {
-                Debug.Log($"[CourseGate] Guest + needLogin=true => BLOCK. seo={data.seoUrl}");
-                yield break;
-            }
-
-            if (!isFree)
-            {
-                Debug.Log($"[CourseGate] Guest + isFree=false => BLOCK. seo={data.seoUrl}");
-                yield break;
-            }
-
-            Debug.Log($"[CourseGate] Guest + isFree=true => ALLOW. seo={data.seoUrl}");
             yield return book.TryEnterCourse();
             yield break;
         }
 
-        // ===== ĐÃ LOGIN: VÀO BÌNH THƯỜNG =====
-        // Nếu course free: thử grant, nhưng chấp nhận 409 như OK
+        bool needLogin = data.needLogin ?? false;
+        bool isFree = data.isFree ?? false;
+
+        if (!loggedIn)
+        {
+            if (needLogin) yield break;
+            if (!isFree) yield break;
+
+            yield return book.TryEnterCourse();
+            yield break;
+        }
+
         if (isFree)
         {
             if (string.IsNullOrEmpty(data.id))
             {
-                Debug.LogError($"[CourseGate] isFree=true nhưng thiếu courseId. seo={data.seoUrl} sku={data.sku}");
-                // vẫn cho vào thử theo flow cũ nếu bạn muốn:
                 yield return book.TryEnterCourse();
                 yield break;
             }
@@ -378,18 +406,11 @@ public class CourseListPageAllUI : MonoBehaviour
 
             if (!ok)
             {
-                // OPTION A (khuyên dùng): vẫn cho vào TryEnterCourse() để tránh “login lại bị chặn”
-                Debug.LogWarning($"[CourseGate] Grant FREE failed but LOGIN => fallback ALLOW. courseId={data.id} seo={data.seoUrl}");
                 yield return book.TryEnterCourse();
                 yield break;
-
-                // OPTION B: nếu muốn strict thì block:
-                // Debug.LogError($"[CourseGate] Grant FREE failed => BLOCK. courseId={data.id} seo={data.seoUrl}");
-                // yield break;
             }
         }
 
-        Debug.Log($"[CourseGate] LOGIN OK => vào TryEnterCourse(). seo={data.seoUrl}");
         yield return book.TryEnterCourse();
     }
 
@@ -419,15 +440,9 @@ public class CourseListPageAllUI : MonoBehaviour
             string xData = LmsSecurityHeader.BuildXDataHeader();
             req.SetRequestHeader("x-data", xData);
 
-            Debug.Log($"[Course/FREE] POST {url} tokenLen={token.Length}");
             yield return req.SendWebRequest();
 
             long code = req.responseCode;
-            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
-
-            Debug.Log($"[Course/FREE] Status={code} Result={req.result} Error={req.error} Body={body}");
-
-            // CHỐT: coi 409 (already granted) là OK
             bool ok = (code == 200 || code == 201 || code == 204 || code == 409);
             onDone(ok);
         }
@@ -598,6 +613,9 @@ public class CourseListPageAllUI : MonoBehaviour
         bool? isFree = TryParseBool(MatchNestedBoolField(objJson, "coursePrice", "isFree"));
         bool? needLogin = TryParseBool(MatchNestedBoolField(objJson, "settings", "needLogin"));
 
+        bool? isJoined = TryParseBool(MatchBoolField(objJson, "isJoined"));
+        if (isJoined == null) isJoined = TryParseBool(MatchBoolField(objJson, "joined"));
+
         string group = MatchStringField(objJson, "group");
         var groups = MatchStringArrayField(objJson, "groups");
 
@@ -609,6 +627,7 @@ public class CourseListPageAllUI : MonoBehaviour
             seoUrl = seoUrl,
             originalPrice = p1,
             currentPrice = p2,
+            isJoined = isJoined,
             isFree = isFree,
             needLogin = needLogin,
             group = string.IsNullOrEmpty(group) ? null : group.Trim(),
@@ -644,6 +663,13 @@ public class CourseListPageAllUI : MonoBehaviour
         var rx = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)", RegexOptions.IgnoreCase);
         var m = rx.Match(objJson);
         return m.Success ? m.Groups[1].Value : null;
+    }
+
+    string MatchBoolField(string objJson, string field)
+    {
+        var rx = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
+        var m = rx.Match(objJson);
+        return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
     }
 
     string MatchNestedStringField(string objJson, string parent, string child)

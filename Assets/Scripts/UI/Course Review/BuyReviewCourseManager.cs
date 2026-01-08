@@ -26,6 +26,8 @@ public class BuyReviewCourseManager : MonoBehaviour
 
     private bool needFetchData;
     private Coroutine previewCoroutine;
+    private bool lastLoggedIn;
+
 
     private void Awake()
     {
@@ -42,6 +44,8 @@ public class BuyReviewCourseManager : MonoBehaviour
             enterCourseBtn.onClick.AddListener(EnterCourse);
 
         LoadKey();
+        lastLoggedIn = IsLoggedIn();
+
 
         if (playVideoHandleUI != null && playVideoHandleUI.autoSkipToggle != null)
         {
@@ -89,8 +93,14 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (bookHandler == null) return;
         if (playVideoOpenBook != null && playVideoOpenBook.IsPlayingVideo()) return;
 
-        needFetchData = currentBookSelect != bookHandler;
-        currentBookSelect = bookHandler;
+bool nowLoggedIn = IsLoggedIn();
+
+// refetch nếu đổi book HOẶC vừa thay đổi trạng thái login (guest -> logged)
+needFetchData = (currentBookSelect != bookHandler) || (nowLoggedIn != lastLoggedIn);
+
+currentBookSelect = bookHandler;
+lastLoggedIn = nowLoggedIn;
+
 
         StopAllPreviewRuntime();
 
@@ -130,17 +140,31 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         // CHANGED: Preview không còn bắt buộc private
         // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
-        if (!SeoResolver.canEnterCourse)
-        {
-            BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để xem/ vào khóa học này.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
-            previewCoroutine = null;
-            yield break;
-        }
+if (!SeoResolver.canEnterCourse)
+{
+    if (!IsLoggedIn())
+    {
+        BookHandler.CanSelectBook = false;
+        LoadingUI.ShowErrorPopup(
+            "Bạn cần đăng nhập để xem/ vào khóa học này.",
+            "Thông báo",
+            () => { BookHandler.CanSelectBook = true; }
+        );
+        previewCoroutine = null;
+        yield break;
+    }
+
+    // Logged-in mà vẫn canEnterCourse=false => state lỗi hoặc token invalid
+    BookHandler.CanSelectBook = false;
+    LoadingUI.ShowErrorPopup(
+       "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+        "Thông báo",
+        () => { BookHandler.CanSelectBook = true; }
+    );
+    previewCoroutine = null;
+    yield break;
+}
+
 
         // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
         if (courseReviewUI != null)
@@ -237,6 +261,11 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (playVideoHandleUI != null) playVideoHandleUI.Hide();
     }
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/// <summary>
+/// Hide CourseReviewUI and show TabItemManagerUI, stopping any preview runtime
+/// </summary>
+/*******  4ee58a2a-7f4d-4cca-9b5d-71ecf4ef614a  *******/
     public void ShowBuyCourseUI()
     {
         StopAllPreviewRuntime();
@@ -262,4 +291,10 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
             autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
     }
+
+private bool IsLoggedIn()
+{
+    return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+}
+
 }

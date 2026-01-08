@@ -52,12 +52,12 @@ public class LessonSender : MonoBehaviour
         // Kiểm tra kết quả
         if (request.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log("✅ Gửi thành công!");
+            Debug.Log("Gửi thành công!");
             Debug.Log("Response: " + request.downloadHandler.text);
         }
         else
         {
-            Debug.LogError($"❌ Lỗi: {request.responseCode} - {request.error}");
+            Debug.LogError($"Lỗi: {request.responseCode} - {request.error}");
             Debug.LogError(request.downloadHandler.text);
         }
     }
