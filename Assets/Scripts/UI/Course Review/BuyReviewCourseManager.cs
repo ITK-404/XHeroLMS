@@ -84,6 +84,31 @@ public class BuyReviewCourseManager : MonoBehaviour
         currentBookSelect.EnterCourse();
     }
 
+    private bool IsLoggedIn()
+    {
+        return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+    }
+
+    private void ShowNeedLoginPopup()
+    {
+        BookHandler.CanSelectBook = false;
+        LoadingUI.ShowErrorPopup(
+            "Bạn cần đăng nhập để vào khóa học này.",
+            "Thông báo",
+            () => { BookHandler.CanSelectBook = true; }
+        );
+    }
+
+    private void ShowNotSupportedPopup()
+    {
+        BookHandler.CanSelectBook = false;
+        LoadingUI.ShowErrorPopup(
+            "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác",
+            "Thông báo",
+            () => { BookHandler.CanSelectBook = true; }
+        );
+    }
+
     public void ShowBookPreviewUI(BookHandler bookHandler)
     {
         if (bookHandler == null) return;
@@ -120,6 +145,17 @@ public class BuyReviewCourseManager : MonoBehaviour
             timeoutHeader: "Lỗi Mạng"
         );
 
+        // ===== báo cần login, không call private =====
+        bool loggedIn = IsLoggedIn();
+        if (!loggedIn)
+        {
+            LoadingUI.Hide();
+            ShowNeedLoginPopup();
+            previewCoroutine = null;
+            yield break;
+        }
+
+        // ===== loggedIn: mới fetch private =====
         if (needFetchData)
         {
             yield return SeoResolver.LoadPrivateAndFillData();
@@ -128,28 +164,16 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         LoadingUI.Hide();
 
-        // CHANGED: Preview không còn bắt buộc private
-        // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
-        if (!SeoResolver.canEnterCourse)
+        if (!SeoResolver.canEnterCourse || SeoResolver.LmsCoursePrivate == null)
         {
-            BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để xem/ vào khóa học này.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
+            ShowNotSupportedPopup();
             previewCoroutine = null;
             yield break;
         }
 
-        // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
+        // render đầy đủ khi có private
         if (courseReviewUI != null)
-        {
-            if (SeoResolver.LmsCoursePrivate != null)
-                courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
-            else
-                courseReviewUI.RefreshCourseUI(null); // nếu hàm không support null thì bỏ dòng này
-        }
+            courseReviewUI.RefreshCourseUI(SeoResolver.LmsCoursePrivate);
 
         string apiText = GetApiFullTextFromCourse();
 
@@ -193,7 +217,6 @@ public class BuyReviewCourseManager : MonoBehaviour
                 text = SeoResolver.LmsCoursePrivate.title;
         }
 
-        // fallback khi không có private (guest free)
         if (string.IsNullOrWhiteSpace(text) && currentBookSelect != null)
             text = currentBookSelect.book_name;
 
