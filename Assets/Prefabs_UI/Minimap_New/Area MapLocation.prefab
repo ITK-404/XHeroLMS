@@ -228,6 +228,7 @@ GameObject:
   - component: {fileID: 7328838960599054321}
   - component: {fileID: 2052382581694674060}
   - component: {fileID: 5388368936620212585}
+  - component: {fileID: 1130072262964236344}
   m_Layer: 0
   m_Name: Spline
   m_TagString: Untagged
@@ -292,6 +293,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SplineConverter
   splineContainer: {fileID: 2052382581694674060}
   lineRenderer: {fileID: 5676894378833413407}
+--- !u!114 &1130072262964236344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8935652443942587992}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09395df22d66a42b0841c851fafb315a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SplineToMeshCollider
+  splineContainer: {fileID: 2052382581694674060}
+  meshHeight: 0.1
+  resolution: 50
+  useConvexCollider: 0
 --- !u!1 &8983653681505884835
 GameObject:
   m_ObjectHideFlags: 0
@@ -353,3 +370,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BigArea
   mapData: {fileID: 11400000, guid: ac03ae696f3864dc68a6de31f57afef7, type: 2}
+  spline: {fileID: 2052382581694674060}
+  lineRenderer: {fileID: 5676894378833413407}
