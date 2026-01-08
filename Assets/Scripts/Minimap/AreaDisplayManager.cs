@@ -95,7 +95,7 @@ public class AreaDisplayManager : MonoBehaviour
         {
             var ray = wrapperCamera.ScreenPointToRay(Input.mousePosition);
             
-            if (Physics.Raycast(ray, out var raycastHit,Mathf.Infinity, minimapLayerMask))
+            if (Physics.Raycast(ray, out var raycastHit,Mathf.Infinity, minimapLayerMask,QueryTriggerInteraction.Collide))
             {
                 Debug.Log("Hit something in highlight area");
                 var bigArea = raycastHit.collider.GetComponentInParent<BigArea>();
