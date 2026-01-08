@@ -7,15 +7,19 @@ public class BookViewUI : MonoBehaviour
 {
     public Button enterCourseBtn;
     public Button buyCourseBtn;
-    public Color leftColor;
-    public Color rightColor;
+
     public TextMeshProUGUI priceText;
     public TextMeshProUGUI fullPriceText;
 
+    public Color leftColor;
+    public Color rightColor;
+
     private void Awake()
     {
-        ShowEnterCourse();
+        // mặc định
+        ShowEnterCourse("Vào học");
     }
+
     private void OnEnable()
     {
         TMPro_EventManager.TEXT_CHANGED_EVENT.Add(OnTextChanged);
@@ -24,14 +28,12 @@ public class BookViewUI : MonoBehaviour
     private void OnDisable()
     {
         TMPro_EventManager.TEXT_CHANGED_EVENT.Remove(OnTextChanged);
-        
     }
-    
-    private void OnTextChanged(Object obj){
+
+    private void OnTextChanged(Object obj)
+    {
         if (obj == priceText)
-        {
             RefreshColor();
-        }
     }
 
     [ContextMenu("Refresh Color")]
@@ -50,6 +52,8 @@ public class BookViewUI : MonoBehaviour
     private void LocalRefreshColor()
     {
         var tmp = priceText;
+        if (tmp == null) return;
+
         tmp.ForceMeshUpdate();
         var textInfo = tmp.textInfo;
 
@@ -76,19 +80,37 @@ public class BookViewUI : MonoBehaviour
             tmp.textInfo.meshInfo[i].mesh.colors32 = tmp.textInfo.meshInfo[i].colors32;
             tmp.UpdateGeometry(tmp.textInfo.meshInfo[i].mesh, i);
         }
+
         tmp.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-
     }
 
-    public void ShowEnterCourse()
+    public void ApplyCourseState(bool joined, float price)
     {
-        enterCourseBtn.gameObject.SetActive(true);
-        buyCourseBtn.gameObject.SetActive(false);
+        if (joined)
+        {
+            ShowEnterCourse("Vào học");
+            return;
+        }
+
+        if (price > 0f)
+        {
+            ShowBuyCourseButton("Ghi danh");
+            return;
+        }
+
+        // free
+        ShowEnterCourse("Vào học");
     }
 
-    public void ShowBuyCourseButton()
+    public void ShowEnterCourse(string label = null)
     {
-        enterCourseBtn.gameObject.SetActive(false);
-        buyCourseBtn.gameObject.SetActive(true);
+        if (enterCourseBtn != null) enterCourseBtn.gameObject.SetActive(true);
+        if (buyCourseBtn != null) buyCourseBtn.gameObject.SetActive(false);
+    }
+
+    public void ShowBuyCourseButton(string label = null)
+    {
+        if (enterCourseBtn != null) enterCourseBtn.gameObject.SetActive(false);
+        if (buyCourseBtn != null) buyCourseBtn.gameObject.SetActive(true);
     }
 }
