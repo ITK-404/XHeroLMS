@@ -505,10 +505,15 @@ private IEnumerator SubmitExamRoutine(bool timeUp)
         UpdateNavButtons();
     }
 
-    public void ReviewHighlightNavIndex(int index)
-    {
-        if (_navItems == null || _navItems.Count == 0) return;
+public void ReviewHighlightNavIndex(int index)
+{
+    if (_navItems == null || _navItems.Count == 0) return;
 
+    var rp = reviewPanel;
+
+    // Không có reviewPanel: Selected + Unanswered
+    if (rp == null)
+    {
         for (int i = 0; i < _navItems.Count; i++)
         {
             var el = _navItems[i];
@@ -517,7 +522,32 @@ private IEnumerator SubmitExamRoutine(bool timeUp)
             if (i == index) el.ShowSelectedAnswerButton();
             else            el.SetUnansweredButton();
         }
+        return;
     }
+
+    // Có reviewPanel: Selected / Correct-InCorrect / Unanswered
+    for (int i = 0; i < _navItems.Count; i++)
+    {
+        var el = _navItems[i];
+        if (!el) continue;
+
+        if (i == index)
+        {
+            el.ShowSelectedAnswerButton();
+            continue;
+        }
+
+        if (rp.IsQuestionAnsweredInReview(i))
+        {
+            if (rp.IsQuestionCorrectInReview(i)) el.ShowCorrectButton();
+            else                                 el.ShowInCorrectButton();
+        }
+        else
+        {
+            el.SetUnansweredButton();
+        }
+    }
+}
 
     private void RefreshAllNavStates()
     {
