@@ -24,6 +24,12 @@ public class ExamResultReviewPanel : ExamQuestionManager
     [Header("Matching Review (optional override)")]
     [SerializeField] private GameObject matchingReviewPrefab;  // prefab có MatchingElementHandler
 
+    [Header("Statistics (Thông số)")]
+    [SerializeField] private GameObject statisticsObj;     // object thông số (root)
+    [SerializeField] private TMP_Text txtCorrectCount;     // txt số câu đúng
+    [SerializeField] private TMP_Text txtWrongCount;       // txt số câu sai
+    [SerializeField] private TMP_Text txtSkippedCount;     // txt số câu bỏ qua
+
     // ----- state review -----
     private ExamPaper _paper;
     private Dictionary<string, HashSet<int>> _userPicked;
@@ -114,6 +120,8 @@ public class ExamResultReviewPanel : ExamQuestionManager
         RebuildNavForReview();
         HijackBaseNav();
         RenderReview();
+
+        UpdateStatisticsPanel();
 
         if (closeBtn)
         {
@@ -238,6 +246,8 @@ public class ExamResultReviewPanel : ExamQuestionManager
         if (btnNext) btnNext.interactable = _idx < _paper.questions.Count - 1;
 
         ReviewHighlightNavIndex(_idx);
+        UpdateStatisticsPanel();
+
     }
 
     private void RenderMatchingReadOnly(ExamQuestion q)
@@ -514,145 +524,239 @@ public class ExamResultReviewPanel : ExamQuestionManager
         _navHijacked = false;
     }
 
-private bool IsMatchingExactlyCorrect(ExamQuestion q)
-{
-    if (q == null) return false;
-
-    // raw pairs user: có thể left->right hoặc right->left tuỳ nơi lưu
-    if (_matchingUserPairs == null ||
-        !_matchingUserPairs.TryGetValue(q.id, out var rawPairs) ||
-        rawPairs == null || rawPairs.Count == 0)
-        return false;
-
-    // correct strings từ server (format: "<p>LEFT</p>-<p>RIGHT</p>")
-    if (_correctMatchingStrings == null ||
-        !_correctMatchingStrings.TryGetValue(q.id, out var correctList) ||
-        correctList == null || correctList.Count == 0)
-        return false;
-
-    // Build correct set
-    var correctSet = new HashSet<string>();
-    foreach (var s in correctList)
+    private bool IsMatchingExactlyCorrect(ExamQuestion q)
     {
-        var norm = NormalizeMatchingPair_SubmitStyle(s);
-        if (!string.IsNullOrEmpty(norm))
-            correctSet.Add(norm);
-    }
+        if (q == null) return false;
 
-    // Split sides đúng kiểu submit/service: options[0] / options[1]
-    GetMatchingSides_SubmitStyleSafe(q, out var left, out var right);
-    if (left.Count == 0 || right.Count == 0) return false;
+        // raw pairs user: có thể left->right hoặc right->left tuỳ nơi lưu
+        if (_matchingUserPairs == null ||
+            !_matchingUserPairs.TryGetValue(q.id, out var rawPairs) ||
+            rawPairs == null || rawPairs.Count == 0)
+            return false;
 
-    // Heuristic xác định rawPairs đang là right->left hay left->right
-    int scoreRightLeft = 0;
-    int scoreLeftRight = 0;
+        // correct strings từ server (format: "<p>LEFT</p>-<p>RIGHT</p>")
+        if (_correctMatchingStrings == null ||
+            !_correctMatchingStrings.TryGetValue(q.id, out var correctList) ||
+            correctList == null || correctList.Count == 0)
+            return false;
 
-    foreach (var kv in rawPairs)
-    {
-        int a = kv.Key;
-        int b = kv.Value;
-
-        // a=right, b=left
-        if (a >= 0 && a < right.Count && b >= 0 && b < left.Count) scoreRightLeft++;
-        // a=left, b=right
-        if (a >= 0 && a < left.Count && b >= 0 && b < right.Count) scoreLeftRight++;
-    }
-
-    bool isRightLeft = scoreRightLeft > scoreLeftRight;
-
-    // Build user set
-    var userSet = new HashSet<string>();
-
-    foreach (var kv in rawPairs)
-    {
-        int leftIndex, rightIndex;
-
-        if (isRightLeft)
+        // Build correct set
+        var correctSet = new HashSet<string>();
+        foreach (var s in correctList)
         {
-            // raw: right -> left
-            rightIndex = kv.Key;
-            leftIndex  = kv.Value;
-        }
-        else
-        {
-            // raw: left -> right
-            leftIndex  = kv.Key;
-            rightIndex = kv.Value;
+            var norm = NormalizeMatchingPair_SubmitStyle(s);
+            if (!string.IsNullOrEmpty(norm))
+                correctSet.Add(norm);
         }
 
-        // bounds check tránh crash
-        if (leftIndex < 0 || leftIndex >= left.Count) continue;
-        if (rightIndex < 0 || rightIndex >= right.Count) continue;
+        // Split sides đúng kiểu submit/service: options[0] / options[1]
+        GetMatchingSides_SubmitStyleSafe(q, out var left, out var right);
+        if (left.Count == 0 || right.Count == 0) return false;
 
-        string pair = $"<p>{left[leftIndex]}</p>-<p>{right[rightIndex]}</p>";
-        var norm = NormalizeMatchingPair_SubmitStyle(pair);
-        if (!string.IsNullOrEmpty(norm))
-            userSet.Add(norm);
+        // Heuristic xác định rawPairs đang là right->left hay left->right
+        int scoreRightLeft = 0;
+        int scoreLeftRight = 0;
+
+        foreach (var kv in rawPairs)
+        {
+            int a = kv.Key;
+            int b = kv.Value;
+
+            // a=right, b=left
+            if (a >= 0 && a < right.Count && b >= 0 && b < left.Count) scoreRightLeft++;
+            // a=left, b=right
+            if (a >= 0 && a < left.Count && b >= 0 && b < right.Count) scoreLeftRight++;
+        }
+
+        bool isRightLeft = scoreRightLeft > scoreLeftRight;
+
+        // Build user set
+        var userSet = new HashSet<string>();
+
+        foreach (var kv in rawPairs)
+        {
+            int leftIndex, rightIndex;
+
+            if (isRightLeft)
+            {
+                // raw: right -> left
+                rightIndex = kv.Key;
+                leftIndex = kv.Value;
+            }
+            else
+            {
+                // raw: left -> right
+                leftIndex = kv.Key;
+                rightIndex = kv.Value;
+            }
+
+            // bounds check tránh crash
+            if (leftIndex < 0 || leftIndex >= left.Count) continue;
+            if (rightIndex < 0 || rightIndex >= right.Count) continue;
+
+            string pair = $"<p>{left[leftIndex]}</p>-<p>{right[rightIndex]}</p>";
+            var norm = NormalizeMatchingPair_SubmitStyle(pair);
+            if (!string.IsNullOrEmpty(norm))
+                userSet.Add(norm);
+        }
+
+        if (userSet.Count == 0) return false;
+        return userSet.SetEquals(correctSet);
     }
 
-    if (userSet.Count == 0) return false;
-    return userSet.SetEquals(correctSet);
-}
-
-private static string NormalizeMatchingPair_SubmitStyle(string pair)
-{
-    if (string.IsNullOrWhiteSpace(pair)) return "";
-
-    const string sep = "</p>-<p>";
-    int idx = pair.IndexOf(sep);
-    if (idx < 0)
+    private static string NormalizeMatchingPair_SubmitStyle(string pair)
     {
-        // fallback: normalize cả chuỗi
-        return NormalizeForCompare(pair);
+        if (string.IsNullOrWhiteSpace(pair)) return "";
+
+        const string sep = "</p>-<p>";
+        int idx = pair.IndexOf(sep);
+        if (idx < 0)
+        {
+            // fallback: normalize cả chuỗi
+            return NormalizeForCompare(pair);
+        }
+
+        // left part includes "</p>"
+        string leftPart = pair.Substring(0, idx + 4);
+        // right part starts after sep; add "<p>" back for StripP
+        string rightPart = "<p>" + pair.Substring(idx + sep.Length);
+
+        string l = StripP(leftPart);
+        string r = StripP(rightPart);
+
+        return $"{NormalizeForCompare(l)}|{NormalizeForCompare(r)}";
     }
 
-    // left part includes "</p>"
-    string leftPart = pair.Substring(0, idx + 4);
-    // right part starts after sep; add "<p>" back for StripP
-    string rightPart = "<p>" + pair.Substring(idx + sep.Length);
-
-    string l = StripP(leftPart);
-    string r = StripP(rightPart);
-
-    return $"{NormalizeForCompare(l)}|{NormalizeForCompare(r)}";
-}
-
-/// <summary>
-/// Split sides theo đúng kiểu submit/service:
-/// q.options[0] = "<p>..</p>-<p>..</p>-..."
-/// q.options[1] = "<p>..</p>-<p>..</p>-..."
-/// </summary>
-private static void GetMatchingSides_SubmitStyleSafe(ExamQuestion q, out List<string> left, out List<string> right)
-{
-    left = new List<string>();
-    right = new List<string>();
-
-    if (q == null || q.options == null || q.options.Count < 2) return;
-
-    left = SplitRawSide(q.options[0]);
-    right = SplitRawSide(q.options[1]);
-}
-
-private static List<string> SplitRawSide(string raw)
-{
-    var list = new List<string>();
-    if (string.IsNullOrEmpty(raw)) return list;
-
-    // raw dùng dấu '-' để tách, mỗi phần thường là "<p>...</p>"
-    var parts = raw.Split(new[] { '-' }, System.StringSplitOptions.RemoveEmptyEntries);
-    foreach (var p in parts)
+    private static void GetMatchingSides_SubmitStyleSafe(ExamQuestion q, out List<string> left, out List<string> right)
     {
-        var s = StripP(p).Trim();
-        if (!string.IsNullOrEmpty(s))
-            list.Add(s);
+        left = new List<string>();
+        right = new List<string>();
+
+        if (q == null || q.options == null || q.options.Count < 2) return;
+
+        left = SplitRawSide(q.options[0]);
+        right = SplitRawSide(q.options[1]);
     }
-    return list;
-}
 
-private static string StripP(string s)
-{
-    if (string.IsNullOrEmpty(s)) return "";
-    return s.Replace("<p>", "").Replace("</p>", "");
-}
+    private static List<string> SplitRawSide(string raw)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrEmpty(raw)) return list;
 
+        // raw dùng dấu '-' để tách, mỗi phần thường là "<p>...</p>"
+        var parts = raw.Split(new[] { '-' }, System.StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in parts)
+        {
+            var s = StripP(p).Trim();
+            if (!string.IsNullOrEmpty(s))
+                list.Add(s);
+        }
+        return list;
+    }
+
+    private static string StripP(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Replace("<p>", "").Replace("</p>", "");
+    }
+    public bool IsQuestionAnsweredInReview(int questionIndex)
+    {
+        if (_paper?.questions == null) return false;
+        if (questionIndex < 0 || questionIndex >= _paper.questions.Count) return false;
+
+        var q = _paper.questions[questionIndex];
+
+        // ESSAY: có text
+        if (_essayMapReview != null &&
+            _essayMapReview.TryGetValue(q.id, out var txt) &&
+            !string.IsNullOrWhiteSpace(txt))
+            return true;
+
+        // còn lại: có chọn
+        HashSet<int> set = null;
+        if (_userPicked != null) _userPicked.TryGetValue(q.id, out set);
+
+        return set != null && set.Count > 0;
+    }
+
+    public bool IsQuestionCorrectInReview(int questionIndex)
+    {
+        if (_paper?.questions == null) return false;
+        if (questionIndex < 0 || questionIndex >= _paper.questions.Count) return false;
+
+        var q = _paper.questions[questionIndex];
+
+        // effective type (ESSAY có thể override)
+        var effectiveType = q.type;
+        if (_essayMapReview != null && _essayMapReview.ContainsKey(q.id))
+            effectiveType = ExamQuestionType.ESSAY;
+
+        // userSet
+        HashSet<int> userSet = null;
+        if (_userPicked != null) _userPicked.TryGetValue(q.id, out userSet);
+        userSet ??= new HashSet<int>();
+
+        // correctSetRaw
+        HashSet<int> correctSetRaw = null;
+        if (_correctPicked != null) _correctPicked.TryGetValue(q.id, out correctSetRaw);
+
+        // correctSet (0-based)
+        var correctSet = NormalizeCorrectIndexSet(q, correctSetRaw);
+
+        // correctTextSet
+        HashSet<string> correctTextSet = null;
+        if (_correctByText != null) _correctByText.TryGetValue(q.id, out correctTextSet);
+
+        if (effectiveType == ExamQuestionType.ESSAY)
+        {
+            // logic hiện tại: có bài essay => đúng
+            return _essayMapReview != null &&
+                   _essayMapReview.TryGetValue(q.id, out var txt) &&
+                   !string.IsNullOrWhiteSpace(txt);
+        }
+
+        if (effectiveType == ExamQuestionType.MATCHING)
+            return IsMatchingExactlyCorrect(q);
+
+        return IsExactlyCorrect(q, userSet, correctSet, correctTextSet);
+    }
+    private void UpdateStatisticsPanel()
+    {
+        if (statisticsObj == null)
+            return;
+
+        // bật object thông số khi review đang chạy
+        statisticsObj.SetActive(true);
+
+        if (_paper?.questions == null || _paper.questions.Count == 0)
+        {
+            if (txtCorrectCount) txtCorrectCount.text = "0";
+            if (txtWrongCount) txtWrongCount.text = "0";
+            if (txtSkippedCount) txtSkippedCount.text = "0";
+            return;
+        }
+
+        int correct = 0;
+        int wrong = 0;
+        int skipped = 0;
+
+        for (int i = 0; i < _paper.questions.Count; i++)
+        {
+            bool answered = IsQuestionAnsweredInReview(i);
+
+            if (!answered)
+            {
+                skipped++;
+                continue;
+            }
+
+            bool isCorrect = IsQuestionCorrectInReview(i);
+            if (isCorrect) correct++;
+            else wrong++;
+        }
+
+        if (txtCorrectCount) txtCorrectCount.text = $"{correct} câu";
+        if (txtWrongCount)   txtWrongCount.text = $"{wrong} câu";
+        if (txtSkippedCount) txtSkippedCount.text = $"{skipped} câu";
+    }
 }
