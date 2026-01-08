@@ -26,4 +26,18 @@ public class BigArea : MonoBehaviour
         }
     }
 
+    public SplineContainer GetSpline()
+    {
+        return spline;
+    }
+
+    public void Highlight()
+    {
+        lineRenderer.gameObject.SetActive(true);
+    }
+
+    public void UnHighlight()
+    {
+        lineRenderer.gameObject.SetActive(false);
+    }
 }
