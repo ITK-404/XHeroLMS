@@ -23,13 +23,9 @@ public class BookHandler : MonoBehaviour
 
         if (bookHandleUI)
         {
-            // Nút "Vào học"
-            if (bookHandleUI.enterCourseBtn != null)
-                bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse);
+            bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse);
 
-            // Nút "Ghi danh/Mua"
-            if (bookHandleUI.buyCourseBtn != null)
-                bookHandleUI.buyCourseBtn.onClick.AddListener(BuyCourse);
+            bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
         }
 
         if (bookModel != null)
@@ -42,11 +38,8 @@ public class BookHandler : MonoBehaviour
     {
         if (bookHandleUI)
         {
-            if (bookHandleUI.enterCourseBtn != null)
-                bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
-
-            if (bookHandleUI.buyCourseBtn != null)
-                bookHandleUI.buyCourseBtn.onClick.RemoveListener(BuyCourse);
+            bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
+            bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
         }
 
         if (bookModel != null)
@@ -76,33 +69,6 @@ public class BookHandler : MonoBehaviour
         StartCoroutine(TryEnterCourse());
     }
 
-    private bool IsLoggedIn()
-    {
-        return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
-    }
-
-    private void ShowNeedLoginPopup()
-    {
-        Debug.LogWarning($"[BookHandler] Need login. seo={book_seo}");
-        BookHandler.CanSelectBook = false;
-        LoadingUI.ShowErrorPopup(
-            "Bạn cần đăng nhập để vào khóa học này.",
-            "Thông báo",
-            () => { BookHandler.CanSelectBook = true; }
-        );
-    }
-
-    private void ShowNotSupportedPopup()
-    {
-        Debug.LogWarning($"[BookHandler] Not supported/unknown error. seo={book_seo}");
-        BookHandler.CanSelectBook = false;
-        LoadingUI.ShowErrorPopup(
-            "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-            "Thông báo",
-            () => { BookHandler.CanSelectBook = true; }
-        );
-    }
-
     public IEnumerator TryEnterCourse()
     {
         LoadingUI.Show(
@@ -114,69 +80,55 @@ public class BookHandler : MonoBehaviour
         SeoResolver.seoCourse = book_seo;
 
         yield return null; // bỏ wait 1s cho nhanh
-
-        bool loggedIn = IsLoggedIn();
-
         yield return SeoResolver.LoadPrivateAndFillData();
 
         LoadingUI.Hide();
 
         if (!SeoResolver.canEnterCourse)
         {
-            ShowNeedLoginPopup();
+            Debug.LogWarning($"[BookHandler] Block enter by SeoResolver.canEnterCourse=false. seo={book_seo}");
+            BookHandler.CanSelectBook = false;
+            LoadingUI.ShowErrorPopup(
+                "Bạn cần đăng nhập để vào khóa học này.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
             yield break;
         }
 
         // Vào scene theo seo như cũ
-        bool entered = false;
-
-        try
+        if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
         {
-            if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
-            {
-                AudioManager.Instance.Resume();
-                LoadingTransition.Load("dai_dao_chi_gian_2");
-                entered = true;
-            }
-            else if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
-                     book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
-                     book_seo == "cong-dong-phong-thuy-khoa-hoc" ||
-                     book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
-            {
-                LoadingTransition.Load(SeoResolver.DefaultScene);
-                AudioManager.Instance.Resume();
-                entered = true;
-            }
+            AudioManager.Instance.Resume();
+            LoadingTransition.Load("dai_dao_chi_gian_2");
         }
-        catch (Exception e)
+        else if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
+                 book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
+                 book_seo == "cong-dong-phong-thuy-khoa-hoc" ||
+                 book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
         {
-            Debug.LogError($"[BookHandler] Exception when loading scene. seo={book_seo}\n{e}");
-            entered = false;
+            LoadingTransition.Load(SeoResolver.DefaultScene);
+            AudioManager.Instance.Resume();
         }
-
-        if (!entered)
+        else
         {
-            if (!loggedIn) ShowNeedLoginPopup();
-            else ShowNotSupportedPopup();
-            yield break;
+            BookHandler.CanSelectBook = false;
+            LoadingUI.ShowErrorPopup(
+                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
         }
     }
 
-    private void BuyCourse()
-    {
-        // logic ghi danh/mua (nếu có)
-        // Hiện tại bạn để trống -> ok
-    }
+    private void BuyCourse() { }
 
     public void SetBuyCourse(bool state)
     {
         if (bookHandleUI)
         {
-            if (bookHandleUI.enterCourseBtn != null)
-                bookHandleUI.enterCourseBtn.gameObject.SetActive(!state);
-
-            if (bookHandleUI.buyCourseBtn != null)
-                bookHandleUI.buyCourseBtn.gameObject.SetActive(state);
+            bookHandleUI.enterCourseBtn.gameObject.SetActive(!state);
+            bookHandleUI.buyCourseBtn.gameObject.SetActive(state);
         }
     }
 
