@@ -8,6 +8,7 @@ public class AreaMapUI : MonoBehaviour
     Camera wrapperCamera;
 
     private RectTransform uiElement;
+    private bool isWorldSpaceUI = false;
 
     private void Awake()
     {
@@ -24,14 +25,25 @@ public class AreaMapUI : MonoBehaviour
             return;
         
         var worldSpacePos = areaMapLocation.GetItemWorldPosition();
-        var screenPosition = wrapperCamera.WorldToScreenPoint(worldSpacePos);
+        
+        if (isWorldSpaceUI)
+        {
+            uiElement.position = worldSpacePos;
+        }
+        else
+        {
+            var screenPosition = wrapperCamera.WorldToScreenPoint(worldSpacePos);
 
-        uiElement.position = screenPosition;
+            uiElement.position = screenPosition;
+        }
+        
     }
 
-    public void Setup(Camera cam, AreaMapLocation location)
+    public void Setup(Camera cam, AreaMapLocation location,bool worldSpaceUI = false)
     {
         wrapperCamera = cam;
         areaMapLocation = location;
+
+        this.isWorldSpaceUI = worldSpaceUI;
     }
 }

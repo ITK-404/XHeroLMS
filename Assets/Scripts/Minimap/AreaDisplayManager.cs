@@ -2,24 +2,35 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class AreaDisplayManager : MonoBehaviour
 {
+    public static AreaDisplayManager Instance;
     [Header("UI")]
     [SerializeField] private BigArea[] bigAreasLocation;
-    [SerializeField] private BigMapUI bigMapUIPrefab;
+    [FormerlySerializedAs("bigMapUIPrefab")] 
+    [SerializeField] private BigAreaUI bigAreaUIPrefab;
     [SerializeField] private RectTransform playerMarker;
+
+    [Header("UI Plot Area")]
+    [SerializeField]private PlotAreaUI plotAreaUIPrefab;
     [Header("Others")] 
     [SerializeField] private GameObject player;
     [SerializeField] private GameObject uiAreaContainer;
     [SerializeField] private GameObject locationAreaContainer;
     [SerializeField] private Camera wrapperCamera;
+
+    [Header("World Space")]
+    [SerializeField] private GameObject worldSpaceContainer;
     
-    [SerializeField] private MinimapCameraHandler minimapCameraHandler;
-    private List<BigMapUI> bigMapUIList = new(); 
+    public MinimapCameraHandler minimapCameraHandler;
+    private List<BigAreaUI> bigMapUIList = new(); 
 
     private void Awake()
     {
+        Instance = this;
+        
         Hide();
     }
 
@@ -38,7 +49,7 @@ public class AreaDisplayManager : MonoBehaviour
 
         foreach (var bigMap in bigAreasLocation)
         {
-            var bigMapUI = Instantiate(bigMapUIPrefab, uiAreaContainer.transform);
+            var bigMapUI = Instantiate(bigAreaUIPrefab, uiAreaContainer.transform);
             bigMapUI.SetData(bigMap.Data);
             
             var areaUI = bigMapUI.AreaMapUI;
@@ -48,16 +59,13 @@ public class AreaDisplayManager : MonoBehaviour
         }
     }
 
-    [ContextMenu("Update Button Hitbox")]
-    private void UpdateHitboxUI()
+    public PlotAreaUI CreatePlotAreaUI(AreaMapLocation location)
     {
-        for (int i = 0; i < bigMapUIList.Count; i++)
-        {
-            var area = bigAreasLocation[i];
-            bigMapUIList[i].CalculatorHitbox(area.GetSpline(),wrapperCamera);
-        }
+        var plotAreaUI = Instantiate(plotAreaUIPrefab, worldSpaceContainer.transform);
+        plotAreaUI.AreaMapUI.Setup(wrapperCamera, location);
+        return plotAreaUI;
     }
-
+    
     public void Show()
     {
         uiAreaContainer.gameObject.SetActive(true);   
