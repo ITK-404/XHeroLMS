@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 
 public class AreaDisplayManager : MonoBehaviour
@@ -23,7 +24,8 @@ public class AreaDisplayManager : MonoBehaviour
 
     [Header("World Space")]
     [SerializeField] private GameObject worldSpaceContainer;
-    
+
+    [SerializeField] private PlotHandlerUI plotHandlerUI;
     public MinimapCameraHandler minimapCameraHandler;
     private List<BigAreaUI> bigMapUIList = new(); 
 
@@ -101,6 +103,8 @@ public class AreaDisplayManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject())
+                return;
             var ray = wrapperCamera.ScreenPointToRay(Input.mousePosition);
             
             if (Physics.Raycast(ray, out var raycastHit,Mathf.Infinity, minimapLayerMask,QueryTriggerInteraction.Collide))
@@ -132,6 +136,18 @@ public class AreaDisplayManager : MonoBehaviour
         }
         // neu khong chon vung nao thi active ui len 
         ActiveBigAreaList(selectArea == null);
+
+        if (selectArea != null)
+        {
+            plotHandlerUI.Show();
+            plotHandlerUI.ShowArea(selectArea);
+        }
+        else
+        {
+            plotHandlerUI.Hide();
+        }
+        
+        
     }
 
     public void ResetArea()
