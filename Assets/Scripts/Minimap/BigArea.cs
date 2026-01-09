@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -5,16 +7,20 @@ using UnityEngine.Splines;
 
 public class BigArea : MonoBehaviour
 {
-    private AreaMapLocation location;
-    public AreaMapLocation Location => location;
     [SerializeField] private AreaMapData mapData;
-    public AreaMapData Data => mapData;
     [Header("Highlight")] 
     [SerializeField] private SplineContainer spline;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private CinemachineCamera focusCamera;
+    [SerializeField] private Color normalColor;
+    private Tween colorTween;
+    private Material areaMaterial;
 
+    [SerializeField] private GameObject plotContainer;
+    private AreaMapLocation location;
     
+    public AreaMapData Data => mapData;
+    public AreaMapLocation Location => location;
     
     private void Awake()
     {
@@ -22,6 +28,11 @@ public class BigArea : MonoBehaviour
         
         location = GetComponent<AreaMapLocation>();
         LoadForDebug();
+    }
+
+    private void Start()
+    {
+        SetupPlots();
     }
     
     [ContextMenu("Load For Debug")]
@@ -42,16 +53,15 @@ public class BigArea : MonoBehaviour
     {
         lineRenderer.gameObject.SetActive(true);
         HandleColor();
+        ShowPlotArea();
     }
 
     public void UnHighlight()
     {
         lineRenderer.gameObject.SetActive(false);
+        HidePlotArea();
     }
 
-    private Material areaMaterial;
-    [SerializeField] private Color normalColor;
-    private Tween colorTween;
     private void HandleColor()
     {
         colorTween?.Kill();
@@ -74,5 +84,44 @@ public class BigArea : MonoBehaviour
     public CinemachineCamera GetFocusCamera()
     {
         return focusCamera;
+    }
+
+    private List<PlotArea> plotAreaList = new();
+    
+    private void SetupPlots()
+    {
+        plotAreaList.Clear();
+        plotAreaList = GetComponentsInChildren<PlotArea>().ToList();
+
+        foreach (var plot in plotAreaList)
+        {
+            // setup UI
+            var plotAreaUI = AreaDisplayManager.Instance.CreatePlotAreaUI(plot.Location);
+            // using for API linking
+            var plotData = mapData.GetPlotAreaData(plot.seo_url);
+            plot.plotAreaUI = plotAreaUI;
+            plot.plotAreaData = plotData;
+
+            plot.Initialize();
+        }
+        
+        HidePlotArea();
+    }
+
+    public void ShowPlotArea()
+    {
+        foreach (var plot in plotAreaList)
+        {
+            plot.Show(true);
+        }
+    }
+
+    public void HidePlotArea()
+    {
+        foreach (var plot in plotAreaList)
+        {
+            plot.Show(false);
+            
+        }
     }
 }

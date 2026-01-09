@@ -11,7 +11,11 @@ public class MinimapCameraHandler : MonoBehaviour
     private List<CinemachineCamera> focusCameraGroup = new();
     [SerializeField] private GameObject areaContainer;
 
-
+    public CinemachineCamera GetActiveCamera()
+    {
+        return minimapCamera;
+    }
+    
     private void Start()
     {
         CatchAllCamera();
