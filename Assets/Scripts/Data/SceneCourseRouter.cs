@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 [System.Serializable] public class SceneSeoItem { public string sceneName; public string _id; public string seo; public string image; public string title; }
-[System.Serializable] class SceneSeoList { public List<SceneSeoItem> items = new(); }
+[System.Serializable] public class SceneSeoList { public List<SceneSeoItem> items = new(); }
 
 public class SceneCourseRouter : MonoBehaviour
 {
