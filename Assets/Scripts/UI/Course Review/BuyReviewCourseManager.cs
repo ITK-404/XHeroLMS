@@ -146,7 +146,7 @@ if (!SeoResolver.canEnterCourse)
     {
         BookHandler.CanSelectBook = false;
         LoadingUI.ShowErrorPopup(
-            "Bạn cần đăng nhập để xem/ vào khóa học này.",
+            "Bạn cần đăng nhập để xem khóa học này.",
             "Thông báo",
             () => { BookHandler.CanSelectBook = true; }
         );
