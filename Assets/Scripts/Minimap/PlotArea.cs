@@ -14,9 +14,7 @@ public class PlotArea : MonoBehaviour
     [SerializeField] private string titleName;
     [SerializeField] private string displayName;
 
-    [SerializeField] private GameObject textContainer;
-    [SerializeField] private TextMeshPro titleTmp;
-    [SerializeField] private TextMeshPro displayTmp;
+    [SerializeField] private float ratioUI = 1;
     public void Initialize()
     {
         UpdateUI();
@@ -48,26 +46,9 @@ public class PlotArea : MonoBehaviour
 
     public void Show(bool isEnable)
     {
-        // if (isEnable)
-        //     plotAreaUI.Show();
-        // else
+        if (isEnable)
+            plotAreaUI.Show();
+        else
             plotAreaUI.Hide();
-        textContainer.gameObject.SetActive(isEnable);
-        
-    }
-
-    private void Update()
-    {
-        RotateToCamera();
-    }
-
-    private void RotateToCamera()
-    {
-        var activeCameraPos = AreaDisplayManager.Instance.minimapCameraHandler.GetActiveCamera().transform.position;
-        var currentPos = textContainer.transform.position;
-        var direction = activeCameraPos - currentPos;
-
-        direction.Normalize();
-        textContainer.transform.LookAt(direction);
     }
 }

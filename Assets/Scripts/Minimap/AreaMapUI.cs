@@ -26,17 +26,12 @@ public class AreaMapUI : MonoBehaviour
         
         var worldSpacePos = areaMapLocation.GetItemWorldPosition();
         
-        if (isWorldSpaceUI)
-        {
-            uiElement.position = worldSpacePos;
-        }
-        else
+        if (!isWorldSpaceUI)
         {
             var screenPosition = wrapperCamera.WorldToScreenPoint(worldSpacePos);
 
             uiElement.position = screenPosition;
         }
-        
     }
 
     public void Setup(Camera cam, AreaMapLocation location,bool worldSpaceUI = false)
@@ -45,5 +40,9 @@ public class AreaMapUI : MonoBehaviour
         areaMapLocation = location;
 
         this.isWorldSpaceUI = worldSpaceUI;
+        if (worldSpaceUI)
+        {
+            transform.position = areaMapLocation.GetItemWorldPosition();
+        }
     }
 }

@@ -10,6 +10,8 @@ public class PlotAreaUI : MonoBehaviour
 
     public GameObject container;
 
+    public float scaleUI = 1;
+    
     public void Show()
     {
         container.gameObject.SetActive(true);
