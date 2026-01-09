@@ -1,9 +1,12 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using DG.Tweening;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Splines;
+using Vector3 = UnityEngine.Vector3;
 
 public class BigArea : MonoBehaviour
 {
@@ -53,7 +56,7 @@ public class BigArea : MonoBehaviour
     {
         lineRenderer.gameObject.SetActive(true);
         HandleColor();
-        ShowPlotArea();
+        StartCoroutine(WaitForDelay());
     }
 
     public void UnHighlight()
@@ -116,12 +119,36 @@ public class BigArea : MonoBehaviour
         }
     }
 
+    private IEnumerator WaitForDelay()
+    {
+        yield return new WaitForSeconds(2);
+        ShowPlotArea();
+        RatioCalculation();
+    }
+
     public void HidePlotArea()
     {
         foreach (var plot in plotAreaList)
         {
             plot.Show(false);
+        }
+    }
+
+    private void RatioCalculation()
+    {
+        var startPosition = focusCamera.transform.position;
+        var distanceForTest = 30;
+        foreach (var item in plotAreaList)
+        {
+            var endPosition = item.transform.position;
+            float distance = Vector3.Distance(startPosition, endPosition);
+
+            float distancePoint = distance / distanceForTest;
+            float minusRatio = distancePoint / 10;
+            float ratio = 1 - minusRatio;
             
+            ratio = Mathf.Clamp(ratio, 0.5f, 1);
+            item.plotAreaUI.transform.localScale = Vector3.one * ratio;
         }
     }
 }

@@ -62,7 +62,7 @@ public class AreaDisplayManager : MonoBehaviour
     public PlotAreaUI CreatePlotAreaUI(AreaMapLocation location)
     {
         var plotAreaUI = Instantiate(plotAreaUIPrefab, worldSpaceContainer.transform);
-        plotAreaUI.AreaMapUI.Setup(wrapperCamera, location);
+        plotAreaUI.AreaMapUI.Setup(wrapperCamera, location,false);
         return plotAreaUI;
     }
     
@@ -130,10 +130,20 @@ public class AreaDisplayManager : MonoBehaviour
             var focusCam = selectArea.GetFocusCamera();
             minimapCameraHandler.TryFocusCamera(focusCam);
         }
+        // neu khong chon vung nao thi active ui len 
+        ActiveBigAreaList(selectArea == null);
     }
 
     public void ResetArea()
     {
         HighlightSingleArea(null);
+    }
+
+    private void ActiveBigAreaList(bool isEnable)
+    {
+        foreach (var ui in bigMapUIList)
+        {
+            ui.gameObject.SetActive(isEnable);
+        }
     }
 }
