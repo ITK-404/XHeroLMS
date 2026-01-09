@@ -3,15 +3,16 @@ using UnityEngine;
 using UnityEngine.Splines;
 using UnityEngine.UI;
 
-public class BigMapUI : MonoBehaviour
+public class BigAreaUI : MonoBehaviour
 {
     [SerializeField] private AreaMapUI areaMapUI;
-    public AreaMapUI AreaMapUI => areaMapUI;
     
     [SerializeField] private TextMeshProUGUI displayNameTxt;
     [SerializeField] private Image iconImg;
     [SerializeField] private RectTransform uiButton;
+
     private AreaMapData data;
+    public AreaMapUI AreaMapUI => areaMapUI;
     
     public void SetDisplayName(string displayName)
     {
@@ -34,12 +35,5 @@ public class BigMapUI : MonoBehaviour
         
         displayNameTxt.text = data.displayName;
         iconImg.sprite = data.displayIcon;
-    }
-
-    private float padding = 10;
-    
-    public void CalculatorHitbox(SplineContainer splineContainer,Camera mainCamera)
-    {
-        
     }
 }
