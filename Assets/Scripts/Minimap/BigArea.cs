@@ -1,20 +1,29 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using DG.Tweening;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Splines;
+using Vector3 = UnityEngine.Vector3;
 
 public class BigArea : MonoBehaviour
 {
-    private AreaMapLocation location;
-    public AreaMapLocation Location => location;
     [SerializeField] private AreaMapData mapData;
-    public AreaMapData Data => mapData;
     [Header("Highlight")] 
     [SerializeField] private SplineContainer spline;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private CinemachineCamera focusCamera;
+    [SerializeField] private Color normalColor;
+    private Tween colorTween;
+    private Material areaMaterial;
 
+    [SerializeField] private GameObject plotContainer;
+    private AreaMapLocation location;
     
+    public AreaMapData Data => mapData;
+    public AreaMapLocation Location => location;
     
     private void Awake()
     {
@@ -22,6 +31,11 @@ public class BigArea : MonoBehaviour
         
         location = GetComponent<AreaMapLocation>();
         LoadForDebug();
+    }
+
+    private void Start()
+    {
+        SetupPlots();
     }
     
     [ContextMenu("Load For Debug")]
@@ -42,16 +56,15 @@ public class BigArea : MonoBehaviour
     {
         lineRenderer.gameObject.SetActive(true);
         HandleColor();
+        StartCoroutine(WaitForDelay());
     }
 
     public void UnHighlight()
     {
         lineRenderer.gameObject.SetActive(false);
+        HidePlotArea();
     }
 
-    private Material areaMaterial;
-    [SerializeField] private Color normalColor;
-    private Tween colorTween;
     private void HandleColor()
     {
         colorTween?.Kill();
@@ -74,5 +87,68 @@ public class BigArea : MonoBehaviour
     public CinemachineCamera GetFocusCamera()
     {
         return focusCamera;
+    }
+
+    private List<PlotArea> plotAreaList = new();
+    
+    private void SetupPlots()
+    {
+        plotAreaList.Clear();
+        plotAreaList = GetComponentsInChildren<PlotArea>().ToList();
+
+        foreach (var plot in plotAreaList)
+        {
+            // setup UI
+            var plotAreaUI = AreaDisplayManager.Instance.CreatePlotAreaUI(plot.Location);
+            // using for API linking
+            var plotData = mapData.GetPlotAreaData(plot.seo_url);
+            plot.plotAreaUI = plotAreaUI;
+            plot.plotAreaData = plotData;
+
+            plot.Initialize();
+        }
+        
+        HidePlotArea();
+    }
+
+    public void ShowPlotArea()
+    {
+        foreach (var plot in plotAreaList)
+        {
+            plot.Show(true);
+        }
+    }
+
+    private IEnumerator WaitForDelay()
+    {
+        yield return new WaitForSeconds(2);
+        ShowPlotArea();
+        RatioCalculation();
+    }
+
+    public void HidePlotArea()
+    {
+        foreach (var plot in plotAreaList)
+        {
+            plot.Show(false);
+        }
+    }
+
+    private void RatioCalculation()
+    {
+        var startPosition = focusCamera.transform.position;
+        var distanceForTest = 30;
+        foreach (var item in plotAreaList)
+        {
+            var endPosition = item.transform.position;
+            float distance = Vector3.Distance(startPosition, endPosition);
+
+            float distancePoint = distance / distanceForTest;
+            float minusRatio = distancePoint / 10;
+            float ratio = 1 - minusRatio;
+            
+            ratio = Mathf.Clamp(ratio, 0.5f, 1);
+            item.plotAreaUI.transform.localScale = Vector3.one * ratio;
+        }
     }
 }
