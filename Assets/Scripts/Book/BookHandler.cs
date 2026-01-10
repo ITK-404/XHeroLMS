@@ -66,7 +66,7 @@ public class BookHandler : MonoBehaviour
         }
 
         // fallback
-        StartCoroutine(TryEnterCourse());
+        BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
     }
 
     public IEnumerator TryEnterCourse()
