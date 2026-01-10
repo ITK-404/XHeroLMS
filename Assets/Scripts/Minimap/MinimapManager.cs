@@ -10,16 +10,37 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private CameraZoomSlider cameraZoomSlider;
     [SerializeField] private AreaDisplayManager areaDisplayManager;
     [SerializeField] private MinimapCameraHandler minimapCameraHandler;
+    [SerializeField] private PlotHandlerUI plotHandlerUI;
     private void Awake()
     {
         minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
         minimapUI.turnOffBtn.onClick.AddListener(ToggleOff);
+        
+        areaDisplayManager.OnShowFocusArea += OnShowFocusArea;
+    }
+    
+
+    private void OnShowFocusArea(BigArea selectArea)
+    {
+        if (selectArea != null)
+        {
+            plotHandlerUI.Show();
+            plotHandlerUI.ShowArea(selectArea);
+            
+            cameraZoomSlider.Hide();
+        }
+        else
+        {
+            plotHandlerUI.Hide();
+        }
     }
 
     private void OnDestroy()
     {
         minimapUI.turnOnBtn.onClick.RemoveListener(ToggleOn);
         minimapUI.turnOffBtn.onClick.RemoveListener(ToggleOff);
+        areaDisplayManager.OnShowFocusArea -= OnShowFocusArea;
+        
     }
     
 
