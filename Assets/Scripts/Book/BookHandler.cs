@@ -88,15 +88,10 @@ public class BookHandler : MonoBehaviour
         {
             Debug.LogWarning($"[BookHandler] Block enter by SeoResolver.canEnterCourse=false. seo={book_seo}");
             BookHandler.CanSelectBook = false;
-            // LoadingUI.ShowErrorPopup(
-            //     "Bạn cần đăng nhập để vào khóa học này.",
-            //     "Thông báo",
-            //     () => { BookHandler.CanSelectBook = true; }
-            // );
             LoadingUI.ShowErrorPopup(
-            "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-            "Thông báo",
-            () => { BookHandler.CanSelectBook = true; }
+                "Bạn cần đăng nhập để vào khóa học này.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
             );
             yield break;
         }
@@ -118,11 +113,11 @@ public class BookHandler : MonoBehaviour
         else
         {
             BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup(
-                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
+            // LoadingUI.ShowErrorPopup(
+            //     "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+            //     "Thông báo",
+            //     () => { BookHandler.CanSelectBook = true; }
+            // );
         }
     }
 
