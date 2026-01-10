@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Xml;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,7 +47,9 @@ public class UI_PanelSwitcher : MonoBehaviour
             closeButton.button.onClick.RemoveListener(CloseUI);
             closeButton.button.onClick.AddListener(CloseUI);
         }
-        SetButtonState(loginButton);
+
+        // default
+        ResetStateToDefault();
         OpenLoginPanel();
     }
 
@@ -73,6 +74,34 @@ public class UI_PanelSwitcher : MonoBehaviour
     [SerializeField] private TMP_FontAsset activeFont;
     [SerializeField] private TMP_FontAsset deActiveFont;
 
+    // ================= RESET STATE =================
+
+    private void ResetStateToDefault()
+    {
+        // reset hết về default
+        ResetButtonSprite(loginButton);
+        ResetButtonSprite(registerButton);
+        ResetButtonSprite(closeButton);
+
+        // set default active = login
+        ApplyActiveState(loginButton);
+    }
+
+    private void ApplyActiveState(ButtonSpriteState active)
+    {
+        if (active == null) return;
+
+        if (active.targetImage != null && active.activeSprite != null)
+            active.targetImage.sprite = active.activeSprite;
+
+        var tmp = (active.button != null)
+            ? active.button.GetComponentInChildren<TextMeshProUGUI>(true)
+            : null;
+
+        HandleText(tmp, true);
+    }
+
+
     private void SetButtonState(ButtonSpriteState active)
     {
         ResetButtonSprite(loginButton);
@@ -88,12 +117,19 @@ public class UI_PanelSwitcher : MonoBehaviour
 
     private void ResetButtonSprite(ButtonSpriteState b)
     {
-        if (b != null && b.targetImage != null && b.defaultSprite != null)
+        if (b == null) return;
+
+        if (b.targetImage != null && b.defaultSprite != null)
             b.targetImage.sprite = b.defaultSprite;
-        HandleText(b.button.GetComponentInChildren<TextMeshProUGUI>(), false);
+
+        var tmp = (b.button != null)
+            ? b.button.GetComponentInChildren<TextMeshProUGUI>(true)
+            : null;
+
+        HandleText(tmp, false);
     }
 
-    private void HandleText(TextMeshProUGUI tmpText,bool isEnable)
+    private void HandleText(TextMeshProUGUI tmpText, bool isEnable)
     {
         tmpText.color = isEnable ? activeColor : defaultColor;
         tmpText.enableVertexGradient = isEnable;
@@ -128,6 +164,6 @@ public class UI_PanelSwitcher : MonoBehaviour
 
         InputBlocker.SetBlocked(false);
 
-        SetButtonState(closeButton);
+        ResetStateToDefault();
     }
 }
