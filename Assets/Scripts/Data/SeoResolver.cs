@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -83,6 +82,10 @@ public static class SeoResolver
         return item.seo;
     }
 
+    /// <summary>
+    /// Flow mới:
+    /// - Guest: nếu needLogin=false thì cho vào (không bắt buộc fetch private)
+    /// - Login: nếu isFree=true thì POST /users/lms/courses/{id}/free, rồi fetch private
     /// </summary>
     public static IEnumerator LoadPrivateAndFillData()
     {
@@ -109,26 +112,24 @@ public static class SeoResolver
 
         string courseId = lastResolvedCourseId;
 
-        // Lấy market course để đọc needLogin
+        // Lấy market course để đọc needLogin / isFree
         var market = LmsStore.Instance.GetMarketCourse(courseId);
         bool needLogin = false;
+        bool isFree = false;
 
         if (market != null)
         {
             needLogin = GetNeedLoginSafe(market);
+            isFree = market.isFree;
         }
         else
         {
             Debug.LogWarning($"[SeoResolver] Market course null cho courseId='{courseId}'. Fallback rule.");
-            // fallback: guest -> coi như cần login (an toàn), login -> allow
+            // fallback:
             needLogin = !TokenStore.IsAuthenticated;
         }
 
-        Debug.Log($"[SeoResolver] courseId={courseId} needLogin={needLogin} authed={TokenStore.IsAuthenticated}");
-
-        // -------------------------
         // Guest gate
-        // -------------------------
         if (!TokenStore.IsAuthenticated)
         {
             if (needLogin)
@@ -141,32 +142,28 @@ public static class SeoResolver
 
             // allow guest
             canEnterCourse = true;
-            shouldHavePrivate = false;
+            shouldHavePrivate = false; // guest không bắt buộc có private
             Debug.Log($"[SeoResolver] Guest + needLogin=false => ALLOW (no private). seo={_seo} courseId={courseId}");
-            yield break; 
+            // yield break;
         }
 
-        // -------------------------
-        // Login
-        // -------------------------
+        // Login: allow
         canEnterCourse = true;
         shouldHavePrivate = true;
 
-        // Always try /free first to ensure isJoined=true for courses using this flow
-        bool freeOk = true;
-        bool authFail = false;
-
-        yield return TryGrantFreeCourse(courseId, TokenStore.AccessToken,
-            ok => freeOk = ok,
-            isAuthFail => authFail = isAuthFail
-        );
-
-        if (!freeOk && authFail)
+        // Login + free => grant /free trước
+        if (isFree)
         {
-            canEnterCourse = false;
-            shouldHavePrivate = false;
-            Debug.LogError($"[SeoResolver] /free auth failed => BLOCK. courseId={courseId}");
-            yield break;
+            bool ok = false;
+            yield return GrantFreeCourse(courseId, TokenStore.AccessToken, done => ok = done);
+
+            if (!ok)
+            {
+                canEnterCourse = false; // không grant được => block
+                shouldHavePrivate = false;
+                Debug.LogError($"[SeoResolver] GrantFreeCourse FAILED => BLOCK. courseId={courseId}");
+                yield break;
+            }
         }
 
         // fetch private
@@ -176,6 +173,7 @@ public static class SeoResolver
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
         {
+            // login mà vẫn không có private => tuỳ bạn: block hay cho vào “rỗng”
             canEnterCourse = false;
             shouldHavePrivate = false;
             Debug.LogError($"[SeoResolver] Private null cho courseId='{courseId}' => BLOCK");
@@ -205,18 +203,15 @@ public static class SeoResolver
         onDone(id);
     }
 
-    private static IEnumerator TryGrantFreeCourse(string courseId, string token, Action<bool> onOk, Action<bool> onAuthFail)
+    private static IEnumerator GrantFreeCourse(string courseId, string token, Action<bool> onDone)
     {
-        if (onOk == null) onOk = _ => { };
-        if (onAuthFail == null) onAuthFail = _ => { };
+        if (onDone == null) onDone = _ => { };
 
         token = NormalizeBearer(token);
 
         if (string.IsNullOrEmpty(courseId) || string.IsNullOrWhiteSpace(token))
         {
-            Debug.LogError($"[SeoResolver/FREE] Missing courseId or token. courseId='{courseId}', tokenEmpty={string.IsNullOrWhiteSpace(token)}");
-            onOk(false);
-            onAuthFail(true);
+            onDone(false);
             yield break;
         }
 
@@ -224,9 +219,7 @@ public static class SeoResolver
 
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
-            // nhiều BE cần body JSON tối thiểu
-            var payload = Encoding.UTF8.GetBytes("{}");
-            req.uploadHandler = new UploadHandlerRaw(payload);
+            req.uploadHandler = new UploadHandlerRaw(Array.Empty<byte>());
             req.downloadHandler = new DownloadHandlerBuffer();
 
             req.SetRequestHeader("Authorization", "Bearer " + token);
@@ -236,7 +229,7 @@ public static class SeoResolver
             string xData = LmsSecurityHeader.BuildXDataHeader();
             req.SetRequestHeader("x-data", xData);
 
-            Debug.Log($"[SeoResolver/FREE] POST {url} tokenLen={token.Length}");
+            Debug.Log($"[SeoResolver/FREE] POST {url}");
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -245,22 +238,11 @@ public static class SeoResolver
 #else
             bool error = req.isNetworkError || req.isHttpError;
 #endif
-            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
+            string body = req.downloadHandler.text;
             Debug.Log($"[SeoResolver/FREE] Status={req.responseCode} Error={req.error} Body={body}");
 
-            // auth fail => block
-            if (req.responseCode == 401 || req.responseCode == 403)
-            {
-                onOk(false);
-                onAuthFail(true);
-                yield break;
-            }
-
-            // ok codes (409: already joined)
-            bool ok = !error && (req.responseCode == 200 || req.responseCode == 201 || req.responseCode == 204 || req.responseCode == 409);
-
-            onOk(ok);
-            onAuthFail(false);
+            bool ok = !error && (req.responseCode == 200 || req.responseCode == 201 || req.responseCode == 204);
+            onDone(ok);
         }
     }
 
@@ -295,6 +277,7 @@ public static class SeoResolver
 
     public static bool IsContainData()
     {
+        // chỉ đúng khi đã load private (login)
         return _lmsCoursePrivate != null;
     }
 }
