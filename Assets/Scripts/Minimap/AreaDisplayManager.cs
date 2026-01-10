@@ -24,10 +24,11 @@ public class AreaDisplayManager : MonoBehaviour
 
     [Header("World Space")]
     [SerializeField] private GameObject worldSpaceContainer;
-
     [SerializeField] private PlotHandlerUI plotHandlerUI;
     public MinimapCameraHandler minimapCameraHandler;
-    private List<BigAreaUI> bigMapUIList = new(); 
+    private List<BigAreaUI> bigMapUIList = new();
+
+    public Action<BigArea> OnShowFocusArea;
 
     private void Awake()
     {
@@ -147,7 +148,7 @@ public class AreaDisplayManager : MonoBehaviour
             plotHandlerUI.Hide();
         }
         
-        
+        OnShowFocusArea?.Invoke(selectArea);
     }
 
     public void ResetArea()

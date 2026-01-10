@@ -13,14 +13,6 @@ public class MinimapUI : MonoBehaviour
     public Button showAreaList;
     private void Start()
     {
-        // if (TokenStore.IsAuthenticated)
-        // {
-        //     Show();
-        // }
-        // else
-        // {
-        //     LoginController.OnLoginComplete += Show;
-        // }
         Show();
         ShowBottomViewUI();
     }
