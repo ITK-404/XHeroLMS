@@ -29,6 +29,7 @@ public class AreaDisplayManager : MonoBehaviour
     private List<BigAreaUI> bigMapUIList = new();
 
     public Action<BigArea> OnShowFocusArea;
+    public BigArea[] BigAreas => bigAreasLocation;
 
     private void Awake()
     {
