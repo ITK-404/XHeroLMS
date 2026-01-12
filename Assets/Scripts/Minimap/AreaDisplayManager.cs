@@ -31,6 +31,9 @@ public class AreaDisplayManager : MonoBehaviour
     public Action<BigArea> OnShowFocusArea;
     public BigArea[] BigAreas => bigAreasLocation;
 
+    public BigArea SelectArea => selectArea;
+    private BigArea selectArea;
+    
     private void Awake()
     {
         Instance = this;
@@ -119,7 +122,7 @@ public class AreaDisplayManager : MonoBehaviour
         }
     }
 
-    private void HighlightSingleArea(BigArea selectArea)
+    public void HighlightSingleArea(BigArea selectArea)
     {
         foreach (var area in bigAreasLocation)
         {
@@ -148,7 +151,8 @@ public class AreaDisplayManager : MonoBehaviour
         {
             plotHandlerUI.Hide();
         }
-        
+
+        this.selectArea = selectArea;
         OnShowFocusArea?.Invoke(selectArea);
     }
 
