@@ -1,14 +1,17 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlotHandlerUI : MonoBehaviour
 {
     [SerializeField] private GameObject container;
     [SerializeField] private TextMeshProUGUI bigAreaNameTmp;
     [SerializeField] private TextMeshProUGUI percentNameTmp;
-
+    public Button showScrollViewBtn;
+    
     public void Show()
     {
         container.gameObject.SetActive(true);
@@ -31,8 +34,6 @@ public class PlotHandlerUI : MonoBehaviour
         });
         UpdatePercentComplete(2, 10);
     }
-
-    
 
     private void UpdatePercentComplete(int current, int max)
     {
