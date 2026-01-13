@@ -32,26 +32,25 @@ public class UI_PanelSwitcher : MonoBehaviour
 
     private CursorGameManager cursorMgr;
 
-    private void Start()
+private void Start()
+{
+    cursorMgr = FindAnyObjectByType<CursorGameManager>();
+
+    if (loginButton.button)
+        loginButton.button.onClick.AddListener(OpenLoginPanel);
+
+    if (registerButton.button)
+        registerButton.button.onClick.AddListener(OpenRegisterPanel);
+
+    if (closeButton.button)
     {
-        cursorMgr = FindAnyObjectByType<CursorGameManager>();
-
-        if (loginButton.button)
-            loginButton.button.onClick.AddListener(OpenLoginPanel);
-
-        if (registerButton.button)
-            registerButton.button.onClick.AddListener(OpenRegisterPanel);
-
-        if (closeButton.button)
-        {
-            closeButton.button.onClick.RemoveListener(CloseUI);
-            closeButton.button.onClick.AddListener(CloseUI);
-        }
-
-        // default
-        ResetStateToDefault();
-        OpenLoginPanel();
+        closeButton.button.onClick.RemoveListener(CloseUI);
+        closeButton.button.onClick.AddListener(CloseUI);
     }
+
+    // Default
+    ResetStateToDefault();   
+}
 
     private GameObject GetCurrentActivePanel()
     {
@@ -76,16 +75,26 @@ public class UI_PanelSwitcher : MonoBehaviour
 
     // ================= RESET STATE =================
 
-    private void ResetStateToDefault()
-    {
-        // reset hết về default
-        ResetButtonSprite(loginButton);
-        ResetButtonSprite(registerButton);
-        ResetButtonSprite(closeButton);
+private void ResetStateToDefault()
+{
+    // Reset sprite + text
+    ResetButtonSprite(loginButton);
+    ResetButtonSprite(registerButton);
+    ResetButtonSprite(closeButton);
 
-        // set default active = login
-        ApplyActiveState(loginButton);
+    // Ẩn tất cả panel đang mở
+    foreach (var p in currentPanels)
+    {
+        if (p != null) p.SetActive(false);
     }
+
+    // Set Login là panel mặc định
+    if (loginPanel != null)
+        loginPanel.SetActive(true);
+
+    // Set Login là button active
+    ApplyActiveState(loginButton);
+}
 
     private void ApplyActiveState(ButtonSpriteState active)
     {
