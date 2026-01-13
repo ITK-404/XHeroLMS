@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class MinimapManager : MonoBehaviour
 {
+    
     [Header("Others")]
     [SerializeField] private GameObject player;
     [Header("UI")]
@@ -12,25 +13,49 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private MinimapCameraHandler minimapCameraHandler;
     [SerializeField] private PlotHandlerUI plotHandlerUI;
     [SerializeField] private CircularScrollView circularScrollView;
+    [SerializeField] private FindCourseHandler findCourseHandler;
     private void Awake()
     {
         minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
         minimapUI.turnOffBtn.onClick.AddListener(ToggleOff);
-        
         areaDisplayManager.OnShowFocusArea += OnShowFocusArea;
         
         plotHandlerUI.showScrollViewBtn.onClick.AddListener(ToggleScrollViewArea);
+        plotHandlerUI.findCourseBtn.onClick.AddListener(ShowFindCourseUI);
+    }
+    
+    private void OnDestroy()
+    {
+        minimapUI.turnOnBtn.onClick.RemoveListener(ToggleOn);
+        minimapUI.turnOffBtn.onClick.RemoveListener(ToggleOff);
+        areaDisplayManager.OnShowFocusArea -= OnShowFocusArea;
+        
+        plotHandlerUI.showScrollViewBtn.onClick.RemoveListener(ToggleScrollViewArea);
+        plotHandlerUI.findCourseBtn.onClick.RemoveListener(ShowFindCourseUI);
     }
 
     private bool isOn = false;
+
+    private void ShowFindCourseUI()
+    {
+        // make sure hide area course
+        findCourseHandler.Show();
+        circularScrollView.Hide();
+    }
     
     private void ToggleScrollViewArea()
     {
         isOn = !isOn;
-        if (isOn)
+        OnScrollViewAreaUpdate(isOn);
+    }
+
+    private void OnScrollViewAreaUpdate(bool state)
+    {
+        if (state)
         {
             circularScrollView.Show();
             AreaDisplayManager.Instance.SelectArea?.HidePlotArea();
+            findCourseHandler.Hide();
         }
         else
         {
@@ -58,13 +83,7 @@ public class MinimapManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        minimapUI.turnOnBtn.onClick.RemoveListener(ToggleOn);
-        minimapUI.turnOffBtn.onClick.RemoveListener(ToggleOff);
-        areaDisplayManager.OnShowFocusArea -= OnShowFocusArea;
-        
-    }
+  
     
 
     private void ToggleOff()
