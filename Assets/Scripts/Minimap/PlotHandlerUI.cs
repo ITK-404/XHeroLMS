@@ -10,8 +10,10 @@ public class PlotHandlerUI : MonoBehaviour
     [SerializeField] private GameObject container;
     [SerializeField] private TextMeshProUGUI bigAreaNameTmp;
     [SerializeField] private TextMeshProUGUI percentNameTmp;
+    [Header("Function Btn")]
     public Button showScrollViewBtn;
-    
+    public Button findCourseBtn;
+    public Button showReviewBtn;
     public void Show()
     {
         container.gameObject.SetActive(true);
