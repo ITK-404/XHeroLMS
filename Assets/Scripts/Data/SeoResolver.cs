@@ -183,25 +183,19 @@ public static class SeoResolver
         _lmsCoursePrivate = p;
     }
 
-    private static IEnumerator ResolveCourseIdBySeo(string seo, Action<string> onDone)
-    {
-        if (onDone == null) onDone = _ => { };
+private static IEnumerator ResolveCourseIdBySeo(string seo, Action<string> onDone)
+{
+    if (onDone == null) onDone = _ => { };
 
-        var id = LmsStore.Instance.GetCourseIdBySeo(seo);
-        if (!string.IsNullOrEmpty(id))
-        {
-            onDone(id);
-            yield break;
-        }
+    // ĐỪNG dùng cache nữa để tránh lẫn prod/dev
+    yield return LmsStore.Instance.FetchMarketIfExpired(0, 500, "", "", "", "");
 
-        yield return LmsStore.Instance.FetchMarketIfExpired(0, 500, "", "", "", "");
+    if (TokenStore.IsAuthenticated)
+        yield return LmsStore.Instance.FetchMyCoursesIfExpired();
 
-        if (TokenStore.IsAuthenticated)
-            yield return LmsStore.Instance.FetchMyCoursesIfExpired();
-
-        id = LmsStore.Instance.GetCourseIdBySeo(seo);
-        onDone(id);
-    }
+    var id = LmsStore.Instance.GetCourseIdBySeo(seo);
+    onDone(id);
+}
 
     private static IEnumerator GrantFreeCourse(string courseId, string token, Action<bool> onDone)
     {

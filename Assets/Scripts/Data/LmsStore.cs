@@ -389,9 +389,26 @@ public class LmsStore : MonoBehaviour
         }
         return true;
     }
+    public void RefreshBaseUrl(bool force = false)
+{
+    if (force)
+        baseUrl = SecurityConfig.ForceRefreshAndGet();
+    else
+        baseUrl = SecurityConfig.GetBaseUrl();
+}
+
+// (khuyên) khi switch env: clear cache data luôn cho sạch
+public void ClearAllCacheData()
+{
+    Data = new StoreData();
+    _idxMarketById.Clear();
+    _idxPrivateById.Clear();
+    _myCourseIds.Clear();
+}
 
     IEnumerator GET(string url, Action<string> onSuccess, bool withXData = false)
     {
+        RefreshBaseUrl(force: false);
         // if (!EnsureToken()) yield break;
 
         using (var req = UnityWebRequest.Get(url))
