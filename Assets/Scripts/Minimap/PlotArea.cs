@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -52,3 +53,4 @@ public class PlotArea : MonoBehaviour
             plotAreaUI.Hide();
     }
 }
+
