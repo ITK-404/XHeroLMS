@@ -136,6 +136,7 @@ public class QuadCinemachineController : MonoBehaviour
                 videoPlayerController.EnterFullScreenMode();
                 break;
             case ViewState.Exam:
+                videoPlayerController.TryToPauseVideo();
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
