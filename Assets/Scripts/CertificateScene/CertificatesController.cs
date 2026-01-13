@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class CertificatesController : MonoBehaviour
@@ -30,8 +31,8 @@ public class CertificatesController : MonoBehaviour
     public Button btnNext;
 
     // ====== INTERNAL DATA ======
-    private readonly List<CertificateItem>   _certDataList = new List<CertificateItem>();
-    private readonly List<CertificateItemUI> _certUIList   = new List<CertificateItemUI>();
+    private readonly List<CertificateItem> _certDataList = new List<CertificateItem>();
+    private readonly List<CertificateItemUI> _certUIList = new List<CertificateItemUI>();
     private int _currentIndex = 0;
 
     private void Awake()
@@ -143,7 +144,20 @@ public class CertificatesController : MonoBehaviour
             if (root?.data == null || root.data.data == null || root.data.data.Length == 0)
             {
                 Debug.Log("[CertificatesController] Không có certificate nào trong data.");
+
+                // Clear UI để tránh còn sót item cũ
+                ClearSpawnedCertificates();
+                _certDataList.Clear();
+                _currentIndex = 0;
                 UpdateNavButtons();
+
+                // Popup báo không có bằng
+                LoadingUI.ShowErrorPopup(
+                    "Bạn chưa có bằng nào để hiển thị!",
+                    "Thông báo",
+                    () => LoadingTransition.Load("new scene")
+                );
+
                 yield break;
             }
 
@@ -345,4 +359,10 @@ public class CertificatesController : MonoBehaviour
         public string updatedAt;
         public int __v;
     }
+
+public bool HasAnyCertificate()
+{
+    return _certDataList != null && _certDataList.Count > 0;
+}
+
 }
