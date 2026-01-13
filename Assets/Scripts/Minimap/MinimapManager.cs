@@ -11,23 +11,46 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private AreaDisplayManager areaDisplayManager;
     [SerializeField] private MinimapCameraHandler minimapCameraHandler;
     [SerializeField] private PlotHandlerUI plotHandlerUI;
+    [SerializeField] private CircularScrollView circularScrollView;
     private void Awake()
     {
         minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
         minimapUI.turnOffBtn.onClick.AddListener(ToggleOff);
         
         areaDisplayManager.OnShowFocusArea += OnShowFocusArea;
+        
+        plotHandlerUI.showScrollViewBtn.onClick.AddListener(ToggleScrollViewArea);
     }
+
+    private bool isOn = false;
     
+    private void ToggleScrollViewArea()
+    {
+        isOn = !isOn;
+        if (isOn)
+        {
+            circularScrollView.Show();
+            AreaDisplayManager.Instance.SelectArea?.HidePlotArea();
+        }
+        else
+        {
+            circularScrollView.Hide();
+            AreaDisplayManager.Instance.SelectArea?.ShowPlotArea();
+        }
+    }
 
     private void OnShowFocusArea(BigArea selectArea)
     {
         if (selectArea != null)
         {
+            // hien thi khu vuc nho ben trong khu vuc lon
             plotHandlerUI.Show();
             plotHandlerUI.ShowArea(selectArea);
-            
+            // an thanh slider
             cameraZoomSlider.Hide();
+            // an scroll view hien thi danh sach khu vuc
+            isOn = false;
+            circularScrollView.Hide();
         }
         else
         {
