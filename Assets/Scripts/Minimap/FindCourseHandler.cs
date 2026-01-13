@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class MinimapFindCourseHandle : MonoBehaviour
+public class FindCourseHandler : MonoBehaviour
 {
     [SerializeField] private FindCourseTypeOptionUI[] courseTpeList;
     [SerializeField] private GameObject container;
@@ -9,6 +9,7 @@ public class MinimapFindCourseHandle : MonoBehaviour
     private void Awake()
     {
         courseTpeList = GetComponentsInChildren<FindCourseTypeOptionUI>();
+        Hide();
     }
 
     private void Start()
