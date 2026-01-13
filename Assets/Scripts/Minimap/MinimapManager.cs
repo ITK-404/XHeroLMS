@@ -77,8 +77,8 @@ public class MinimapManager : MonoBehaviour
             minimapUI.ShowBottomViewUI();
             UIManager.Instance.PlayerPanelUI.ShowAll();
             UIManager.Instance.InputCanvas.Show();
-            
-            UIManager.Instance.CourseMenuButtons.Show();
+            if(TokenStore.IsAuthenticated)
+                UIManager.Instance.CourseMenuButtons.Show();
             
             InputBlocker.SetBlocked(false);
             TeleMapController._mapActive = false;
