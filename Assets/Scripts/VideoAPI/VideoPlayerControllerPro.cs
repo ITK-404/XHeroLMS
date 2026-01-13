@@ -868,7 +868,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     {
         _currentUrl = url;
     }
-
+    [Obsolete("Đã cũ")]
     public void StopVideo()
     {
         if (videoPlayer && videoPlayer.isPlaying)
