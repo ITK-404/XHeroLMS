@@ -62,6 +62,9 @@ public class BigArea : MonoBehaviour
     public void UnHighlight()
     {
         lineRenderer.gameObject.SetActive(false);
+        
+        colorTween.Kill();
+        StopAllCoroutines();
         HidePlotArea();
     }
 
