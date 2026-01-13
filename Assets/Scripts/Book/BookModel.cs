@@ -119,7 +119,7 @@ public class BookModel : MonoBehaviour
             container.transform.localRotation = Quaternion.Euler(0, rotationY, 0);
         }
 
-        Debug.Log("Horizontal: " + horizontal);
+        // Debug.Log("Horizontal: " + horizontal);
     }
 
     private void OnMouseDown()

@@ -21884,6 +21884,38 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2853593671222546303, guid: 68ec4815ae94f5d4da1f7ea13c9dc1f7, type: 3}
+--- !u!1 &119570006 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2401911670934103874, guid: de865cb949872194985d7246ad512811, type: 3}
+  m_PrefabInstance: {fileID: 7948191528127235712}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &119570008 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4180239880816961027, guid: de865cb949872194985d7246ad512811, type: 3}
+  m_PrefabInstance: {fileID: 7948191528127235712}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 119570006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &119570010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 119570006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b87a9f30f9041394d9b493e2fe326c9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickableTermsText
+  targetText: {fileID: 119570008}
+  privacyPolicyUrl: https://xherozone.com/chinh-sach-bao-mat
+  termsOfUseUrl: https://xherozone.com/dieu-khoan-dich-vu
+  linkColor: {r: 1, g: 0.5, b: 0, a: 1}
 --- !u!1 &120540838 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 539487403094804267, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -187448,6 +187480,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 530297475559569649, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 530297475559569649, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 530297475559569649, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 530297475559569649, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 738323995018629772, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: m_Enabled
       value: 1
@@ -187532,6 +187580,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1864574192384713718, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2042333984701007199, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: buttonOpen
       value: 
@@ -187544,6 +187596,70 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2276683081543559586, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5974351511332282659, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5974351511332282659, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: termsOfUseUrl
+      value: https://xherozone.com/dieu-khoan-dich-vu
+      objectReference: {fileID: 0}
+    - target: {fileID: 5974351511332282659, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: privacyPolicyUrl
+      value: https://xherozone.com/chinh-sach-bao-mat
+      objectReference: {fileID: 0}
+    - target: {fileID: 6776162870207450188, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6776162870207450188, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6776162870207450188, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6776162870207450188, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8556867728951386089, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8556867728951386089, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8556867728951386089, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8556867728951386089, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8583768875381023246, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8583768875381023246, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8583768875381023246, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8583768875381023246, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8651229780034662501, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: m_Name
       value: CanvasLogin
@@ -187555,7 +187671,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2401911670934103874, guid: de865cb949872194985d7246ad512811, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 119570010}
   m_SourcePrefab: {fileID: 100100000, guid: de865cb949872194985d7246ad512811, type: 3}
 --- !u!1001 &8201207987643709038
 PrefabInstance:
@@ -188024,6 +188143,18 @@ PrefabInstance:
     - target: {fileID: 6959989677017097986, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7540910596032517877, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMax.y
