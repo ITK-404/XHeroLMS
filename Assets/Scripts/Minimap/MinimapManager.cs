@@ -126,6 +126,8 @@ public class MinimapManager : MonoBehaviour
             TeleMapController._mapActive = false;
             cameraZoomSlider.Hide();
             areaDisplayManager.Hide();
+            circularScrollView.Hide();
+            findCourseHandler.Hide();
         }
     }
 }
