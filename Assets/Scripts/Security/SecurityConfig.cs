@@ -20,6 +20,19 @@ public static class SecurityConfig
         return _cachedBaseUrl;
     }
 
+    // === clear cache để lần sau decode lại (dùng khi switch env runtime) ===
+    public static void ClearCache()
+    {
+        _cachedBaseUrl = null;
+    }
+
+    // === force decode ngay lập tức ===
+    public static string ForceRefreshAndGet()
+    {
+        ClearCache();
+        return GetBaseUrl();
+    }
+
 #if UNITY_EDITOR
     public static string EncodeForCode(string plain)
     {

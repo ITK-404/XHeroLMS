@@ -130,18 +130,33 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         // CHANGED: Preview không còn bắt buộc private
         // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
-        if (!SeoResolver.canEnterCourse)
-        {
-            BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để xem khóa học này.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
-            previewCoroutine = null;
-            yield break;
-        }
+if (!SeoResolver.canEnterCourse)
+{
+    if (!IsLoggedIn())
+            {
+        BookHandler.CanSelectBook = true;
+        previewCoroutine = null;
+        yield break;
+    }
 
+    // Logged-in mà vẫn canEnterCourse=false => state lỗi hoặc token invalid
+    BookHandler.CanSelectBook = false;
+
+    bool isLoggedIn = TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+
+    string msg = isLoggedIn
+        ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
+        : "Bạn cần đăng nhập để xem khóa học này.";
+
+    LoadingUI.ShowErrorPopup(
+        msg,
+        "Thông báo",
+        () => { BookHandler.CanSelectBook = true; }
+    );
+
+    previewCoroutine = null;
+    yield break;
+}
         // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
         if (courseReviewUI != null)
         {
@@ -262,4 +277,10 @@ public class BuyReviewCourseManager : MonoBehaviour
         if (PlayerPrefs.HasKey(AUTO_SKIP_SAVE_KEY))
             autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
     }
+
+private bool IsLoggedIn()
+{
+    return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+}
+
 }
