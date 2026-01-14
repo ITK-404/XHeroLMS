@@ -51,11 +51,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapCourseDisplayUI
   displayTmp: {fileID: 6703145626175694898}
   priceTmp: {fileID: 6229375304498622497}
-  findWayBtn: {fileID: 5752183216958403248}
-  buyCourseBtn: {fileID: 4344831068848990596}
+  findWayBtn: {fileID: 4344831068848990596}
+  buyCourseBtn: {fileID: 5752183216958403248}
   bookModel: {fileID: 4457567717568412376}
+  backgroundImg: {fileID: 4343221209309405275}
   book_sku: 
   seo_url: 
+  priceColor: {r: 0.9019608, g: 0.28235295, b: 0.02745098, a: 1}
+  ownCourseColor: {r: 1, g: 0.6901961, b: 0.25882354, a: 1}
+  ownerTextColor: {r: 0.4392157, g: 0.2627451, b: 0, a: 1}
+  priceTextColor: {r: 0.98039216, g: 0.91764706, b: 0.72156864, a: 1}
 --- !u!1 &1462857663319515129
 GameObject:
   m_ObjectHideFlags: 0
@@ -138,7 +143,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1119582233147383685
 RectTransform:
   m_ObjectHideFlags: 0
@@ -154,10 +159,10 @@ RectTransform:
   - {fileID: 3213345664833456956}
   m_Father: {fileID: 540793746128825379}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 92.58066, y: -50.92815}
+  m_SizeDelta: {x: 185.16132, y: 101.8563}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2632178598491270993
 CanvasRenderer:
@@ -421,7 +426,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 16
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -453,7 +458,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 19.6, z: 0, w: 0}
+  m_margin: {x: 19.3, y: 19.6, z: 7.21, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -622,7 +627,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.9019608, g: 0.28068668, b: 0.02745098, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -819,6 +824,18 @@ PrefabInstance:
       value: 47.2078
       objectReference: {fileID: 0}
     - target: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -866,21 +883,41 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3786979577184113556, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
       propertyPath: m_Name
       value: Hover Button Yellow Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 3786979577184113556, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5388566232109349801, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: -0.000068665
+      objectReference: {fileID: 0}
     - target: {fileID: 5388566232109349801, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 5.1217995
+      value: -0.000022888184
       objectReference: {fileID: 0}
     - target: {fileID: 6660631017858982204, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
       propertyPath: m_text
       value: "T\xECm \u0111\u01B0\u1EDDng\n"
       objectReference: {fileID: 0}
     - target: {fileID: 6660631017858982204, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_fontSize
+      value: 31.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6660631017858982204, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
       propertyPath: m_margin.w
       value: -8.083948
+      objectReference: {fileID: 0}
+    - target: {fileID: 6660631017858982204, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 31.4
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -933,9 +970,61 @@ PrefabInstance:
 
 '
       objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontSize
+      value: 31.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 31.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.b
+      value: 0.72156864
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.g
+      value: 0.91764706
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topLeft.r
+      value: 0.98039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topRight.b
+      value: 0.72156864
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topRight.g
+      value: 0.91764706
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.topRight.r
+      value: 0.98039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.bottomLeft.b
+      value: 0.015686275
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.bottomLeft.g
+      value: 0.75686276
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.bottomRight.b
+      value: 0.015686275
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871022131387441168, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_fontColorGradient.bottomRight.g
+      value: 0.75686276
+      objectReference: {fileID: 0}
     - target: {fileID: 5707949868060447416, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_Name
       value: Hover Button Red Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 5707949868060447416, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6356663583035449752, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_PreserveAspect
@@ -994,6 +1083,18 @@ PrefabInstance:
       value: 45.791
       objectReference: {fileID: 0}
     - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -1040,6 +1141,10 @@ PrefabInstance:
     - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9187787007587066558, guid: f99553403134cc94b991678a53f70ad7, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

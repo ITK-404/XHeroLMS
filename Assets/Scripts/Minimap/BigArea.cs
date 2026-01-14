@@ -92,6 +92,7 @@ public class BigArea : MonoBehaviour
     }
 
     private List<PlotArea> plotAreaList = new();
+    public List<PlotArea> PlotAreas => plotAreaList;
     
     private void SetupPlots()
     {
