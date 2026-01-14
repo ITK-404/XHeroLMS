@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,10 +11,32 @@ public class MinimapCourseDisplayUI : MonoBehaviour
     [SerializeField] private Button buyCourseBtn;
 
     [SerializeField] private BookModel bookModel;
+    public static Action<string> OnFindWayAction;
 
+    [SerializeField] private Image backgroundImg;
     // giữ đúng kiểu bạn đang dùng
     public string book_sku;
     public string seo_url;
+
+    [SerializeField] private Color priceColor;
+    [SerializeField] private Color ownCourseColor;
+    [SerializeField] private Color ownerTextColor;
+    [SerializeField] private Color priceTextColor;
+    private void Awake()    
+    {
+        findWayBtn.onClick.AddListener(ClickFindWayButton);
+    }
+
+    private void OnDestroy()
+    {
+        findWayBtn.onClick.RemoveListener(ClickFindWayButton);
+    }
+
+    private void ClickFindWayButton()
+    {
+        Debug.Log("Nhan tim duong toi khoa hoc");
+        OnFindWayAction?.Invoke(seo_url);
+    }
 
     public void SetMeta(string sku, string seo)
     {
@@ -45,9 +68,15 @@ public class MinimapCourseDisplayUI : MonoBehaviour
             if (buyCourseBtn) buyCourseBtn.gameObject.SetActive(false);
             if (findWayBtn) findWayBtn.gameObject.SetActive(true);
         }
+
+        backgroundImg.color = owned ? ownCourseColor : priceColor;
+
+        priceTmp.color = owned ? ownerTextColor : priceTextColor;
+        priceTmp.enableVertexGradient = owned;
     }
 
     public Button FindWayBtn => findWayBtn;
     public Button BuyCourseBtn => buyCourseBtn;
     public BookModel BookModel => bookModel;
 }
+
