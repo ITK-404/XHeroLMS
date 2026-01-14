@@ -261,17 +261,17 @@ public class CourseMapBrowserUI : MonoBehaviour
         ui.SetOwnedUI(owned);
 
         // Bind click giữ nguyên theo CourseMapBrowserUI
-        if (ui.FindWayBtn)
-        {
-            ui.FindWayBtn.onClick.RemoveAllListeners();
-            ui.FindWayBtn.onClick.AddListener(() => OnClickFindWay?.Invoke(data));
-        }
-
-        if (ui.BuyCourseBtn)
-        {
-            ui.BuyCourseBtn.onClick.RemoveAllListeners();
-            ui.BuyCourseBtn.onClick.AddListener(() => OnClickBuy?.Invoke(data));
-        }
+        // if (ui.FindWayBtn)
+        // {
+        //     ui.FindWayBtn.onClick.RemoveAllListeners();
+        //     ui.FindWayBtn.onClick.AddListener(() => OnClickFindWay?.Invoke(data));
+        // }
+        //
+        // if (ui.BuyCourseBtn)
+        // {
+        //     ui.BuyCourseBtn.onClick.RemoveAllListeners();
+        //     ui.BuyCourseBtn.onClick.AddListener(() => OnClickBuy?.Invoke(data));
+        // }
     }
 
     private void ClearContent(RectTransform content)

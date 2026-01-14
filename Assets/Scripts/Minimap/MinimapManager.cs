@@ -99,7 +99,7 @@ public class MinimapManager : MonoBehaviour
   
     
 
-    private void ToggleOffMinimap()
+    public void ToggleOffMinimap()
     {
         UpdateState(false);
         minimapCameraHandler.FocusPlayerCamera();
@@ -107,7 +107,7 @@ public class MinimapManager : MonoBehaviour
         Debug.Log($"Toggle vao player camera");
     }
     
-    private void ToggleOnMinimap()
+    public void ToggleOnMinimap()
     {
         Debug.Log($"Toggle vao minimap camera");
         UpdateState(true);
