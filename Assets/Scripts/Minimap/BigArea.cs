@@ -164,4 +164,9 @@ public class BigArea : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(drawCheckPoint.transform.position,3);
     }
+
+    public bool IsEmptyPlotInSide()
+    {
+        return plotAreaList.Count <= 0;
+    }
 }

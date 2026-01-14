@@ -95,16 +95,22 @@ public class CircularScrollView : MonoBehaviour
             float angleInRadians = angle * Mathf.Deg2Rad;
 
             // calculation alpha
-            float delta = Mathf.Abs(Mathf.DeltaAngle(startAngle, angle));
-            float alpha = 1;
-            float fadeAngle = startAngle + fadeMaxAngle;
-            if (delta > fadeAngle)
+            float focusAngle = startAngle + scrollAngle;
+            float delta = Mathf.Abs(Mathf.DeltaAngle(focusAngle, angle));
+
+            float alpha;
+
+            if (delta <= fadeMinAngle)
+            {
+                alpha = 1f;
+            }
+            else if (delta >= fadeMaxAngle)
             {
                 alpha = 0f;
             }
             else
             {
-                alpha = 1f - Mathf.InverseLerp(0f, fadeAngle, delta);
+                alpha = 1f - Mathf.InverseLerp(fadeMinAngle, fadeMaxAngle, delta);
             }
 
             float x = radius * Mathf.Cos(angleInRadians);
