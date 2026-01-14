@@ -10,6 +10,7 @@ public class CurvedScrollView : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     public void OnBeginDrag(PointerEventData eventData)
     {
         isDrag = true;
+        scrollAngle = scrollView.scrollAngle;
     }
 
     public void OnDrag(PointerEventData eventData)
