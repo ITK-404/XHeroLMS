@@ -35,6 +35,12 @@ public class PointClickSystem : MonoBehaviour
     private float rotationLerpSpeed = 2f; // độ mượt xoay
 
     private bool isClickMoving = false;
+
+    public bool IsClickMoving
+    {
+        get => isClickMoving;
+        set => isClickMoving = value;
+    }
     private Vector3 lookTargetWorldPos;
     private float defaultSpeed;
 

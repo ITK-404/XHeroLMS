@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -153,5 +154,14 @@ public class BigArea : MonoBehaviour
             ratio = Mathf.Clamp(ratio, 0.5f, 1);
             item.plotAreaUI.transform.localScale = Vector3.one * ratio;
         }
+    }
+
+    [SerializeField] private Transform drawCheckPoint;
+    [SerializeField] private bool isDrawDebug = false;
+    private void OnDrawGizmos()
+    {
+        if (!isDrawDebug) return;
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(drawCheckPoint.transform.position,3);
     }
 }

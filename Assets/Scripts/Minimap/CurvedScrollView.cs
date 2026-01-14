@@ -6,9 +6,10 @@ public class CurvedScrollView : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     [SerializeField] private float scrollAngle;
     [SerializeField] private float dragSensitivity;
     [SerializeField] private CircularScrollView scrollView;
+    private bool isDrag = false;
     public void OnBeginDrag(PointerEventData eventData)
     {
-        
+        isDrag = true;
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -19,10 +20,12 @@ public class CurvedScrollView : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        isDrag = false;
     }
 
     private void Update()
     {
-        scrollView.SetAngle(scrollAngle);
+        if(isDrag)
+            scrollView.SetAngle(scrollAngle);
     }
 }

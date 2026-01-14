@@ -248,6 +248,37 @@ MonoBehaviour:
       BarrelClipping: 0.25
       Anamorphism: 0
   BlendHint: 0
+--- !u!1 &8412488386405760284
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6390569536051763279}
+  m_Layer: 0
+  m_Name: Teleport Checkpoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6390569536051763279
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8412488386405760284}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7197887144541603677}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8935652443942587992
 GameObject:
   m_ObjectHideFlags: 0
@@ -396,6 +427,7 @@ Transform:
   - {fileID: 7328838960599054321}
   - {fileID: 1526748296981247674}
   - {fileID: 8428849299166572545}
+  - {fileID: 6390569536051763279}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5852859794191080639
@@ -427,6 +459,9 @@ MonoBehaviour:
   lineRenderer: {fileID: 5676894378833413407}
   focusCamera: {fileID: 5317822573653170505}
   normalColor: {r: 0.9710841, g: 0.990566, b: 0.41585082, a: 1}
+  plotContainer: {fileID: 3207298148692616791}
+  drawCheckPoint: {fileID: 6390569536051763279}
+  isDrawDebug: 1
 --- !u!114 &4267768888078755589
 MonoBehaviour:
   m_ObjectHideFlags: 0
