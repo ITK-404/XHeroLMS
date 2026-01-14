@@ -8,6 +8,7 @@ using UnityEngine.Serialization;
 public class AreaDisplayManager : MonoBehaviour
 {
     public static AreaDisplayManager Instance;
+    public event Action<BigArea[]> OnAreasReady;
     [Header("UI")]
     [SerializeField] private BigArea[] bigAreasLocation;
     [FormerlySerializedAs("bigMapUIPrefab")] 
@@ -46,6 +47,8 @@ public class AreaDisplayManager : MonoBehaviour
         SetupBigAreaUI();
         // hide all highlight area
         HighlightSingleArea(null);
+
+        OnAreasReady?.Invoke(bigAreasLocation);
     }
 
     private void SetupBigAreaUI()

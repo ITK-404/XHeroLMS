@@ -45,6 +45,18 @@ public class CourseMapBrowserUI : MonoBehaviour
     public Action<CourseData> OnClickBuy;
     public Action<CourseData> OnClickFindWay;
 
+    public string requiredAreaName = "Lớp Học";
+
+    private AreaDisplayManager areaDisplayManager;
+
+    private AreaDropdownController areaDropdownController;
+
+    public bool loadOnlyWhenInRequiredArea = true;
+
+    private bool _isInRequiredArea = false;
+    private Coroutine _loadRoutine;
+
+    // ===================== DATA =====================
     private readonly List<CourseData> _courses = new();
     private string _currentGroup = "all";
 
@@ -69,19 +81,142 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void Awake()
     {
+        areaDropdownController = GetComponent<AreaDropdownController>();
+        areaDisplayManager = FindAnyObjectByType<AreaDisplayManager>();
         baseUrl = LmsStore.Instance.baseUrl;
 
         SetupTabs();
+
+        if (areaDisplayManager == null) areaDisplayManager = AreaDisplayManager.Instance;
+    }
+
+    private void OnEnable()
+    {
+        // NEW: ưu tiên hook qua dropdown (vì đã có selection event rõ ràng)
+        if (areaDropdownController != null)
+            areaDropdownController.OnAreaSelected += HandleAreaSelectedFromDropdown;
+
+        // NEW: fallback hook qua AreaDisplayManager (khi click trực tiếp trên minimap)
+        if (areaDisplayManager == null) areaDisplayManager = AreaDisplayManager.Instance;
+        if (areaDisplayManager != null)
+            areaDisplayManager.OnShowFocusArea += HandleAreaSelectedFromManager;
+    }
+
+    private void OnDisable()
+    {
+        if (areaDropdownController != null)
+            areaDropdownController.OnAreaSelected -= HandleAreaSelectedFromDropdown;
+
+        if (areaDisplayManager != null)
+            areaDisplayManager.OnShowFocusArea -= HandleAreaSelectedFromManager;
     }
 
     private void Start()
     {
-        if (!autoRunOnStart) return;
-
         // đảm bảo có tab mặc định bật (nếu prefab đang tắt hết)
         EnsureDefaultTabOn();
 
-        StartCoroutine(LoadCoursesThenRender());
+        // NEW: nếu chỉ load khi đúng khu vực thì không chạy ngay
+        if (!autoRunOnStart) return;
+
+        if (loadOnlyWhenInRequiredArea)
+        {
+            // sync state ngay từ selected area hiện tại (nếu có)
+            var current = areaDisplayManager != null ? areaDisplayManager.SelectArea : null;
+            UpdateGateByArea(current);
+
+            // nếu đang đúng khu vực ngay từ đầu thì load
+            if (_isInRequiredArea)
+                StartLoadIfNeeded(forceReload: true);
+            else
+                ClearAndHideCourses();
+        }
+        else
+        {
+            // giữ behavior cũ: load luôn
+            StartLoadIfNeeded(forceReload: true);
+        }
+    }
+
+    // ===================== NEW: Area handlers =====================
+    private void HandleAreaSelectedFromDropdown(BigArea area)
+    {
+        UpdateGateByArea(area);
+    }
+
+    private void HandleAreaSelectedFromManager(BigArea area)
+    {
+        UpdateGateByArea(area);
+    }
+
+    private void UpdateGateByArea(BigArea area)
+    {
+        bool isMatch = IsRequiredArea(area);
+
+        // nếu không đổi trạng thái thì thôi (tránh spam reload)
+        if (_isInRequiredArea == isMatch && loadOnlyWhenInRequiredArea) return;
+
+        _isInRequiredArea = isMatch;
+
+        if (_isInRequiredArea)
+        {
+            // vào đúng khu vực -> load/render
+            StartLoadIfNeeded(forceReload: true);
+        }
+        else
+        {
+            // ra khỏi khu vực -> stop load + clear UI
+            StopLoadIfRunning();
+            ClearAndHideCourses();
+        }
+    }
+
+    private bool IsRequiredArea(BigArea area)
+    {
+        if (area == null) return false;
+        string name = null;
+
+        if (area.Data != null && !string.IsNullOrEmpty(area.Data.displayName))
+            name = area.Data.displayName;
+        else if (area.gameObject != null)
+            name = area.gameObject.name;
+
+        if (string.IsNullOrEmpty(name)) return false;
+
+        // so sánh ignore case + trim
+        return string.Equals(name.Trim(), requiredAreaName.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void StartLoadIfNeeded(bool forceReload)
+    {
+        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+            return;
+
+        if (_loadRoutine != null)
+        {
+            if (!forceReload) return;
+            StopCoroutine(_loadRoutine);
+            _loadRoutine = null;
+        }
+
+        _loadRoutine = StartCoroutine(LoadCoursesThenRender());
+    }
+
+    private void StopLoadIfRunning()
+    {
+        if (_loadRoutine != null)
+        {
+            StopCoroutine(_loadRoutine);
+            _loadRoutine = null;
+        }
+    }
+
+    private void ClearAndHideCourses()
+    {
+        _courses.Clear();
+
+        if (contentParent != null)
+            ClearContent(contentParent);
     }
 
     // ===================== TAB SETUP =====================
@@ -106,9 +241,10 @@ public class CourseMapBrowserUI : MonoBehaviour
 
         tab.Toggle.onValueChanged.AddListener(isOn =>
         {
-            if (!isOn) return;                 // chỉ xử lý lúc bật
-            SetExclusive(tab);                 // tắt các tab khác
-            SelectGroup(groupKey);             // render theo group
+            if (!isOn) return;
+
+            SetExclusive(tab);
+            SelectGroup(groupKey);
         });
     }
 
@@ -119,14 +255,12 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void SetExclusive(FindCourseTypeOptionUI activeTab)
     {
-        // dùng SetIsOnWithoutNotify để tránh trigger vòng lặp event
         SetToggleWithoutNotify(tabAll, activeTab == tabAll);
         SetToggleWithoutNotify(tabBasic, activeTab == tabBasic);
         SetToggleWithoutNotify(tabAdvanced, activeTab == tabAdvanced);
         SetToggleWithoutNotify(tabIntensive, activeTab == tabIntensive);
         SetToggleWithoutNotify(tabBusiness, activeTab == tabBusiness);
 
-        // đảm bảo tab đang chọn vẫn ON (trường hợp activeTab null)
         if (activeTab != null && activeTab.Toggle != null)
             activeTab.Toggle.SetIsOnWithoutNotify(true);
     }
@@ -139,10 +273,8 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void EnsureDefaultTabOn()
     {
-        // nếu có cái nào đang ON thì dùng cái đó
         if (IsOn(tabAll) || IsOn(tabBasic) || IsOn(tabAdvanced) || IsOn(tabIntensive) || IsOn(tabBusiness))
         {
-            // sync group theo tab đang ON
             if (IsOn(tabAll)) _currentGroup = "all";
             else if (IsOn(tabBasic)) _currentGroup = "basic";
             else if (IsOn(tabAdvanced)) _currentGroup = "advanced";
@@ -151,10 +283,9 @@ public class CourseMapBrowserUI : MonoBehaviour
             return;
         }
 
-        // mặc định bật "Tất cả"
         if (tabAll != null && tabAll.Toggle != null)
         {
-            tabAll.Toggle.isOn = true; // cái này sẽ trigger listener và render khi đã load
+            tabAll.Toggle.isOn = true;
             _currentGroup = "all";
         }
         else
@@ -172,11 +303,25 @@ public class CourseMapBrowserUI : MonoBehaviour
     public void SelectGroup(string groupKey)
     {
         _currentGroup = string.IsNullOrEmpty(groupKey) ? "all" : groupKey.ToLowerInvariant();
+
+        // nếu không ở khu vực "Lớp Học" thì không render gì cả
+        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+        {
+            ClearAndHideCourses();
+            return;
+        }
+
         RenderCurrentGroup();
     }
 
     public IEnumerator LoadCoursesThenRender()
     {
+        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+        {
+            ClearAndHideCourses();
+            yield break;
+        }
+
         _courses.Clear();
         string token = GetToken();
 
@@ -185,6 +330,10 @@ public class CourseMapBrowserUI : MonoBehaviour
 
         while (true)
         {
+            // nếu trong lúc đang load mà user chuyển khu vực -> stop sớm
+            if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+                yield break;
+
             string url = BuildUrl(nextSkip, limitPerPage);
             string body = null;
 
@@ -208,6 +357,13 @@ public class CourseMapBrowserUI : MonoBehaviour
             if (objects.Count < limitPerPage) break;
             nextSkip += limitPerPage;
             page++;
+        }
+
+        // gate lần cuối trước khi render
+        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+        {
+            ClearAndHideCourses();
+            yield break;
         }
 
         RenderCurrentGroup();
@@ -240,9 +396,7 @@ public class CourseMapBrowserUI : MonoBehaviour
     {
         if (ui == null || data == null) return;
 
-        // truyền meta giữ nguyên như bạn muốn
         ui.SetMeta(data.sku, data.seoUrl);
-
         ui.SetDisplayCourseName(string.IsNullOrEmpty(data.title) ? "(no title)" : data.title);
 
         float? displayPrice = useCurrentPriceFirst
@@ -259,19 +413,6 @@ public class CourseMapBrowserUI : MonoBehaviour
 
         if (!owned) ui.SetPriceText(priceText);
         ui.SetOwnedUI(owned);
-
-        // Bind click giữ nguyên theo CourseMapBrowserUI
-        // if (ui.FindWayBtn)
-        // {
-        //     ui.FindWayBtn.onClick.RemoveAllListeners();
-        //     ui.FindWayBtn.onClick.AddListener(() => OnClickFindWay?.Invoke(data));
-        // }
-        //
-        // if (ui.BuyCourseBtn)
-        // {
-        //     ui.BuyCourseBtn.onClick.RemoveAllListeners();
-        //     ui.BuyCourseBtn.onClick.AddListener(() => OnClickBuy?.Invoke(data));
-        // }
     }
 
     private void ClearContent(RectTransform content)

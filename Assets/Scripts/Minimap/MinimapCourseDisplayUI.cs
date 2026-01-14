@@ -22,7 +22,7 @@ public class MinimapCourseDisplayUI : MonoBehaviour
     [SerializeField] private Color ownCourseColor;
     [SerializeField] private Color ownerTextColor;
     [SerializeField] private Color priceTextColor;
-    private void Awake()    
+    private void Awake()
     {
         findWayBtn.onClick.AddListener(ClickFindWayButton);
         buyCourseBtn.onClick.AddListener(OnShowPopup);
@@ -37,13 +37,20 @@ public class MinimapCourseDisplayUI : MonoBehaviour
 
     private void OnShowPopup()
     {
+        // check login theo chuẩn bạn đang dùng (TokenStore)
+        bool isLoggedIn = TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+
+        string msg = isLoggedIn
+            ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
+            : "Bạn cần đăng nhập để xem khóa học này.";
+
         LoadingUI.ShowErrorPopup(
-            "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+            msg,
             "Thông báo",
-            () => { }
+            () => { BookHandler.CanSelectBook = true; }
         );
     }
-    
+
     private void ClickFindWayButton()
     {
         Debug.Log("Nhan tim duong toi khoa hoc");
@@ -83,8 +90,11 @@ public class MinimapCourseDisplayUI : MonoBehaviour
 
         backgroundImg.color = owned ? ownCourseColor : priceColor;
 
-        priceTmp.color = owned ? ownerTextColor : priceTextColor;
-        priceTmp.enableVertexGradient = owned;
+        if (priceTmp)
+        {
+            priceTmp.color = owned ? ownerTextColor : priceTextColor;
+            priceTmp.enableVertexGradient = owned;
+        }
     }
 
     public Button FindWayBtn => findWayBtn;
