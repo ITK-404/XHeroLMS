@@ -1,12 +1,15 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
+
 public enum PlayerState
 {
     Unlogged,
     LoggedIn,
     Learning,
-    Examining, 
+    Examining,
 }
+
 public class PlayerPanelUI : MonoBehaviour
 {
     public GameObject container;
@@ -18,7 +21,11 @@ public class PlayerPanelUI : MonoBehaviour
 
 
     public LogoutPopupUI logoutPopupUI;
+    public DeleteAccountPopup deleteAccountPopup;
+    public GameObject selectFunctionGroup;
+    public Button blockingSelectFunction;
     public string defaultLoadScene = "New Scene";
+
     private void Awake()
     {
         defaultContainer.gameObject.SetActive(true);
@@ -34,6 +41,7 @@ public class PlayerPanelUI : MonoBehaviour
         {
             LoginController.OnLoginComplete += ShowLoginUI;
         }
+
         logoutPopupUI.gameObject.SetActive(false);
         LogoutPopupUI.OnReturn += OnReturn;
         LogoutPopupUI.OnLogout += OnLogout;
@@ -41,31 +49,33 @@ public class PlayerPanelUI : MonoBehaviour
     }
 
     private bool isLoaded = false;
+
     private void OnLogout()
     {
-        if(isLoaded) return;
-        
+        if (isLoaded) return;
+
         if (TokenStore.IsAuthenticated)
         {
             isLoaded = true;
             TokenStore.Clear();
             LoadingTransition.Load(defaultLoadScene);
         }
-        
     }
 
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;
-        
+
         LogoutPopupUI.OnReturn -= OnReturn;
         LogoutPopupUI.OnLogout -= OnLogout;
         TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
     }
-    
+
     private void TryLogoutButtonOnOnTryLogout()
     {
-        logoutPopupUI.Show();
+        selectFunctionGroup.gameObject.SetActive(true);
+        blockingSelectFunction.gameObject.SetActive(true);
+        // logoutPopupUI.Show();
     }
 
     private void OnReturn()
@@ -88,5 +98,5 @@ public class PlayerPanelUI : MonoBehaviour
     {
         container.gameObject.SetActive(true);
     }
-    
 }
+
