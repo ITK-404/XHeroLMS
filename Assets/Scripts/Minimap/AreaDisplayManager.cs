@@ -119,6 +119,14 @@ public class AreaDisplayManager : MonoBehaviour
             {
                 Debug.Log("Hit something in highlight area");
                 var bigArea = raycastHit.collider.GetComponentInParent<BigArea>();
+
+                // if (bigArea.IsEmptyPlotInSide())
+                // {
+                //     player.GetComponent<PointClickSystem>().TeleportDelay(bigArea.Location.transform.position);
+                //     FindFirstObjectByType<MinimapManager>().ToggleOffMinimap();
+                //     return;
+                // }
+                
                 Debug.Log($"Hit Area: {raycastHit.collider.gameObject}",raycastHit.collider.gameObject);
                 HighlightSingleArea(bigArea);
             }
