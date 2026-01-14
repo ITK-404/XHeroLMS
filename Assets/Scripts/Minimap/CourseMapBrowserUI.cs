@@ -45,13 +45,16 @@ public class CourseMapBrowserUI : MonoBehaviour
     public Action<CourseData> OnClickBuy;
     public Action<CourseData> OnClickFindWay;
 
+    public event Action OnCoursesChanged;
+
     public string requiredAreaName = "Lớp Học";
 
     private AreaDisplayManager areaDisplayManager;
-
     private AreaDropdownController areaDropdownController;
 
     public bool loadOnlyWhenInRequiredArea = true;
+
+    public bool prefetchCoursesForPercentOnStart = true;
 
     private bool _isInRequiredArea = false;
     private Coroutine _loadRoutine;
@@ -92,11 +95,9 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // NEW: ưu tiên hook qua dropdown (vì đã có selection event rõ ràng)
         if (areaDropdownController != null)
             areaDropdownController.OnAreaSelected += HandleAreaSelectedFromDropdown;
 
-        // NEW: fallback hook qua AreaDisplayManager (khi click trực tiếp trên minimap)
         if (areaDisplayManager == null) areaDisplayManager = AreaDisplayManager.Instance;
         if (areaDisplayManager != null)
             areaDisplayManager.OnShowFocusArea += HandleAreaSelectedFromManager;
@@ -113,47 +114,39 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void Start()
     {
-        // đảm bảo có tab mặc định bật (nếu prefab đang tắt hết)
         EnsureDefaultTabOn();
 
-        // NEW: nếu chỉ load khi đúng khu vực thì không chạy ngay
         if (!autoRunOnStart) return;
+
+        if (prefetchCoursesForPercentOnStart)
+        {
+            StartCoroutine(LoadCoursesDataOnly());
+        }
 
         if (loadOnlyWhenInRequiredArea)
         {
-            // sync state ngay từ selected area hiện tại (nếu có)
             var current = areaDisplayManager != null ? areaDisplayManager.SelectArea : null;
             UpdateGateByArea(current);
 
-            // nếu đang đúng khu vực ngay từ đầu thì load
             if (_isInRequiredArea)
                 StartLoadIfNeeded(forceReload: true);
             else
-                ClearAndHideCourses();
+                ClearAndHideCoursesUIOnly();
         }
         else
         {
-            // giữ behavior cũ: load luôn
             StartLoadIfNeeded(forceReload: true);
         }
     }
 
-    // ===================== NEW: Area handlers =====================
-    private void HandleAreaSelectedFromDropdown(BigArea area)
-    {
-        UpdateGateByArea(area);
-    }
-
-    private void HandleAreaSelectedFromManager(BigArea area)
-    {
-        UpdateGateByArea(area);
-    }
+    // ===================== Area handlers =====================
+    private void HandleAreaSelectedFromDropdown(BigArea area) => UpdateGateByArea(area);
+    private void HandleAreaSelectedFromManager(BigArea area) => UpdateGateByArea(area);
 
     private void UpdateGateByArea(BigArea area)
     {
         bool isMatch = IsRequiredArea(area);
 
-        // nếu không đổi trạng thái thì thôi (tránh spam reload)
         if (_isInRequiredArea == isMatch && loadOnlyWhenInRequiredArea) return;
 
         _isInRequiredArea = isMatch;
@@ -165,26 +158,31 @@ public class CourseMapBrowserUI : MonoBehaviour
         }
         else
         {
-            // ra khỏi khu vực -> stop load + clear UI
             StopLoadIfRunning();
-            ClearAndHideCourses();
+            ClearAndHideCoursesUIOnly();
         }
     }
 
     private bool IsRequiredArea(BigArea area)
     {
         if (area == null) return false;
-        string name = null;
-
-        if (area.Data != null && !string.IsNullOrEmpty(area.Data.displayName))
-            name = area.Data.displayName;
-        else if (area.gameObject != null)
-            name = area.gameObject.name;
-
+        string name = GetAreaName(area);
         if (string.IsNullOrEmpty(name)) return false;
 
-        // so sánh ignore case + trim
         return string.Equals(name.Trim(), requiredAreaName.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetAreaName(BigArea area)
+    {
+        if (area == null) return null;
+
+        if (area.Data != null && !string.IsNullOrEmpty(area.Data.displayName))
+            return area.Data.displayName;
+
+        if (area.gameObject != null)
+            return area.gameObject.name;
+
+        return null;
     }
 
     private void StartLoadIfNeeded(bool forceReload)
@@ -211,10 +209,8 @@ public class CourseMapBrowserUI : MonoBehaviour
         }
     }
 
-    private void ClearAndHideCourses()
+    private void ClearAndHideCoursesUIOnly()
     {
-        _courses.Clear();
-
         if (contentParent != null)
             ClearContent(contentParent);
     }
@@ -222,12 +218,6 @@ public class CourseMapBrowserUI : MonoBehaviour
     // ===================== TAB SETUP =====================
     private void SetupTabs()
     {
-        UnhookTab(tabAll);
-        UnhookTab(tabBasic);
-        UnhookTab(tabAdvanced);
-        UnhookTab(tabIntensive);
-        UnhookTab(tabBusiness);
-
         HookTab(tabAll, "all");
         HookTab(tabBasic, "basic");
         HookTab(tabAdvanced, "advanced");
@@ -246,11 +236,6 @@ public class CourseMapBrowserUI : MonoBehaviour
             SetExclusive(tab);
             SelectGroup(groupKey);
         });
-    }
-
-    private void UnhookTab(FindCourseTypeOptionUI tab)
-    {
-        if (tab == null || tab.Toggle == null) return;
     }
 
     private void SetExclusive(FindCourseTypeOptionUI activeTab)
@@ -304,10 +289,10 @@ public class CourseMapBrowserUI : MonoBehaviour
     {
         _currentGroup = string.IsNullOrEmpty(groupKey) ? "all" : groupKey.ToLowerInvariant();
 
-        // nếu không ở khu vực "Lớp Học" thì không render gì cả
+        // chỉ render list khi đúng khu (nếu bật gate)
         if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
         {
-            ClearAndHideCourses();
+            ClearAndHideCoursesUIOnly();
             return;
         }
 
@@ -318,20 +303,43 @@ public class CourseMapBrowserUI : MonoBehaviour
     {
         if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
         {
-            ClearAndHideCourses();
+            ClearAndHideCoursesUIOnly();
             yield break;
         }
 
-        _courses.Clear();
-        string token = GetToken();
+        // Nếu đã prefetch rồi, vẫn cho phép reload để đảm bảo data mới nhất
+        yield return LoadCoursesCore(clearBeforeLoad: true, stopIfGateOff: true);
 
+        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+        {
+            ClearAndHideCoursesUIOnly();
+            yield break;
+        }
+
+        OnCoursesChanged?.Invoke();
+        RenderCurrentGroup();
+    }
+
+    private IEnumerator LoadCoursesDataOnly()
+    {
+        if (_loadRoutine != null) yield break;
+
+        yield return LoadCoursesCore(clearBeforeLoad: true, stopIfGateOff: false);
+
+        OnCoursesChanged?.Invoke();
+    }
+
+    private IEnumerator LoadCoursesCore(bool clearBeforeLoad, bool stopIfGateOff)
+    {
+        if (clearBeforeLoad) _courses.Clear();
+
+        string token = GetToken();
         int nextSkip = 0;
         int page = 0;
 
         while (true)
         {
-            // nếu trong lúc đang load mà user chuyển khu vực -> stop sớm
-            if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
+            if (stopIfGateOff && loadOnlyWhenInRequiredArea && !_isInRequiredArea)
                 yield break;
 
             string url = BuildUrl(nextSkip, limitPerPage);
@@ -358,15 +366,6 @@ public class CourseMapBrowserUI : MonoBehaviour
             nextSkip += limitPerPage;
             page++;
         }
-
-        // gate lần cuối trước khi render
-        if (loadOnlyWhenInRequiredArea && !_isInRequiredArea)
-        {
-            ClearAndHideCourses();
-            yield break;
-        }
-
-        RenderCurrentGroup();
     }
 
     // ===================== Render =====================
@@ -436,6 +435,40 @@ public class CourseMapBrowserUI : MonoBehaviour
                     return true;
         }
         return false;
+    }
+
+    public float GetBigAreaOwnedPercent(BigArea area)
+    {
+        if (area == null) return 0f;
+
+        string name = GetAreaName(area);
+        if (string.IsNullOrEmpty(name)) return 0f;
+
+        bool isClassArea = string.Equals(name.Trim(), requiredAreaName.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        if (!isClassArea) return 0f;
+
+        return GetCurrentLoadedOwnedPercent();
+    }
+
+    public float GetCurrentLoadedOwnedPercent()
+    {
+        int total = _courses != null ? _courses.Count : 0;
+        if (total <= 0) return 0f;
+
+        int owned = 0;
+        for (int i = 0; i < total; i++)
+        {
+            var c = _courses[i];
+            if (c == null) continue;
+
+            bool joined = c.isJoined ?? false;
+            bool isFree = c.isFree ?? false;
+
+            if (joined || isFree) owned++;
+        }
+
+        return (owned * 100f) / total;
     }
 
     // ===================== Network =====================
@@ -628,7 +661,7 @@ public class CourseMapBrowserUI : MonoBehaviour
     {
         if (string.IsNullOrEmpty(s)) return null;
         if (float.TryParse(s, System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture, out var v))
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
             return v;
         return null;
     }

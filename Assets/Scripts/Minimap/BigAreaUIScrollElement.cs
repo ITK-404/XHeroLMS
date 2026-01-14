@@ -47,16 +47,19 @@ public class BigAreaUIScrollElement : MonoBehaviour
             timer -= Time.deltaTime;
     }
 
-    public void UpdateUI()
+    public void UpdateUI(float percent)
     {
+        if (bigArea == null) return;
+
         displayNameText.text = bigArea.Data.displayName;
-        UpdatePercent(0);
+        UpdatePercent(percent);
         UpdateHighlight();
     }
 
     private void UpdatePercent(float percent)
     {
-        percentText.text = $"{percent}%";
+        percent = Mathf.Clamp(percent, 0f, 100f);
+        percentText.text = $"{Mathf.RoundToInt(percent)}%";
     }
 
     public void UpdateHighlight()
