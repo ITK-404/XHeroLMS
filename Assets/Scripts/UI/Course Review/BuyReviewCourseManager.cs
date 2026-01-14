@@ -25,7 +25,7 @@ public class BuyReviewCourseManager : MonoBehaviour
     public AutomaticTextPreview automaticTextPreview;
 
     private bool needFetchData;
-    private Coroutine previewCoroutine;
+    private Coroutine previewCoroutine; 
 
     private void Awake()
     {
