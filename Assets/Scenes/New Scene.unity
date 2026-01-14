@@ -86463,7 +86463,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 447747032402799813, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
   m_PrefabInstance: {fileID: 366156518662101356}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1309472199}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 88c3dfe2eaf28d34c8aea28e3ba93947, type: 3}
@@ -125697,6 +125697,31 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4404038850881384740, guid: af27adb4abead6a4d912e7289d02046e, type: 3}
+--- !u!1 &1309472199 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4113181839120997904, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
+  m_PrefabInstance: {fileID: 366156518662101356}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1309472201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1309472199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d6afbe04c639ed4da59630138b56654, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AreaDropdownController
+  dropdown: {fileID: 2088854050}
+  areaDisplayManager: {fileID: 714706946}
+  includeAllOption: 1
+  allOptionLabel: "T\u1EA5t c\u1EA3 khu v\u1EF1c"
+  autoBuildWhenAreasReady: 1
+  fallbackBuildNextFrame: 1
+  autoSelectOnChange: 1
+  syncWithAreaSelection: 1
 --- !u!1 &1311608445 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8708181203024150270, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -179992,6 +180017,17 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 6879628508378384717, guid: af27adb4abead6a4d912e7289d02046e, type: 3}
+--- !u!114 &2088854050 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6576971151863676922, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
+  m_PrefabInstance: {fileID: 366156518662101356}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b743370ac3e4ec2a1668f5455a8ef8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_Dropdown
 --- !u!1 &2089877290 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5701471699194135920, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -184760,7 +184796,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 635861946447464412, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 899809696}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4113181839120997904, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1309472201}
   m_SourcePrefab: {fileID: 100100000, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
 --- !u!114 &366156518662101359 stripped
 MonoBehaviour:
