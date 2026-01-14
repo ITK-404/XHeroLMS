@@ -11,7 +11,9 @@ public class LogoutPopupUI : MonoBehaviour
     public static Action OnLogout;
     public static Action OnReturn;
 
-    public void Awake()
+    [SerializeField] private CanvasGroup _canvasGroup;
+
+    private void Awake()
     {
         logoutBtn.onClick.AddListener(Logout);
         returnBtn.onClick.AddListener(Return);
@@ -34,16 +36,25 @@ public class LogoutPopupUI : MonoBehaviour
         OnReturn?.Invoke();
     }
 
-    [SerializeField] private CanvasGroup _canvasGroup;
+    public void SetInteractable(bool interactable)
+    {
+        if (_canvasGroup == null) return;
+
+        _canvasGroup.interactable = interactable;
+        _canvasGroup.blocksRaycasts = interactable;
+    }
+
     public void Show()
     {
         _canvasGroup.gameObject.SetActive(true);
-        _canvasGroup.DOFade(0, 0);
+        _canvasGroup.alpha = 0;
         _canvasGroup.DOFade(1, 0.2f);
+        SetInteractable(true);
     }
 
     public void Hide()
     {
+        SetInteractable(false);
         _canvasGroup.gameObject.SetActive(false);
     }
 }
