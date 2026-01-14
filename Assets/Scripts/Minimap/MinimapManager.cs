@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class MinimapManager : MonoBehaviour
@@ -14,8 +15,15 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private PlotHandlerUI plotHandlerUI;
     [SerializeField] private CircularScrollView circularScrollView;
     [SerializeField] private FindCourseHandler findCourseHandler;
+    
+    // setting
+    private bool isBleding;
+    [SerializeField] private GameObject blockedImg;
     private void Awake()
     {
+        blockedImg.gameObject.SetActive(false);
+        waitForTwoSecond = new WaitForSeconds(2);
+        
         minimapUI.TurnOnMinimapAction += ToggleOnMinimap;
         minimapUI.TurnOffMinimapAction += ToggleOffMinimap;
         
@@ -96,12 +104,28 @@ public class MinimapManager : MonoBehaviour
         }
     }
 
-  
-    
+
+    private IEnumerator TryBlending(bool isEnable)
+    {
+        if (isBleding)
+        {
+            yield break;
+        }
+
+        isBleding = true;
+        UpdateState(isEnable);
+        blockedImg.gameObject.SetActive(true);
+        yield return waitForTwoSecond;
+        blockedImg.gameObject.SetActive(false);
+        isBleding = false;
+    }
+
+    private YieldInstruction waitForTwoSecond;
 
     public void ToggleOffMinimap()
     {
-        UpdateState(false);
+        StartCoroutine(TryBlending(false));
+        // UpdateState(false);
         minimapCameraHandler.FocusPlayerCamera();
         areaDisplayManager.ResetArea();
         Debug.Log($"Toggle vao player camera");
@@ -110,7 +134,8 @@ public class MinimapManager : MonoBehaviour
     public void ToggleOnMinimap()
     {
         Debug.Log($"Toggle vao minimap camera");
-        UpdateState(true);
+        // UpdateState(true);
+        StartCoroutine(TryBlending(true));
         minimapCameraHandler.FocusMinimapCamera();
     }
 
