@@ -75,4 +75,9 @@ public class BigAreaUIScrollElement : MonoBehaviour
         hiddenIcon.gameObject.SetActive(isHighlight);
         hiddenBackground.gameObject.SetActive(isHighlight);
     }
+
+    public bool IsSelected()
+    {
+        return AreaDisplayManager.Instance.SelectArea == bigArea;
+    }
 }

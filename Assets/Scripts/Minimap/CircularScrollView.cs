@@ -73,8 +73,6 @@ public class CircularScrollView : MonoBehaviour
 
             canvasGroup.alpha = alpha;
             rect.anchoredPosition = new Vector2(x, y) + offset;
-            
-            Debug.Log($"angle = "+angle, rect.gameObject);
         }
     }
   
@@ -103,6 +101,7 @@ public class CircularScrollView : MonoBehaviour
     {
         container.gameObject.SetActive(true);
         UpdateHighlightElement();
+        TryUpdateFocusElement();
     }
 
     public void Hide()
@@ -116,5 +115,31 @@ public class CircularScrollView : MonoBehaviour
         {
             item.UpdateUI();
         }
+    }
+
+    private void TryUpdateFocusElement()
+    {
+        if (items == null)return;
+        for (int index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+            var isItemSelected = item.IsSelected();
+            if (isItemSelected)
+            {
+                SelectElement(index);
+                break;
+            }
+        }
+    }
+    
+    public void SelectElement(int index)
+    {
+        if (items == null || items.Count == 0)
+            return;
+
+        index = Mathf.Clamp(index, 0, items.Count - 1);
+
+        float targetScrollAngle = -index * angleStep;
+        SetAngle(targetScrollAngle);
     }
 }
