@@ -16,22 +16,29 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private FindCourseHandler findCourseHandler;
     private void Awake()
     {
-        minimapUI.turnOnBtn.onClick.AddListener(ToggleOn);
-        minimapUI.turnOffBtn.onClick.AddListener(ToggleOff);
+        minimapUI.TurnOnMinimapAction += ToggleOnMinimap;
+        minimapUI.TurnOffMinimapAction += ToggleOffMinimap;
+        
         areaDisplayManager.OnShowFocusArea += OnShowFocusArea;
         
-        plotHandlerUI.showScrollViewBtn.onClick.AddListener(ToggleScrollViewArea);
-        plotHandlerUI.findCourseBtn.onClick.AddListener(ShowFindCourseUI);
+        plotHandlerUI.OnClickShowScrollViewAction += ToggleScrollViewArea;    
+        plotHandlerUI.OnShowFindCourseAction += ShowFindCourseUI;
+
+        findCourseHandler.OnCloseFindCourseAction += HideFindCourseUI;
     }
     
     private void OnDestroy()
     {
-        minimapUI.turnOnBtn.onClick.RemoveListener(ToggleOn);
-        minimapUI.turnOffBtn.onClick.RemoveListener(ToggleOff);
-        areaDisplayManager.OnShowFocusArea -= OnShowFocusArea;
+        minimapUI.TurnOnMinimapAction -= ToggleOnMinimap;
+        minimapUI.TurnOffMinimapAction -= ToggleOffMinimap;
         
-        plotHandlerUI.showScrollViewBtn.onClick.RemoveListener(ToggleScrollViewArea);
-        plotHandlerUI.findCourseBtn.onClick.RemoveListener(ShowFindCourseUI);
+        areaDisplayManager.OnShowFocusArea -= OnShowFocusArea;
+
+        plotHandlerUI.OnClickShowScrollViewAction -= ToggleScrollViewArea;
+        plotHandlerUI.OnShowFindCourseAction -= ShowFindCourseUI;
+        
+        findCourseHandler.OnCloseFindCourseAction -= HideFindCourseUI;
+
     }
 
     private bool isOn = false;
@@ -41,6 +48,12 @@ public class MinimapManager : MonoBehaviour
         // make sure hide area course
         findCourseHandler.Show();
         circularScrollView.Hide();
+    }
+
+    public void HideFindCourseUI()
+    {
+        findCourseHandler.Hide();
+        // circularScrollView.Show();
     }
     
     private void ToggleScrollViewArea()
@@ -86,7 +99,7 @@ public class MinimapManager : MonoBehaviour
   
     
 
-    private void ToggleOff()
+    private void ToggleOffMinimap()
     {
         UpdateState(false);
         minimapCameraHandler.FocusPlayerCamera();
@@ -94,7 +107,7 @@ public class MinimapManager : MonoBehaviour
         Debug.Log($"Toggle vao player camera");
     }
     
-    private void ToggleOn()
+    private void ToggleOnMinimap()
     {
         Debug.Log($"Toggle vao minimap camera");
         UpdateState(true);

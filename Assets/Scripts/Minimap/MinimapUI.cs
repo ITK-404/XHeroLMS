@@ -8,19 +8,31 @@ public class MinimapUI : MonoBehaviour
     [Header("Minimap UI")]
     [SerializeField] private GameObject container;
     [SerializeField] private GameObject maskView;
-    public Button turnOnBtn;
-    public Button turnOffBtn;
-    public Button showAreaList;
+    [SerializeField] private Button turnOnBtn;
+    [SerializeField] private Button turnOffBtn;
+    [SerializeField] private Button showAreaList;
+
+    public Action TurnOnMinimapAction;
+    public Action TurnOffMinimapAction;
+    
     private void Start()
     {
         Show();
         ShowBottomViewUI();
+        
+        turnOffBtn.onClick.AddListener(ClickTurnOffMinimap);
+        turnOnBtn.onClick.AddListener(ClickTurnOnMinimap);
     }
 
     private void OnDestroy()
     {
-        LoginController.OnLoginComplete -= Show;
+        turnOffBtn.onClick.RemoveListener(ClickTurnOffMinimap);
+        turnOnBtn.onClick.RemoveListener(ClickTurnOnMinimap);    
     }
+
+    private void ClickTurnOnMinimap() => TurnOnMinimapAction?.Invoke();
+    private void ClickTurnOffMinimap() => TurnOffMinimapAction?.Invoke();
+    
 
     public void Show()
     {

@@ -11,9 +11,28 @@ public class PlotHandlerUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI bigAreaNameTmp;
     [SerializeField] private TextMeshProUGUI percentNameTmp;
     [Header("Function Btn")]
-    public Button showScrollViewBtn;
-    public Button findCourseBtn;
-    public Button showReviewBtn;
+    [SerializeField] private Button showScrollViewBtn;
+    [SerializeField] private Button findCourseBtn;
+    [SerializeField] private Button showReviewBtn;
+
+    public Action OnShowFindCourseAction;
+    public Action OnClickShowScrollViewAction;
+
+    private void Awake()
+    {
+        findCourseBtn.onClick.AddListener(ClickShowFindCourse);
+        showScrollViewBtn.onClick.AddListener(ClickShowScrollView);
+    }
+
+    private void OnDestroy()
+    {
+        findCourseBtn.onClick.RemoveListener(ClickShowFindCourse);
+        showScrollViewBtn.onClick.RemoveListener(ClickShowScrollView);
+    }
+
+    private void ClickShowFindCourse() => OnShowFindCourseAction?.Invoke();
+    private void ClickShowScrollView() => OnClickShowScrollViewAction?.Invoke();
+
     public void Show()
     {
         container.gameObject.SetActive(true);
