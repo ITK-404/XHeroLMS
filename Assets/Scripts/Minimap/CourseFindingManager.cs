@@ -48,10 +48,6 @@ public class CourseFindingManager : MonoBehaviour
         
         minimapManager.ToggleOffMinimap();
         pointClickSystem.MoveToPosition(findPlot.Location.GetItemWorldPosition());
-    }
-
-    private void FindHouse()
-    {
-        
+        pointClickSystem.IsClickMoving = true;
     }
 }
