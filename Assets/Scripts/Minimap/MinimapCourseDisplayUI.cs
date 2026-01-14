@@ -25,13 +25,25 @@ public class MinimapCourseDisplayUI : MonoBehaviour
     private void Awake()    
     {
         findWayBtn.onClick.AddListener(ClickFindWayButton);
+        buyCourseBtn.onClick.AddListener(OnShowPopup);
     }
 
     private void OnDestroy()
     {
         findWayBtn.onClick.RemoveListener(ClickFindWayButton);
+        buyCourseBtn.onClick.RemoveListener(OnShowPopup);
+        
     }
 
+    private void OnShowPopup()
+    {
+        LoadingUI.ShowErrorPopup(
+            "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+            "Thông báo",
+            () => { }
+        );
+    }
+    
     private void ClickFindWayButton()
     {
         Debug.Log("Nhan tim duong toi khoa hoc");
@@ -60,13 +72,13 @@ public class MinimapCourseDisplayUI : MonoBehaviour
         {
             // giá -> "ĐÃ SỞ HỮU"
             SetPriceText("ĐÃ SỞ HỮU");
-            if (buyCourseBtn) buyCourseBtn.gameObject.SetActive(true);
-            if (findWayBtn) findWayBtn.gameObject.SetActive(false);
+            if (buyCourseBtn) buyCourseBtn.gameObject.SetActive(false);
+            if (findWayBtn) findWayBtn.gameObject.SetActive(true);
         }
         else
         {
-            if (buyCourseBtn) buyCourseBtn.gameObject.SetActive(false);
-            if (findWayBtn) findWayBtn.gameObject.SetActive(true);
+            if (buyCourseBtn) buyCourseBtn.gameObject.SetActive(true);
+            if (findWayBtn) findWayBtn.gameObject.SetActive(false);
         }
 
         backgroundImg.color = owned ? ownCourseColor : priceColor;
