@@ -22,6 +22,12 @@ public class AreaDropdownController : MonoBehaviour
     // Nếu true: khi chọn khu vực bằng click minimap (OnShowFocusArea) thì dropdown sẽ tự sync caption/value
     [SerializeField] private bool syncWithAreaSelection = true;
 
+    [Header("UI - Progress")]
+    [SerializeField] private TMP_Text progressTmp;
+    [SerializeField] private string progressFormat = "Đã mở khóa <color=#F9DF99>{0}/{1} ({2:0}%)</color>";
+
+    private CourseMapBrowserUI _courseMap;
+
     [Header("Events")]
     public Action<BigArea> OnAreaSelected;
 
