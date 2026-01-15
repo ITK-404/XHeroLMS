@@ -582,4 +582,13 @@ public class PointClickSystem : MonoBehaviour
             moveVfxInstance.SetActive(false);
         }
     }
+
+    public void StopMoving()
+    {
+        if (ai != null)
+        {
+            ai.canMove = false;
+            ai.isStopped = true;
+        }
+    }
 }
