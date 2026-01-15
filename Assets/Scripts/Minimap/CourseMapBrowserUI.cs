@@ -48,6 +48,8 @@ public class CourseMapBrowserUI : MonoBehaviour
     public event Action OnCoursesChanged;
 
     public string requiredAreaName = "Lớp Học";
+    // chọn "Tất cả khu vực" vẫn hiện list
+    public bool showCoursesWhenAllAreaSelected = true;
 
     private AreaDisplayManager areaDisplayManager;
     private AreaDropdownController areaDropdownController;
@@ -163,14 +165,16 @@ public class CourseMapBrowserUI : MonoBehaviour
         }
     }
 
-    private bool IsRequiredArea(BigArea area)
-    {
-        if (area == null) return false;
-        string name = GetAreaName(area);
-        if (string.IsNullOrEmpty(name)) return false;
+private bool IsRequiredArea(BigArea area)
+{
+    // ALL (null) => vẫn cho hiển thị nếu bật option
+    if (area == null) return showCoursesWhenAllAreaSelected;
 
-        return string.Equals(name.Trim(), requiredAreaName.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
+    string name = GetAreaName(area);
+    if (string.IsNullOrEmpty(name)) return false;
+
+    return string.Equals(name.Trim(), requiredAreaName.Trim(), StringComparison.OrdinalIgnoreCase);
+}
 
     private string GetAreaName(BigArea area)
     {
