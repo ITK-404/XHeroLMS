@@ -13,17 +13,17 @@ public class BigAreaTooltipUI : MonoBehaviour
     [SerializeField] private GameObject container;
 
     [SerializeField] private Image areaIconImg;
-
+    public Action OnClickFindPathAction;
     private void Awake()
     {
         closeBgBtn.onClick.AddListener(Hide);
-        findPathBtn.onClick.AddListener(Hide);
+        findPathBtn.onClick.AddListener(ClickFindPath);
         Hide();
     }
 
     private void OnDestroy()
     {
-        findPathBtn.onClick.RemoveListener(Hide);
+        findPathBtn.onClick.RemoveListener(ClickFindPath);
         closeBgBtn.onClick.RemoveListener(Hide);
     }
 
@@ -32,20 +32,21 @@ public class BigAreaTooltipUI : MonoBehaviour
         container.gameObject.SetActive(true);
     }
 
+
+    public void ClickFindPath()
+    {
+        OnClickFindPathAction?.Invoke();
+        Hide();
+    }
     public void Hide()
     {
         container.gameObject.SetActive(false);
     }
-    
+
     public void ShowTooltip(BigArea bigaArea)
     {
-        informationTmp.text = "Nhân tướng học là nơi học tập và tìm hiểu các kiến thức cơ bản về nhân tướng theo phong thủy một cách trực quan. ";
+        informationTmp.text =
+            "Nhân tướng học là nơi học tập và tìm hiểu các kiến thức cơ bản về nhân tướng theo phong thủy một cách trực quan. ";
         areaIconImg.sprite = bigaArea.Data.displayIcon;
     }
-}
-
-public class ReviewBigAreaUI : MonoBehaviour
-{
-    [SerializeField] private TextMeshProUGUI reviewInformationTmp;
-    [SerializeField] private 
 }
