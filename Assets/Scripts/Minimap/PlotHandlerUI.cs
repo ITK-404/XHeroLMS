@@ -17,7 +17,7 @@ public class PlotHandlerUI : MonoBehaviour
 
     public Action OnShowFindCourseAction;
     public Action OnClickShowScrollViewAction;
-    public Action OnClickShowBigArea;
+    public Action OnClickShowReviewBigArea;
 
     private void Awake()
     {
@@ -35,7 +35,7 @@ public class PlotHandlerUI : MonoBehaviour
 
     private void ClickShowFindCourse() => OnShowFindCourseAction?.Invoke();
     private void ClickShowScrollView() => OnClickShowScrollViewAction?.Invoke();
-    private void ClickBigAreaInformation() => OnClickShowBigArea?.Invoke();
+    private void ClickBigAreaInformation() => OnClickShowReviewBigArea?.Invoke();
     public void Show()
     {
         container.gameObject.SetActive(true);
