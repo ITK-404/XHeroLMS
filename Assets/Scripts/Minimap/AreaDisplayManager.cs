@@ -10,6 +10,7 @@ public class AreaDisplayManager : MonoBehaviour
     public static AreaDisplayManager Instance;
     public event Action<BigArea[]> OnAreasReady;
     [Header("UI")]
+    [SerializeField] private BigAreaToolTip bigAreaToolTip;
     [SerializeField] private BigArea[] bigAreasLocation;
     [FormerlySerializedAs("bigMapUIPrefab")] 
     [SerializeField] private BigAreaUI bigAreaUIPrefab;
@@ -22,7 +23,7 @@ public class AreaDisplayManager : MonoBehaviour
     [SerializeField] private GameObject uiAreaContainer;
     [SerializeField] private GameObject locationAreaContainer;
     [SerializeField] private Camera wrapperCamera;
-
+    [SerializeField] private MinimapManager minimapManager;
     [Header("World Space")]
     [SerializeField] private GameObject worldSpaceContainer;
     [SerializeField] private PlotHandlerUI plotHandlerUI;
@@ -120,12 +121,19 @@ public class AreaDisplayManager : MonoBehaviour
                 Debug.Log("Hit something in highlight area");
                 var bigArea = raycastHit.collider.GetComponentInParent<BigArea>();
 
-                // if (bigArea.IsEmptyPlotInSide())
+                // if (selectArea != null)
                 // {
-                //     player.GetComponent<PointClickSystem>().TeleportDelay(bigArea.Location.transform.position);
-                //     FindFirstObjectByType<MinimapManager>().ToggleOffMinimap();
+                //     bigAreaToolTip.ShowTooltip(bigArea);
                 //     return;
-                // }
+                // }                
+                
+                if (bigArea.IsEmptyPlotInSide())
+                {
+                    bigArea.StandCheckPoint.rotation = Quaternion.Euler(0, 180, 0);
+                    player.GetComponent<PointClickSystem>().TeleportDelay(bigArea.StandCheckPoint);
+                    minimapManager.ToggleOffMinimap();
+                    return;
+                }
                 
                 Debug.Log($"Hit Area: {raycastHit.collider.gameObject}",raycastHit.collider.gameObject);
                 HighlightSingleArea(bigArea);

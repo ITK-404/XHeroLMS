@@ -158,6 +158,8 @@ public class BigArea : MonoBehaviour
 
     [SerializeField] private Transform drawCheckPoint;
     [SerializeField] private bool isDrawDebug = false;
+
+    public Transform StandCheckPoint => drawCheckPoint;
     private void OnDrawGizmos()
     {
         if (!isDrawDebug) return;

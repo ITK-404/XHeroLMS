@@ -4,14 +4,12 @@ using System.Collections.Generic;
 
 public class CircularScrollView : MonoBehaviour
 {
-    [Header("UI")]
-    [SerializeField] private GameObject container;
+    [Header("UI")] [SerializeField] private GameObject container;
     [SerializeField] private GameObject elementContainer;
     [SerializeField] private BigAreaUIScrollElement scrollElementPrefab;
     [SerializeField] private List<BigAreaUIScrollElement> items = new();
 
-    [Header("Settings")]
-    [SerializeField] private float radius = 360f;
+    [Header("Settings")] [SerializeField] private float radius = 360f;
     [SerializeField] private float startAngle = 180f;
     [SerializeField] private float angleStep = 10f;
     [SerializeField] private Vector2 offset;
@@ -95,22 +93,16 @@ public class CircularScrollView : MonoBehaviour
             float angleInRadians = angle * Mathf.Deg2Rad;
 
             // calculation alpha
-            float focusAngle = startAngle + scrollAngle;
-            float delta = Mathf.Abs(Mathf.DeltaAngle(focusAngle, angle));
-
-            float alpha;
-
-            if (delta <= fadeMinAngle)
-            {
-                alpha = 1f;
-            }
-            else if (delta >= fadeMaxAngle)
+            float delta = Mathf.Abs(Mathf.DeltaAngle(startAngle, angle));
+            float alpha = 1;
+            float fadeAngle = startAngle + fadeMaxAngle;
+            if (delta > fadeAngle)
             {
                 alpha = 0f;
             }
             else
             {
-                alpha = 1f - Mathf.InverseLerp(fadeMinAngle, fadeMaxAngle, delta);
+                alpha = 1f - Mathf.InverseLerp(0f, fadeAngle, delta);
             }
 
             float x = radius * Mathf.Cos(angleInRadians);
@@ -167,9 +159,10 @@ public class CircularScrollView : MonoBehaviour
             item.UpdateUI(percent);
         }
     }
+
     private void TryUpdateFocusElement()
     {
-        if (items == null)return;
+        if (items == null) return;
         for (int index = 0; index < items.Count; index++)
         {
             var item = items[index];
@@ -181,7 +174,7 @@ public class CircularScrollView : MonoBehaviour
             }
         }
     }
-    
+
     public void SelectElement(int index)
     {
         if (items == null || items.Count == 0)
