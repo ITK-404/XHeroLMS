@@ -141,6 +141,7 @@ public class MinimapManager : MonoBehaviour
 
     private void UpdateState(bool isEnable)
     {
+        player.GetComponent<PointClickSystem>().StopMoving();
         if (isEnable)
         {
             minimapUI.ShowTopViewUI();
