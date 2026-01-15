@@ -17,22 +17,25 @@ public class PlotHandlerUI : MonoBehaviour
 
     public Action OnShowFindCourseAction;
     public Action OnClickShowScrollViewAction;
+    public Action OnClickShowBigArea;
 
     private void Awake()
     {
         findCourseBtn.onClick.AddListener(ClickShowFindCourse);
         showScrollViewBtn.onClick.AddListener(ClickShowScrollView);
+        showReviewBtn.onClick.AddListener(ClickBigAreaInformation);
     }
 
     private void OnDestroy()
     {
         findCourseBtn.onClick.RemoveListener(ClickShowFindCourse);
         showScrollViewBtn.onClick.RemoveListener(ClickShowScrollView);
+        showReviewBtn.onClick.RemoveListener(ClickBigAreaInformation);
     }
 
     private void ClickShowFindCourse() => OnShowFindCourseAction?.Invoke();
     private void ClickShowScrollView() => OnClickShowScrollViewAction?.Invoke();
-
+    private void ClickBigAreaInformation() => OnClickShowBigArea?.Invoke();
     public void Show()
     {
         container.gameObject.SetActive(true);
