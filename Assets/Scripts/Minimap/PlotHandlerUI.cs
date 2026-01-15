@@ -56,10 +56,10 @@ public class PlotHandlerUI : MonoBehaviour
             bigAreaNameTmp.text = bigArea.Data.displayName;
             bigAreaNameTmp.DOFade(1, 1);
         });
-        UpdatePercentComplete(2, 10);
+        // UpdatePercentComplete(2, 10);
     }
 
-    private void UpdatePercentComplete(int current, int max)
+    public void UpdatePercentComplete(int current, int max)
     {
         percentNameTmp.text = $"Đã mở khóa <color=#F9DF99>{current}/{max} ({current/max * 100}%)</color>";
     }
