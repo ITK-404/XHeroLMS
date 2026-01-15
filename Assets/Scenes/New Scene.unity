@@ -2234,6 +2234,11 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2972596110289790105, guid: af27adb4abead6a4d912e7289d02046e, type: 3}
+--- !u!1 &23993715 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3792918897888818857, guid: 44ccbea80a3784a37b34f94ba3a0fe8b, type: 3}
+  m_PrefabInstance: {fileID: 717455307}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &24290970 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1367624470186494388, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -87167,6 +87172,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 501c5ebf9ae6496a9a93b573115abe4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AreaDisplayManager
+  bigAreaToolTip: {fileID: 717455310}
   bigAreasLocation: []
   bigAreaUIPrefab: {fileID: 7749482603485049856, guid: 2f4d58c5b248f409d925b6e75db16860, type: 3}
   playerMarker: {fileID: 442441785}
@@ -87603,13 +87609,40 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3792918897888818857, guid: 44ccbea80a3784a37b34f94ba3a0fe8b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 717455310}
   m_SourcePrefab: {fileID: 100100000, guid: 44ccbea80a3784a37b34f94ba3a0fe8b, type: 3}
 --- !u!224 &717455308 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2931830341954306804, guid: 44ccbea80a3784a37b34f94ba3a0fe8b, type: 3}
   m_PrefabInstance: {fileID: 717455307}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &717455309 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3771070259844256374, guid: 44ccbea80a3784a37b34f94ba3a0fe8b, type: 3}
+  m_PrefabInstance: {fileID: 717455307}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 23993715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25c9fd70c32b4342957057146d6792f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BigAreaTooltipUI
+--- !u!114 &717455310
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 23993715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24469e5e7b544fb8b89244368a9890ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BigAreaToolTip
+  tooltipArea: {fileID: 717455309}
 --- !u!1 &718300366
 GameObject:
   m_ObjectHideFlags: 0
@@ -184080,7 +184113,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000102996826
+      value: -0.00011634827
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x

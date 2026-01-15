@@ -17,11 +17,13 @@ public class BigAreaTooltipUI : MonoBehaviour
     private void Awake()
     {
         closeBgBtn.onClick.AddListener(Hide);
+        findPathBtn.onClick.AddListener(Hide);
         Hide();
     }
 
     private void OnDestroy()
     {
+        findPathBtn.onClick.RemoveListener(Hide);
         closeBgBtn.onClick.RemoveListener(Hide);
     }
 
@@ -37,7 +39,13 @@ public class BigAreaTooltipUI : MonoBehaviour
     
     public void ShowTooltip(BigArea bigaArea)
     {
-        informationTmp.text = "";
+        informationTmp.text = "Nhân tướng học là nơi học tập và tìm hiểu các kiến thức cơ bản về nhân tướng theo phong thủy một cách trực quan. ";
         areaIconImg.sprite = bigaArea.Data.displayIcon;
     }
+}
+
+public class ReviewBigAreaUI : MonoBehaviour
+{
+    [SerializeField] private TextMeshProUGUI reviewInformationTmp;
+    [SerializeField] private 
 }

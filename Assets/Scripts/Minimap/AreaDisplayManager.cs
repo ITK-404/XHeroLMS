@@ -10,6 +10,7 @@ public class AreaDisplayManager : MonoBehaviour
     public static AreaDisplayManager Instance;
     public event Action<BigArea[]> OnAreasReady;
     [Header("UI")]
+    [SerializeField] private BigAreaToolTip bigAreaToolTip;
     [SerializeField] private BigArea[] bigAreasLocation;
     [FormerlySerializedAs("bigMapUIPrefab")] 
     [SerializeField] private BigAreaUI bigAreaUIPrefab;
@@ -120,6 +121,12 @@ public class AreaDisplayManager : MonoBehaviour
                 Debug.Log("Hit something in highlight area");
                 var bigArea = raycastHit.collider.GetComponentInParent<BigArea>();
 
+                if (selectArea != null)
+                {
+                    bigAreaToolTip.ShowTooltip(bigArea);
+                    return;
+                }                
+                
                 // if (bigArea.IsEmptyPlotInSide())
                 // {
                 //     player.GetComponent<PointClickSystem>().TeleportDelay(bigArea.Location.transform.position);
