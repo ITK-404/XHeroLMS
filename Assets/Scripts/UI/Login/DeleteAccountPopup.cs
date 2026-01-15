@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,6 +11,8 @@ public class DeleteAccountPopup : MonoBehaviour
     [SerializeField] private Button deleteAccountBtn;
     [SerializeField] private Button continueBtn;
 
+    public static Action OnDeleteAccountAction;
+    
     private void Awake()
     {
         continueBtn.onClick.AddListener(Hide);
@@ -26,6 +29,7 @@ public class DeleteAccountPopup : MonoBehaviour
     private void OnDeleteAccount()
     {
         // 
+        OnDeleteAccountAction?.Invoke();
     }
 
     public void Show()
