@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,7 +12,7 @@ public class BigAreaTooltipUI : MonoBehaviour
     [SerializeField] private Button closeBgBtn; // using for hide self tooltip
 
     [SerializeField] private GameObject container;
-
+    [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image areaIconImg;
     public Action OnClickFindPathAction;
     private void Awake()
@@ -29,6 +30,8 @@ public class BigAreaTooltipUI : MonoBehaviour
 
     public void Show()
     {
+        canvasGroup.DOFade(0, 0);
+        canvasGroup.DOFade(1, 0.2f);
         container.gameObject.SetActive(true);
     }
 
