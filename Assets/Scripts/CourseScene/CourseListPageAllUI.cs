@@ -46,6 +46,8 @@ public class CourseListPageAllUI : MonoBehaviour
         public GameObject root;
         public RectTransform contentParent;
         public BookShelfUI shelfPrefabOverride;
+
+        public GameObject emptyTextObj;
     }
 
     [Header("4 View tương ứng 4 group")]
@@ -83,6 +85,11 @@ public class CourseListPageAllUI : MonoBehaviour
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
+
+        if (basicView?.emptyTextObj)     basicView.emptyTextObj.SetActive(false);
+        if (advancedView?.emptyTextObj)  advancedView.emptyTextObj.SetActive(false);
+        if (intensiveView?.emptyTextObj) intensiveView.emptyTextObj.SetActive(false);
+        if (businessView?.emptyTextObj)  businessView.emptyTextObj.SetActive(false);
 
         ToggleAllRoots(false);
 
@@ -169,19 +176,27 @@ public class CourseListPageAllUI : MonoBehaviour
         if (!string.IsNullOrEmpty(_currentDesiredGroup))
         {
             ToggleAllRoots(false);
+
             var view = GetViewByGroup(_currentDesiredGroup);
             if (view == null || view.contentParent == null)
             {
                 Debug.LogError($"[CourseList] View for group '{_currentDesiredGroup}' chưa gán contentParent.");
                 return;
             }
+
             if (view.root != null) view.root.SetActive(true);
 
             if (clearOldOnReload)
                 ClearContent(view.contentParent);
 
             var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
-            SpawnShelvesInto(view, list);
+
+            bool isEmpty = (list == null || list.Count == 0);
+            SetEmptyState(view, isEmpty);
+
+            if (!isEmpty)
+                SpawnShelvesInto(view, list);
+
             return;
         }
 
@@ -204,7 +219,12 @@ public class CourseListPageAllUI : MonoBehaviour
         if (clearOldOnReload) ClearContent(view.contentParent);
 
         var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
-        SpawnShelvesInto(view, list);
+
+        bool isEmpty = (list == null || list.Count == 0);
+        SetEmptyState(view, isEmpty);
+
+        if (!isEmpty)
+            SpawnShelvesInto(view, list);
     }
 
     void ToggleAllRoots(bool active)
@@ -757,5 +777,11 @@ public class CourseListPageAllUI : MonoBehaviour
                     return true;
         }
         return false;
+    }
+    void SetEmptyState(GroupView view, bool isEmpty)
+    {
+        if (view == null) return;
+        if (view.emptyTextObj != null)
+            view.emptyTextObj.SetActive(isEmpty);
     }
 }

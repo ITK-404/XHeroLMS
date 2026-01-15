@@ -46,16 +46,22 @@ public class CourseListPageMyUI : MonoBehaviour
     [Tooltip("Ẩn Buy / bật Enter cho các khóa đã đăng ký")]
     public bool forceEnterForMyCourse = true;
 
-    [Serializable]
-    public class GroupView
-    {
-        [Tooltip("Root ScrollView / Panel của view để bật/tắt")]
-        public GameObject root;
-        [Tooltip("Content RectTransform bên trong ScrollView")]
-        public RectTransform contentParent;
-        [Tooltip("Kệ riêng cho view này (optional). Để trống sẽ dùng globalShelfPrefab")]
-        public BookShelfUI shelfPrefabOverride;
-    }
+[Serializable]
+public class GroupView
+{
+    [Tooltip("Root ScrollView / Panel của view để bật/tắt")]
+    public GameObject root;
+
+    [Tooltip("Content RectTransform bên trong ScrollView")]
+    public RectTransform contentParent;
+
+    [Tooltip("Kệ riêng cho view này (optional). Để trống sẽ dùng globalShelfPrefab")]
+    public BookShelfUI shelfPrefabOverride;
+
+    [Header("Empty state")]
+    [Tooltip("Text/GameObject hiển thị khi không có khóa học của group này")]
+    public GameObject emptyTextObj;
+}
 
     [Header("4 View tương ứng 4 group")]
     public GroupView basicView;     // group = "basic"
@@ -86,19 +92,24 @@ public class CourseListPageMyUI : MonoBehaviour
         public List<string> groups;   // optional array fallback
     }
 
-    private void Awake()
-    {
-        baseUrl = LmsStore.Instance.baseUrl;
+private void Awake()
+{
+    baseUrl = LmsStore.Instance.baseUrl;
 
-        // Ẩn tất cả root để ngăn các script con chạy khi inactive
-        if (basicView?.root)     basicView.root.SetActive(false);
-        if (advancedView?.root)  advancedView.root.SetActive(false);
-        if (intensiveView?.root) intensiveView.root.SetActive(false);
-        if (businessView?.root)  businessView.root.SetActive(false);
+    if (basicView?.root)     basicView.root.SetActive(false);
+    if (advancedView?.root)  advancedView.root.SetActive(false);
+    if (intensiveView?.root) intensiveView.root.SetActive(false);
+    if (businessView?.root)  businessView.root.SetActive(false);
 
-        if (defaultOpenBasic)
-            _currentDesiredGroup = "basic";
-    }
+    // tắt empty text mặc định
+    if (basicView?.emptyTextObj)     basicView.emptyTextObj.SetActive(false);
+    if (advancedView?.emptyTextObj)  advancedView.emptyTextObj.SetActive(false);
+    if (intensiveView?.emptyTextObj) intensiveView.emptyTextObj.SetActive(false);
+    if (businessView?.emptyTextObj)  businessView.emptyTextObj.SetActive(false);
+
+    if (defaultOpenBasic)
+        _currentDesiredGroup = "basic";
+}
 
     private void Start()
     {
@@ -196,28 +207,37 @@ public class CourseListPageMyUI : MonoBehaviour
     // ================== RENDER ==================
     private const int BOOKS_PER_SHELF = 4;
 
-    void RenderAccordingToCurrentGroup()
+void RenderAccordingToCurrentGroup()
+{
+    if (!string.IsNullOrEmpty(_currentDesiredGroup))
     {
-        if (!string.IsNullOrEmpty(_currentDesiredGroup))
-        {
-            ToggleAllRoots(false);
-            var view = GetViewByGroup(_currentDesiredGroup);
-            if (view == null || view.contentParent == null)
-            {
-                Debug.LogError($"[CourseList/MY] View for group '{_currentDesiredGroup}' chưa gán contentParent.");
-                return;
-            }
-            if (view.root != null) view.root.SetActive(true);
-            if (clearOldOnReload) ClearContent(view.contentParent);
+        ToggleAllRoots(false);
 
-            var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
-            SpawnShelvesInto(view, list, isMy: true);
+        var view = GetViewByGroup(_currentDesiredGroup);
+        if (view == null || view.contentParent == null)
+        {
+            Debug.LogError($"[CourseList/MY] View for group '{_currentDesiredGroup}' chưa gán contentParent.");
             return;
         }
 
-        // Không có tab -> render đúng group cho từng view
-        RenderAllGroupsToTheirViews();
+        if (view.root != null) view.root.SetActive(true);
+
+        var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
+
+        // clear content trước cho chắc
+        if (clearOldOnReload) ClearContent(view.contentParent);
+
+        bool isEmpty = (list == null || list.Count == 0);
+        SetEmptyState(view, isEmpty);
+
+        if (!isEmpty)
+            SpawnShelvesInto(view, list, isMy: true);
+
+        return;
     }
+
+    RenderAllGroupsToTheirViews();
+}
 
     void RenderAllGroupsToTheirViews()
     {
@@ -227,16 +247,21 @@ public class CourseListPageMyUI : MonoBehaviour
         RenderOneGroup("business",  businessView);
     }
 
-    void RenderOneGroup(string groupKey, GroupView view)
-    {
-        if (view == null || view.contentParent == null) return;
+void RenderOneGroup(string groupKey, GroupView view)
+{
+    if (view == null || view.contentParent == null) return;
 
-        if (view.root != null) view.root.SetActive(true);
-        if (clearOldOnReload) ClearContent(view.contentParent);
+    if (view.root != null) view.root.SetActive(true);
+    if (clearOldOnReload) ClearContent(view.contentParent);
 
-        var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
+    var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
+
+    bool isEmpty = (list == null || list.Count == 0);
+    SetEmptyState(view, isEmpty);
+
+    if (!isEmpty)
         SpawnShelvesInto(view, list, isMy: true);
-    }
+}
 
     void ToggleAllRoots(bool active)
     {
@@ -654,6 +679,12 @@ void SortCoursesByIdAscending()
         // so sánh chữ
         return string.CompareOrdinal(sa, sb);
     });
+}
+void SetEmptyState(GroupView view, bool isEmpty)
+{
+    if (view == null) return;
+    if (view.emptyTextObj != null)
+        view.emptyTextObj.SetActive(isEmpty);
 }
 
 }

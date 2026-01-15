@@ -42,6 +42,8 @@ public class CourseMapBrowserUI : MonoBehaviour
     public bool useCurrentPriceFirst = true;
     public string priceFormat = "{0:#,0}'đ";
 
+    public GameObject emptyTextObj;
+
     public Action<CourseData> OnClickBuy;
     public Action<CourseData> OnClickFindWay;
 
@@ -147,21 +149,76 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     private void UpdateGateByArea(BigArea area)
     {
-        bool isMatch = IsRequiredArea(area);
-
-        if (_isInRequiredArea == isMatch && loadOnlyWhenInRequiredArea) return;
-
-        _isInRequiredArea = isMatch;
-
-        if (_isInRequiredArea)
+        bool isClassArea = IsRequiredArea(area);
+        
+        if (loadOnlyWhenInRequiredArea)
         {
-            // vào đúng khu vực -> load/render
+            // Trường hợp ALL (null)
+            if (area == null)
+            {
+                _isInRequiredArea = showCoursesWhenAllAreaSelected;
+
+                if (_isInRequiredArea)
+                {
+                    // ALL area nhưng vẫn cho hiện list => ẩn empty
+                    SetEmptyState(false);
+                    StartLoadIfNeeded(forceReload: true);
+                }
+                else
+                {
+                    StopLoadIfRunning();
+                    ClearContent(contentParent);
+                    SetEmptyState(true);
+                }
+                return;
+            }
+
+            // Trường hợp area != null
+            if (isClassArea)
+            {
+                if (_isInRequiredArea == true)
+                {
+                    SetEmptyState(false);
+                    StartLoadIfNeeded(forceReload: true);
+                    return;
+                }
+
+                _isInRequiredArea = true;
+                SetEmptyState(false);
+                StartLoadIfNeeded(forceReload: true);
+            }
+            else
+            {
+                _isInRequiredArea = false;
+                StopLoadIfRunning();
+
+                if (contentParent != null) ClearContent(contentParent);
+                SetEmptyState(true);
+            }
+
+            return;
+        }
+
+        if (area == null)
+        {
+            bool canShow = showCoursesWhenAllAreaSelected;
+            SetEmptyState(!canShow);
+
+            if (canShow) StartLoadIfNeeded(forceReload: true);
+            else if (contentParent != null) ClearContent(contentParent);
+
+            return;
+        }
+
+        if (isClassArea)
+        {
+            SetEmptyState(false);
             StartLoadIfNeeded(forceReload: true);
         }
         else
         {
-            StopLoadIfRunning();
-            ClearAndHideCoursesUIOnly();
+            if (contentParent != null) ClearContent(contentParent);
+            SetEmptyState(true);
         }
     }
 
@@ -217,6 +274,9 @@ private bool IsRequiredArea(BigArea area)
     {
         if (contentParent != null)
             ClearContent(contentParent);
+
+        // Kkhông có data trong khu vực này => show empty
+        SetEmptyState(true);
     }
 
     // ===================== TAB SETUP =====================
@@ -386,6 +446,11 @@ private bool IsRequiredArea(BigArea area)
         List<CourseData> list = (_currentGroup == "all")
             ? new List<CourseData>(_courses)
             : _courses.FindAll(c => MatchesGroup(c, _currentGroup));
+
+        bool isEmpty = (list == null || list.Count == 0);
+        SetEmptyState(isEmpty);
+
+        if (isEmpty) return;
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -766,5 +831,11 @@ private bool IsRequiredArea(BigArea area)
             if (!string.IsNullOrEmpty(s)) list.Add(s);
         }
         return list.Count > 0 ? list : null;
+    }
+
+    private void SetEmptyState(bool isEmpty)
+    {
+        if (emptyTextObj != null)
+            emptyTextObj.SetActive(isEmpty);
     }
 }
