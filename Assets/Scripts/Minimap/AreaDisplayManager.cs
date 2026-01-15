@@ -127,7 +127,7 @@ public class AreaDisplayManager : MonoBehaviour
                 //     return;
                 // }                
                 
-                if (bigArea.IsEmptyPlotInSide())
+                if (bigArea.IsEmptyPlotInSide() || bigArea == selectArea)
                 {
                     bigArea.StandCheckPoint.rotation = Quaternion.Euler(0, 180, 0);
                     player.GetComponent<PointClickSystem>().TeleportDelay(bigArea.StandCheckPoint);
