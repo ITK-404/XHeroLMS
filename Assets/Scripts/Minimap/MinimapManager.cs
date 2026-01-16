@@ -19,6 +19,8 @@ public class MinimapManager : MonoBehaviour
     // setting
     private bool isBleding;
     [SerializeField] private GameObject blockedImg;
+
+    public Action<bool> OnMinimapActiveAction;
     private void Awake()
     {
         blockedImg.gameObject.SetActive(false);
@@ -135,34 +137,30 @@ public class MinimapManager : MonoBehaviour
     {
         Debug.Log($"Toggle vao minimap camera");
         // UpdateState(true);
+        player.transform.rotation = Quaternion.Euler(0, 180, 0);
         StartCoroutine(TryBlending(true));
         minimapCameraHandler.FocusMinimapCamera();
     }
 
     private void UpdateState(bool isEnable)
     {
+        OnMinimapActiveAction?.Invoke(isEnable);
+            InputBlocker.SetBlocked(isEnable);
+            TeleMapController._mapActive = isEnable;
+        
         player.GetComponent<PointClickSystem>().StopMoving();
+        
         if (isEnable)
         {
             minimapUI.ShowTopViewUI();
-            UIManager.Instance.PlayerPanelUI.HideAll();
-            UIManager.Instance.InputCanvas.Hide();
-            InputBlocker.SetBlocked(true);
-            UIManager.Instance.CourseMenuButtons.Hide();
-            TeleMapController._mapActive = true;
             cameraZoomSlider.Show();
             areaDisplayManager.Show();
         }
         else
         {
+            
             minimapUI.ShowBottomViewUI();
-            UIManager.Instance.PlayerPanelUI.ShowAll();
-            UIManager.Instance.InputCanvas.Show();
             
-            UIManager.Instance.CourseMenuButtons.Show();
-            
-            InputBlocker.SetBlocked(false);
-            TeleMapController._mapActive = false;
             cameraZoomSlider.Hide();
             areaDisplayManager.Hide();
             circularScrollView.Hide();
