@@ -95,6 +95,8 @@ public class TutorialHandler : MonoBehaviour
         {
             item.HideTutorial();
         }
+
+        firstTimePlayed = true;
     }
 
     private void LoadSave()
@@ -113,6 +115,7 @@ public class TutorialHandler : MonoBehaviour
         PlayerPrefs.SetInt(key, 0);
     }
 
+    public static bool firstTimePlayed = false;
     private void Start()
     {
         Instance = this;
@@ -127,7 +130,7 @@ public class TutorialHandler : MonoBehaviour
         SetupForChangeParentUI();
 
         // LoadSave();
-        isPlayedBefore = true; // ép luôn là chưa chơi
+        isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
 
         CreateHandList();
         // if player is played tutorial before
@@ -203,8 +206,6 @@ public class TutorialHandler : MonoBehaviour
             item.newParent = newParent;
         }
     }
-    
-
 
     private void HandleFollowWorldPosition()
     {
@@ -213,7 +214,6 @@ public class TutorialHandler : MonoBehaviour
         followWorldItem.position = screenPosition;
 
     }
-
     
     public bool IsStep(int index)
     {
