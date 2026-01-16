@@ -38,7 +38,6 @@ public class LmsStore : MonoBehaviour
     [Tooltip("TTL cho /lms/courses/{id}/private (giây)")]
     public int ttlPrivateSeconds = 300;
 
-    // ====== THÊM 2 FIELD NÀY ĐỂ LƯU QR STEP1 ======
     [Header("QR Login (step1 cache)")]
     [Tooltip("Code từ /auth-for-lms/request step=1")]
     public string lastLoginQrCode;
