@@ -12,7 +12,9 @@ public class InputCanvas : MonoBehaviour
         #if UNITY_ANDROID || UNITY_IOS
         isWindow = true;
         #endif
-
+#if UNITY_EDITOR
+        isWindow = true; // giả lập mobile trong Editor
+#endif
         if (isWindow)
         {
             Hide();
