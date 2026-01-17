@@ -9,6 +9,7 @@ public enum PlayerState
 }
 public class PlayerPanelUI : MonoBehaviour
 {
+    public static PlayerPanelUI Instance;
     public GameObject container;
     [Header("Containers")]
     public GameObject loginContainer;
@@ -21,6 +22,8 @@ public class PlayerPanelUI : MonoBehaviour
     public string defaultLoadScene = "New Scene";
     private void Awake()
     {
+        Instance = this;
+        
         defaultContainer.gameObject.SetActive(true);
         unLogginContainer.gameObject.SetActive(true);
         loginContainer.gameObject.SetActive(false);
@@ -88,5 +91,12 @@ public class PlayerPanelUI : MonoBehaviour
     {
         container.gameObject.SetActive(true);
     }
-    
+
+    public void ShowUnLoginContainer(bool isShow)
+    {
+        if (!TokenStore.IsAuthenticated)
+        {
+            unLogginContainer.gameObject.SetActive(isShow);
+        }
+    }
 }
