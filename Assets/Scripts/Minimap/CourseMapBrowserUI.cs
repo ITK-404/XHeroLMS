@@ -479,7 +479,14 @@ private bool IsRequiredArea(BigArea area)
         bool isFree = data.isFree ?? false;
         bool owned = joined || isFree;
 
-        if (!owned) ui.SetPriceText(priceText);
+#if UNITY_ANDROID || UNITY_IOS
+        // Mobile: không hiện giá (không gọi SetPriceText)
+        if (!owned) ui.SetPriceText("");
+#else
+    // PC: hiện giá bình thường
+    if (!owned) ui.SetPriceText(priceText);
+#endif
+
         ui.SetOwnedUI(owned);
     }
 

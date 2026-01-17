@@ -40,15 +40,32 @@ public class MinimapCourseDisplayUI : MonoBehaviour
         // check login theo chuẩn bạn đang dùng (TokenStore)
         bool isLoggedIn = TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
 
-        string msg = isLoggedIn
-            ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
-            : "Bạn cần đăng nhập để xem khóa học này.";
+#if UNITY_ANDROID || UNITY_IOS
+        // Mobile: login thì mở web, chưa login thì báo cần đăng nhập
+        if (isLoggedIn)
+        {
+            Application.OpenURL("https://daotao.phongthuydainam.vn/vi");
+            BookHandler.CanSelectBook = true;
+            return;
+        }
 
         LoadingUI.ShowErrorPopup(
-            msg,
+            "Bạn cần đăng nhập để xem khóa học này.",
             "Thông báo",
             () => { BookHandler.CanSelectBook = true; }
         );
+#else
+    // giữ nguyên popup như cũ
+    string msg = isLoggedIn
+        ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
+        : "Bạn cần đăng nhập để xem khóa học này.";
+
+    LoadingUI.ShowErrorPopup(
+        msg,
+        "Thông báo",
+        () => { BookHandler.CanSelectBook = true; }
+    );
+#endif
     }
 
     private void ClickFindWayButton()

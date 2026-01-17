@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 public class CourseMenuButtons : MonoBehaviour
 {
@@ -11,17 +10,20 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("Destination")] [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
 
+    [Header("Mobile Redirect")]
+    public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
+
     // Khóa lưu tạm key giữa các scene
     private const string COURSE_KEY_PREF = "CourseListKey";
 
     // Hằng số để dùng thống nhất
     public const string KEY_ALL = "All Courses";
     public const string KEY_MY = "My Courses";
+
     public Transform player;
 
     void Awake()
     {
-
         if (TokenStore.IsAuthenticated)
         {
             Show();
@@ -34,6 +36,14 @@ public class CourseMenuButtons : MonoBehaviour
         if (btnAllCourses != null)
             btnAllCourses.onClick.AddListener(() =>
             {
+                // MOBILE: mở web
+                if (IsMobileBuild())
+                {
+                    Application.OpenURL(mobileAllCoursesUrl);
+                    return;
+                }
+
+                // PC/Editor: giữ nguyên logic cũ
                 PlayerLocator.Save(player.gameObject);
                 Go(KEY_ALL);
             });
@@ -73,6 +83,15 @@ public class CourseMenuButtons : MonoBehaviour
     public static string GetSavedKey()
     {
         return PlayerPrefs.GetString(COURSE_KEY_PREF, KEY_ALL);
+    }
+
+    private static bool IsMobileBuild()
+    {
+#if UNITY_ANDROID || UNITY_IOS
+        return true;
+#else
+        return false;
+#endif
     }
 }
 
