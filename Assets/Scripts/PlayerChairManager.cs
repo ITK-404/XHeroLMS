@@ -90,6 +90,9 @@ public class PlayerChairManager : MonoBehaviour
             inputCanvas.Show();
 
             courseExitWayHandler.Show();
+            
+            PlayerPanelUI.Instance.ShowUnLoginContainer(true);
+            
         }));
     }
 
@@ -151,7 +154,9 @@ public class PlayerChairManager : MonoBehaviour
             InputBlocker.SetBlocked(true);
             
             courseExitWayHandler.Hide();
-
+            
+            PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+            
             StartCoroutine(WaitForBlendDone(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
@@ -164,7 +169,7 @@ public class PlayerChairManager : MonoBehaviour
                 {
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
-
+                
             }));
         }
     }

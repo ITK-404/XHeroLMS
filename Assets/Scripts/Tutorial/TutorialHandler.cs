@@ -130,7 +130,7 @@ public class TutorialHandler : MonoBehaviour
         SetupForChangeParentUI();
 
         // LoadSave();
-        isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
+        isPlayedBefore = true; // ép luôn là chưa chơi
 
         CreateHandList();
         // if player is played tutorial before
