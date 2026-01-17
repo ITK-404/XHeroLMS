@@ -46,4 +46,12 @@ public class LogoutPopupUI : MonoBehaviour
     {
         _canvasGroup.gameObject.SetActive(false);
     }
+    
+    public void SetInteractable(bool interactable)
+    {
+        if (_canvasGroup == null) return;
+
+        _canvasGroup.interactable = interactable;
+        _canvasGroup.blocksRaycasts = interactable;
+    }
 }
