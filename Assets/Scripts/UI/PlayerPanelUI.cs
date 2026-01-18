@@ -197,6 +197,8 @@ public class PlayerPanelUI : MonoBehaviour
 
     public void ShowUnLoginContainer(bool b)
     {
+        // don't try to turn on or off this of is logged
+        if (TokenStore.IsAuthenticated) return;
         unLogginContainer.gameObject.SetActive(b);
     }
 }

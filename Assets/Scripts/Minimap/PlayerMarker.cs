@@ -27,6 +27,6 @@ public class PlayerMarker : MonoBehaviour
         float yRotation = player.transform.eulerAngles.y;
         yRotation -= normalizeValue;
         marker.transform.eulerAngles = new Vector3(0, 0, -yRotation);
-        Debug.Log("Y Rotation: "+yRotation);
+        // Debug.Log("Y Rotation: "+yRotation);
     }
 }
