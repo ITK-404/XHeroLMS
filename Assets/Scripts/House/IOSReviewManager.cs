@@ -1,12 +1,12 @@
 using System;
-using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class IOSReviewManager : MonoBehaviour
+public class IOSReviewManager
 {
     [Serializable]
-    public class XheroConfig
+    public class AppReviewConfig
     {
         public bool isInReview;
         public string versionInReview;
@@ -15,37 +15,59 @@ public class IOSReviewManager : MonoBehaviour
     [Serializable]
     public class ReviewConfigData
     {
-        public XheroConfig xheroApp;
+        public AppReviewConfig xheroApp;
+        public AppReviewConfig lmsApp;
     }
 
-    public async void CheckIOSReviewStatus()
+    // --- API response mapping (match JSON exactly) ---
+    [Serializable]
+    private class ApiResponse
+    {
+        public bool status;
+        public ApiData data;
+    }
+
+    [Serializable]
+    private class ApiData
+    {
+        public string _id;
+        public string key;
+        public ReviewConfigData data; // <-- config thật nằm ở đây
+        public int __v;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Init()
+    {
+        // Fire-and-forget ở startup (không block load scene)
+        _ = CheckIOSReviewStatusAsync();
+    }
+
+    public static async Task CheckIOSReviewStatusAsync()
     {
         try
         {
-            var data = await FetchIOSReviewStatus();
-            Debug.Log($"Review Config: {data}");
-
-            if (data != null)
+            ReviewConfigData config = await FetchIOSReviewStatusAsync();
+            if (config?.xheroApp == null)
             {
-                var reviewConfig = JsonUtility.FromJson<ReviewConfigData>(data);
-                
-                if (reviewConfig?.xheroApp != null)
+                AppDataGlobal.isInReviewMode = false;
+                Debug.Log("Review Mode: INACTIVE (no config / missing xheroApp)");
+                return;
+            }
+
+            bool isInReview = config.lmsApp.isInReview;
+            string versionInReview = config.lmsApp.versionInReview;
+
+            if (isInReview && !string.IsNullOrEmpty(versionInReview))
+            {
+                string appVersion = Application.version;
+                Debug.Log($"Check Review Mode: API(v{versionInReview}) vs App(v{appVersion})");
+
+                if (appVersion == versionInReview)
                 {
-                    bool isInReview = reviewConfig.xheroApp.isInReview;
-                    string versionInReview = reviewConfig.xheroApp.versionInReview;
-
-                 
-                       if (isInReview && !string.IsNullOrEmpty(versionInReview))
-                                        {    string appVersion = Application.version;
-                        Debug.Log($"Check Review Mode: API(v{versionInReview}) vs App(v{appVersion})");
-
-                        if (appVersion == versionInReview)
-                        {
-                            AppDataGlobal.isInReviewMode = true;
-                            Debug.Log("Review Mode: ACTIVE");
-                            return;
-                        }
-                    }
+                    AppDataGlobal.isInReviewMode = true;
+                    Debug.Log("Review Mode: ACTIVE");
+                    return;
                 }
             }
 
@@ -54,59 +76,50 @@ public class IOSReviewManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"Check Review Mode Error: {e.Message}");
+            Debug.LogError($"Check Review Mode Error: {e}");
             AppDataGlobal.isInReviewMode = false;
         }
     }
 
-    public async System.Threading.Tasks.Task<string> FetchIOSReviewStatus()
+    public static async Task<ReviewConfigData> FetchIOSReviewStatusAsync()
     {
-        string url = "YOUR_BASE_URL/config?key=ios-in-review";
-        
+        const string url = "https://apis-dev.xheroapp.com/config?key=ios-in-review";
+
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
-            // Add headers if needed
-            // request.SetRequestHeader("Authorization", "Bearer YOUR_TOKEN");
-            
+            request.timeout = 10;
+
             var operation = request.SendWebRequest();
-            
             while (!operation.isDone)
-            {
-                await System.Threading.Tasks.Task.Yield();
-            }
+                await Task.Yield();
 
             if (request.result == UnityWebRequest.Result.Success)
             {
                 string jsonResponse = request.downloadHandler.text;
-                
-                // Parse nested response structure
+Debug.Log("Review Mode: "+jsonResponse);
                 var response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
-                
-                return JsonUtility.ToJson(response.data.data);
+
+                // Validate minimal fields
+                if (response == null || response.data == null)
+                {
+                    Debug.LogError("Parse failed: response or response.data is null");
+                    return null;
+                }
+
+                // Optional: log status
+                Debug.Log($"API status: {response.status}, key: {response.data.key}");
+
+                return response.data.data; // <-- trả về ReviewConfigData
             }
-            else
-            {
-                Debug.LogError($"Request failed: {request.error}");
-                return null;
-            }
+
+            Debug.LogError($"Request failed: {request.error} | Code: {request.responseCode} | URL: {url}");
+            return null;
         }
-    }
-
-    [Serializable]
-    private class ApiResponse
-    {
-        public DataWrapper data;
-    }
-
-    [Serializable]
-    private class DataWrapper
-    {
-        public ReviewConfigData data;
     }
 }
 
 // Global data class (đặt ở file riêng)
 public static class AppDataGlobal
 {
-    public static bool isInReviewMode = false;
+    public static bool isInReviewMode = true;
 }

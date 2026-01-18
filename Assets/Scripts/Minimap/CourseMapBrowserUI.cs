@@ -481,7 +481,22 @@ private bool IsRequiredArea(BigArea area)
 
 #if UNITY_ANDROID || UNITY_IOS
         // Mobile: không hiện giá (không gọi SetPriceText)
-        if (!owned) ui.SetPriceText("");
+        if (AppDataGlobal.isInReviewMode)
+        {
+            ui.SetPriceText("");
+        }
+        else
+        {
+            if (!owned)
+            {
+                ui.SetPriceText(priceText);
+            }
+            else
+            {
+                ui.SetOwnedUI(owned);
+            }
+        }
+        
 #else
     // PC: hiện giá bình thường
     if (!owned) ui.SetPriceText(priceText);

@@ -10,8 +10,7 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("Destination")] [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
 
-    [Header("Mobile Redirect")]
-    public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
+    [Header("Mobile Redirect")] public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
 
     // Khóa lưu tạm key giữa các scene
     private const string COURSE_KEY_PREF = "CourseListKey";
@@ -34,11 +33,14 @@ public class CourseMenuButtons : MonoBehaviour
         }
 
         if (btnAllCourses != null)
+        {
+            btnAllCourses.onClick.RemoveAllListeners();
             btnAllCourses.onClick.AddListener(() =>
             {
                 // MOBILE: mở web
                 if (IsMobileBuild())
                 {
+                    Debug.Log("Open hyper link to the web");
                     Application.OpenURL(mobileAllCoursesUrl);
                     return;
                 }
@@ -47,13 +49,18 @@ public class CourseMenuButtons : MonoBehaviour
                 PlayerLocator.Save(player.gameObject);
                 Go(KEY_ALL);
             });
+        }
+
 
         if (btnMyCourses != null)
+        {
+            btnMyCourses.onClick.RemoveAllListeners();
             btnMyCourses.onClick.AddListener(() =>
             {
                 PlayerLocator.Save(player.gameObject);
                 Go(KEY_MY);
             });
+        }
     }
 
     private void OnDestroy()

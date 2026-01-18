@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class ChairCheckPoint : MonoBehaviour
 {
@@ -6,6 +7,25 @@ public class ChairCheckPoint : MonoBehaviour
     public GameObject checkPoint;
     public GameObject examCheckPoint;
     public GameObject player;
+
+    private static GameObject targetCamera;
+
+    private void Awake()
+    {
+        if (!targetCamera)
+        {
+            targetCamera = player.GetComponent<PlayerCamera>().playerCinemachineCamera.gameObject;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (targetCamera)
+        {
+            targetCamera = null;
+        }
+    }
+
     public void Show(bool isShow)
     {
         spriteCheckPoint.gameObject.SetActive(isShow);
@@ -18,13 +38,16 @@ public class ChairCheckPoint : MonoBehaviour
             return;
         }
 
-        var direction = player.transform.position - transform.position;
+        if (targetCamera == null) return;
+        var direction = targetCamera.transform.position - transform.position;
 
         if (direction.y < 0f)
             direction.y = 0f;
 
         if (direction.sqrMagnitude > 0.0001f)
             spriteCheckPoint.transform.forward = direction.normalized;
+        
+        
     }
     private bool IsPlayer(GameObject other)
     {
