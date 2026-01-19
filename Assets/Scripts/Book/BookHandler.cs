@@ -79,7 +79,7 @@ public class BookHandler : MonoBehaviour
         string url =
             "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
             "?course=" + UnityWebRequest.EscapeURL(course_id)+
-            "&?accessToken=" + UnityWebRequest.EscapeURL(token) ;
+            "&accessToken=" + UnityWebRequest.EscapeURL(token) ;
 
         Application.OpenURL(url);
         BookHandler.CanSelectBook = true;
