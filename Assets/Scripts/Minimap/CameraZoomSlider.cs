@@ -6,7 +6,8 @@ public class CameraZoomSlider : MonoBehaviour
 {
     [SerializeField] private Slider _slider;
     [SerializeField] private GameObject container;
-   
+    [SerializeField] private Button zoomInBtn;
+    [SerializeField] private Button zoomOutBtn;
     public Action<float> OnSliderValueChanged;
     
     private void Awake()
@@ -24,7 +25,13 @@ public class CameraZoomSlider : MonoBehaviour
         {
             _slider.onValueChanged.RemoveListener(OnValueChanged);
         }
+        zoomInBtn.onClick.RemoveListener(ZoomIn);
+        zoomOutBtn.onClick.RemoveListener(ZoomOut);
     }
+
+    private void ZoomIn() => OnValueChanged(_slider.value += 0.1f);
+    private void ZoomOut() => OnValueChanged(_slider.value -= 0.1f);
+    
 
     private void ClampZeroToOne()
     {
@@ -35,6 +42,7 @@ public class CameraZoomSlider : MonoBehaviour
 
     private void OnValueChanged(float valueChanged)
     {
+        valueChanged = Mathf.Clamp(valueChanged, _slider.minValue, _slider.maxValue);
         OnSliderValueChanged?.Invoke(valueChanged);
     }
 
