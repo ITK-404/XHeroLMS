@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class BookHandler : MonoBehaviour
 {
@@ -8,12 +9,13 @@ public class BookHandler : MonoBehaviour
     public string book_seo;
     public string book_name;
 
+    public string course_id; // ✅ thêm dòng này (ID khóa học)
+
     public BookViewUI bookHandleUI;
     public BookModel bookModel;
 
     public static bool CanSelectBook = true;
 
-    // để CourseListPageAllUI quyết định có cho EnterCourse hay không
     public Action<BookHandler> OnRequestEnterCourse;
 
     private void Awake()
@@ -24,8 +26,7 @@ public class BookHandler : MonoBehaviour
         if (bookHandleUI)
         {
             bookHandleUI.enterCourseBtn.onClick.AddListener(EnterCourse);
-
-            bookHandleUI.enterCourseBtn.onClick.AddListener(BuyCourse);
+            bookHandleUI.buyCourseBtn.onClick.AddListener(BuyCourse);
         }
 
         if (bookModel != null)
@@ -39,11 +40,49 @@ public class BookHandler : MonoBehaviour
         if (bookHandleUI)
         {
             bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
-            bookHandleUI.enterCourseBtn.onClick.RemoveListener(BuyCourse);
+            bookHandleUI.buyCourseBtn.onClick.RemoveListener(BuyCourse);
         }
 
         if (bookModel != null)
             bookModel.OnPlayerClickBook -= OnPlayerClickBook;
+    }
+
+    private void BuyCourse()
+    {
+        string token = TokenStore.AccessToken;
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            LoadingUI.ShowErrorPopup(
+                "Bạn cần đăng nhập để xem khóa học này.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
+            return;
+        }
+
+        token = token.Trim();
+        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            token = token.Substring("Bearer ".Length).Trim();
+
+        if (string.IsNullOrWhiteSpace(course_id))
+        {
+            Debug.LogWarning($"[BuyCourse] Missing course_id for book seo={book_seo}, sku={book_sku}");
+            LoadingUI.ShowErrorPopup(
+                "Không xác định được khóa học để thanh toán.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
+            return;
+        }
+
+        string url =
+            "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+            "?course=" + UnityWebRequest.EscapeURL(course_id)+
+            "&?accessToken=" + UnityWebRequest.EscapeURL(token) ;
+
+        Application.OpenURL(url);
+        BookHandler.CanSelectBook = true;
     }
 
     private void OnPlayerClickBook()
@@ -52,11 +91,6 @@ public class BookHandler : MonoBehaviour
         BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
     }
 
-    public void UpdateData() { }
-
-    /// <summary>
-    /// Gate: ưu tiên để CourseListPageAllUI xử lý rule needLogin/isFree/free-grant
-    /// </summary>
     public void EnterCourse()
     {
         if (OnRequestEnterCourse != null)
@@ -65,7 +99,6 @@ public class BookHandler : MonoBehaviour
             return;
         }
 
-        // fallback
         BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
     }
 
@@ -120,8 +153,6 @@ public class BookHandler : MonoBehaviour
             // );
         }
     }
-
-    private void BuyCourse() { }
 
     public void SetBuyCourse(bool state)
     {

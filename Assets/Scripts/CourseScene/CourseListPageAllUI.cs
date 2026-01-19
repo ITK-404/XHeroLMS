@@ -331,7 +331,10 @@ public class CourseListPageAllUI : MonoBehaviour
 
             slot.book_name = data.title ?? "(no title)";
             slot.book_sku  = data.sku ?? "";
-            slot.book_seo  = data.seoUrl ?? "";
+            slot.book_seo = data.seoUrl ?? "";
+
+            slot.course_id = data.id;
+            
             slot.RefreshBookCover();
 
             float? displayPrice = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)

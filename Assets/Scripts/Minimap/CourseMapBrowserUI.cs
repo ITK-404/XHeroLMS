@@ -490,6 +490,8 @@ private bool IsRequiredArea(BigArea area)
         ui.SetMeta(data.sku, data.seoUrl);
         ui.SetDisplayCourseName(string.IsNullOrEmpty(data.title) ? "(no title)" : data.title);
 
+        ui.course_id = data.id;
+
         bool owned = IsOwned(data);
 
         // Preview/Review mode: list đã lọc owned rồi, nhưng vẫn set UI owned cho chắc

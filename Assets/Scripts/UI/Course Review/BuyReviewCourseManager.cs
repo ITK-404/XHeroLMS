@@ -132,31 +132,26 @@ public class BuyReviewCourseManager : MonoBehaviour
         // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
 if (!SeoResolver.canEnterCourse)
 {
+    // Chưa login -> vẫn báo cần đăng nhập
     if (!IsLoggedIn())
-            {
-        BookHandler.CanSelectBook = true;
+    {
+        BookHandler.CanSelectBook = false; // tránh click spam trong lúc popup
+        LoadingUI.ShowErrorPopup(
+            "Bạn cần đăng nhập để xem khóa học này.",
+            "Thông báo",
+            () => { BookHandler.CanSelectBook = true; }
+        );
+
         previewCoroutine = null;
         yield break;
     }
 
-    // Logged-in mà vẫn canEnterCourse=false => state lỗi hoặc token invalid
-    BookHandler.CanSelectBook = false;
-
-    bool isLoggedIn = TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
-
-    string msg = isLoggedIn
-        ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
-        : "Bạn cần đăng nhập để xem khóa học này.";
-
-    LoadingUI.ShowErrorPopup(
-        msg,
-        "Thông báo",
-        () => { BookHandler.CanSelectBook = true; }
-    );
-
+    // Đã login nhưng vẫn không vào được -> silent (không popup, không làm gì)
+    BookHandler.CanSelectBook = true;
     previewCoroutine = null;
     yield break;
 }
+
         // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
         if (courseReviewUI != null)
         {
