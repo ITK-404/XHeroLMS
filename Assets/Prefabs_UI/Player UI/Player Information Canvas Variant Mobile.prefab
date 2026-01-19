@@ -1116,6 +1116,9 @@ PrefabInstance:
       insertIndex: 0
       addedObject: {fileID: 4849308299536580236}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4560201109277234066, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7294387616278730989}
     - targetCorrespondingSourceObject: {fileID: 8101435519563770920, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6164684956383875936}
@@ -1164,6 +1167,25 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3742642578430269711, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
   m_PrefabInstance: {fileID: 1706432266018583926}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2947431845379352292 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4560201109277234066, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+  m_PrefabInstance: {fileID: 1706432266018583926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7294387616278730989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2947431845379352292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a889124077244ce588118dcf0416d228, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IOSReviewChecker
+  checkerList:
+  - {fileID: 6477942138275783063}
 --- !u!114 &2963691324842890703 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4507912548039237817, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
@@ -1212,6 +1234,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!1 &6477942138275783063 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5640812509246723297, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+  m_PrefabInstance: {fileID: 1706432266018583926}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &6632816785627994777 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5449927998312001519, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}

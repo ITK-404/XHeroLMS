@@ -83,7 +83,7 @@ public class IOSReviewManager
 
     public static async Task<ReviewConfigData> FetchIOSReviewStatusAsync()
     {
-        const string url = "https://apis-dev.xheroapp.com/config?key=ios-in-review";
+        const string url = "https://apis-dev.xheroapp.com/config?key=ios-in-review"; // fix API dev 
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
@@ -119,7 +119,20 @@ Debug.Log("Review Mode: "+jsonResponse);
 }
 
 // Global data class (đặt ở file riêng)
+
 public static class AppDataGlobal
 {
-    public static bool isInReviewMode = true;
+    private static bool _isInReviewMode = true;
+    public static event Action<bool> OnReviewModeChanged;
+
+    public static bool isInReviewMode
+    {
+        get => _isInReviewMode;
+        set
+        {
+            if (_isInReviewMode == value) return;
+            _isInReviewMode = value;
+            OnReviewModeChanged?.Invoke(_isInReviewMode);
+        }
+    }
 }

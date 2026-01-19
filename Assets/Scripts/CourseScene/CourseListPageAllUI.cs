@@ -189,7 +189,13 @@ public class CourseListPageAllUI : MonoBehaviour
             if (clearOldOnReload)
                 ClearContent(view.contentParent);
 
+            // var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
             var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
+
+            // Preview/Review mode: chỉ hiện khóa đã sở hữu
+            if (IsPreviewMode())
+                list = list.FindAll(IsOwned);
+
 
             bool isEmpty = (list == null || list.Count == 0);
             SetEmptyState(view, isEmpty);
@@ -201,6 +207,22 @@ public class CourseListPageAllUI : MonoBehaviour
         }
 
         RenderAllGroupsToTheirViews();
+    }
+    private bool IsPreviewMode()
+    {
+    #if UNITY_ANDROID || UNITY_IOS
+        return AppDataGlobal.isInReviewMode;
+    #else
+        return false;
+    #endif
+    }
+
+    private bool IsOwned(CourseData c)
+    {
+        if (c == null) return false;
+        bool joined = c.isJoined ?? false;
+        bool isFree = c.isFree ?? false;
+        return joined || isFree;
     }
 
     void RenderAllGroupsToTheirViews()
@@ -218,7 +240,12 @@ public class CourseListPageAllUI : MonoBehaviour
         if (view.root != null) view.root.SetActive(true);
         if (clearOldOnReload) ClearContent(view.contentParent);
 
+        // var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
         var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
+
+        // Preview/Review mode: chỉ hiện khóa đã sở hữu
+        if (IsPreviewMode())
+            list = list.FindAll(IsOwned);
 
         bool isEmpty = (list == null || list.Count == 0);
         SetEmptyState(view, isEmpty);
