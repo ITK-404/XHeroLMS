@@ -247,31 +247,34 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
 #endif
     }
 
-    private void OpenXHeroDeepLink(string code, string timestamp)
-    {
-        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-        string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
-        string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
+private void OpenXHeroDeepLink(string code, string timestamp)
+{
+    string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
+    string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
+    string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
 
-        string host = GetXHeroHostForPlatform();
-
-        string p = string.IsNullOrEmpty(xheroPath) ? "/" : xheroPath;
-        if (!p.StartsWith("/")) p = "/" + p;
-
-        string deepLinkUrl =
-            $"{xheroScheme}://{host}{p}" +
-            $"?{codeParamName}={codeEnc}" +
-            $"&{timestampParamName}={tsEnc}" +
-            $"&{functionParamName}={fnEnc}";
-
-        Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+    string p = string.IsNullOrEmpty(xheroPath) ? "/" : xheroPath;
+    if (!p.StartsWith("/")) p = "/" + p;
 
 #if UNITY_IOS
-        Application.OpenURL(deepLinkUrl);
+    string deepLinkUrl =
+        $"{xheroScheme}://{p.TrimStart('/')}" +  // nếu xheroPath="/auth" => "xhero://auth"
+        $"?{codeParamName}={codeEnc}" +
+        $"&{timestampParamName}={tsEnc}" +
+        $"&{functionParamName}={fnEnc}";
 #else
-        Application.OpenURL(deepLinkUrl);
+    // Android: giữ host
+    string host = GetXHeroHostForPlatform();
+    string deepLinkUrl =
+        $"{xheroScheme}://{host}{p}" +
+        $"?{codeParamName}={codeEnc}" +
+        $"&{timestampParamName}={tsEnc}" +
+        $"&{functionParamName}={fnEnc}";
 #endif
-    }
+
+    Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+    Application.OpenURL(deepLinkUrl);
+}
 
     // ===================== JSON =====================
     [Serializable] private class LmsAuthResponse { public bool status; public LmsAuthData data; }
