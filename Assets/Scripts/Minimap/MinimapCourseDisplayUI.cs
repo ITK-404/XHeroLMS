@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 
 public class MinimapCourseDisplayUI : MonoBehaviour
 {
@@ -22,6 +23,8 @@ public class MinimapCourseDisplayUI : MonoBehaviour
     [SerializeField] private Color ownCourseColor;
     [SerializeField] private Color ownerTextColor;
     [SerializeField] private Color priceTextColor;
+    public string course_id; // thêm vào MinimapCourseDisplayUI
+
     private void Awake()
     {
         findWayBtn.onClick.AddListener(ClickFindWayButton);
@@ -37,14 +40,21 @@ public class MinimapCourseDisplayUI : MonoBehaviour
 
     private void OnShowPopup()
     {
-        // check login theo chuẩn bạn đang dùng (TokenStore)
         bool isLoggedIn = TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
 
-#if UNITY_ANDROID || UNITY_IOS
-        // Mobile: login thì mở web, chưa login thì báo cần đăng nhập
         if (isLoggedIn)
         {
-            Application.OpenURL("https://daotao.phongthuydainam.vn/vi");
+            string token = TokenStore.AccessToken.Trim();
+
+            if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                token = token.Substring("Bearer ".Length).Trim();
+
+            string url =
+                "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+                "?course=" + UnityWebRequest.EscapeURL(course_id) +
+                "&accessToken=" + UnityWebRequest.EscapeURL(token);
+
+            Application.OpenURL(url);
             BookHandler.CanSelectBook = true;
             return;
         }
@@ -54,18 +64,6 @@ public class MinimapCourseDisplayUI : MonoBehaviour
             "Thông báo",
             () => { BookHandler.CanSelectBook = true; }
         );
-#else
-    // giữ nguyên popup như cũ
-    string msg = isLoggedIn
-        ? "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác."
-        : "Bạn cần đăng nhập để xem khóa học này.";
-
-    LoadingUI.ShowErrorPopup(
-        msg,
-        "Thông báo",
-        () => { BookHandler.CanSelectBook = true; }
-    );
-#endif
     }
 
     private void ClickFindWayButton()
