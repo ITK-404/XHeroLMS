@@ -447,6 +447,12 @@ private bool IsRequiredArea(BigArea area)
             ? new List<CourseData>(_courses)
             : _courses.FindAll(c => MatchesGroup(c, _currentGroup));
 
+        // Preview/Review mode: chỉ hiện khóa đã sở hữu
+        if (IsPreviewMode())
+        {
+            list = list.FindAll(IsOwned);
+        }
+
         bool isEmpty = (list == null || list.Count == 0);
         SetEmptyState(isEmpty);
 
@@ -460,6 +466,23 @@ private bool IsRequiredArea(BigArea area)
         }
     }
 
+    private bool IsOwned(CourseData c)
+    {
+        if (c == null) return false;
+        bool joined = c.isJoined ?? false;
+        bool isFree = c.isFree ?? false;
+        return joined || isFree;
+    }
+
+    private bool IsPreviewMode()
+    {
+    #if UNITY_ANDROID || UNITY_IOS
+        return AppDataGlobal.isInReviewMode;
+    #else
+        return false;
+    #endif
+    }
+
     private void BindItem(MinimapCourseDisplayUI ui, CourseData data)
     {
         if (ui == null || data == null) return;
@@ -467,6 +490,17 @@ private bool IsRequiredArea(BigArea area)
         ui.SetMeta(data.sku, data.seoUrl);
         ui.SetDisplayCourseName(string.IsNullOrEmpty(data.title) ? "(no title)" : data.title);
 
+        bool owned = IsOwned(data);
+
+        // Preview/Review mode: list đã lọc owned rồi, nhưng vẫn set UI owned cho chắc
+        if (IsPreviewMode())
+        {
+            ui.SetPriceText("");   // hoặc bỏ cũng được
+            ui.SetOwnedUI(true);
+            return;
+        }
+
+        // ---- Normal mode ----
         float? displayPrice = useCurrentPriceFirst
             ? (data.currentPrice ?? data.originalPrice)
             : (data.originalPrice ?? data.currentPrice);
@@ -475,34 +509,21 @@ private bool IsRequiredArea(BigArea area)
             ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
             : "";
 
-        bool joined = data.isJoined ?? false;
-        bool isFree = data.isFree ?? false;
-        bool owned = joined || isFree;
-
-#if UNITY_ANDROID || UNITY_IOS
-        // Mobile: không hiện giá (không gọi SetPriceText)
-        if (AppDataGlobal.isInReviewMode)
+    #if UNITY_ANDROID || UNITY_IOS
+        if (!owned)
         {
-            ui.SetPriceText("");
+            ui.SetPriceText(priceText);
+            ui.SetOwnedUI(false);
         }
         else
         {
-            if (!owned)
-            {
-                ui.SetPriceText(priceText);
-            }
-            else
-            {
-                ui.SetOwnedUI(owned);
-            }
+            ui.SetPriceText("");
+            ui.SetOwnedUI(true);
         }
-        
-#else
-    // PC: hiện giá bình thường
-    if (!owned) ui.SetPriceText(priceText);
-#endif
-
+    #else
+        if (!owned) ui.SetPriceText(priceText);
         ui.SetOwnedUI(owned);
+    #endif
     }
 
     private void ClearContent(RectTransform content)

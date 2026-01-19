@@ -10,7 +10,7 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("Destination")] [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
 
-    [Header("Mobile Redirect")] public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
+    // [Header("Mobile Redirect")] public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
 
     // Khóa lưu tạm key giữa các scene
     private const string COURSE_KEY_PREF = "CourseListKey";
@@ -38,12 +38,12 @@ public class CourseMenuButtons : MonoBehaviour
             btnAllCourses.onClick.AddListener(() =>
             {
                 // MOBILE: mở web
-                if (IsMobileBuild())
-                {
-                    Debug.Log("Open hyper link to the web");
-                    Application.OpenURL(mobileAllCoursesUrl);
-                    return;
-                }
+                // if (IsMobileBuild())
+                // {
+                //     Debug.Log("Open hyper link to the web");
+                //     Application.OpenURL(mobileAllCoursesUrl);
+                //     return;
+                // }
 
                 // PC/Editor: giữ nguyên logic cũ
                 PlayerLocator.Save(player.gameObject);
