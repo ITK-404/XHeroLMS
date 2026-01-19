@@ -270,6 +270,7 @@ MonoBehaviour:
   streamingAssetsVideoName: myintro.mp4
   activateImmediatelyWhenReady: 1
   finishTo100Duration: 0.25
+  loaderCanvasGroup: {fileID: 1303146501}
 --- !u!4 &1202030477
 Transform:
   m_ObjectHideFlags: 0
@@ -532,8 +533,28 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8431596316608840840, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1303146501}
   m_SourcePrefab: {fileID: 100100000, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
+--- !u!1 &1303146500 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8431596316608840840, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
+  m_PrefabInstance: {fileID: 1303146499}
+  m_PrefabAsset: {fileID: 0}
+--- !u!225 &1303146501
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1303146500}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!114 &1701186723 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7669130224638703362, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
@@ -699,7 +720,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BackGroundColor: {r: 1, g: 1, b: 1, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
