@@ -213,11 +213,16 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             }
         }
 
-        // listen firebase by code
-        EnsureFirebase().StartListen(_currentCode);
-
-        // open XHero app (android/ios)
         OpenXHeroDeepLink(_currentCode, _currentTimestamp);
+
+        try
+        {
+            EnsureFirebase().StartListen(_currentCode);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[LmsDeepLinkAuthUI] Firebase StartListen failed: " + e);
+        }
 
         // wait token
         float t = waitTokenTimeoutSeconds;
