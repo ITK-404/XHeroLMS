@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Video;
 using System.Collections;
+using DG.Tweening;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
@@ -49,8 +50,10 @@ public class IntroManager : MonoBehaviour
 
     private bool activationRoutineStarted = false;
 
+    public CanvasGroup loaderCanvasGroup;
     private void Awake()
     {
+        loaderCanvasGroup.DOFade(0, 0);
         SetProgressInstant(0f);
     }
 
@@ -67,9 +70,16 @@ public class IntroManager : MonoBehaviour
             return;
         }
 
+        videoPlayer.prepareCompleted += OnFadeSlider;
+        
         StartCoroutine(CoPrepareAndPlayVideo());
         StartCoroutine(CoVideoStartTimeoutCheck());
         StartCoroutine(CoUpdateProgressUI());
+    }
+
+    private void OnFadeSlider(VideoPlayer source)
+    {
+        loaderCanvasGroup.DOFade(1, 0.1f);
     }
 
     private void BeginPreloadNextScene()
@@ -290,6 +300,7 @@ public class IntroManager : MonoBehaviour
         {
             videoPlayer.prepareCompleted -= OnVideoPrepared;
             videoPlayer.loopPointReached -= OnVideoEnd;
+            videoPlayer.prepareCompleted -= OnFadeSlider;
         }
     }
 }
