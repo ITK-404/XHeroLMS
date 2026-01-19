@@ -36,7 +36,7 @@ public class IOSReviewManager
         public int __v;
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Init()
     {
         // Fire-and-forget ở startup (không block load scene)
