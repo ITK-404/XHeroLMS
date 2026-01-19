@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Events;
-
+//xhero://xhero.deeplink?authLMSCode=1&timestamp=123
 public class LmsDeepLinkAuthUI : MonoBehaviour
 {
     [Header("API config")]
@@ -29,6 +29,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     [Header("Extra param (required by XHero)")]
     public string functionParamName = "function";
     public string functionValue = "auth-for-lms";
+    [Header("XHero deeplink host")]
+    public string xheroHost = "xhero.deeplink";
 
     [Header("Flow")]
     public float waitTokenTimeoutSeconds = 25f;
@@ -253,24 +255,13 @@ private void OpenXHeroDeepLink(string code, string timestamp)
     string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
     string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
 
-    string p = string.IsNullOrEmpty(xheroPath) ? "/" : xheroPath;
-    if (!p.StartsWith("/")) p = "/" + p;
+    string host = "xhero.deeplink"; // hoặc xheroHost / GetXHeroHostForPlatform()
 
-#if UNITY_IOS
     string deepLinkUrl =
-        $"{xheroScheme}://{p.TrimStart('/')}" +  // nếu xheroPath="/auth" => "xhero://auth"
+        $"{xheroScheme}://{host}" +
         $"?{codeParamName}={codeEnc}" +
         $"&{timestampParamName}={tsEnc}" +
         $"&{functionParamName}={fnEnc}";
-#else
-    // Android: giữ host
-    string host = GetXHeroHostForPlatform();
-    string deepLinkUrl =
-        $"{xheroScheme}://{host}{p}" +
-        $"?{codeParamName}={codeEnc}" +
-        $"&{timestampParamName}={tsEnc}" +
-        $"&{functionParamName}={fnEnc}";
-#endif
 
     Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
     Application.OpenURL(deepLinkUrl);
