@@ -264,15 +264,15 @@ catch (Exception e)
             _loggedIn = false;
 
             // stop listen firebase nếu đang nghe
-            try
-            {
-                if (FirebaseLoginQrPerCode.Instance != null)
-                    FirebaseLoginQrPerCode.Instance.StopListen();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[LmsDeepLinkAuthUI] StopListen failed: " + e);
-            }
+            // try
+            // {
+            //     if (FirebaseLoginQrPerCode.Instance != null)
+            //         FirebaseLoginQrPerCode.Instance.StopListen();
+            // }
+            // catch (Exception e)
+            // {
+            //     Debug.LogWarning("[LmsDeepLinkAuthUI] StopListen failed: " + e);
+            // }
 
             LoadingUI.Hide();
             LoadingUI.ShowErrorPopup(
