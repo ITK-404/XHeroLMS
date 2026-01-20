@@ -22,7 +22,7 @@ public class PanelSwitchController : MonoBehaviour
             btnForgot.onClick.AddListener(ShowForgot);
 
         if (btnLoginQR != null)
-            btnLoginQR.onClick.AddListener(OnClickLoginViaApp);
+            btnLoginQR.onClick.AddListener(ShowLoginQr);
     }
 
     private void OnDestroy()
@@ -31,7 +31,7 @@ public class PanelSwitchController : MonoBehaviour
             btnForgot.onClick.RemoveListener(ShowForgot);
 
         if (btnLoginQR != null)
-            btnLoginQR.onClick.RemoveListener(OnClickLoginViaApp);
+            btnLoginQR.onClick.RemoveListener(ShowLoginQr);
     }
 
     private void ShowForgot()
