@@ -168,6 +168,20 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             });
     }
 
+    public void StopListen()
+    {
+        Debug.Log("[FirebaseLoginQrPerCode] StopListen() called (public)");
+        StopListenInternal();
+
+        _notifiedSuccess = false;
+
+        if (_step2Co != null)
+        {
+            StopCoroutine(_step2Co);
+            _step2Co = null;
+        }
+    }
+
     private FirebaseApp EnsureFirebaseApp()
     {
         if (_firebaseApp != null)
@@ -194,7 +208,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             AppId = "1:934560089313:web:8edd540216d9dcd6ba63a0",
             ProjectId = "xhero-e1eee",
             // DatabaseUrl = new Uri("https://xhero-e1eee-default-rtdb.firebaseio.com"),   
-            DatabaseUrl = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),   
+            DatabaseUrl = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),
             MessageSenderId = "934560089313",
             StorageBucket = "xhero-e1eee.firebasestorage.app"
         };

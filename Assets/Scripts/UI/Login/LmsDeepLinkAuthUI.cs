@@ -213,16 +213,17 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             }
         }
 
-        OpenXHeroDeepLink(_currentCode, _currentTimestamp);
+if (!OpenXHeroDeepLink(_currentCode, _currentTimestamp))
+    yield break;
 
-        try
-        {
-            EnsureFirebase().StartListen(_currentCode);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[LmsDeepLinkAuthUI] Firebase StartListen failed: " + e);
-        }
+try
+{
+    EnsureFirebase().StartListen(_currentCode);
+}
+catch (Exception e)
+{
+    Debug.LogError("[LmsDeepLinkAuthUI] Firebase StartListen failed: " + e);
+}
 
         // wait token
         float t = waitTokenTimeoutSeconds;
@@ -254,23 +255,91 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
 #endif
     }
 
-private void OpenXHeroDeepLink(string code, string timestamp)
-{
-    string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-    string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
-    string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
+    private bool OpenXHeroDeepLink(string code, string timestamp)
+    {
+        if (!CanOpenXHeroApp())
+        {
+            _isRunning = false;
+            _loggedIn = false;
 
-    string host = "xhero.deeplink"; // hoặc xheroHost / GetXHeroHostForPlatform()
+            // stop listen firebase nếu đang nghe
+            try
+            {
+                if (FirebaseLoginQrPerCode.Instance != null)
+                    FirebaseLoginQrPerCode.Instance.StopListen();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LmsDeepLinkAuthUI] StopListen failed: " + e);
+            }
 
-    string deepLinkUrl =
-        $"{xheroScheme}://{host}" +
-        $"?{codeParamName}={codeEnc}" +
-        $"&{timestampParamName}={tsEnc}" +
-        $"&{functionParamName}={fnEnc}";
+            LoadingUI.Hide();
+            LoadingUI.ShowErrorPopup(
+                "Thiết bị của bạn chưa có ứng dụng XHero để đăng nhập,\nVui lòng tải ứng dụng và thử lại",
+                "Thông báo"
+            );
 
-    Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
-    Application.OpenURL(deepLinkUrl);
-}
+            StopFlow();
+            return false;
+        }
+
+        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
+        string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
+        string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
+
+        string host = "xhero.deeplink"; // hoặc xheroHost / GetXHeroHostForPlatform()
+
+        string deepLinkUrl =
+            $"{xheroScheme}://{host}" +
+            $"?{codeParamName}={codeEnc}" +
+            $"&{timestampParamName}={tsEnc}" +
+            $"&{functionParamName}={fnEnc}";
+
+        Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+        Application.OpenURL(deepLinkUrl);
+        return true;
+    }
+    private bool CanOpenXHeroApp()
+    {
+    #if UNITY_EDITOR
+        return true; // Editor không check
+    #elif UNITY_IOS
+        // iOS: cần khai báo LSApplicationQueriesSchemes trong Info.plist mới CanOpenURL trả true
+        try
+        {
+            return Application.CanOpenURL($"{xheroScheme}://");
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] CanOpenURL exception: " + e);
+            // Nếu lỗi môi trường, cho qua để không block login
+            return true;
+        }
+    #elif UNITY_ANDROID
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
+            {
+                // Có app => có launch intent
+                AndroidJavaObject intent = pm.Call<AndroidJavaObject>(
+                    "getLaunchIntentForPackage",
+                    xheroAndroidPackageName
+                );
+                return intent != null;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Android package check failed: " + e);
+            // Nếu check fail do device policy/manifest queries, cho qua để không block login
+            return true;
+        }
+    #else
+        return true;
+    #endif
+    }
 
     // ===================== JSON =====================
     [Serializable] private class LmsAuthResponse { public bool status; public LmsAuthData data; }
