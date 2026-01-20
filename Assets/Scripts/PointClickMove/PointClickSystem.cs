@@ -281,6 +281,13 @@ public class PointClickSystem : MonoBehaviour
                     return;
             }
 
+            if (TutorialHandler.Instance != null)
+            {
+                if (!TutorialHandler.Instance.IsPlayedBefore())
+                {
+                    return;
+                }
+            }
             // Raycast xuống ground (maxDistance + layerMask)
             if (Physics.Raycast(ray, out var groundHit, 1000f, groundLayerMask))
             {

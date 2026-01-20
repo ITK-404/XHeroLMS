@@ -130,7 +130,7 @@ public class TutorialHandler : MonoBehaviour
         SetupForChangeParentUI();
 
         // LoadSave();
-        isPlayedBefore = false; // ép luôn là chưa chơi
+        isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
 
         CreateHandList();
         // if player is played tutorial before
@@ -138,7 +138,7 @@ public class TutorialHandler : MonoBehaviour
         {
             return;
         }
-
+        
         SetupStartingClick();
         // if player not play tutorial then fade background
         

@@ -49,6 +49,13 @@ public class TouchRotationView : MonoBehaviour
 
     private void Update()
     {
+        if (TutorialHandler.Instance != null)
+        {
+            if (!TutorialHandler.Instance.IsPlayedBefore())
+            {
+                return;
+            }
+        }
         var activeTouches = EnhancedTouch.activeTouches;
 
         
