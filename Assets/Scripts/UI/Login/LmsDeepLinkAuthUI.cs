@@ -16,6 +16,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
 
     [Tooltip("ANDROID host (as in AndroidManifest intent-filter host)")]
     public string xheroAndroidHost = "com.xhero_app";
+    public string xheroAndroidPackageName = "com.xhero_app";
 
     [Tooltip("iOS host (as in iOS URLTypes / associated host config if they use host)")]
     public string xheroIosHost = "com.xhero.app";
