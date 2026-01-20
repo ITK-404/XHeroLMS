@@ -16,6 +16,8 @@ public class CameraZoomSlider : MonoBehaviour
         {
             _slider.onValueChanged.AddListener(OnValueChanged);
         }
+        zoomInBtn.onClick.AddListener(ZoomIn);
+        zoomOutBtn.onClick.AddListener(ZoomOut);
         ClampZeroToOne();
     }
     
@@ -29,8 +31,17 @@ public class CameraZoomSlider : MonoBehaviour
         zoomOutBtn.onClick.RemoveListener(ZoomOut);
     }
 
-    private void ZoomIn() => OnValueChanged(_slider.value += 0.1f);
-    private void ZoomOut() => OnValueChanged(_slider.value -= 0.1f);
+    private void ZoomIn()
+    {
+        Debug.Log("Zoom in value");
+        _slider.value += 0.1f;
+    }
+
+    private void ZoomOut()
+    {
+        Debug.Log("Zoom out value");
+        _slider.value -= 0.1f;
+    }
     
 
     private void ClampZeroToOne()
