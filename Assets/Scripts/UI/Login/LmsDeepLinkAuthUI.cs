@@ -302,44 +302,36 @@ catch (Exception e)
     }
     private bool CanOpenXHeroApp()
     {
-    #if UNITY_EDITOR
-        return true; // Editor không check
-    #elif UNITY_IOS
-        // iOS: cần khai báo LSApplicationQueriesSchemes trong Info.plist mới CanOpenURL trả true
-        try
-        {
-            return Application.CanOpenURL($"{xheroScheme}://");
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning("[LmsDeepLinkAuthUI] CanOpenURL exception: " + e);
-            // Nếu lỗi môi trường, cho qua để không block login
-            return true;
-        }
-    #elif UNITY_ANDROID
-        try
-        {
-            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-            using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
-            {
-                // Có app => có launch intent
-                AndroidJavaObject intent = pm.Call<AndroidJavaObject>(
-                    "getLaunchIntentForPackage",
-                    xheroAndroidPackageName
-                );
-                return intent != null;
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning("[LmsDeepLinkAuthUI] Android package check failed: " + e);
-            // Nếu check fail do device policy/manifest queries, cho qua để không block login
-            return true;
-        }
-    #else
+#if UNITY_EDITOR
         return true;
-    #endif
+
+#elif UNITY_ANDROID
+    try
+    {
+        using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+        using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+        using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
+        {
+            AndroidJavaObject intent = pm.Call<AndroidJavaObject>(
+                "getLaunchIntentForPackage",
+                xheroAndroidPackageName
+            );
+            return intent != null;
+        }
+    }
+    catch (Exception e)
+    {
+        Debug.LogWarning("[LmsDeepLinkAuthUI] Android package check failed: " + e);
+        return true; // fail-safe
+    }
+
+#elif UNITY_IOS
+    // ✅ Unity không support CanOpenURL ở version này -> cho qua
+    return IOSUrlChecker.CanOpen($"{xheroScheme}://");
+
+#else
+    return true;
+#endif
     }
 
     // ===================== JSON =====================

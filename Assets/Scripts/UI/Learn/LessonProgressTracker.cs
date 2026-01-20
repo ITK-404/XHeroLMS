@@ -83,7 +83,11 @@ public class LessonProgressTracker : MonoBehaviour
 
     public void UpdateLesson(LessonUI newLessonUI)
     {
-        if (newLessonUI == null) return;
+        if (newLessonUI == null)
+        {
+            lessonUI = newLessonUI;
+            return;
+        }
 
         
         if (newLessonUI.type == CourseListView.FinalExamType)
