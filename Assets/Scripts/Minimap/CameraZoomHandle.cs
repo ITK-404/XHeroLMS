@@ -13,6 +13,7 @@ public class CameraZoomHandle : MonoBehaviour
     {
         cameraZoomSlider.Hide();
         cameraZoomSlider.OnSliderValueChanged += Zoom;
+        targetValue = minimapCamera.Lens.FieldOfView;
     }
 
     private void OnDestroy()
@@ -22,6 +23,12 @@ public class CameraZoomHandle : MonoBehaviour
 
     public void Zoom(float normalize)
     {
-        minimapCamera.Lens.FieldOfView = Mathf.Lerp(maxZoom, minZoom, normalize);
+        targetValue = Mathf.Lerp(maxZoom, minZoom, normalize);
+    }
+
+    [SerializeField] private float targetValue;
+    private void Update()
+    {
+        minimapCamera.Lens.FieldOfView = Mathf.Lerp(minimapCamera.Lens.FieldOfView, targetValue, Time.deltaTime * 5);
     }
 }
