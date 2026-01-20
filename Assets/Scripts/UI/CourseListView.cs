@@ -399,6 +399,8 @@ public class CourseListView : MonoBehaviour
                 return;
             }
         }
+        
+        LessonProgressTracker.Instance.UpdateLesson(null);
 
         // Clear selection cũ
         if (_currentLesson != null && _currentLesson != lesson)

@@ -19,6 +19,7 @@ public class PCInput : BaseInput
 
     private void MoveHandle()
     {
+        
         MoveVector = InputHandler.Player.Move.ReadValue<Vector2>();
 
 
