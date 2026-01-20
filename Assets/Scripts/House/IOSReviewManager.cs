@@ -83,7 +83,7 @@ public class IOSReviewManager
 
     public static async Task<ReviewConfigData> FetchIOSReviewStatusAsync()
     {
-        const string url = "https://apis-dev.xheroapp.com/config?key=ios-in-review"; // fix API dev 
+        string url = $"{LmsStore.Instance.baseUrl}/config?key=ios-in-review";
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
