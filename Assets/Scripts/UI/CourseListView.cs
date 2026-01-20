@@ -52,6 +52,11 @@ public class CourseListView : MonoBehaviour
     private readonly List<LessonUI> _videoLessons = new();
     private LessonUI _currentLesson;
 
+    private float _videoStartRealtime;
+    private string _videoStartUrl;
+    private bool _loggedFirstFrame;
+
+
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
     void Awake()
     {
@@ -186,27 +191,39 @@ public class CourseListView : MonoBehaviour
     public const string FinalExamType = "FINAL_EXAM";
     public Action<LessonUI> OnClickFinalExamEvt;
 
-    private void PlayVideo(string url)
-    {
-        if (string.IsNullOrEmpty(url) || !videoPlayer) return;
+private void PlayVideo(string url)
+{
+    if (string.IsNullOrEmpty(url) || !videoPlayer) return;
+    if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
 
-        if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+    var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
 
-        var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
+    // ===== [testvideo] mốc bắt đầu =====
+    _videoStartRealtime = Time.realtimeSinceStartup;
+    _videoStartUrl = finalUrl;
+    _loggedFirstFrame = false;
 
-        Debug.Log("[PlayVideo] FINAL URL = " + finalUrl);
+    Debug.Log($"[testvideo][1] Got URL -> start loading. t={_videoStartRealtime:F3}s | url={finalUrl}");
 
-        videoPlayer.source = VideoSource.Url;
-        videoPlayer.url = finalUrl;
+    // avoid duplicate events
+    videoPlayer.errorReceived -= OnVideoError;
+    videoPlayer.errorReceived += OnVideoError;
 
-        videoPlayer.errorReceived -= OnVideoError;
-        videoPlayer.errorReceived += OnVideoError;
-        videoPlayer.Play();
-        
-        // for testing
-        
-        learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
-    }
+    videoPlayer.prepareCompleted -= OnVideoPrepared;
+    videoPlayer.prepareCompleted += OnVideoPrepared;
+
+    videoPlayer.frameReady -= OnVideoFrameReady;
+    videoPlayer.frameReady += OnVideoFrameReady;
+    videoPlayer.sendFrameReadyEvents = true;
+
+    videoPlayer.source = VideoSource.Url;
+    videoPlayer.url = finalUrl;
+
+    // prepare then play
+    videoPlayer.Prepare();
+
+    learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+}
 
     private void OnVideoError(VideoPlayer vp, string msg)
     {
@@ -418,4 +435,24 @@ public class CourseListView : MonoBehaviour
 
         PlayVideo(_currentLesson.linkVideo2);
     }
+
+    private void OnVideoPrepared(VideoPlayer vp)
+    {
+        vp.Play();
+    }
+
+    private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
+    {
+        if (_loggedFirstFrame) return;
+        _loggedFirstFrame = true;
+
+        float now = Time.realtimeSinceStartup;
+        float delta = now - _videoStartRealtime;
+
+        Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+
+        // optional: bỏ event để nhẹ hơn
+        vp.frameReady -= OnVideoFrameReady;
+    }
+
 }

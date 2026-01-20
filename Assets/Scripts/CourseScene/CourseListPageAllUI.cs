@@ -340,25 +340,37 @@ public class CourseListPageAllUI : MonoBehaviour
             float? displayPrice = useCurrentPriceFirst ? (data.currentPrice ?? data.originalPrice)
                                                        : (data.originalPrice ?? data.currentPrice);
 
+bool isReview = IsPreviewMode();
+
             if (slot.bookHandleUI != null)
             {
-                if (slot.bookHandleUI.priceText != null)
+                if (isReview)
                 {
-                    slot.bookHandleUI.priceText.text = displayPrice.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
-                        : "";
+                    // Review: không hiển thị giá (theo yêu cầu: " ")
+                    if (slot.bookHandleUI.priceText != null) slot.bookHandleUI.priceText.text = " ";
+                    if (slot.bookHandleUI.fullPriceText != null) slot.bookHandleUI.fullPriceText.text = " ";
+                    // không cần RefreshColor
                 }
-
-                if (slot.bookHandleUI.fullPriceText != null)
+                else
                 {
-                    slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
-                        ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
-                        : "";
-                }
+                    if (slot.bookHandleUI.priceText != null)
+                    {
+                        slot.bookHandleUI.priceText.text = displayPrice.HasValue
+                            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
+                            : "";
+                    }
 
-                slot.bookHandleUI.RefreshColor();
+                    if (slot.bookHandleUI.fullPriceText != null)
+                    {
+                        slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
+                            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
+                            : "";
+                    }
+
+                    slot.bookHandleUI.RefreshColor();
+                }
             }
-
+            
             bool joined = data.isJoined ?? false;
             float priceVal = displayPrice ?? 0f;
 
