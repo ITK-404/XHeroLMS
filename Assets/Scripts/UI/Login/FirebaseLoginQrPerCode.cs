@@ -207,8 +207,8 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             ApiKey = "AIzaSyCw9j5LCQuupiidpQ3nEplzujl7l2LfIc8",
             AppId = "1:934560089313:web:8edd540216d9dcd6ba63a0",
             ProjectId = "xhero-e1eee",
-            // DatabaseUrl = new Uri("https://xhero-e1eee-default-rtdb.firebaseio.com"),   
-            DatabaseUrl = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),
+            DatabaseUrl = new Uri("https://xhero-e1eee-default-rtdb.firebaseio.com"),   
+            // DatabaseUrl = new Uri("https://xhero-dev-default-rtdb.firebaseio.com"),
             MessageSenderId = "934560089313",
             StorageBucket = "xhero-e1eee.firebasestorage.app"
         };

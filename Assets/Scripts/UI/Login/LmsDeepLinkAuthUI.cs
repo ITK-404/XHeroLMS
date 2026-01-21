@@ -312,21 +312,28 @@ catch (Exception e)
         using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
         using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
         {
-            AndroidJavaObject intent = pm.Call<AndroidJavaObject>(
-                "getLaunchIntentForPackage",
-                xheroAndroidPackageName
-            );
-            return intent != null;
+            using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.VIEW"))
+            using (var uriClass = new AndroidJavaClass("android.net.Uri"))
+            {
+                string testUrl = $"{xheroScheme}://{xheroHost}";
+                using (var uri = uriClass.CallStatic<AndroidJavaObject>("parse", testUrl))
+                {
+                    intent.Call<AndroidJavaObject>("setData", uri);
+
+                    // resolve app nào có thể mở deeplink
+                    var resolved = pm.Call<AndroidJavaObject>("resolveActivity", intent, 0);
+                    return resolved != null;
+                }
+            }
         }
     }
     catch (Exception e)
     {
-        Debug.LogWarning("[LmsDeepLinkAuthUI] Android package check failed: " + e);
+        Debug.LogWarning("[LmsDeepLinkAuthUI] Android deeplink resolve check failed: " + e);
         return true; // fail-safe
     }
 
 #elif UNITY_IOS
-    // ✅ Unity không support CanOpenURL ở version này -> cho qua
     return IOSUrlChecker.CanOpen($"{xheroScheme}://");
 
 #else
