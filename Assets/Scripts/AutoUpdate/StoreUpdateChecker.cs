@@ -168,11 +168,7 @@ private int TryGetAvailableVersionCode(AppUpdateInfo info)
         return -1;
     }
 }
-#endif
-
-    public void TriggerCheck() => StartCoroutine(CoCheck());
-
-    private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, bool canImmediate)
+private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, bool canImmediate)
     {
         if (_appUpdateManager == null)
             _appUpdateManager = new AppUpdateManager();
@@ -238,6 +234,11 @@ private int TryGetAvailableVersionCode(AppUpdateInfo info)
             _appUpdateManager.CompleteUpdate();
         }
     }
+#endif
+
+    public void TriggerCheck() => StartCoroutine(CoCheck());
+
+    
 
     private int GetCurrentVersionCodeSafe()
     {
