@@ -1,5 +1,7 @@
 fileFormatVersion: 2
-guid: fd67598710aa4e8d9c7e3f50aed25687
+guid: af6ec1f2557f4a238c5b820d2e7336ea
+labels:
+- gvh
 PluginImporter:
   externalObjects: {}
   serializedVersion: 3
@@ -14,48 +16,31 @@ PluginImporter:
     Android:
       enabled: 0
       settings:
-        AndroidLibraryDependee: UnityLibrary
-        AndroidSharedLibraryType: Executable
-        CPU: ARMv7
+        Is16KbAligned: false
     Any:
       enabled: 1
-      settings:
-        Exclude Android: 1
-        Exclude Editor: 1
-        Exclude Linux64: 1
-        Exclude OSXUniversal: 1
-        Exclude Win: 1
-        Exclude Win64: 1
-        Exclude iOS: 0
+      settings: {}
     Editor:
       enabled: 0
       settings:
-        CPU: AnyCPU
+        CPU: x86_64
         DefaultValueInitialized: true
-        OS: AnyOS
     Linux64:
-      enabled: 0
+      enabled: 1
       settings:
         CPU: x86_64
     OSXUniversal:
-      enabled: 0
+      enabled: 1
       settings:
-        CPU: None
+        CPU: x86_64
     Win:
       enabled: 0
       settings:
-        CPU: x86
-    Win64:
-      enabled: 0
-      settings:
         CPU: None
-    iOS:
+    Win64:
       enabled: 1
       settings:
-        AddToEmbeddedBinaries: false
-        CPU: AnyCPU
-        CompileFlags: 
-        FrameworkDependencies: 
+        CPU: x86_64
   userData: 
   assetBundleName: 
   assetBundleVariant: 
