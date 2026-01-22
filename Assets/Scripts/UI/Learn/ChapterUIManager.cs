@@ -35,7 +35,8 @@ public class ChapterUIManager : MonoBehaviour
         var completed = new bool[chaptersList.Count];
         for (int i = 0; i < chaptersList.Count; i++)
         {
-            completed[i] = chaptersList[i].IsCompleteAll();
+            // completed[i] = chaptersList[i].IsCompleteAll();
+            completed[i] = true;
         }
 
         // decide state for the first chapter (usually unlocked)

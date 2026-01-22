@@ -104978,6 +104978,8 @@ MonoBehaviour:
   fadeMaxAngle: 65
   scrollAngle: 0
   keepLastPercentWhenQueryReturnsZero: 1
+  innerRange: 65
+  fadeRange: 22
 --- !u!1001 &996459354
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -172314,26 +172316,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
-  githubOwner: ITK-404
-  githubRepo: XHeroLMS
-  tagPrefix: v
-  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
-  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
-  localVersionFallback: 1.0.0
-  exeName: XHeroLMS.exe
-  patchFolder: Updates
-  maxRetries: 2
-  helperDebug: 1
-  windowRect:
-    x: 20
-    y: 20
-    width: 520
-    height: 220
-  showPopup: 0
-  uiTitle: Auto Updater
-  uiMessage: 
-  progress01: 0
-  state: 0
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
