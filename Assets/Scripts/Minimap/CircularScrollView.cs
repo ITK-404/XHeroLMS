@@ -84,6 +84,8 @@ public class CircularScrollView : MonoBehaviour
         return 0f;
     }
 
+    [SerializeField] private float innerRange = 50f;
+    [SerializeField] private float fadeRange = 30f;
     void UpdateItemPositions()
     {
         for (int i = 0; i < items.Count; i++)
@@ -93,16 +95,24 @@ public class CircularScrollView : MonoBehaviour
             float angleInRadians = angle * Mathf.Deg2Rad;
 
             // calculation alpha
-            float delta = Mathf.Abs(Mathf.DeltaAngle(startAngle, angle));
-            float alpha = 1;
-            float fadeAngle = startAngle + fadeMaxAngle;
-            if (delta > fadeAngle)
+            float centerAngle = startAngle;     
+            float outerRange = innerRange + fadeRange;
+
+            float delta = Mathf.Abs(Mathf.DeltaAngle(centerAngle, angle)); // 0..180
+
+            float alpha;
+            if (delta <= innerRange)
+            {
+                alpha = 1f;
+            }
+            else if (delta >= outerRange)
             {
                 alpha = 0f;
             }
             else
             {
-                alpha = 1f - Mathf.InverseLerp(0f, fadeAngle, delta);
+                // alpha = 1f - Mathf.InverseLerp(innerRange, outerRange, delta);
+                alpha = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(innerRange, outerRange, delta));
             }
 
             float x = radius * Mathf.Cos(angleInRadians);
@@ -115,6 +125,7 @@ public class CircularScrollView : MonoBehaviour
             rect.anchoredPosition = new Vector2(x, y) + offset;
         }
     }
+    
 
     public void SetAngle(float targetScrollAngle)
     {
