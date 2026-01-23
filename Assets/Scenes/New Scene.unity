@@ -172316,6 +172316,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
+  githubOwner: ITK-404
+  githubRepo: XHeroLMS
+  tagPrefix: v
+  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
+  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
+  localVersionFallback: 1.0.0
+  exeName: XHeroLMS.exe
+  patchFolder: Updates
+  maxRetries: 2
+  helperDebug: 1
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
@@ -184316,7 +184326,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00002670288
+      value: -0.000022888184
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x
@@ -188797,6 +188807,10 @@ PrefabInstance:
     - target: {fileID: 3950209349973276224, guid: 384cea599eab86642ad613a6ab610888, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 2.0029297
+      objectReference: {fileID: 0}
+    - target: {fileID: 3950209349973276224, guid: 384cea599eab86642ad613a6ab610888, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 3999601221992793929, guid: 384cea599eab86642ad613a6ab610888, type: 3}
       propertyPath: m_AnchoredPosition.x
