@@ -3746,7 +3746,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &35870208
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -3758,7 +3758,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &35870214
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -3770,7 +3770,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &35870220
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -14549,6 +14549,10 @@ PrefabInstance:
     - target: {fileID: 6491463050311997021, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.z
       value: 2.91
+      objectReference: {fileID: 0}
+    - target: {fileID: 6603664481683999934, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6860985684544424470, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_IsActive
@@ -32876,7 +32880,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &242596343
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -32888,7 +32892,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &242596349
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -32900,7 +32904,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!114 &242596355
 MonoBehaviour:
-  m_ObjectHideFlags: 2
+  m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -46149,6 +46153,14 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: d4a023129a0f45d49aab26eac8ef469c, type: 2}
+    - target: {fileID: 5959346565739064864, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.4823296
+      objectReference: {fileID: 0}
+    - target: {fileID: 5959346565739064864, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_LODs.Array.data[1].screenRelativeHeight
+      value: 0.24109536
+      objectReference: {fileID: 0}
     - target: {fileID: 6087967903750017196, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.y
       value: 3.44
@@ -78114,6 +78126,10 @@ PrefabInstance:
     - target: {fileID: 6491463050311997021, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_LocalPosition.z
       value: 2.91
+      objectReference: {fileID: 0}
+    - target: {fileID: 6603664481683999934, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6860985684544424470, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
       propertyPath: m_IsActive
@@ -172316,16 +172332,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb6b81b71beca54cac201e81863ab29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoUpdaterUI
-  githubOwner: ITK-404
-  githubRepo: XHeroLMS
-  tagPrefix: v
-  projectSettingsUrl: https://raw.githubusercontent.com/ITK-404/XHeroLMS/dev/ProjectSettings/ProjectSettings.asset
-  projectSettingsUrlFallback: https://cdn.jsdelivr.net/gh/ITK-404/XHeroLMS@dev/ProjectSettings/ProjectSettings.asset
-  localVersionFallback: 1.0.0
-  exeName: XHeroLMS.exe
-  patchFolder: Updates
-  maxRetries: 2
-  helperDebug: 1
 --- !u!224 &1952375502
 RectTransform:
   m_ObjectHideFlags: 0
