@@ -53,6 +53,8 @@ public class PointClickSystem : MonoBehaviour
     public float minPitch = -40f;
     public float maxPitch = 60f;
 
+    private bool rotateWhenMove = false;
+    
     private void Awake()
     {
         playerCamera = GetComponent<PlayerCamera>();
@@ -184,6 +186,16 @@ public class PointClickSystem : MonoBehaviour
 
         // Vừa đi vừa xoay mượt về phía điểm đã click
         HandleClickMoveRotation();
+
+        if (ai.canMove && !ai.isStopped && !ai.reachedDestination)
+        {
+            if(rotateWhenMove)
+                RotateToVelocity();
+        }
+        else
+        {
+            rotateWhenMove = false;
+        }
     }
 
     private void HandleClickMoveRotation()
@@ -393,6 +405,8 @@ public class PointClickSystem : MonoBehaviour
         }
 
         lastPickPosition = groundPos;
+
+        rotateWhenMove = true;
     }
     
     private bool TryHandleMoveToHouse(Ray ray)
