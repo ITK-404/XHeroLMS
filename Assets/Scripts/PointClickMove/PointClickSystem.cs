@@ -186,16 +186,6 @@ public class PointClickSystem : MonoBehaviour
 
         // Vừa đi vừa xoay mượt về phía điểm đã click
         HandleClickMoveRotation();
-
-        if (ai.canMove && !ai.isStopped && !ai.reachedDestination)
-        {
-            if(rotateWhenMove)
-                RotateToVelocity();
-        }
-        else
-        {
-            rotateWhenMove = false;
-        }
     }
 
     private void HandleClickMoveRotation()
