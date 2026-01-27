@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 1.1486983, g: 1.1486983, b: 1.1486983, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
-  m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientIntensity: 1.5
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 1, g: 1, b: 1, a: 1}
   m_SkyboxMaterial: {fileID: 2100000, guid: d41ed884a61bd9b44b55f1e9f86f80d0, type: 2}
   m_HaloStrength: 0.5
@@ -2191,7 +2191,7 @@ Light:
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
-  m_ColorTemperature: 7071
+  m_ColorTemperature: 6727
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
@@ -3658,7 +3658,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 1ca32d23575f94902998d31d222b1885, type: 2}
 --- !u!4 &832575519
 Transform:
   m_ObjectHideFlags: 0
@@ -8490,7 +8490,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1958035936
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8750,10 +8750,18 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 4.784388
       objectReference: {fileID: 0}
+    - target: {fileID: 4000899325791828700, guid: 3f3c611989254704584bc54b5ac23aae, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 74267b404fd58452daf4eb4c86bb57df, type: 2}
     - target: {fileID: 4068763124765997394, guid: 3f3c611989254704584bc54b5ac23aae, type: 3}
       propertyPath: m_LocalPosition.z
       value: -4.939645
       objectReference: {fileID: 0}
+    - target: {fileID: 4224285100274945453, guid: 3f3c611989254704584bc54b5ac23aae, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 74267b404fd58452daf4eb4c86bb57df, type: 2}
     - target: {fileID: 4305097144959078369, guid: 3f3c611989254704584bc54b5ac23aae, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
