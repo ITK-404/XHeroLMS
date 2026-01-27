@@ -127,6 +127,8 @@ public class PointClickSystem : MonoBehaviour
                 ai.canMove = false;
             }
 
+            rotateWhenMove = false;
+
             isClickMoving = false;
             HideMoveVfx(); // VFX
 
@@ -194,6 +196,7 @@ public class PointClickSystem : MonoBehaviour
         }
         else
         {
+            rotateWhenMove = false;
             HandleClickMoveRotation();
         }
     }
@@ -238,6 +241,8 @@ public class PointClickSystem : MonoBehaviour
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
         if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
         {
+            rotateWhenMove = false;
+
             isClickMoving = false;
             HideMoveVfx(); // VFX
         }
