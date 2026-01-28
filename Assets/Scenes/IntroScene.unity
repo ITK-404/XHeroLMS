@@ -146,6 +146,7 @@ GameObject:
   - component: {fileID: 820501523}
   - component: {fileID: 820501522}
   - component: {fileID: 820501524}
+  - component: {fileID: 820501525}
   m_Layer: 0
   m_Name: AppBootstrap
   m_TagString: Untagged
@@ -204,6 +205,25 @@ MonoBehaviour:
   popupHeader: "Th\xF4ng b\xE1o"
   popupMessage: "Hi\u1EC7n t\u1EA1i \u0111\xE3 c\xF3 phi\xEAn b\u1EA3n m\u1EDBi,
     vui l\xF2ng c\u1EADp nh\u1EADt."
+--- !u!114 &820501525
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 820501521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3cfb883bf5b30743ad52a650c603df1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AddressablesPreload
+  preloadLabel: cloud
+  showProgressLog: 1
+  cleanIfCacheExceedsBytes: 5368709120
+  reserveFreeSpaceBytes: 838860800
+  cleanOnMajorUpgrade: 1
+  majorVersionPrefsKey: ADDR_LAST_MAJOR
+  cleanWhenLowDiskSpace: 1
 --- !u!114 &1084524951 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 335126811950672249, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
@@ -295,6 +315,7 @@ MonoBehaviour:
   streamingAssetsVideoName: myintro.mp4
   activateImmediatelyWhenReady: 1
   finishTo100Duration: 0.25
+  gateProgressByAddressables: 1
   loaderCanvasGroup: {fileID: 1303146501}
 --- !u!4 &1202030477
 Transform:

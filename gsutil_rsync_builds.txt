@@ -1,0 +1,88 @@
+[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "C:\_khoa\XHeroLMS\ServerData\Android" "gs://dlc-lms/addressables/releases/android/builds/1.0.2/"
+ExitCode=0
+
+--- STDOUT ---
+
+
+--- STDERR ---
+Building synchronization state...
+Starting synchronization...
+Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_newscene(main)_scenes_all_3f7eb0a353ef462a7f6b4fa94ecc2607.bundle [Content-Type=application/octet-stream]...
+==> NOTE: You are uploading one or more large file(s), which would run
+significantly faster if you enable parallel composite uploads. This
+feature can be enabled by editing the
+"parallel_composite_upload_threshold" value in your .boto
+configuration file. However, note that if you do this large files will
+be uploaded as `composite objects
+<https://cloud.google.com/storage/docs/composite-objects>`_,which
+means that any user who downloads such objects will need to have a
+compiled crcmod installed (see "gsutil help crcmod"). This is because
+without a compiled crcmod, computing checksums on composite objects is
+so slow that gsutil disables downloads of composite objects.
+
+/ [0/1 files][    0.0 B/253.2 MiB]   0% Done                                    
+-
+- [0/1 files][640.0 KiB/253.2 MiB]   0% Done                                    
+\
+\ [0/1 files][ 14.7 MiB/253.2 MiB]   5% Done                                    
+|
+/
+/ [0/1 files][ 25.9 MiB/253.2 MiB]  10% Done                                    
+-
+- [0/1 files][ 35.3 MiB/253.2 MiB]  13% Done                                    
+\
+|
+| [0/1 files][ 46.6 MiB/253.2 MiB]  18% Done                                    
+/
+-
+- [0/1 files][ 57.8 MiB/253.2 MiB]  22% Done                                    
+\
+\ [0/1 files][ 69.1 MiB/253.2 MiB]  27% Done                                    
+|
+/
+/ [0/1 files][ 80.3 MiB/253.2 MiB]  31% Done                                    
+-
+\
+\ [0/1 files][ 93.8 MiB/253.2 MiB]  37% Done                                    
+|
+| [0/1 files][105.3 MiB/253.2 MiB]  41% Done                                    
+/
+-
+- [0/1 files][116.9 MiB/253.2 MiB]  46% Done  11.6 MiB/s ETA 00:00:12           
+\
+|
+| [0/1 files][128.1 MiB/253.2 MiB]  50% Done  11.6 MiB/s ETA 00:00:11           
+/
+/ [0/1 files][139.4 MiB/253.2 MiB]  55% Done  11.6 MiB/s ETA 00:00:10           
+-
+\
+\ [0/1 files][150.3 MiB/253.2 MiB]  59% Done  11.1 MiB/s ETA 00:00:09           
+|
+/
+/ [0/1 files][161.6 MiB/253.2 MiB]  63% Done  11.1 MiB/s ETA 00:00:08           
+-
+- [0/1 files][172.8 MiB/253.2 MiB]  68% Done  11.0 MiB/s ETA 00:00:07           
+\
+|
+| [0/1 files][183.8 MiB/253.2 MiB]  72% Done  10.9 MiB/s ETA 00:00:06           
+/
+-
+- [0/1 files][195.0 MiB/253.2 MiB]  77% Done  10.9 MiB/s ETA 00:00:05           
+\
+\ [0/1 files][206.2 MiB/253.2 MiB]  81% Done  11.0 MiB/s ETA 00:00:04           
+|
+/
+/ [0/1 files][217.8 MiB/253.2 MiB]  86% Done  11.1 MiB/s ETA 00:00:03           
+-
+\
+\ [0/1 files][229.1 MiB/253.2 MiB]  90% Done  11.1 MiB/s ETA 00:00:02           
+|
+| [0/1 files][240.3 MiB/253.2 MiB]  94% Done  11.2 MiB/s ETA 00:00:01           
+/
+-
+- [0/1 files][251.6 MiB/253.2 MiB]  99% Done  11.2 MiB/s ETA 00:00:00           
+- [1/1 files][253.2 MiB/253.2 MiB] 100% Done  10.0 MiB/s ETA 00:00:00           
+\
+
+Operation completed over 1 objects/253.2 MiB.                                    
+
