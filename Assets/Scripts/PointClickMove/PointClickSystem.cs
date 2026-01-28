@@ -53,6 +53,8 @@ public class PointClickSystem : MonoBehaviour
     public float minPitch = -40f;
     public float maxPitch = 60f;
 
+    private bool rotateWhenMove = false;
+    
     private void Awake()
     {
         playerCamera = GetComponent<PlayerCamera>();
@@ -90,7 +92,12 @@ public class PointClickSystem : MonoBehaviour
         }
 
         if (InputBlocker.IsBlocked() || IsBlendingCamera())
+        {
+            if(rotateWhenMove)
+                RotateToVelocity();
             return;
+        }
+            
 
         // Gravity update
         bool isGrounded = characterController != null && characterController.isGrounded;
@@ -124,6 +131,8 @@ public class PointClickSystem : MonoBehaviour
                 ai.isStopped = true;
                 ai.canMove = false;
             }
+
+            rotateWhenMove = false;
 
             isClickMoving = false;
             HideMoveVfx(); // VFX
@@ -183,7 +192,18 @@ public class PointClickSystem : MonoBehaviour
         }
 
         // Vừa đi vừa xoay mượt về phía điểm đã click
-        HandleClickMoveRotation();
+        
+
+        if (rotateWhenMove && ai.canMove && ai.reachedDestination == false)
+        {
+            // Debug.Log($"Velocity {ai.velocity}");
+            RotateToVelocity();
+        }
+        else
+        {
+            rotateWhenMove = false;
+            HandleClickMoveRotation();
+        }
     }
 
     private void HandleClickMoveRotation()
@@ -226,6 +246,8 @@ public class PointClickSystem : MonoBehaviour
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
         if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
         {
+            rotateWhenMove = false;
+
             isClickMoving = false;
             HideMoveVfx(); // VFX
         }
@@ -393,6 +415,8 @@ public class PointClickSystem : MonoBehaviour
         }
 
         lastPickPosition = groundPos;
+
+        rotateWhenMove = true;
     }
     
     private bool TryHandleMoveToHouse(Ray ray)

@@ -5247,6 +5247,12 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 6967036246002267829}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8187274223872442157, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7470199161212908758}
+    - targetCorrespondingSourceObject: {fileID: 2546486983432099001, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4864020220012767093}
     - targetCorrespondingSourceObject: {fileID: 6449534438605416163, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3534867225169931934}
@@ -5312,6 +5318,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2ac4e961eb940fab0c46b561b797ff8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStandUI
+--- !u!1 &2940061007775261997 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8187274223872442157, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+  m_PrefabInstance: {fileID: 6436272167587617280}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7470199161212908758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2940061007775261997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ee00d0be40e44c7988f112d8438d1de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoAspectRatio
+  aspectRatio: {x: 16, y: 9}
+  applyOnStart: 1
+  updateOnScreenChange: 0
 --- !u!114 &2978676535767447776 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8071675287504331488, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
@@ -5473,6 +5499,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbc81df58d5a49a784ab6797d66d666a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CourseExitWayHandler
+--- !u!1 &8792375594507259577 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2546486983432099001, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+  m_PrefabInstance: {fileID: 6436272167587617280}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4864020220012767093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8792375594507259577}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ee00d0be40e44c7988f112d8438d1de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoAspectRatio
+  aspectRatio: {x: 16, y: 9}
+  applyOnStart: 1
+  updateOnScreenChange: 0
 --- !u!1001 &6574037983481329114
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5656,6 +5702,10 @@ PrefabInstance:
     - target: {fileID: 394958936108755093, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -58.84024
+      objectReference: {fileID: 0}
+    - target: {fileID: 469614535968358305, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 503801968808620301, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_IsActive
