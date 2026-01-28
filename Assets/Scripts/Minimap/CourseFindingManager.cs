@@ -7,15 +7,21 @@ public class CourseFindingManager : MonoBehaviour
     [SerializeField] private CourseMapBrowserUI courseMapBrowserUI;
     [SerializeField] private PlotArea defaultPlotArea;
     [SerializeField] private PointClickSystem pointClickSystem;
-    private void Awake()
+    private void Start()
     {
         MinimapCourseDisplayUI.OnFindWayAction += OnClickFindWay;
+        PlayerPanelUI.Instance.OnClickTryExitAutoFindWay += OnClickTryExitAutoFindWay;
+    }
+
+    private void OnClickTryExitAutoFindWay()
+    {
+        pointClickSystem.StopMoving();
     }
 
     private void OnDestroy()
     {
         MinimapCourseDisplayUI.OnFindWayAction -= OnClickFindWay;
-
+        PlayerPanelUI.Instance.OnClickTryExitAutoFindWay -= OnClickTryExitAutoFindWay;
     }
 
     private void OnClickFindWay(string seoUrl)
@@ -49,5 +55,8 @@ public class CourseFindingManager : MonoBehaviour
         minimapManager.ToggleOffMinimap();
         pointClickSystem.MoveToPosition(findPlot.Location.GetItemWorldPosition());
         pointClickSystem.IsClickMoving = true;
+        
+        InputBlocker.SetBlocked(true);
+        PlayerPanelUI.Instance.ShowPathfindingPanel();
     }
 }
