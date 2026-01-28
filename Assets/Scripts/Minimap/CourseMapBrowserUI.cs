@@ -40,7 +40,7 @@ public class CourseMapBrowserUI : MonoBehaviour
 
     [Header("Price format")]
     public bool useCurrentPriceFirst = true;
-    public string priceFormat = "{0:#,0}'đ";
+    public string priceFormat = "{0:#,0} đ";
 
     public GameObject emptyTextObj;
 
