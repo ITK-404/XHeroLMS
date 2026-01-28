@@ -752,6 +752,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 491691207525793172}
+  - component: {fileID: 5264863107977190502}
   m_Layer: 5
   m_Name: Certificates - khung
   m_TagString: Untagged
@@ -768,7 +769,7 @@ RectTransform:
   m_GameObject: {fileID: 8470311018606748441}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.79, y: 0.79, z: 0.79}
+  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6015199334723552550}
@@ -780,6 +781,20 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -65}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5264863107977190502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8470311018606748441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19aa825a812d40babeb4cbc410875fb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoSizeCertificates
+  frame: {fileID: 6015199334723552550}
+  certificates: {fileID: 3655785075411488722}
 --- !u!1 &8905820261665722984
 GameObject:
   m_ObjectHideFlags: 0
