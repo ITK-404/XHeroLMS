@@ -17,6 +17,6 @@ public class AutoSizeCertificates : MonoBehaviour
             transform.localScale = Vector3.one * 0.6f;
         }
 
-        certificates.transform.localScale = frame.gameObject.activeSelf ? Vector3.one * 1.8f: Vector3.one * 3.3f;
+        certificates.transform.localScale = frame.gameObject.activeSelf ? Vector3.one * 1.8f: Vector3.one * 2.5f;
     }
 }
