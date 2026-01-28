@@ -1,0 +1,17 @@
+[CMD] C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd ls -b "gs://dlc-lms"
+ExitCode=1
+
+--- STDOUT ---
+
+
+--- STDERR ---
+Traceback (most recent call last):
+  File "C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\platform/gsutil\gsutil", line 21, in <module>
+    gsutil.RunMain()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\platform\gsutil\gsutil.py", line 157, in RunMain
+    import gslib.__main__
+  File "C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\platform\gsutil\gslib\__main__.py", line 39, in <module>
+    from google.auth import exceptions as google_auth_exceptions
+ModuleNotFoundError: No module named 'google.auth'
+
