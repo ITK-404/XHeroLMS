@@ -28,6 +28,9 @@ public class PlayerPanelUI : MonoBehaviour
     public Button blockingSelectFunction;
     public string defaultLoadScene = "New Scene";
 
+    public GameObject pathfindPanel;
+    public Button exitPathBtn;
+    public Action OnClickTryExitAutoFindWay;
     
     // users 
     public string deleteUserPath = "/users"; // <-- chỉnh theo API thật
@@ -56,8 +59,28 @@ public class PlayerPanelUI : MonoBehaviour
         LogoutPopupUI.OnReturn += OnReturn;
         LogoutPopupUI.OnLogout += OnLogout;
         TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
+        
+        exitPathBtn.onClick.AddListener(TryExitAutoFinding);
+        
+        HidePathfinding();
     }
 
+    public void TryExitAutoFinding()
+    {
+        OnClickTryExitAutoFindWay?.Invoke();
+        HidePathfinding();
+    }
+    
+    private void OnDestroy()
+    {
+        LoginController.OnLoginComplete -= ShowLoginUI;
+
+        LogoutPopupUI.OnReturn -= OnReturn;
+        LogoutPopupUI.OnLogout -= OnLogout;
+        TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
+        exitPathBtn.onClick.RemoveListener(TryExitAutoFinding);
+        
+    }
     private bool isLoaded = false;
 
     private void OnLogout()
@@ -158,14 +181,7 @@ public class PlayerPanelUI : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        LoginController.OnLoginComplete -= ShowLoginUI;
 
-        LogoutPopupUI.OnReturn -= OnReturn;
-        LogoutPopupUI.OnLogout -= OnLogout;
-        TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
-    }
 
     private void TryLogoutButtonOnOnTryLogout()
     {
@@ -201,4 +217,17 @@ public class PlayerPanelUI : MonoBehaviour
         if (TokenStore.IsAuthenticated) return;
         unLogginContainer.gameObject.SetActive(b);
     }
+
+    public void ShowPathfindingPanel()
+    {
+        pathfindPanel.gameObject.SetActive(true);
+        playerInformation.gameObject.SetActive(false);
+    }
+
+    public void HidePathfinding()
+    {
+        pathfindPanel.gameObject.SetActive(false);
+        playerInformation.gameObject.SetActive(true);
+    }
+    
 }
