@@ -152,12 +152,19 @@ private void Awake()
     {
         _courses.Clear();
 
-        string token = GetToken();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            Debug.LogWarning("[CourseList/MY] No token. Set overrideAccessToken or TokenStore.AccessToken.");
-            yield break;
-        }
+string token = GetToken();
+if (string.IsNullOrWhiteSpace(token))
+{
+    Debug.LogWarning("[CourseList/MY] No token -> render EMPTY state (not logged in).");
+
+    // đảm bảo dữ liệu rỗng
+    _courses.Clear();
+
+    // nếu bạn đang mở tab cụ thể thì render view đó, không thì render cả 4 group
+    RenderAccordingToCurrentGroup();
+
+    yield break;
+}
 
         int nextSkip = 0;
         int page = 0;

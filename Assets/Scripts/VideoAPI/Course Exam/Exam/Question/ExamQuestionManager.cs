@@ -229,16 +229,41 @@ public class ExamQuestionManager : MonoBehaviour
         Debug.Log("[EQM] OnSubmit() -> mở panel xác nhận");
 
         if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
-        if (mainConfirmPanel) mainConfirmPanel.SetActive(true);
+    if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
 
         confirmPanel.examPanelRoot = mainExamPanelRoot;
         confirmPanel.gameObject.SetActive(true);
         confirmPanel.Show(_examUIController, selectedMap, essayMap, _lastQuestionIndexBeforeSubmit);
     }
 
-    public void SubmitExamNow(bool timeUp)
+public void SubmitExamNow(bool timeUp)
+{
+    Debug.Log($"[EQM] SubmitExamNow(timeUp={timeUp}) CALLED");
+
+    if (_isSubmitting)
     {
-        Debug.Log($"[EQM] SubmitExamNow(timeUp={timeUp}) CALLED");
+        Debug.LogWarning("[EQM] SubmitExamNow() BỎ QUA: đang _isSubmitting = true");
+        return;
+    }
+
+    StopTimerSafe();
+
+    // QUAN TRỌNG: bật result panel trước
+    ShowResultPanelForSubmit();
+
+    SetReviewMode(true);
+
+    if (mainConfirmPanel) mainConfirmPanel.SetActive(false);
+    if (confirmPanel) confirmPanel.gameObject.SetActive(false);
+    
+    Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(timeUp))");
+    StartCoroutine(SubmitExamRoutine(timeUp));
+}
+
+    // Giữ API cũ để các nơi gọi không cần sửa
+    public void SubmitExamNow()
+    {
+        Debug.Log("[EQM] SubmitExamNow() CALLED");
 
         if (_isSubmitting)
         {
@@ -249,21 +274,11 @@ public class ExamQuestionManager : MonoBehaviour
         StopTimerSafe();
         SetReviewMode(true);
 
-        // Nếu confirm đang mở thì tắt (hết giờ có thể đang ở confirm)
         if (mainConfirmPanel) mainConfirmPanel.SetActive(false);
-        if (confirmPanel) confirmPanel.gameObject.SetActive(false);
-
-        // Đảm bảo root hiển thị đúng
         if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
 
-        Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(timeUp))");
-        StartCoroutine(SubmitExamRoutine(timeUp));
-    }
-
-    // Giữ API cũ để các nơi gọi không cần sửa
-    public void SubmitExamNow()
-    {
-        SubmitExamNow(timeUp: false);
+        Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(false))");
+        StartCoroutine(SubmitExamRoutine(false));
     }
 
     private IEnumerator SubmitExamRoutine(bool timeUp)
@@ -592,10 +607,17 @@ public class ExamQuestionManager : MonoBehaviour
     }
 
     // ===================== Utils =====================
-    protected void StopTimerSafe()
+protected void StopTimerSafe()
+{
+    if (_examUIController == null) return;
+
+    // chỉ dừng timer, KHÔNG tắt examStarted ở đây
+    if (_examUIController.timerCo != null)
     {
-        if (_examUIController != null) _examUIController.examStarted = false;
+        _examUIController.StopCoroutine(_examUIController.timerCo);
+        _examUIController.timerCo = null;
     }
+}
 
     public void ClearContent()
     {
@@ -762,5 +784,14 @@ public class ExamQuestionManager : MonoBehaviour
         }
 
         return copy;
+    }
+
+    private void ShowResultPanelForSubmit()
+    {
+        // tuỳ setup của bạn, tối thiểu bật ResultUI
+        if (resultUI && resultUI.gameObject) resultUI.gameObject.SetActive(true);
+
+        // nếu bạn có root riêng cho reviewPanel, cũng bật luôn
+        if (reviewPanel && reviewPanel.gameObject) reviewPanel.gameObject.SetActive(true);
     }
 }

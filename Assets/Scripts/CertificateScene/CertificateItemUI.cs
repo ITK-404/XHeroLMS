@@ -4,6 +4,7 @@ using System.Globalization;
 using UnityEngine;
 using UnityEngine.Networking;
 using TMPro;
+using Unity.VisualScripting.Antlr3.Runtime;
 
 public class CertificateItemUI : MonoBehaviour
 {
@@ -26,8 +27,12 @@ public class CertificateItemUI : MonoBehaviour
 
     public void Setup(string fullName, string certName, string createdAt, string certImgUrl)
     {
-        if (nameText != null)      nameText.text = fullName ?? "";
-        if (certNameText != null)  certNameText.text = certName ?? "";
+if (nameText != null)
+    nameText.text = !string.IsNullOrWhiteSpace(fullName) ? "Người dùng mới" : TokenStore.FullName;
+
+if (certNameText != null)
+    certNameText.text = string.IsNullOrWhiteSpace(certName) ? "" : certName;
+
 
         if (TryParseIsoDate(createdAt, out var dtLocal))
         {
