@@ -55,7 +55,7 @@ public class PlayerInformationUI : MonoBehaviour
     public void FillData()
     {
         if (playerName != null)
-            playerName.text = string.IsNullOrEmpty(TokenStore.FullName) ? "Người dùng mới" : TokenStore.FullName;
+            playerName.text = string.IsNullOrEmpty(TokenStore.FullName) ? "(no name)" : TokenStore.FullName;
 
         // luôn có ảnh ngay
         ApplyIdenticon();
