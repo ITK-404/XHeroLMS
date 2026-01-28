@@ -26,9 +26,6 @@ public class ExamTitleManager : MonoBehaviour
     private bool _oneMinuteWarningTriggered = false;
     private Coroutine _warningCo;
 
-    // chống gọi submit nhiều lần
-    private bool _timeUpSubmitted = false;
-
     private void Awake()
     {
         _examUIController = GetComponent<ExamUIController>();
@@ -105,8 +102,6 @@ public class ExamTitleManager : MonoBehaviour
             return;
         }
 
-        _timeUpSubmitted = false;
-
         _oneMinuteWarningTriggered = false;
         if (_warningCo != null) { StopCoroutine(_warningCo); _warningCo = null; }
         if (objectImage) objectImage.SetActive(false);
@@ -143,22 +138,7 @@ public class ExamTitleManager : MonoBehaviour
 
                 if (remain <= 0)
                 {
-                    // ====== ĐI ĐÚNG LUỒNG NỘP BÀI ======
-                    if (!_timeUpSubmitted)
-                    {
-                        _timeUpSubmitted = true;
-
-                        var qm = _examUIController.GetComponent<ExamQuestionManager>();
-                        if (qm != null && !qm.IsSubmitting)
-                        {
-                            qm.SubmitExamNow(timeUp: true); // <-- giống hệt nộp thường, chỉ khác flag timeUp
-                        }
-                        else
-                        {
-                            Debug.LogWarning("[ExamTitleManager] TimeUp nhưng không tìm thấy ExamQuestionManager hoặc đang submit.");
-                        }
-                    }
-
+                    StartCoroutine(_examUIController.SubmitExamCoroutine(timeUp: true));
                     yield break;
                 }
             }

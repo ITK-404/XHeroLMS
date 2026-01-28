@@ -80,7 +80,7 @@ public class CertificateDownloadCapture : MonoBehaviour
     private string BuildShareMessage()
     {
         string name =
-        !string.IsNullOrEmpty(TokenStore.FullName) ? "Người dùng mới" : TokenStore.FullName;
+        !string.IsNullOrEmpty(TokenStore.FullName) ? TokenStore.FullName : TokenStore.Username;
         string msg = !string.IsNullOrEmpty(shareMessage) ? "Chúc mừng " + name + " đã nhận bằng tốt nghiệp!" : shareMessage;
         string modeLabel = IsWithFrame() ? "có khung" : "không khung";
         return $"{msg}";

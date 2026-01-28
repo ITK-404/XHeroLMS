@@ -9,7 +9,7 @@ public class BookHandler : MonoBehaviour
     public string book_seo;
     public string book_name;
 
-    public string course_id; // thêm dòng này (ID khóa học)
+    public string course_id; // ✅ thêm dòng này (ID khóa học)
 
     public BookViewUI bookHandleUI;
     public BookModel bookModel;
@@ -146,11 +146,11 @@ public class BookHandler : MonoBehaviour
         else
         {
             BookHandler.CanSelectBook = false;
-            LoadingUI.ShowErrorPopup(
-                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
+            // LoadingUI.ShowErrorPopup(
+            //     "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+            //     "Thông báo",
+            //     () => { BookHandler.CanSelectBook = true; }
+            // );
         }
     }
 
