@@ -16,6 +16,7 @@ public class CourseFindingManager : MonoBehaviour
     private void OnClickTryExitAutoFindWay()
     {
         pointClickSystem.StopMoving();
+        InputBlocker.SetBlocked(false);
     }
 
     private void OnDestroy()

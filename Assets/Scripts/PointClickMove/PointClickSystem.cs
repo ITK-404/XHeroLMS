@@ -92,7 +92,12 @@ public class PointClickSystem : MonoBehaviour
         }
 
         if (InputBlocker.IsBlocked() || IsBlendingCamera())
+        {
+            if(rotateWhenMove)
+                RotateToVelocity();
             return;
+        }
+            
 
         // Gravity update
         bool isGrounded = characterController != null && characterController.isGrounded;
