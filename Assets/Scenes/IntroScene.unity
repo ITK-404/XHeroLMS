@@ -146,6 +146,7 @@ GameObject:
   - component: {fileID: 820501523}
   - component: {fileID: 820501522}
   - component: {fileID: 820501524}
+  - component: {fileID: 820501525}
   m_Layer: 0
   m_Name: AppBootstrap
   m_TagString: Untagged
@@ -204,6 +205,26 @@ MonoBehaviour:
   popupHeader: "Th\xF4ng b\xE1o"
   popupMessage: "Hi\u1EC7n t\u1EA1i \u0111\xE3 c\xF3 phi\xEAn b\u1EA3n m\u1EDBi,
     vui l\xF2ng c\u1EADp nh\u1EADt."
+--- !u!114 &820501525
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 820501521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d736407442713a243b311689a02acfbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeviceGatekeeper
+  enforceBlock: 1
+  verboseLog: 1
+  showPopupWhenBlocked: 1
+  autoQuitAfterSeconds: 5
+  blockedMessage: "Thi\u1EBFt b\u1ECB c\u1EE7a b\u1EA1n kh\xF4ng \u0111\u1EA1t y\xEAu
+    c\u1EA7u \u0111\u1EC3 s\u1EED d\u1EE5ng \u1EE9ng d\u1EE5ng.\nVui l\xF2ng d\xF9ng
+    thi\u1EBFt b\u1ECB m\u1EA1nh h\u01A1n ho\u1EB7c li\xEAn h\u1EC7 h\u1ED7 tr\u1EE3."
+  blockedHeader: "Kh\xF4ng h\u1ED7 tr\u1EE3 thi\u1EBFt b\u1ECB"
 --- !u!114 &1084524951 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 335126811950672249, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
