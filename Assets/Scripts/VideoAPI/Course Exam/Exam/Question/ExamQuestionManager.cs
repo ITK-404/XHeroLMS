@@ -29,7 +29,7 @@ public class ExamQuestionManager : MonoBehaviour
     public Button   btnBack;
     public Button   btnNext;
     public Button btnNopBai;
-
+    
     [Tooltip("Khi submit xong gọi GET result với đáp án đúng")]
     public bool getWithCorrectAnswer = true;
 
@@ -208,37 +208,37 @@ public class ExamQuestionManager : MonoBehaviour
     public void OnBack() => Move(-1);
     public void OnNext() => Move(+1);
 
-    public void OnSubmit()
+public void OnSubmit()
+{
+    Debug.Log("[EQM] OnSubmit() CLICK");
+
+    if (_isReviewMode || _examUIController == null || !_examUIController.examStarted)
     {
-        Debug.Log("[EQM] OnSubmit() CLICK");
-
-        if (_isReviewMode || _examUIController == null || !_examUIController.examStarted)
-        {
-            Debug.LogWarning($"[EQM] OnSubmit() BỎ QUA: isReviewMode={_isReviewMode}, examStarted={_examUIController?.examStarted}");
-            return;
-        }
-
-        _lastQuestionIndexBeforeSubmit = _examUIController.currentIndex;
-
-        if (!confirmPanel)
-        {
-            Debug.LogWarning("[ExamUI] Chưa gán ExamConfirmPanel!");
-            return;
-        }
-
-        Debug.Log("[EQM] OnSubmit() -> mở panel xác nhận");
-
-        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
-    if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
-
-        confirmPanel.examPanelRoot = mainExamPanelRoot;
-        confirmPanel.gameObject.SetActive(true);
-        confirmPanel.Show(_examUIController, selectedMap, essayMap, _lastQuestionIndexBeforeSubmit);
+        Debug.LogWarning($"[EQM] OnSubmit() BỎ QUA: isReviewMode={_isReviewMode}, examStarted={_examUIController?.examStarted}");
+        return;
     }
 
-public void SubmitExamNow(bool timeUp)
+    _lastQuestionIndexBeforeSubmit = _examUIController.currentIndex;
+
+    if (!confirmPanel)
+    {
+        Debug.LogWarning("[ExamUI] Chưa gán ExamConfirmPanel!");
+        return;
+    }
+
+    Debug.Log("[EQM] OnSubmit() -> mở panel xác nhận");
+
+    if (mainExamPanelRoot) mainExamPanelRoot.SetActive(false);
+    if (mainConfirmPanel)  mainConfirmPanel.SetActive(true);
+
+    confirmPanel.examPanelRoot = mainExamPanelRoot;
+    confirmPanel.gameObject.SetActive(true);
+    confirmPanel.Show(_examUIController, selectedMap, essayMap, _lastQuestionIndexBeforeSubmit);
+}
+
+public void SubmitExamNow()
 {
-    Debug.Log($"[EQM] SubmitExamNow(timeUp={timeUp}) CALLED");
+    Debug.Log("[EQM] SubmitExamNow() CALLED");
 
     if (_isSubmitting)
     {
@@ -247,68 +247,43 @@ public void SubmitExamNow(bool timeUp)
     }
 
     StopTimerSafe();
-
-    // QUAN TRỌNG: bật result panel trước
-    ShowResultPanelForSubmit();
-
     SetReviewMode(true);
 
-    if (mainConfirmPanel) mainConfirmPanel.SetActive(false);
-    if (confirmPanel) confirmPanel.gameObject.SetActive(false);
-    
-    Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(timeUp))");
-    StartCoroutine(SubmitExamRoutine(timeUp));
+    if (mainConfirmPanel)  mainConfirmPanel.SetActive(false);
+    if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
+
+    Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(false))");
+    StartCoroutine(SubmitExamRoutine(false));
 }
 
-    // Giữ API cũ để các nơi gọi không cần sửa
-    public void SubmitExamNow()
+private IEnumerator SubmitExamRoutine(bool timeUp)
+{
+    Debug.Log($"[EQM] SubmitExamRoutine START, timeUp={timeUp}");
+
+    if (_examUIController == null)
     {
-        Debug.Log("[EQM] SubmitExamNow() CALLED");
-
-        if (_isSubmitting)
-        {
-            Debug.LogWarning("[EQM] SubmitExamNow() BỎ QUA: đang _isSubmitting = true");
-            return;
-        }
-
-        StopTimerSafe();
-        SetReviewMode(true);
-
-        if (mainConfirmPanel) mainConfirmPanel.SetActive(false);
-        if (mainExamPanelRoot) mainExamPanelRoot.SetActive(true);
-
-        Debug.Log("[EQM] SubmitExamNow() -> StartCoroutine(SubmitExamRoutine(false))");
-        StartCoroutine(SubmitExamRoutine(false));
+        Debug.LogError("[EQM] SubmitExamRoutine: _examUIController = null, DỪNG.");
+        yield break;
     }
 
-    private IEnumerator SubmitExamRoutine(bool timeUp)
-    {
-        Debug.Log($"[EQM] SubmitExamRoutine START, timeUp={timeUp}");
+    _isSubmitting = true;
+    _examUIController.ShowLoading(true);
+    if (btnNopBai) btnNopBai.gameObject.SetActive(false);
 
-        if (_examUIController == null)
-        {
-            Debug.LogError("[EQM] SubmitExamRoutine: _examUIController = null, DỪNG.");
-            yield break;
-        }
+    Debug.Log("[EQM] SubmitExamRoutine -> gọi _submissionService.SubmitExamCoroutine(...)");
+    yield return _submissionService.SubmitExamCoroutine(timeUp);
+    Debug.Log("[EQM] SubmitExamRoutine: SubmitExamCoroutine DONE");
 
-        _isSubmitting = true;
-        _examUIController.ShowLoading(true);
-        if (btnNopBai) btnNopBai.gameObject.SetActive(false);
+    _examUIController.ShowLoading(false);
+    _isSubmitting = false;
 
-        Debug.Log("[EQM] SubmitExamRoutine -> gọi _submissionService.SubmitExamCoroutine(...)");
-        yield return _submissionService.SubmitExamCoroutine(timeUp);
-        Debug.Log("[EQM] SubmitExamRoutine: SubmitExamCoroutine DONE");
+    // Bật nav buttons khi vào review
+    if (btnBack) btnBack.gameObject.SetActive(true);
+    if (btnNext) btnNext.gameObject.SetActive(true);
+    if (btnNopBai) btnNopBai.gameObject.SetActive(false);
 
-        _examUIController.ShowLoading(false);
-        _isSubmitting = false;
-
-        // Bật nav buttons khi vào review
-        if (btnBack) btnBack.gameObject.SetActive(true);
-        if (btnNext) btnNext.gameObject.SetActive(true);
-        if (btnNopBai) btnNopBai.gameObject.SetActive(false);
-
-        Debug.Log("[EQM] SubmitExamRoutine END");
-    }
+    Debug.Log("[EQM] SubmitExamRoutine END");
+}
 
     public void ReturnToLastQuestion()
     {
@@ -530,49 +505,49 @@ public void SubmitExamNow(bool timeUp)
         UpdateNavButtons();
     }
 
-    public void ReviewHighlightNavIndex(int index)
+public void ReviewHighlightNavIndex(int index)
+{
+    if (_navItems == null || _navItems.Count == 0) return;
+
+    var rp = reviewPanel;
+
+    // Không có reviewPanel: Selected + Unanswered
+    if (rp == null)
     {
-        if (_navItems == null || _navItems.Count == 0) return;
-
-        var rp = reviewPanel;
-
-        // Không có reviewPanel: Selected + Unanswered
-        if (rp == null)
-        {
-            for (int i = 0; i < _navItems.Count; i++)
-            {
-                var el = _navItems[i];
-                if (!el) continue;
-
-                if (i == index) el.ShowSelectedAnswerButton();
-            else            el.SetUnansweredButton();
-            }
-            return;
-        }
-
-        // Có reviewPanel: Selected / Correct-InCorrect / Unanswered
         for (int i = 0; i < _navItems.Count; i++)
         {
             var el = _navItems[i];
             if (!el) continue;
 
-            if (i == index)
-            {
-                el.ShowSelectedAnswerButton();
-                continue;
-            }
+            if (i == index) el.ShowSelectedAnswerButton();
+            else            el.SetUnansweredButton();
+        }
+        return;
+    }
 
-            if (rp.IsQuestionAnsweredInReview(i))
-            {
-                if (rp.IsQuestionCorrectInReview(i)) el.ShowCorrectButton();
+    // Có reviewPanel: Selected / Correct-InCorrect / Unanswered
+    for (int i = 0; i < _navItems.Count; i++)
+    {
+        var el = _navItems[i];
+        if (!el) continue;
+
+        if (i == index)
+        {
+            el.ShowSelectedAnswerButton();
+            continue;
+        }
+
+        if (rp.IsQuestionAnsweredInReview(i))
+        {
+            if (rp.IsQuestionCorrectInReview(i)) el.ShowCorrectButton();
             else                                 el.ShowInCorrectButton();
-            }
-            else
-            {
-                el.SetUnansweredButton();
-            }
+        }
+        else
+        {
+            el.SetUnansweredButton();
         }
     }
+}
 
     private void RefreshAllNavStates()
     {
@@ -607,17 +582,10 @@ public void SubmitExamNow(bool timeUp)
     }
 
     // ===================== Utils =====================
-protected void StopTimerSafe()
-{
-    if (_examUIController == null) return;
-
-    // chỉ dừng timer, KHÔNG tắt examStarted ở đây
-    if (_examUIController.timerCo != null)
+    protected void StopTimerSafe()
     {
-        _examUIController.StopCoroutine(_examUIController.timerCo);
-        _examUIController.timerCo = null;
+        if (_examUIController != null) _examUIController.examStarted = false;
     }
-}
 
     public void ClearContent()
     {
@@ -784,14 +752,5 @@ protected void StopTimerSafe()
         }
 
         return copy;
-    }
-
-    private void ShowResultPanelForSubmit()
-    {
-        // tuỳ setup của bạn, tối thiểu bật ResultUI
-        if (resultUI && resultUI.gameObject) resultUI.gameObject.SetActive(true);
-
-        // nếu bạn có root riêng cho reviewPanel, cũng bật luôn
-        if (reviewPanel && reviewPanel.gameObject) reviewPanel.gameObject.SetActive(true);
     }
 }
