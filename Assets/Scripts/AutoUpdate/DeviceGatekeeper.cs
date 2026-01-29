@@ -88,7 +88,8 @@ public class DeviceGatekeeper : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
         return CheckAndroid();
 #elif UNITY_IOS && !UNITY_EDITOR
-        return CheckiOS();
+   return (true,"null","null");  
+   // return CheckiOS();
 #else
         return (true, "Editor/Other platform", $"platform={Application.platform}");
 #endif
@@ -176,7 +177,7 @@ public class DeviceGatekeeper : MonoBehaviour
         return (true, "iOS OK", $"hw.machine={hw} (major={major}) ios={iosVer}");
     }
 
-    [System.Runtime.InteropServices.DllImport("__Internal")]
+    // [System.Runtime.InteropServices.DllImport("__Internal")]
     private static extern IntPtr _GetHWMachine();
 
     private static string IOSHardwareMachine()
