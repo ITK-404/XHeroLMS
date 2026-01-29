@@ -138,9 +138,32 @@ public class ExamTitleManager : MonoBehaviour
 
                 if (remain <= 0)
                 {
-                    StartCoroutine(_examUIController.SubmitExamCoroutine(timeUp: true));
+                    // (optional) update UI về 00:00
+                    if (textDemNguoc)
+                        textDemNguoc.text = string.Format(timeFormat, 0, 0);
+
+                    // TÌM ExamQuestionManager và gọi đúng luồng submit
+                    var qm = _examUIController != null
+                        ? _examUIController.GetComponent<ExamQuestionManager>()
+                        : null;
+
+                    // fallback nếu EQM không cùng GameObject với ExamUIController
+                    if (qm == null)
+                        qm = FindObjectOfType<ExamQuestionManager>(true);
+
+                    if (qm != null)
+                    {
+                        qm.SubmitExamNow(); // giống bấm nộp bài (luồng đúng)
+                    }
+                    else
+                    {
+                        Debug.LogError("[ExamTitleManager] Force submit failed: cannot find ExamQuestionManager.");
+                        // Không gọi đường tắt SubmitExamCoroutine nữa để tránh lệch luồng
+                    }
+
                     yield break;
                 }
+
             }
 
             yield return new WaitForSeconds(1f);
