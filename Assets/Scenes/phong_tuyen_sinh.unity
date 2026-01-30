@@ -3564,13 +3564,14 @@ GameObject:
   - component: {fileID: 542427419}
   - component: {fileID: 542427418}
   - component: {fileID: 542427417}
+  - component: {fileID: 542427421}
   m_Layer: 0
   m_Name: Plane (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &542427417
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3664,6 +3665,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 77.314, y: 78.215, z: -103.092}
+--- !u!114 &542427421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 542427416}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3315a66bb42f7f14e901465accb8de3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogAlphaController
+  sharedMaterial: {fileID: 0}
+  targetAlpha: 0.6
+  smoothTime: 3
 --- !u!1001 &557389959
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4191,6 +4207,8 @@ GameObject:
   - component: {fileID: 637837434}
   - component: {fileID: 637837433}
   - component: {fileID: 637837432}
+  - component: {fileID: 637837436}
+  - component: {fileID: 637837437}
   m_Layer: 0
   m_Name: Plane (1)
   m_TagString: Untagged
@@ -4291,6 +4309,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 77.314, y: 78.215, z: -89.529}
+--- !u!114 &637837436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637837431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3315a66bb42f7f14e901465accb8de3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogAlphaController
+  sharedMaterial: {fileID: 0}
+  targetAlpha: 0.6
+  smoothTime: 3
+--- !u!114 &637837437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637837431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c5ae3aeff7b0846a716572466a0a44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogFloatingMovement
+  amplitude: {x: 0.3, y: 0.5, z: 0.3}
+  speed: 0.5
 --- !u!1 &656523519
 GameObject:
   m_ObjectHideFlags: 0
@@ -9951,13 +9998,14 @@ GameObject:
   - component: {fileID: 1565864816}
   - component: {fileID: 1565864815}
   - component: {fileID: 1565864814}
+  - component: {fileID: 1565864818}
   m_Layer: 0
   m_Name: Plane (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &1565864814
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10051,6 +10099,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 77.314, y: 78.215, z: -103.092}
+--- !u!114 &1565864818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1565864813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3315a66bb42f7f14e901465accb8de3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogAlphaController
+  sharedMaterial: {fileID: 2100000, guid: f56bb58bf69f51f40a8e08188ab3d852, type: 2}
+  targetAlpha: 0.6
+  smoothTime: 3
 --- !u!1001 &1567464738
 PrefabInstance:
   m_ObjectHideFlags: 0
