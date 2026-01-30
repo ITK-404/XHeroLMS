@@ -6,7 +6,8 @@ using UnityEditor.iOS.Xcode;
 
 public static class Sample_AddFileToBuild
 {
-    private const string RelPath = "Libraries/Plugins/iOS/CanOpenURL.mm";
+    private const string CanOpenPath = "Libraries/Plugins/iOS/CanOpenURL.mm";
+    private const string HardwareMachinePath = "Libraries/Plugins/iOS/HWMachine.mm";
 
     [PostProcessBuild(9999)]
     public static void OnPostProcessBuild(BuildTarget target, string pathToBuiltProject)
@@ -14,6 +15,12 @@ public static class Sample_AddFileToBuild
         if (target != BuildTarget.iOS) return;
 
         // 0) Verify file exists in built Xcode folder
+        LoadFile(pathToBuiltProject, CanOpenPath);
+        LoadFile(pathToBuiltProject, HardwareMachinePath);
+    }
+
+    private static void LoadFile(string pathToBuiltProject,string RelPath)
+    {
         var absPath = Path.Combine(pathToBuiltProject, RelPath);
         if (!File.Exists(absPath))
         {
