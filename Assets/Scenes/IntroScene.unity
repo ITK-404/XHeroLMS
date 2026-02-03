@@ -147,6 +147,7 @@ GameObject:
   - component: {fileID: 820501522}
   - component: {fileID: 820501524}
   - component: {fileID: 820501525}
+  - component: {fileID: 820501527}
   m_Layer: 0
   m_Name: AppBootstrap
   m_TagString: Untagged
@@ -218,12 +219,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AddressablesPreload
   preloadLabel: cloud
-  showProgressLog: 1
-  cleanIfCacheExceedsBytes: 5368709120
-  reserveFreeSpaceBytes: 838860800
-  cleanOnMajorUpgrade: 1
-  majorVersionPrefsKey: ADDR_LAST_MAJOR
-  cleanWhenLowDiskSpace: 1
+  maxRetries: 3
+  stepTimeoutSeconds: 25
+  downloadTimeoutSeconds: 300
+  enableProbeRemoteCatalog: 1
+  probeReadBytes: 64
+  remoteCatalogHashUrl: https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.hash
+  remoteCatalogJsonUrl: https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.json
+  clearCatalogCacheOnRetryOnly: 1
+  enableAddressablesRequestLog: 1
+--- !u!114 &820501527
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 820501521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471ba4c4f56645a47b962f19825cc8cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BootFlow
+  preload: {fileID: 820501525}
+  intro: {fileID: 1202030476}
+  mainSceneBuildIndex: 1
+  allowEnterMainWhenPreloadFailed: 1
+  minHoldBeforeEnterMain: 0.05
 --- !u!114 &1084524951 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 335126811950672249, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
@@ -302,21 +323,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   videoPlayer: {fileID: 1202030475}
-  nextSceneName: New Scene
+  streamingAssetsVideoName: myintro.mp4
+  videoStartTimeout: 5
+  skipVideoIfFail: 1
   progressRing: {fileID: 1084524951}
   sliderUI: {fileID: 99703496}
   textLoading: {fileID: 1701186723}
-  dotSpeed: 0.5
-  baseText: "\u0110ang t\u1EA3i"
-  headroom: 0.06
   visualLerpSpeed: 6
-  minIntroSeconds: 0
-  videoStartTimeout: 5
-  streamingAssetsVideoName: myintro.mp4
-  activateImmediatelyWhenReady: 1
-  finishTo100Duration: 0.25
-  gateProgressByAddressables: 1
-  loaderCanvasGroup: {fileID: 1303146501}
+  warmupMinProgress: 0.01
+  failCanvasGroup: {fileID: 0}
+  failText: {fileID: 0}
+  retryButton: {fileID: 0}
 --- !u!4 &1202030477
 Transform:
   m_ObjectHideFlags: 0

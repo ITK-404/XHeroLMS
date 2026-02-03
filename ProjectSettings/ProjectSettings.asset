@@ -847,24 +847,25 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: DOTWEEN
-    EmbeddedLinux: DOTWEEN
+    Android: ENABLE_JSON_CATALOG;DOTWEEN;ADDRESSABLES
+    EmbeddedLinux: ENABLE_JSON_CATALOG;DOTWEEN
     GameCoreScarlett: DOTWEEN
     GameCoreXboxOne: DOTWEEN
     Kepler: DOTWEEN
-    LinuxHeadlessSimulation: DOTWEEN
-    Nintendo Switch: DOTWEEN
-    PS4: DOTWEEN
+    LinuxHeadlessSimulation: ENABLE_JSON_CATALOG;DOTWEEN
+    Nintendo Switch: ENABLE_JSON_CATALOG;DOTWEEN
+    PS4: ENABLE_JSON_CATALOG;DOTWEEN
     PS5: DOTWEEN
-    QNX: DOTWEEN
+    QNX: ENABLE_JSON_CATALOG;DOTWEEN
     ReservedCFE: DOTWEEN
-    Standalone: DOTWEEN;WEATHER_MAKER_PRESENT
+    Server: ENABLE_JSON_CATALOG
+    Standalone: ENABLE_JSON_CATALOG;DOTWEEN;WEATHER_MAKER_PRESENT
     VisionOS: DOTWEEN
-    WebGL: DOTWEEN
-    Windows Store Apps: DOTWEEN
-    XboxOne: DOTWEEN
-    iPhone: DOTWEEN;WEATHER_MAKER_PRESENT
-    tvOS: DOTWEEN
+    WebGL: ENABLE_JSON_CATALOG;DOTWEEN
+    Windows Store Apps: ENABLE_JSON_CATALOG;DOTWEEN
+    XboxOne: ENABLE_JSON_CATALOG;DOTWEEN
+    iPhone: ENABLE_JSON_CATALOG;DOTWEEN;WEATHER_MAKER_PRESENT
+    tvOS: ENABLE_JSON_CATALOG;DOTWEEN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
