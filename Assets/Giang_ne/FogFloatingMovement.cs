@@ -9,6 +9,7 @@ public class FogFloatingMovement : MonoBehaviour
     private Vector3 startPos;
     private float seed;
 
+
     void Start()
     {
         startPos = transform.position;
@@ -16,6 +17,11 @@ public class FogFloatingMovement : MonoBehaviour
     }
 
     void Update()
+    {
+        HandleFloatingMovement();
+    }
+
+    private void HandleFloatingMovement()
     {
         float t = Time.time * speed + seed;
 
