@@ -8,28 +8,28 @@ using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.Networking;
+
 
 [InitializeOnLoad]
 public static class AddressablesCloudAutoSetup
 {
-    private const string BucketName = "dlc-lms";
-    private const string RootFolder = "addressables";
-    private const string ProfileName = "GCS";
-
-private static string GcloudExePath =>
-    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd");
-
-private static string GsutilExePath =>
-    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gsutil.cmd");
-
-
-    // releases/<platform>/builds/<ver>/...
-    // releases/<platform>/latest/...
+    // ===================== CONFIG =====================
+    private const string BucketName   = "dlc-lms";
+    private const string RootFolder   = "addressables";
     private const string ReleasesFolder = "releases";
+    private const string ProfileName  = "GCS";
 
-    // KEY_MARKER: chỉ cần thay file json này khi đổi key
+    private const string VarRemoteBuildPath = "RemoteBuildPath";
+    private const string VarRemoteLoadPath  = "RemoteLoadPath";
+
+    private const string VarRemoteBuildPathSchema = "Remote.BuildPath";
+    private const string VarRemoteLoadPathSchema  = "Remote.LoadPath";
+
+    private const string RemoteBuildPathValue = "ServerData/[BuildTarget]";
+
+    private const bool AutoBumpPatch = false;
     private static readonly string ProjectKeyJsonPath =
         Path.Combine(Application.dataPath, "Editor", "GCS", "lms-3-479211-dc999d4c697c.json");
 
@@ -46,7 +46,6 @@ private static string GsutilExePath =>
     {
         get
         {
-            // Writable config directory for gsutil/gcloud (avoid Program Files issues)
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             return Path.Combine(home, ".config", "gcloud");
         }
@@ -55,10 +54,27 @@ private static string GsutilExePath =>
     private static string ProjectRoot
         => Directory.GetParent(Application.dataPath)?.FullName ?? "";
 
+    private static string GcloudExePath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd");
+
+    private static string GsutilExePath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gsutil.cmd");
+
+    // Stable URL for clients (always load from latest)
+    // private static string LatestRemoteLoad =>
+    //     $"https://storage.googleapis.com/{{GCS_BUCKET}}/{RootFolder}/{ReleasesFolder}/{{PLATFORM_NAME}}/latest";
+    private static string LatestRemoteLoadResolved(string platformName)
+    => $"https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest";
+
+
     static AddressablesCloudAutoSetup()
     {
         EnsureAddressablesSetup();
     }
+
+    // ===================== MENU =====================
 
     [MenuItem("Tools/Cloud/Addressables/Ensure Setup")]
     public static void EnsureAddressablesSetup()
@@ -77,7 +93,7 @@ private static string GsutilExePath =>
 
         var ps = settings.profileSettings;
 
-        // --- Get or create profile id ---
+        // Get or create profile
         string profileId = ps.GetProfileId(ProfileName);
         if (string.IsNullOrEmpty(profileId))
         {
@@ -86,20 +102,22 @@ private static string GsutilExePath =>
             UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Created profile: {ProfileName} (base={baseId})");
         }
 
-        // --- Variables ---
+        // Core vars
         EnsureVar(ps, profileId, "GCS_BUCKET", BucketName);
-        EnsureVar(ps, profileId, "APP_VERSION", "0.0.0");
-        EnsureVar(ps, profileId, "PLATFORM_NAME", "unknown");
 
-        // Build path: always local folder ServerData/[BuildTarget]
-        EnsureVar(ps, profileId, "RemoteBuildPath", "ServerData/[BuildTarget]");
-        EnsureVar(ps, profileId, "Remote.BuildPath", "ServerData/[BuildTarget]");
+        string appVersion = string.IsNullOrWhiteSpace(PlayerSettings.bundleVersion) ? "0.0.0" : PlayerSettings.bundleVersion;
+        EnsureVar(ps, profileId, "APP_VERSION", appVersion);
 
-        // Load path: ALWAYS latest (stable URL)
-        string latestRemoteLoad =
-            $"https://storage.googleapis.com/{{GCS_BUCKET}}/{RootFolder}/{ReleasesFolder}/{{PLATFORM_NAME}}/latest";
-        EnsureVar(ps, profileId, "RemoteLoadPath", latestRemoteLoad);
-        EnsureVar(ps, profileId, "Remote.LoadPath", latestRemoteLoad);
+        var platformName = GetPlatformName(EditorUserBuildSettings.activeBuildTarget);
+        EnsureVar(ps, profileId, "PLATFORM_NAME", platformName);
+
+        // Canonical vars
+        EnsureVar(ps, profileId, VarRemoteBuildPath, RemoteBuildPathValue);
+var resolvedLoad = LatestRemoteLoadResolved(platformName);
+EnsureVar(ps, profileId, VarRemoteLoadPath, resolvedLoad);
+
+SyncOptionalVarIfExists(ps, profileId, VarRemoteBuildPathSchema, RemoteBuildPathValue);
+SyncOptionalVarIfExists(ps, profileId, VarRemoteLoadPathSchema, resolvedLoad);
 
         settings.activeProfileId = profileId;
 
@@ -107,16 +125,6 @@ private static string GsutilExePath =>
         AssetDatabase.SaveAssets();
 
         UnityEngine.Debug.Log("[AddressablesCloudAutoSetup] Done. Profile set to GCS.");
-    }
-
-    private static void EnsureVar(AddressableAssetProfileSettings ps, string profileId, string name, string value)
-    {
-        if (!ps.GetVariableNames().Contains(name))
-        {
-            ps.CreateValue(name, value);
-            UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Created profile var: {name} = {value}");
-        }
-        ps.SetValue(profileId, name, value);
     }
 
     [MenuItem("Tools/Cloud/Addressables/Print Resolved Paths")]
@@ -132,12 +140,12 @@ private static string GsutilExePath =>
         var ps = settings.profileSettings;
         var profileId = settings.activeProfileId;
 
-        string remoteBuildPath = ps.EvaluateString(profileId, ps.GetValueByName(profileId, "RemoteBuildPath"));
-        string remoteLoadPath = ps.EvaluateString(profileId, ps.GetValueByName(profileId, "RemoteLoadPath"));
+        string bucket = Eval(ps, profileId, "GCS_BUCKET");
+        string ver    = Eval(ps, profileId, "APP_VERSION");
+        string plat   = Eval(ps, profileId, "PLATFORM_NAME");
 
-        string bucket = ps.EvaluateString(profileId, ps.GetValueByName(profileId, "GCS_BUCKET"));
-        string ver = ps.EvaluateString(profileId, ps.GetValueByName(profileId, "APP_VERSION"));
-        string plat = ps.EvaluateString(profileId, ps.GetValueByName(profileId, "PLATFORM_NAME"));
+        string remoteBuildPath = Eval(ps, profileId, VarRemoteBuildPath);
+        string remoteLoadPath  = Eval(ps, profileId, VarRemoteLoadPath);
 
         UnityEngine.Debug.Log(
             "[AddressablesCloudAutoSetup] Resolved Profile Paths:\n" +
@@ -150,119 +158,241 @@ private static string GsutilExePath =>
         );
     }
 
-    // ======================================================
-    // Build + Upload (builds/<ver> + sync to latest)
-    // ======================================================
-    [MenuItem("Tools/Cloud/Addressables/Build + Upload to GCS (builds + latest)")]
-    public static void BuildAndUpload()
+[MenuItem("Tools/Cloud/Addressables/Build + Upload to GCS (builds + latest)")]
+public static void BuildAndUpload()
+{
+    // ====== OPTIONS ======
+    // Nếu bạn muốn tự xoá catalog_*.json/hash trên latest sau khi sync -> bật true
+    const bool RemoveVersionedCatalogsOnLatest = false;
+
+    if (AutoBumpPatch)
     {
-        EnsureAddressablesSetup();
+        PlayerSettings.bundleVersion = BumpPatch(PlayerSettings.bundleVersion);
+        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Auto bumped version -> {PlayerSettings.bundleVersion}");
+    }
 
-        var settings = AddressableAssetSettingsDefaultObject.Settings;
-        if (settings == null)
-        {
-            UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Addressable settings missing.");
-            return;
-        }
+    EnsureAddressablesSetup();
 
-        // Version from PlayerSettings.bundleVersion
-        string appVersion = PlayerSettings.bundleVersion;
-        if (string.IsNullOrWhiteSpace(appVersion))
-            appVersion = "0.0.0";
+    var settings = AddressableAssetSettingsDefaultObject.Settings;
+    if (settings == null)
+    {
+        UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Addressable settings missing.");
+        return;
+    }
 
-        // Platform from current editor build target
-        BuildTarget bt = EditorUserBuildSettings.activeBuildTarget;
-        string platformName = GetPlatformName(bt);
+    string appVersion = string.IsNullOrWhiteSpace(PlayerSettings.bundleVersion) ? "0.0.0" : PlayerSettings.bundleVersion;
+    BuildTarget bt = EditorUserBuildSettings.activeBuildTarget;
+    string platformName = GetPlatformName(bt);
+    string resolvedLoad = LatestRemoteLoadResolved(platformName);
 
-        var ps = settings.profileSettings;
-        var profileId = settings.activeProfileId;
+    var ps = settings.profileSettings;
+    var profileId = settings.activeProfileId;
 
-        // Update vars for build
-        ps.SetValue(profileId, "APP_VERSION", appVersion);
-        ps.SetValue(profileId, "PLATFORM_NAME", platformName);
+    // Refresh profile vars for this run
+    ps.SetValue(profileId, "APP_VERSION", appVersion);
+    ps.SetValue(profileId, "PLATFORM_NAME", platformName);
+    ps.SetValue(profileId, VarRemoteBuildPath, RemoteBuildPathValue);
+    ps.SetValue(profileId, VarRemoteLoadPath, resolvedLoad);
 
-        // Ensure latest RemoteLoadPath (stable)
-        string latestRemoteLoad =
-            $"https://storage.googleapis.com/{{GCS_BUCKET}}/{RootFolder}/{ReleasesFolder}/{{PLATFORM_NAME}}/latest";
-        ps.SetValue(profileId, "RemoteLoadPath", latestRemoteLoad);
-        ps.SetValue(profileId, "Remote.LoadPath", latestRemoteLoad);
+    SyncOptionalVarIfExists(ps, profileId, VarRemoteBuildPathSchema, RemoteBuildPathValue);
+    SyncOptionalVarIfExists(ps, profileId, VarRemoteLoadPathSchema, resolvedLoad);
 
-        EditorUtility.SetDirty(settings);
-        AssetDatabase.SaveAssets();
+    EditorUtility.SetDirty(settings);
+    AssetDatabase.SaveAssets();
 
-        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Building Addressables (PLATFORM={platformName}, APP_VERSION={appVersion}) ...");
-        AddressableAssetSettings.BuildPlayerContent();
+    // Clean output folder to avoid mixing old files
+    string expectedLocalOut = FindLocalBuildOutput(bt);
+    CleanDirectorySafe(expectedLocalOut);
 
-        // Local build output
-        string serverDataRoot = Path.Combine(ProjectRoot, "ServerData");
-        if (!Directory.Exists(serverDataRoot))
-        {
-            UnityEngine.Debug.LogError($"[AddressablesCloudAutoSetup] ServerData not found: {serverDataRoot}");
-            return;
-        }
+    UnityEngine.Debug.Log(
+        "[AddressablesCloudAutoSetup] Building Addressables...\n" +
+        $"BT={bt}\nPLATFORM={platformName}\nAPP_VERSION={appVersion}\nRemoteLoadPath={resolvedLoad}"
+    );
 
-        string localSrc = Path.Combine(serverDataRoot, bt.ToString());
-        if (!Directory.Exists(localSrc))
-        {
-            UnityEngine.Debug.LogError($"[AddressablesCloudAutoSetup] Build output not found: {localSrc}");
-            return;
-        }
+    AddressableAssetSettings.BuildPlayerContent();
 
-        // Credentials
-        string keyFileForCli = GetCredentialFileForCli(out string keySourceInfo);
-        if (string.IsNullOrEmpty(keyFileForCli) || !File.Exists(keyFileForCli))
-        {
-            UnityEngine.Debug.LogError(
-                "[AddressablesCloudAutoSetup] Missing GCP credential file.\n" +
-                "Tried:\n" +
-                " - ENV GOOGLE_APPLICATION_CREDENTIALS\n" +
-                " - ENV GCP_SA_KEY_PATH\n" +
-                $" - Project slot: {ProjectKeyJsonPath}\n" +
-                $" - Fallback: {DefaultKeyPath}\n"
-            );
-            return;
-        }
+    // Local output
+    string localSrc = FindLocalBuildOutput(bt);
+    UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] LocalSrc = {localSrc}");
 
-        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Using key source: {keySourceInfo}");
-
-        // Ensure child processes see the key
-        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", keyFileForCli);
-
-        // Validate key (non-blocking)
-        if (!RunCmd(GcloudExePath, $"auth activate-service-account --key-file=\"{keyFileForCli}\"", dumpLogFile: "gcloud_auth.txt"))
-        {
-            UnityEngine.Debug.LogWarning("[AddressablesCloudAutoSetup] gcloud auth failed (continuing anyway). gsutil will rely on GOOGLE_APPLICATION_CREDENTIALS.");
-        }
-
-        // IMPORTANT:
-        // Do NOT use `gsutil ls -b gs://bucket` here.
-        // `-b` needs storage.buckets.get and will fail for some service accounts even when uploads are allowed.
-        // Let rsync be the real permission check.
-
-        // 1) Upload to versioned builds/<ver> (history / rollback)
-        string dstBuild = $"gs://{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/builds/{appVersion}/";
-        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Uploading (builds) {localSrc} -> {dstBuild}");
-        if (!RunCmd(GsutilExePath, $"-m rsync -r \"{localSrc}\" \"{dstBuild}\"", dumpLogFile: "gsutil_rsync_builds.txt"))
-        {
-            UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Upload failed (gsutil rsync) to builds/<ver>. Check gsutil_rsync_builds.txt for details.");
-            return;
-        }
-
-        // 2) Sync builds/<ver> -> latest (stable URL for clients)
-        string dstLatest = $"gs://{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/";
-        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Syncing (latest) {dstBuild} -> {dstLatest}");
-        if (!RunCmd(GsutilExePath, $"-m rsync -r \"{dstBuild}\" \"{dstLatest}\"", dumpLogFile: "gsutil_rsync_latest.txt"))
-        {
-            UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Sync failed (gsutil rsync) builds/<ver> -> latest. Check gsutil_rsync_latest.txt for details.");
-            return;
-        }
-
-        UnityEngine.Debug.Log(
-            "[AddressablesCloudAutoSetup] Done.\n" +
-            $"Versioned : https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/builds/{appVersion}/\n" +
-            $"Latest    : https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/\n" +
-            "Client should always load from Latest (stable URL)."
+    if (!Directory.Exists(localSrc))
+    {
+        UnityEngine.Debug.LogError(
+            "[AddressablesCloudAutoSetup] Build output not found.\n" +
+            $"BuildTarget={bt}\nExpected something like: {GetServerDataRoot()}\\Android\n" +
+            $"Last tried: {localSrc}"
         );
+        return;
+    }
+
+    // ======= Ensure standard catalog.json + catalog.hash exist =======
+    string versionedJson = Directory.GetFiles(localSrc, "catalog_*.json").OrderByDescending(f => f).FirstOrDefault();
+    string versionedHash = Directory.GetFiles(localSrc, "catalog_*.hash").OrderByDescending(f => f).FirstOrDefault();
+
+    if (string.IsNullOrEmpty(versionedJson) || string.IsNullOrEmpty(versionedHash))
+    {
+        UnityEngine.Debug.LogError(
+            "[AddressablesCloudAutoSetup] Catalog missing in local output.\n" +
+            "Expected catalog_*.json and catalog_*.hash in:\n" + localSrc
+        );
+        return;
+    }
+
+    string dstCatalogJson = Path.Combine(localSrc, "catalog.json");
+    string dstCatalogHash = Path.Combine(localSrc, "catalog.hash");
+
+    try
+    {
+        File.Copy(versionedJson, dstCatalogJson, true);
+        File.Copy(versionedHash, dstCatalogHash, true);
+    }
+    catch (Exception e)
+    {
+        UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Failed to create catalog aliases:\n" + e);
+        return;
+    }
+
+    UnityEngine.Debug.Log(
+        "[AddressablesCloudAutoSetup] Created standard catalog aliases:\n" +
+        $" - {Path.GetFileName(versionedJson)} -> catalog.json\n" +
+        $" - {Path.GetFileName(versionedHash)} -> catalog.hash"
+    );
+
+    // (Optional) quick sanity about bundles
+    int bundleCount = Directory.GetFiles(localSrc, "*.bundle", SearchOption.TopDirectoryOnly).Length;
+    UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Bundles in output: {bundleCount}");
+
+    // ======= Credentials =======
+    string keyFileForCli = GetCredentialFileForCli(out string keySourceInfo);
+    if (string.IsNullOrEmpty(keyFileForCli) || !File.Exists(keyFileForCli))
+    {
+        UnityEngine.Debug.LogError(
+            "[AddressablesCloudAutoSetup] Missing GCP credential file.\n" +
+            "Tried:\n" +
+            " - ENV GOOGLE_APPLICATION_CREDENTIALS\n" +
+            " - ENV GCP_SA_KEY_PATH\n" +
+            $" - Project slot: {ProjectKeyJsonPath}\n" +
+            $" - Fallback: {DefaultKeyPath}\n"
+        );
+        return;
+    }
+
+    UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Using key source: {keySourceInfo}");
+    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", keyFileForCli);
+
+    // Optional: validate auth (non-blocking)
+    if (!RunCmd(GcloudExePath, $"auth activate-service-account --key-file=\"{keyFileForCli}\"", dumpLogFile: "gcloud_auth.txt"))
+    {
+        UnityEngine.Debug.LogWarning("[AddressablesCloudAutoSetup] gcloud auth failed (continuing anyway). gsutil will rely on GOOGLE_APPLICATION_CREDENTIALS.");
+    }
+
+    // ======= Upload =======
+    string dstBuild = $"gs://{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/builds/{appVersion}/";
+    string dstLatest = $"gs://{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/";
+
+    UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Uploading (builds) {localSrc} -> {dstBuild}");
+    if (!RunCmd(GsutilExePath, $"-m rsync -r \"{localSrc}\" \"{dstBuild}\"", dumpLogFile: "gsutil_rsync_builds.txt"))
+        return;
+
+    UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Syncing (latest) {dstBuild} -> {dstLatest}");
+    if (!RunCmd(GsutilExePath, $"-m rsync -r \"{dstBuild}\" \"{dstLatest}\"", dumpLogFile: "gsutil_rsync_latest.txt"))
+        return;
+
+    // ======= Optional: remove versioned catalogs on latest (keep only catalog.json/hash) =======
+    if (RemoveVersionedCatalogsOnLatest)
+    {
+        UnityEngine.Debug.Log("[AddressablesCloudAutoSetup] Removing catalog_*.json/hash on latest (keep catalog.json/hash) ...");
+        RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.json\"", dumpLogFile: "gsutil_rm_catalog_ver_json_latest.txt");
+        RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.hash\"", dumpLogFile: "gsutil_rm_catalog_ver_hash_latest.txt");
+    }
+
+    // Verify catalog exists remotely
+    bool okLatestCatalog = RunCmd(GsutilExePath, $"ls \"{dstLatest}\" | findstr /i catalog", dumpLogFile: "gsutil_verify_latest_catalog.txt");
+    if (!okLatestCatalog)
+        UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Remote latest/ does NOT show catalog files. Check gsutil_verify_latest_catalog.txt");
+
+    UnityEngine.Debug.Log(
+        "[AddressablesCloudAutoSetup] Done.\n" +
+        $"Builds : https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/builds/{appVersion}/\n" +
+        $"Latest : https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/\n" +
+        "Verify in browser:\n" +
+        $" - https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/catalog.json\n" +
+        $" - https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/catalog.hash\n"
+    );
+}
+
+    // ===================== HELPERS =====================
+
+private static string GetServerDataRoot()
+{
+    return Path.Combine(ProjectRoot, "ServerData");
+}
+
+private static string FindLocalBuildOutput(BuildTarget bt)
+{
+    // Try common names: ServerData/Android, ServerData/android, ServerData/<BuildTarget>
+    string root = GetServerDataRoot();
+
+    var candidates = new List<string>
+    {
+        Path.Combine(root, bt.ToString()),                 // "Android"
+        Path.Combine(root, bt.ToString().ToLowerInvariant()), // "android" (rare)
+        Path.Combine(root, FirstCharUpper(GetPlatformName(bt))), // "Android" from "android"
+        Path.Combine(root, GetPlatformName(bt)),           // "android"
+    };
+
+    foreach (var c in candidates)
+    {
+        if (Directory.Exists(c))
+            return c;
+    }
+
+    return candidates[0]; // fallback for logging
+}
+
+private static void CleanDirectorySafe(string dir)
+{
+    if (!Directory.Exists(dir)) return;
+
+    try
+    {
+        Directory.Delete(dir, true);
+        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Cleaned: {dir}");
+    }
+    catch (Exception e)
+    {
+        UnityEngine.Debug.LogWarning($"[AddressablesCloudAutoSetup] Failed to clean {dir}\n{e}");
+    }
+}
+
+private static string FirstCharUpper(string s)
+{
+    if (string.IsNullOrEmpty(s)) return s;
+    if (s.Length == 1) return s.ToUpperInvariant();
+    return char.ToUpperInvariant(s[0]) + s.Substring(1);
+}
+
+
+    private static void EnsureVar(AddressableAssetProfileSettings ps, string profileId, string name, string value)
+    {
+        if (!ps.GetVariableNames().Contains(name))
+        {
+            ps.CreateValue(name, value);
+            UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Created profile var: {name} = {value}");
+        }
+        ps.SetValue(profileId, name, value);
+    }
+
+    private static void SyncOptionalVarIfExists(AddressableAssetProfileSettings ps, string profileId, string name, string value)
+    {
+        if (ps.GetVariableNames().Contains(name))
+            ps.SetValue(profileId, name, value);
+    }
+
+    private static string Eval(AddressableAssetProfileSettings ps, string profileId, string varName)
+    {
+        var raw = ps.GetValueByName(profileId, varName);
+        return ps.EvaluateString(profileId, raw);
     }
 
     private static string GetPlatformName(BuildTarget t)
@@ -277,6 +407,19 @@ private static string GsutilExePath =>
             case BuildTarget.StandaloneLinux64: return "linux";
             default: return t.ToString().ToLowerInvariant();
         }
+    }
+
+    private static string BumpPatch(string v)
+    {
+        // Very simple x.y.z bump
+        if (string.IsNullOrWhiteSpace(v)) return "0.0.1";
+
+        var parts = v.Split('.');
+        if (parts.Length < 3) return v + ".1";
+
+        if (!int.TryParse(parts[2], out var patch)) patch = 0;
+        parts[2] = (patch + 1).ToString();
+        return string.Join(".", parts);
     }
 
     private static string GetCredentialFileForCli(out string sourceInfo)
@@ -351,8 +494,7 @@ private static string GsutilExePath =>
             bool isCmd = exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
                       || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase);
 
-            // Ensure writable Cloud SDK config dir
-            try { Directory.CreateDirectory(CloudSdkConfigDir); } catch { /* ignore */ }
+            try { Directory.CreateDirectory(CloudSdkConfigDir); } catch { }
 
             var psi = new ProcessStartInfo
             {
@@ -373,10 +515,8 @@ private static string GsutilExePath =>
                 psi.Arguments = args;
             }
 
-            // Make gsutil/gcloud use a writable config directory
             psi.EnvironmentVariables["CLOUDSDK_CONFIG"] = CloudSdkConfigDir;
 
-            // Force credential into child process
             var cred = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
             if (!string.IsNullOrWhiteSpace(cred) && File.Exists(cred))
                 psi.EnvironmentVariables["GOOGLE_APPLICATION_CREDENTIALS"] = cred;
@@ -387,7 +527,6 @@ private static string GsutilExePath =>
             using (var p = new Process())
             {
                 p.StartInfo = psi;
-
                 p.OutputDataReceived += (_, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
                 p.ErrorDataReceived += (_, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
 
@@ -395,53 +534,45 @@ private static string GsutilExePath =>
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
 
-                if (!p.WaitForExit(timeoutMs))
+                bool exited = p.WaitForExit(timeoutMs);
+                if (!exited)
                 {
-                    // Timeout -> kill (and children)
-                    try
-                    {
-                        try { p.Kill(); } catch { /* ignore */ }
+                    try { p.Kill(); } catch { }
 
 #if UNITY_EDITOR_WIN
-                        try
-                        {
-                            var killer = new Process();
-                            killer.StartInfo.FileName = "taskkill";
-                            killer.StartInfo.Arguments = $"/PID {p.Id} /T /F";
-                            killer.StartInfo.UseShellExecute = false;
-                            killer.StartInfo.CreateNoWindow = true;
-                            killer.Start();
-                            killer.WaitForExit(5000);
-                        }
-                        catch { /* ignore */ }
-#endif
+                    try
+                    {
+                        var killer = new Process();
+                        killer.StartInfo.FileName = "taskkill";
+                        killer.StartInfo.Arguments = $"/PID {p.Id} /T /F";
+                        killer.StartInfo.UseShellExecute = false;
+                        killer.StartInfo.CreateNoWindow = true;
+                        killer.Start();
+                        killer.WaitForExit(5000);
                     }
-                    catch { /* ignore */ }
+                    catch { }
+#endif
 
                     result.ExitCode = -2;
                     result.StdErr = $"TIMEOUT after {timeoutMs}ms";
-                    DumpCmdLogIfNeeded(exe, args, result.ExitCode, sbOut.ToString(), result.StdErr, dumpLogFile, out result.LogPath);
-                    return result;
                 }
-
-                // flush async buffers
-                try { p.WaitForExit(1000); } catch { /* ignore */ }
-
-                result.ExitCode = p.ExitCode;
-                result.StdOut = sbOut.ToString();
-                result.StdErr = sbErr.ToString();
-
-                DumpCmdLogIfNeeded(exe, args, result.ExitCode, result.StdOut, result.StdErr, dumpLogFile, out result.LogPath);
-                return result;
+                else
+                {
+                    try { p.WaitForExit(1000); } catch { }
+                    result.ExitCode = p.ExitCode;
+                    result.StdOut = sbOut.ToString();
+                    result.StdErr = sbErr.ToString();
+                }
             }
         }
         catch (Exception e)
         {
             result.ExitCode = -3;
             result.StdErr = e.ToString();
-            DumpCmdLogIfNeeded(exe, args, result.ExitCode, result.StdOut, result.StdErr, dumpLogFile, out result.LogPath);
-            return result;
         }
+
+        DumpCmdLogIfNeeded(exe, args, result.ExitCode, result.StdOut, result.StdErr, dumpLogFile, out result.LogPath);
+        return result;
     }
 
     private static void DumpCmdLogIfNeeded(string exe, string args, int exitCode, string stdout, string stderr, string dumpLogFile, out string logPath)

@@ -1,51 +1,91 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
 
+#if ADDRESSABLES
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.Networking;
+#endif
+
+/// <summary>
+/// Đặt trong BootstrapScene hoặc auto-create bởi BootFlow.
+/// </summary>
+[DefaultExecutionOrder(-15000)]
 public class AddressablesPreload : MonoBehaviour
 {
     public static AddressablesPreload Instance { get; private set; }
 
-    // Public status for IntroManager
-    public bool IsReady { get; private set; } = false;          // true when dependencies downloaded (or nothing)
-    public float DownloadPercent01 { get; private set; } = 0f;  // 0..1 while downloading
-    public long BytesToDownload { get; private set; } = 0;      // last computed download bytes
-public bool HasFailed { get; private set; } = false;
-public string LastError { get; private set; } = "";
+    public enum PreloadStage
+    {
+        None, Probe, ClearCache, Initialize, CheckCatalog, UpdateCatalog, GetSize, Download, Verify, Done, Failed
+    }
 
-public void RequestRetry()
-{
-    retryRequested = true;
-    Debug.Log("[Preload] Retry requested");
-}
+    [Header("State (Read-only)")]
+    public PreloadStage Stage { get; private set; } = PreloadStage.None;
 
+    /// <summary>
+    /// Ready = flow hoàn tất và đã verify label preload không còn bytes cần tải.
+    /// </summary>
+    public bool IsReady { get; private set; }
 
-    [Header("Download all content tagged by this label")]
-    [SerializeField] private string preloadLabel = "cloud";
+    public bool HasFailed { get; private set; }
+    public string LastError { get; private set; } = "";
+    public float DownloadPercent01 { get; private set; }
+    public long BytesToDownload { get; private set; }
+
+    /// <summary>
+    /// Cờ “đúng ý bạn”: chỉ true khi label "cloud" đã tải xong hết (size = 0 sau verify).
+    /// BootFlow sẽ chờ cờ này.
+    /// </summary>
+    public bool IsCloudFullyDownloaded { get; private set; }
+
+#if ADDRESSABLES
+    [Header("Label to Preload")]
+    private List<string> preloadLabels = new List<string> { "cloud" };
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxRetries = 3;
-    [SerializeField] private float stepTimeoutSeconds = 25f;   // cho init/check/update/size
+    [SerializeField] private float stepTimeoutSeconds = 25f;
     [SerializeField] private float downloadTimeoutSeconds = 300f;
 
-    [Header("Optional progress log")]
-    [SerializeField] private bool showProgressLog = false;
+    [Header("Verify downloaded (important)")]
+    [Tooltip("Sau khi DownloadDependencies xong sẽ GetDownloadSize lại để confirm bytes=0. Nếu vẫn >0 -> fail để retry.")]
+    [SerializeField] private bool verifyAfterDownload = true;
 
-    // =========================
-    // CLEAN POLICY
-    // =========================
-    [Header("Clean policy")]
-    [SerializeField] private long cleanIfCacheExceedsBytes = 5L * 1024 * 1024 * 1024; // 5GB
-    [SerializeField] private long reserveFreeSpaceBytes = 800L * 1024 * 1024;         // 800MB
-    [SerializeField] private bool cleanOnMajorUpgrade = true;
-    [SerializeField] private string majorVersionPrefsKey = "ADDR_LAST_MAJOR";
-    [SerializeField] private bool cleanWhenLowDiskSpace = true;
+    [Tooltip("Cho phép chênh lệch nhỏ (đề phòng vài bytes báo sai). Thường để 0.")]
+    [SerializeField] private long verifySizeThresholdBytes = 0;
 
-    private bool retryRequested = false;
-    private Coroutine running;
+    [Header("Probe remote catalog (optional)")]
+    [SerializeField] private bool enableProbeRemoteCatalog = true;
+    [SerializeField] private int probeReadBytes = 64;
+
+    [SerializeField] private string remoteCatalogHashUrl =
+        "https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.hash";
+
+    [SerializeField] private string remoteCatalogJsonUrl =
+        "https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.json";
+
+    [Header("Cache")]
+    [SerializeField] private bool clearCatalogCacheOnRetryOnly = true;
+
+    [Header("Debug")]
+    [SerializeField] private bool enableAddressablesRequestLog = true;
+
+    private Coroutine _running;
+    private bool _retryRequested;
+#endif
+
+    public void RequestRetry()
+    {
+#if ADDRESSABLES
+        _retryRequested = true;
+        Debug.Log("[Preload] Retry requested");
+#endif
+    }
 
     private void Awake()
     {
@@ -55,349 +95,392 @@ public void RequestRetry()
             return;
         }
         Instance = this;
-        // Optionally keep across scene
         DontDestroyOnLoad(gameObject);
+
+#if ADDRESSABLES
+        if (enableAddressablesRequestLog)
+        {
+            Addressables.WebRequestOverride = (req) =>
+            {
+                if (req.url.Contains("catalog") || req.url.EndsWith(".hash") || req.url.EndsWith(".json") || req.url.Contains(".bundle"))
+                    Debug.Log($"[ADDR REQ] {req.method} {req.url}");
+            };
+        }
+
+        ResourceManager.ExceptionHandler = (handle, ex) =>
+        {
+            Debug.LogError($"[ADDR EX] stage={Stage} name={handle.DebugName}\n{ex}");
+        };
+
+        if (_running == null)
+            _running = StartCoroutine(RunPreloadFlow());
+#else
+        Fail("ADDRESSABLES define OFF. Preload cannot run.");
+#endif
     }
 
-    private void OnEnable()
-    {
-        if (running == null)
-            running = StartCoroutine(RunPreloadFlow());
-    }
+#if ADDRESSABLES
 
     private IEnumerator RunPreloadFlow()
     {
         int attempt = 0;
 
-        while (attempt <= maxRetries)
+        while (attempt < maxRetries)
         {
             attempt++;
 
-            IsReady = false;
-            HasFailed = false;
-            LastError = "";
-            DownloadPercent01 = 0f;
-            BytesToDownload = 0;
+            ResetStateForAttempt();
 
-            yield return StartCoroutine(CoPreloadOnce(attempt));
+            yield return CoPreloadOnce(attempt);
 
             if (IsReady && !HasFailed)
             {
-                Debug.Log("[Preload] READY");
-                running = null;
+                Stage = PreloadStage.Done;
+                _running = null;
                 yield break;
             }
 
-            // failed
-            Debug.LogWarning($"[Preload] Attempt {attempt} failed. HasFailed={HasFailed}. RetryRequested={retryRequested}");
-
-            if (retryRequested)
+            if (_retryRequested)
             {
-                retryRequested = false;
-                attempt = 0; // reset attempts when user explicitly retries
-                continue;
+                _retryRequested = false;
+                attempt = 0; // reset attempts
             }
 
-            if (attempt > maxRetries)
-            {
-                Debug.LogError("[Preload] Max retries reached. Giving up.");
-                running = null;
-                yield break;
-            }
-
-            // backoff small
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return new WaitForSecondsRealtime(1f);
         }
 
-        running = null;
+        Fail("[Preload] Max retries reached. Giving up.");
+        _running = null;
     }
 
-    private IEnumerator CoPreloadOnce(int attempt)
+    private void ResetStateForAttempt()
     {
-        // 1) Init
-        var init = Addressables.InitializeAsync();
-        yield return WaitWithTimeout(init, stepTimeoutSeconds, $"InitializeAsync timeout (attempt {attempt})");
+        IsReady = false;
+        HasFailed = false;
+        LastError = "";
+        DownloadPercent01 = 0f;
+        BytesToDownload = 0;
+        IsCloudFullyDownloaded = false;
+        Stage = PreloadStage.None;
+    }
 
-        if (!CheckSucceeded(init, "[Preload] Addressables init failed"))
+private IEnumerator CoPreloadOnce(int attempt)
+{
+    // 0) PROBE
+    if (enableProbeRemoteCatalog &&
+        !string.IsNullOrWhiteSpace(remoteCatalogHashUrl) &&
+        !string.IsNullOrWhiteSpace(remoteCatalogJsonUrl))
+    {
+        Stage = PreloadStage.Probe;
+        SetStageProgress(0.02f);
+
+        yield return HttpProbeGet(remoteCatalogHashUrl, probeReadBytes);
+        if (HasFailed) yield break;
+
+        yield return HttpProbeGet(remoteCatalogJsonUrl, probeReadBytes);
+        if (HasFailed) yield break;
+    }
+
+    // 0.5) Clear cache on retry
+    if (clearCatalogCacheOnRetryOnly && attempt >= 2)
+    {
+        Stage = PreloadStage.ClearCache;
+        SetStageProgress(0.04f);
+        ClearAddressablesCatalogCache();
+    }
+
+    // 1) Initialize
+    Stage = PreloadStage.Initialize;
+    SetStageProgress(0.05f);
+
+var init = Addressables.InitializeAsync();
+yield return init;
+
+    if (!init.IsValid())
+    {
+        Fail("[Preload] InitializeAsync handle invalid.");
+        yield break;
+    }
+    if (init.Status != AsyncOperationStatus.Succeeded)
+    {
+        Fail("[Preload] Addressables init failed: " +
+             (init.OperationException != null ? init.OperationException.Message : init.Status.ToString()));
+        SafeRelease(init);
+        yield break;
+    }
+    SafeRelease(init);
+
+    // 2) Check catalog updates
+    Stage = PreloadStage.CheckCatalog;
+    SetStageProgress(0.10f);
+
+    var check = Addressables.CheckForCatalogUpdates(false);
+    yield return WaitWithTimeout(check, stepTimeoutSeconds, $"CheckForCatalogUpdates timeout (attempt {attempt})");
+
+    if (!check.IsValid())
+    {
+        Fail("[Preload] CheckForCatalogUpdates handle invalid.");
+        yield break;
+    }
+    if (check.Status != AsyncOperationStatus.Succeeded)
+    {
+        Fail("[Preload] CheckForCatalogUpdates failed: " +
+             (check.OperationException != null ? check.OperationException.Message : check.Status.ToString()));
+        SafeRelease(check);
+        yield break;
+    }
+
+    IList<string> catalogs = check.Result;
+    SafeRelease(check);
+
+    // 3) Update catalogs
+    if (catalogs != null && catalogs.Count > 0)
+    {
+        Stage = PreloadStage.UpdateCatalog;
+        SetStageProgress(0.20f);
+
+        var update = Addressables.UpdateCatalogs(catalogs, false);
+        yield return WaitWithTimeout(update, stepTimeoutSeconds, $"UpdateCatalogs timeout (attempt {attempt})");
+
+        if (!update.IsValid())
         {
-            Addressables.Release(init);
+            Fail("[Preload] UpdateCatalogs handle invalid.");
+            yield break;
+        }
+        if (update.Status != AsyncOperationStatus.Succeeded)
+        {
+            Fail("[Preload] UpdateCatalogs failed: " +
+                 (update.OperationException != null ? update.OperationException.Message : update.Status.ToString()));
+            SafeRelease(update);
+            yield break;
+        }
+        SafeRelease(update);
+    }
+
+    // --- sanitize labels ---
+    if (preloadLabels == null || preloadLabels.Count == 0)
+    {
+        Fail("[Preload] preloadLabels is empty. Please set at least 1 label (e.g. 'cloud').");
+        yield break;
+    }
+
+    // remove null/empty + distinct
+    List<string> labels = new List<string>();
+    for (int i = 0; i < preloadLabels.Count; i++)
+    {
+        string lb = preloadLabels[i];
+        if (string.IsNullOrWhiteSpace(lb)) continue;
+        if (!labels.Contains(lb)) labels.Add(lb);
+    }
+
+    if (labels.Count == 0)
+    {
+        Fail("[Preload] preloadLabels has no valid label strings.");
+        yield break;
+    }
+
+    // 4) Get total size (trước download) - SUM all labels
+    Stage = PreloadStage.GetSize;
+    SetStageProgress(0.30f);
+
+    long totalBytes = 0;
+    var perLabelBytes = new Dictionary<string, long>(labels.Count);
+
+    for (int i = 0; i < labels.Count; i++)
+    {
+        string lb = labels[i];
+
+        var sizeHandle = Addressables.GetDownloadSizeAsync(lb);
+        yield return WaitWithTimeout(sizeHandle, stepTimeoutSeconds, $"GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
+
+        if (!sizeHandle.IsValid())
+        {
+            Fail($"[Preload] GetDownloadSizeAsync handle invalid (label={lb}).");
+            yield break;
+        }
+        if (sizeHandle.Status != AsyncOperationStatus.Succeeded)
+        {
+            Fail($"[Preload] GetDownloadSizeAsync failed (label={lb}): " +
+                 (sizeHandle.OperationException != null ? sizeHandle.OperationException.Message : sizeHandle.Status.ToString()));
+            SafeRelease(sizeHandle);
             yield break;
         }
 
-        // 2) Check catalog updates
-        var check = Addressables.CheckForCatalogUpdates(false);
-        yield return WaitWithTimeout(check, stepTimeoutSeconds, $"CheckForCatalogUpdates timeout (attempt {attempt})");
+        long b = sizeHandle.Result;
+        SafeRelease(sizeHandle);
 
-        if (!CheckSucceeded(check, "[Preload] CheckForCatalogUpdates failed"))
+        perLabelBytes[lb] = b;
+        totalBytes += b;
+    }
+
+    BytesToDownload = totalBytes;
+    // Nếu totalBytes = 0 thì vẫn đi verify (để chắc chắn) nếu bạn muốn.
+
+    // 5) Download deps (ALL labels)
+    if (BytesToDownload > 0)
+    {
+        Stage = PreloadStage.Download;
+        SetStageProgress(0.35f);
+
+        long downloadedBytesApprox = 0;
+
+        for (int i = 0; i < labels.Count; i++)
         {
-            Addressables.Release(check);
-            yield break;
-        }
+            string lb = labels[i];
+            long thisLabelBytes = perLabelBytes.TryGetValue(lb, out var bb) ? bb : 0;
+            if (thisLabelBytes <= 0) continue;
 
-        var catalogs = check.Result;
+            Debug.Log($"[Preload] Download label='{lb}' bytes={thisLabelBytes}");
 
-        bool catalogUpdated = false;
-
-        // 3) Update catalogs if needed
-        if (catalogs != null && catalogs.Count > 0)
-        {
-            var update = Addressables.UpdateCatalogs(catalogs, false);
-            yield return WaitWithTimeout(update, stepTimeoutSeconds, $"UpdateCatalogs timeout (attempt {attempt})");
-
-            if (!CheckSucceeded(update, "[Preload] UpdateCatalogs failed"))
-            {
-                Addressables.Release(update);
-                Addressables.Release(check);
-                yield break;
-            }
-
-            Addressables.Release(update);
-            catalogUpdated = true;
-        }
-
-        Addressables.Release(check);
-
-        // 4) Download size
-        var sizeHandle = Addressables.GetDownloadSizeAsync(preloadLabel);
-        yield return WaitWithTimeout(sizeHandle, stepTimeoutSeconds, $"GetDownloadSizeAsync timeout (attempt {attempt})");
-
-        if (!CheckSucceeded(sizeHandle, "[Preload] GetDownloadSizeAsync failed"))
-        {
-            Addressables.Release(sizeHandle);
-            yield break;
-        }
-
-        long bytesToDownload = sizeHandle.Result;
-        BytesToDownload = bytesToDownload;
-        Addressables.Release(sizeHandle);
-
-        Debug.Log($"[Preload] Label='{preloadLabel}', Need download: {bytesToDownload / (1024f * 1024f):0.00} MB");
-
-        // 5) Decide clean policy
-        bool shouldClean = false;
-        string cleanReason = "";
-
-        if (cleanOnMajorUpgrade)
-        {
-            int currentMajor = GetCurrentMajorVersion();
-            int lastMajor = PlayerPrefs.GetInt(majorVersionPrefsKey, -1);
-
-            if (lastMajor >= 0 && currentMajor >= 0 && currentMajor != lastMajor)
-            {
-                shouldClean = true;
-                cleanReason = $"Major version changed ({lastMajor} -> {currentMajor})";
-            }
-
-            if (currentMajor >= 0)
-            {
-                PlayerPrefs.SetInt(majorVersionPrefsKey, currentMajor);
-                PlayerPrefs.Save();
-            }
-        }
-
-        if (!shouldClean && cleanIfCacheExceedsBytes > 0)
-        {
-            long cacheBytes = EstimateUnityCacheBytes();
-            if (cacheBytes >= 0 && cacheBytes > cleanIfCacheExceedsBytes)
-            {
-                shouldClean = true;
-                cleanReason = $"Cache exceeds threshold ({FormatBytes(cacheBytes)} > {FormatBytes(cleanIfCacheExceedsBytes)})";
-            }
-        }
-
-        if (!shouldClean && cleanWhenLowDiskSpace && bytesToDownload > 0)
-        {
-            long freeBytes = GetFreeDiskSpaceBestEffort();
-            if (freeBytes >= 0)
-            {
-                long required = bytesToDownload + reserveFreeSpaceBytes;
-                if (freeBytes < required)
-                {
-                    shouldClean = true;
-                    cleanReason = $"Low disk space (free={FormatBytes(freeBytes)}, required~={FormatBytes(required)})";
-                }
-            }
-        }
-
-        if (shouldClean)
-        {
-            Debug.Log($"[Preload] Cleaning bundle cache... Reason: {cleanReason}");
-            var clean = Addressables.CleanBundleCache();
-            yield return WaitWithTimeout(clean, stepTimeoutSeconds, $"CleanBundleCache timeout (attempt {attempt})");
-
-            if (clean.Status != AsyncOperationStatus.Succeeded)
-                Debug.LogWarning("[Preload] CleanBundleCache failed: " + clean.OperationException);
-            else
-                Debug.Log("[Preload] CleanBundleCache done.");
-
-            Addressables.Release(clean);
-
-            // recalc download size
-            var size2 = Addressables.GetDownloadSizeAsync(preloadLabel);
-            yield return WaitWithTimeout(size2, stepTimeoutSeconds, $"GetDownloadSizeAsync(after clean) timeout (attempt {attempt})");
-
-            if (size2.Status == AsyncOperationStatus.Succeeded)
-            {
-                bytesToDownload = size2.Result;
-                BytesToDownload = bytesToDownload;
-                Debug.Log($"[Preload] Need download after clean: {bytesToDownload / (1024f * 1024f):0.00} MB");
-            }
-            else
-            {
-                Debug.LogWarning("[Preload] GetDownloadSizeAsync(after clean) failed: " + size2.OperationException);
-            }
-
-            Addressables.Release(size2);
-        }
-        else
-        {
-            if (catalogUpdated)
-                Debug.Log("[Preload] Catalog updated, cache clean skipped (policy not triggered).");
-        }
-
-        // 6) Download
-        if (bytesToDownload > 0)
-        {
-            var dl = Addressables.DownloadDependenciesAsync(preloadLabel, true);
+            var dl = Addressables.DownloadDependenciesAsync(lb, autoReleaseHandle: false);
 
             float t = 0f;
             while (!dl.IsDone)
             {
-                DownloadPercent01 = Mathf.Clamp01(dl.PercentComplete);
+                // approx overall progress: base 0.35 -> 1.0
+                float labelProgress01 = Mathf.Clamp01(dl.PercentComplete);
+                long labelDownloadedApprox = (long)(thisLabelBytes * labelProgress01);
 
-                if (showProgressLog)
-                    Debug.Log($"[Preload] Downloading... {DownloadPercent01 * 100f:0.0}%");
+                long overallDownloadedApprox = downloadedBytesApprox + labelDownloadedApprox;
+                float overall01 = (totalBytes <= 0) ? 1f : Mathf.Clamp01((float)overallDownloadedApprox / (float)totalBytes);
+
+                DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f, overall01));
 
                 t += Time.unscaledDeltaTime;
-                if (downloadTimeoutSeconds > 0 && t >= downloadTimeoutSeconds)
+                if (downloadTimeoutSeconds > 0f && t >= downloadTimeoutSeconds)
                 {
-                    Fail("[Preload] Download timeout.");
+                    SafeRelease(dl);
+                    Fail($"[Preload] Download timeout (label={lb}).");
                     yield break;
                 }
-
                 yield return null;
             }
 
             if (dl.Status != AsyncOperationStatus.Succeeded)
             {
-                Fail("[Preload] Download failed: " + (dl.OperationException?.ToString() ?? "Unknown"));
+                Fail($"[Preload] DownloadDependencies failed (label={lb}): " +
+                     (dl.OperationException != null ? dl.OperationException.Message : dl.Status.ToString()));
+                SafeRelease(dl);
                 yield break;
             }
 
-            DownloadPercent01 = 1f;
-            IsReady = true;
-            Debug.Log("[Preload] Download done! (Only changed/missing bundles were fetched)");
-        }
-        else
-        {
-            DownloadPercent01 = 1f;
-            IsReady = true;
-            Debug.Log("[Preload] Nothing to download. Cache already up to date. (or label has no entries)");
+            SafeRelease(dl);
+
+            // after done label
+            downloadedBytesApprox += thisLabelBytes;
+            DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f, (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes)));
         }
     }
 
-    // ========================= Helpers =========================
-
-    private IEnumerator WaitWithTimeout(AsyncOperationHandle handle, float timeout, string timeoutMsg)
+    // 6) Verify (TỔNG remain của ALL labels phải = 0)
+    if (verifyAfterDownload)
     {
-        if (timeout <= 0f)
+        Stage = PreloadStage.Verify;
+        SetStageProgress(0.98f);
+
+        long remainTotal = 0;
+
+        for (int i = 0; i < labels.Count; i++)
         {
-            yield return handle;
+            string lb = labels[i];
+
+            var verifyHandle = Addressables.GetDownloadSizeAsync(lb);
+            yield return WaitWithTimeout(verifyHandle, stepTimeoutSeconds, $"Verify GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
+
+            if (!verifyHandle.IsValid())
+            {
+                Fail($"[Preload] Verify GetDownloadSizeAsync handle invalid (label={lb}).");
+                yield break;
+            }
+            if (verifyHandle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Fail($"[Preload] Verify GetDownloadSizeAsync failed (label={lb}): " +
+                     (verifyHandle.OperationException != null ? verifyHandle.OperationException.Message : verifyHandle.Status.ToString()));
+                SafeRelease(verifyHandle);
+                yield break;
+            }
+
+            long remain = verifyHandle.Result;
+            SafeRelease(verifyHandle);
+
+            remainTotal += remain;
+        }
+
+        // Cập nhật để UI/Log nhìn được (remain tổng)
+        BytesToDownload = remainTotal;
+
+        if (remainTotal > verifySizeThresholdBytes)
+        {
+            Fail($"[Preload] Verify failed: labels still have {remainTotal} bytes to download. labels=({string.Join(",", labels)})");
             yield break;
         }
-
-        float t = 0f;
-        while (!handle.IsDone)
-        {
-            t += Time.unscaledDeltaTime;
-            if (t >= timeout)
-            {
-                Fail(timeoutMsg);
-                yield break;
-            }
-            yield return null;
-        }
     }
 
-    private bool CheckSucceeded(AsyncOperationHandle handle, string prefix)
+    // DONE
+    DownloadPercent01 = 1f;
+    IsCloudFullyDownloaded = true; // “coi như cloud pack” của bạn đã xong (theo danh sách labels)
+    IsReady = true;
+    Stage = PreloadStage.Done;
+}
+
+    private IEnumerator HttpProbeGet(string url, int readBytes)
     {
-        if (HasFailed) return false;
-
-        if (handle.Status != AsyncOperationStatus.Succeeded)
+        using (var req = UnityWebRequest.Get(url))
         {
-            Fail(prefix + ": " + (handle.OperationException?.ToString() ?? "Unknown"));
-            return false;
-        }
+            req.timeout = 15;
+            req.downloadHandler = new DownloadHandlerBuffer();
+            if (readBytes > 0) req.SetRequestHeader("Range", $"bytes=0-{readBytes - 1}");
 
-        return true;
+            yield return req.SendWebRequest();
+
+            bool ok = (req.result == UnityWebRequest.Result.Success) &&
+                      (req.responseCode == 200 || req.responseCode == 206);
+
+            if (!ok)
+                Fail($"[HTTP PROBE GET FAILED] url={url} code={req.responseCode} err={req.error}");
+        }
     }
+
+    private void ClearAddressablesCatalogCache()
+    {
+        try
+        {
+            string dir = Path.Combine(Application.persistentDataPath, "com.unity.addressables");
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
+        catch { }
+    }
+
+    private void SetStageProgress(float p01)
+    {
+        DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Clamp01(p01));
+    }
+
+private IEnumerator WaitWithTimeout(AsyncOperationHandle handle, float timeoutSeconds, string timeoutMsg)
+{
+    while (!handle.IsDone)
+        yield return null;
+}
+
+    private void SafeRelease(AsyncOperationHandle handle)
+    {
+        try
+        {
+            if (handle.IsValid())
+                Addressables.Release(handle);
+        }
+        catch { }
+    }
+
+#endif
 
     private void Fail(string msg)
     {
         HasFailed = true;
         IsReady = false;
+        IsCloudFullyDownloaded = false;
         LastError = msg;
+        Stage = PreloadStage.Failed;
         Debug.LogError(msg);
-    }
-
-    private int GetCurrentMajorVersion()
-    {
-        string v = Application.version;
-        if (string.IsNullOrWhiteSpace(v)) return -1;
-        var parts = v.Split('.');
-        if (parts.Length == 0) return -1;
-        if (int.TryParse(parts[0], out int major)) return major;
-        return -1;
-    }
-
-    private long EstimateUnityCacheBytes()
-    {
-        try
-        {
-            string cachePath = Application.temporaryCachePath;
-            if (string.IsNullOrEmpty(cachePath) || !Directory.Exists(cachePath))
-                return -1;
-            return GetDirectorySizeSafe(cachePath);
-        }
-        catch { return -1; }
-    }
-
-    private long GetFreeDiskSpaceBestEffort()
-    {
-        try
-        {
-            string p = Application.persistentDataPath;
-            if (string.IsNullOrEmpty(p)) return -1;
-            string root = Path.GetPathRoot(p);
-            if (string.IsNullOrEmpty(root)) return -1;
-            var drive = new DriveInfo(root);
-            if (!drive.IsReady) return -1;
-            return drive.AvailableFreeSpace;
-        }
-        catch { return -1; }
-    }
-
-    private static long GetDirectorySizeSafe(string folder)
-    {
-        long size = 0;
-        try
-        {
-            var di = new DirectoryInfo(folder);
-            foreach (var fi in di.EnumerateFiles("*", SearchOption.AllDirectories))
-            {
-                try { size += fi.Length; } catch { }
-            }
-        }
-        catch { }
-        return size;
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        if (bytes < 0) return "unknown";
-        float mb = bytes / (1024f * 1024f);
-        if (mb < 1024f) return $"{mb:0.##} MB";
-        float gb = mb / 1024f;
-        return $"{gb:0.##} GB";
     }
 }
