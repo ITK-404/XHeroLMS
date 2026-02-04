@@ -158,6 +158,7 @@ private IEnumerator CoEnterMain()
     // fallback build index
     Debug.Log("[BootFlow] Load main by BuildIndex: " + mainSceneBuildIndex);
     SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
+    yield break;
 }
 
 }
