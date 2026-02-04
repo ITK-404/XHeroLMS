@@ -36,6 +36,9 @@ public class PlayerPanelUI : MonoBehaviour
     public Button blockingSelectFunction;
     public string defaultLoadScene = "New Scene";
 
+    public GameObject pathfindPanel;
+    public Button exitPathBtn;
+    public Action OnClickTryExitAutoFindWay;
     
     // users 
     public string deleteUserPath = "/users"; // <-- chỉnh theo API thật
@@ -64,8 +67,28 @@ public class PlayerPanelUI : MonoBehaviour
         LogoutPopupUI.OnReturn += OnReturn;
         LogoutPopupUI.OnLogout += OnLogout;
         TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
+        
+        exitPathBtn.onClick.AddListener(TryExitAutoFinding);
+        
+        HidePathfinding();
     }
 
+    public void TryExitAutoFinding()
+    {
+        OnClickTryExitAutoFindWay?.Invoke();
+        HidePathfinding();
+    }
+    
+    private void OnDestroy()
+    {
+        LoginController.OnLoginComplete -= ShowLoginUI;
+
+        LogoutPopupUI.OnReturn -= OnReturn;
+        LogoutPopupUI.OnLogout -= OnLogout;
+        TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
+        exitPathBtn.onClick.RemoveListener(TryExitAutoFinding);
+        
+    }
     private bool isLoaded = false;
 
     private void OnLogout()
@@ -168,14 +191,7 @@ public class PlayerPanelUI : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        LoginController.OnLoginComplete -= ShowLoginUI;
 
-        LogoutPopupUI.OnReturn -= OnReturn;
-        LogoutPopupUI.OnLogout -= OnLogout;
-        TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
-    }
 
     private void TryLogoutButtonOnOnTryLogout()
     {
@@ -212,38 +228,49 @@ public class PlayerPanelUI : MonoBehaviour
         unLogginContainer.gameObject.SetActive(b);
     }
 
-private IEnumerator CoLoadSceneSmart(string targetScene)
-{
-#if ADDRESSABLES
-    // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
-    bool isCloud = false;
-    yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+    public void ShowPathfindingPanel()
+    {
+        pathfindPanel.gameObject.SetActive(true);
+        playerInformation.gameObject.SetActive(false);
+    }
 
-    if (isCloud)
-        LoadingTransition.LoadAssetBundle(targetScene);
-    else
-        LoadingTransition.Load(targetScene);
+    public void HidePathfinding()
+    {
+        pathfindPanel.gameObject.SetActive(false);
+        playerInformation.gameObject.SetActive(true);
+    }
+    private IEnumerator CoLoadSceneSmart(string targetScene)
+    {
+#if ADDRESSABLES
+        // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
+        bool isCloud = false;
+        yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+
+        if (isCloud)
+            LoadingTransition.LoadAssetBundle(targetScene);
+        else
+            LoadingTransition.Load(targetScene);
 #else
     LoadingTransition.Load(targetScene);
     yield break;
 #endif
-}
+    }
 
 #if ADDRESSABLES
 // Check: sceneName có tồn tại như 1 addressable scene không?
-private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
+    private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
     {
-    // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
-    var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
+        // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
+        var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
 
-    yield return h;
+        yield return h;
 
-    bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
+        bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
 
-    // Release handle (tránh leak)
-    Addressables.Release(h);
+        // Release handle (tránh leak)
+        Addressables.Release(h);
 
-    result?.Invoke(ok);
-}
+        result?.Invoke(ok);
+    }
 #endif
 }

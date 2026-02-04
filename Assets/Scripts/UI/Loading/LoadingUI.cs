@@ -7,7 +7,6 @@ public static class LoadingUI
     private const string DEFAULT_IMG1_PATH   = "IMG_XHeroLMS/Img1";
     private const string DEFAULT_IMG2_PATH   = "IMG_XHeroLMS/Img2";
     private const string DEFAULT_POPUP_PATH  = "Login_Popup/Failed Login Popup UI Variant";
-
     private const string DEFAULT_PREFAB_PATH = "Loading_UI/Loading_UI";
 
     private static Sprite _cachedCenter;
@@ -22,6 +21,23 @@ public static class LoadingUI
     private static string _timeoutMessage;
     private static string _timeoutHeader;
 
+    // ===================== TAP TO CANCEL =====================
+    /// <summary>
+    /// Mặc định bật để hạn chế khó chịu khi lag.
+    /// Chạm/click bất kỳ -> Hide().
+    /// </summary>
+    public static bool tapToCancel = true;
+
+    /// <summary>
+    /// Đợi X giây sau khi Show() rồi mới cho phép tap để cancel,
+    /// tránh trường hợp cú click mở loading bị tính luôn và tắt ngay.
+    /// </summary>
+    public static float tapToCancelDelay = 0.15f;
+
+    private static Coroutine _tapCancelRoutine;
+
+    // =========================================================
+
     public static void Show(
         float timeoutSeconds = 0f,
         string timeoutMessage = "Hệ thống đang xử lý quá lâu.\nVui lòng kiểm tra kết nối mạng hoặc thử lại sau.",
@@ -30,6 +46,9 @@ public static class LoadingUI
         try
         {
             InternalShowFromPrefab();
+
+            // NEW: Tap/click để cancel (không cần sửa các chỗ gọi Show())
+            StartTapToCancelWatcher();
 
             if (_timeoutRoutine == null && timeoutSeconds > 0f)
                 StartTimeout(timeoutSeconds, timeoutMessage, timeoutHeader);
@@ -55,6 +74,13 @@ public static class LoadingUI
             _host.StopCoroutine(_timeoutRoutine);
             _timeoutRoutine = null;
         }
+
+        // stop tap-to-cancel watcher
+        if (_host != null && _tapCancelRoutine != null)
+        {
+            _host.StopCoroutine(_tapCancelRoutine);
+            _tapCancelRoutine = null;
+        }
     }
 
     public static void Destroy()
@@ -72,6 +98,12 @@ public static class LoadingUI
         {
             _host.StopCoroutine(_timeoutRoutine);
             _timeoutRoutine = null;
+        }
+
+        if (_host != null && _tapCancelRoutine != null)
+        {
+            _host.StopCoroutine(_tapCancelRoutine);
+            _tapCancelRoutine = null;
         }
     }
 
@@ -125,6 +157,61 @@ public static class LoadingUI
 
             _overlay.BuildAndPlay();
         }
+    }
+
+    // =========================================================
+    // TAP TO CANCEL WATCHER
+    // =========================================================
+    private static void StartTapToCancelWatcher()
+    {
+        if (!tapToCancel) return;
+
+        var host = EnsureHost();
+
+        // nếu gọi Show() nhiều lần, chỉ cần 1 watcher
+        if (_tapCancelRoutine != null) return;
+
+        _tapCancelRoutine = host.StartCoroutine(TapToCancelRoutine());
+    }
+
+    private static IEnumerator TapToCancelRoutine()
+    {
+        // Delay nhỏ để tránh click mở loading bị "ăn" luôn và tắt ngay
+        if (tapToCancelDelay > 0f)
+            yield return new WaitForSecondsRealtime(tapToCancelDelay);
+        else
+            yield return null;
+
+        while (_loadingRoot != null && _loadingRoot.activeSelf)
+        {
+            if (tapToCancel && AnyUserInputDown())
+            {
+                Hide();
+                break;
+            }
+
+            yield return null;
+        }
+
+        _tapCancelRoutine = null;
+    }
+
+    private static bool AnyUserInputDown()
+    {
+        // PC / mouse
+        if (Input.GetMouseButtonDown(0)) return true;
+
+        // Mobile touch
+        if (Input.touchCount > 0)
+        {
+            var t = Input.GetTouch(0);
+            if (t.phase == TouchPhase.Began) return true;
+        }
+
+        // Optional: phím bất kỳ
+        if (Input.anyKeyDown) return true;
+
+        return false;
     }
 
     // =========================================================

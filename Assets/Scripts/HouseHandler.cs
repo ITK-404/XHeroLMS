@@ -13,6 +13,8 @@ public class HouseHandler : MonoBehaviour
     [SerializeField] private string sceneNameToLoad;
 
     [SerializeField] private bool savePlayerPosition;
+
+    [SerializeField] private Transform standPoint;
     private void Awake()
     {
         if (TokenStore.IsAuthenticated)
@@ -69,5 +71,10 @@ public class HouseHandler : MonoBehaviour
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
 
 #endif
+    }
+
+    public Vector3 GetStandPoint()
+    {
+        return standPoint.position;
     }
 }
