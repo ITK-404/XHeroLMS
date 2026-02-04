@@ -54,13 +54,48 @@ public static class AddressablesCloudAutoSetup
     private static string ProjectRoot
         => Directory.GetParent(Application.dataPath)?.FullName ?? "";
 
-    private static string GcloudExePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd");
+    // private static string GcloudExePath =>
+    //     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    //         "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd");
 
-    private static string GsutilExePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gsutil.cmd");
+    // private static string GsutilExePath =>
+    //     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    //         "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gsutil.cmd");
+
+private static string GcloudExePath => ResolveGcloudExe("gcloud");
+private static string GsutilExePath => ResolveGcloudExe("gsutil");
+
+private static string ResolveGcloudExe(string toolName)
+{
+#if UNITY_EDITOR_WIN
+    // Windows install via Cloud SDK installer
+    string win = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Google", "Cloud SDK", "google-cloud-sdk", "bin", toolName + ".cmd"
+    );
+    if (File.Exists(win)) return win;
+
+    // fallback: rely on PATH
+    return toolName + ".cmd";
+#else
+    // macOS/Linux: usually installed via brew or official installer and available in PATH
+    // common brew paths: /opt/homebrew/bin (Apple Silicon), /usr/local/bin (Intel)
+    string brew1 = Path.Combine("/opt/homebrew/bin", toolName);
+    if (File.Exists(brew1)) return brew1;
+
+    string brew2 = Path.Combine("/usr/local/bin", toolName);
+    if (File.Exists(brew2)) return brew2;
+
+    // official installer sometimes goes here (varies)
+    string sdk1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "google-cloud-sdk", "bin", toolName);
+    if (File.Exists(sdk1)) return sdk1;
+
+    // fallback: rely on PATH
+    return toolName;
+#endif
+}
+
 
     // Stable URL for clients (always load from latest)
     // private static string LatestRemoteLoad =>
