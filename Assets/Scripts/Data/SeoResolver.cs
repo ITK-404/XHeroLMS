@@ -170,15 +170,35 @@ public static class SeoResolver
         if (LmsStore.Instance.GetPrivate(courseId) == null)
             yield return LmsStore.Instance.FetchPrivateIfExpired(courseId);
 
-        var p = LmsStore.Instance.GetPrivate(courseId);
-        if (p == null)
-        {
-            // login mà vẫn không có private => tuỳ bạn: block hay cho vào “rỗng”
-            canEnterCourse = false;
-            shouldHavePrivate = false;
-            Debug.LogError($"[SeoResolver] Private null cho courseId='{courseId}' => BLOCK");
-            yield break;
-        }
+var p = LmsStore.Instance.GetPrivate(courseId);
+if (p == null)
+{
+    // login mà vẫn không có private => dẫn đi mua luôn (đã login sẵn bằng token)
+    canEnterCourse = false;
+    shouldHavePrivate = false;
+
+    // token
+    string token = TokenStore.AccessToken;
+    token = (token ?? "").Trim();
+    if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        token = token.Substring("Bearer ".Length).Trim();
+
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        Debug.LogError($"[SeoResolver] Private null + token empty. courseId='{courseId}' => BLOCK");
+        yield break;
+    }
+
+    string url =
+        "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+        "?course=" + UnityWebRequest.EscapeURL(courseId) +
+        "&accessToken=" + UnityWebRequest.EscapeURL(token);
+
+    Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
+
+    Application.OpenURL(url);
+    yield break;
+}
 
         _lmsCoursePrivate = p;
     }

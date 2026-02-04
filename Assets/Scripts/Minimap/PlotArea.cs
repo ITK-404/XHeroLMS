@@ -16,6 +16,15 @@ public class PlotArea : MonoBehaviour
     [SerializeField] private string displayName;
 
     [SerializeField] private float ratioUI = 1;
+
+    private void Awake()
+    {
+        if (Location == null)
+        {
+            Location = GetComponent<AreaMapLocation>();
+        }
+    }
+
     public void Initialize()
     {
         UpdateUI();

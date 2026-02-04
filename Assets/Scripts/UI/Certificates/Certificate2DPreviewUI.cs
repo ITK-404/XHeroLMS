@@ -290,7 +290,7 @@ public class Certificate2DPreviewUI : MonoBehaviour
         }
 
         if (nameText != null)
-            nameText.text = userName ?? "";
+            nameText.text = TokenStore.FullName ?? "Người dùng mới";
 
         if (dateText != null)
             dateText.text = FormatDate(dateString);

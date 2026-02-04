@@ -1,21 +1,38 @@
 using System;
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.UI;
 
 public class CircularScrollView : MonoBehaviour
 {
-    [Header("UI")] [SerializeField] private GameObject container;
+    [Header("UI")]
+    [SerializeField] private GameObject container;
     [SerializeField] private GameObject elementContainer;
     [SerializeField] private BigAreaUIScrollElement scrollElementPrefab;
     [SerializeField] private List<BigAreaUIScrollElement> items = new();
 
-    [Header("Settings")] [SerializeField] private float radius = 360f;
+    [Header("Settings - Layout")]
+    [SerializeField] private float radius = 360f;
     [SerializeField] private float startAngle = 180f;
     [SerializeField] private float angleStep = 10f;
     [SerializeField] private Vector2 offset;
-    [SerializeField] private float fadeMinAngle;
-    [SerializeField] private float fadeMaxAngle;
     public float scrollAngle = 0;
+
+    [Header("Settings - Fade (screen-size friendly)")]
+    [Tooltip("Pixel distance from focus where alpha stays 1.")]
+    [SerializeField] private float innerPx = 180f;
+
+    [Tooltip("Additional pixel distance where alpha goes from 1 -> 0.")]
+    [SerializeField] private float fadePx = 120f;
+
+    [Tooltip("If true, scales innerPx/fadePx based on Canvas/Screen so different resolutions feel similar.")]
+    [SerializeField] private bool scaleFadeWithScreen = true;
+
+    [Tooltip("Reference height to scale fade distances when scaleFadeWithScreen is true.")]
+    [SerializeField] private float referenceHeight = 1080f;
+
+    [Tooltip("Optional: assign the root Canvas to get accurate scale factor (CanvasScaler etc.).")]
+    [SerializeField] private Canvas rootCanvas;
 
     private CourseMapBrowserUI courseMapBrowserUI;
 
@@ -25,6 +42,10 @@ public class CircularScrollView : MonoBehaviour
     private void Awake()
     {
         courseMapBrowserUI = FindAnyObjectByType<CourseMapBrowserUI>();
+
+        // Auto find canvas if user didn't assign
+        if (rootCanvas == null)
+            rootCanvas = GetComponentInParent<Canvas>();
     }
 
     private void Start()
@@ -42,7 +63,7 @@ public class CircularScrollView : MonoBehaviour
     {
         items.Clear();
 
-        // dọn con cũ trong container (optional)
+        // Cleanup old children (optional)
         if (elementContainer != null)
         {
             for (int i = elementContainer.transform.childCount - 1; i >= 0; i--)
@@ -84,58 +105,78 @@ public class CircularScrollView : MonoBehaviour
         return 0f;
     }
 
-    [SerializeField] private float innerRange = 50f;
-    [SerializeField] private float fadeRange = 30f;
-    void UpdateItemPositions()
+    private float GetFadeScale()
     {
+        if (!scaleFadeWithScreen) return 1f;
+
+        // Prefer canvas scale if available (handles CanvasScaler, render mode, etc.)
+        float canvasScale = 1f;
+        if (rootCanvas != null)
+            canvasScale = rootCanvas.scaleFactor;
+
+        // Also scale by screen height so different resolutions feel consistent
+        float screenScale = Screen.height / referenceHeight;
+
+        // Combine gently: canvasScale already accounts for screen scaling in many setups,
+        // but not always. Multiplying both can over-scale on some setups.
+        // So we take the larger one as a safer default.
+        return Mathf.Max(screenScale, canvasScale);
+    }
+
+    private Vector2 GetFocusPoint()
+    {
+        // Focus point is the position of the item when its angle == startAngle
+        float a = startAngle * Mathf.Deg2Rad;
+        return offset + new Vector2(radius * Mathf.Cos(a), radius * Mathf.Sin(a));
+    }
+
+    private float GetAlphaByDistance(Vector2 itemPos)
+    {
+        Vector2 focus = GetFocusPoint();
+        float d = Vector2.Distance(itemPos, focus);
+
+        float scale = GetFadeScale();
+        float inner = innerPx * scale;
+        float outer = (innerPx + fadePx) * scale;
+
+        if (d <= inner) return 1f;
+        if (d >= outer) return 0f;
+
+        float t = Mathf.InverseLerp(inner, outer, d);
+        return Mathf.SmoothStep(1f, 0f, t);
+    }
+
+    private void UpdateItemPositions()
+    {
+        if (items == null) return;
+
         for (int i = 0; i < items.Count; i++)
         {
-            // calculation
+            var item = items[i];
+            if (item == null) continue;
+
             float angle = startAngle + i * angleStep + scrollAngle;
             float angleInRadians = angle * Mathf.Deg2Rad;
-
-            // calculation alpha
-            float centerAngle = startAngle;     
-            float outerRange = innerRange + fadeRange;
-
-            float delta = Mathf.Abs(Mathf.DeltaAngle(centerAngle, angle)); // 0..180
-
-            float alpha;
-            if (delta <= innerRange)
-            {
-                alpha = 1f;
-            }
-            else if (delta >= outerRange)
-            {
-                alpha = 0f;
-            }
-            else
-            {
-                // alpha = 1f - Mathf.InverseLerp(innerRange, outerRange, delta);
-                alpha = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(innerRange, outerRange, delta));
-            }
 
             float x = radius * Mathf.Cos(angleInRadians);
             float y = radius * Mathf.Sin(angleInRadians);
 
-            RectTransform rect = items[i].Rect;
-            CanvasGroup canvasGroup = items[i].CanvasGroup;
+            RectTransform rect = item.Rect;
+            CanvasGroup canvasGroup = item.CanvasGroup;
 
-            canvasGroup.alpha = alpha;
-            rect.anchoredPosition = new Vector2(x, y) + offset;
+            Vector2 pos = new Vector2(x, y) + offset;
+
+            // alpha based on screen distance to focus point
+            canvasGroup.alpha = GetAlphaByDistance(pos);
+
+            rect.anchoredPosition = pos;
         }
     }
-    
 
     public void SetAngle(float targetScrollAngle)
     {
         if (items == null || items.Count == 0)
             return;
-
-        // float max = 0f;
-        // float min = -(items.Count - 1) * angleStep;
-        //
-        // scrollAngle = Mathf.Clamp(targetScrollAngle, Mathf.Min(min, max), Mathf.Max(min, max));
 
         float boundA = 0f;
         float boundB = -(items.Count - 1) * angleStep;
@@ -161,6 +202,8 @@ public class CircularScrollView : MonoBehaviour
 
     public void RefreshUI()
     {
+        if (items == null) return;
+
         for (int i = 0; i < items.Count; i++)
         {
             var item = items[i];
@@ -174,11 +217,13 @@ public class CircularScrollView : MonoBehaviour
     private void TryUpdateFocusElement()
     {
         if (items == null) return;
+
         for (int index = 0; index < items.Count; index++)
         {
             var item = items[index];
-            var isItemSelected = item.IsSelected();
-            if (isItemSelected)
+            if (item == null) continue;
+
+            if (item.IsSelected())
             {
                 SelectElement(index);
                 break;
