@@ -218,10 +218,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3cfb883bf5b30743ad52a650c603df1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AddressablesPreload
-  preloadLabel: cloud
   maxRetries: 3
   stepTimeoutSeconds: 25
   downloadTimeoutSeconds: 300
+  verifyAfterDownload: 1
+  verifySizeThresholdBytes: 0
   enableProbeRemoteCatalog: 1
   probeReadBytes: 64
   remoteCatalogHashUrl: https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.hash
@@ -242,6 +243,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BootFlow
   preload: {fileID: 820501525}
   intro: {fileID: 1202030476}
+  mainSceneIsAddressable: 1
+  mainAddressableSceneKey: New Scene
   mainSceneBuildIndex: 1
   allowEnterMainWhenPreloadFailed: 1
   minHoldBeforeEnterMain: 0.05

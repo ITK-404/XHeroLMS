@@ -94,32 +94,70 @@ while (!preload.IsCloudFullyDownloaded && !preload.HasFailed)
         EnterMain();
     }
 
-    public void EnterMain()
-    {
-        if (_loadingMain) return;
-        _loadingMain = true;
+public void EnterMain()
+{
+    if (_loadingMain) return;
+    _loadingMain = true;
 
-        if (intro != null)
-            intro.OnAboutToEnterMain(); // optional hook
+    StartCoroutine(CoEnterMain());
+}
 
-        if (mainSceneIsAddressable)
-        {
+private IEnumerator CoEnterMain()
+{
+    if (intro != null)
+        intro.OnAboutToEnterMain();
+
 #if ADDRESSABLES
-            Debug.Log("[BootFlow] EnterMain after Preload DONE. Load main (Addressables): " + mainAddressableSceneKey);
+    if (mainSceneIsAddressable)
+    {
+        Debug.Log("[BootFlow] Checking remaining download size for scene: " + mainAddressableSceneKey);
 
-            // Lưu ý:
-            // - Nếu scene main + deps đã thuộc label preload (vd: "cloud") thì lúc này load sẽ chủ yếu từ cache.
-            // - Nếu scene main KHÔNG nằm trong label preload, Addressables vẫn có thể phát sinh download.
-            Addressables.LoadSceneAsync(mainAddressableSceneKey, LoadSceneMode.Single, activateOnLoad: true);
-#else
-            Debug.LogError("[BootFlow] ADDRESSABLES define OFF but mainSceneIsAddressable=true");
-            if (intro != null) intro.ShowFatalFail("ADDRESSABLES define OFF, cannot load addressable scene.");
-#endif
-        }
-        else
+        // check size còn lại của scene + deps
+        var sizeHandle = Addressables.GetDownloadSizeAsync(mainAddressableSceneKey);
+        yield return sizeHandle;
+
+        long remainBytes = sizeHandle.Result;
+        Addressables.Release(sizeHandle);
+
+        Debug.Log($"[BootFlow] Scene remaining bytes = {remainBytes}");
+
+        // nếu còn -> download trước
+        if (remainBytes > 0)
         {
-            Debug.Log("[BootFlow] EnterMain after Preload DONE. Load main (BuildIndex): " + mainSceneBuildIndex);
-            SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
+            Debug.Log("[BootFlow] Pre-downloading scene dependencies...");
+
+            var dl = Addressables.DownloadDependenciesAsync(mainAddressableSceneKey, false);
+
+            while (!dl.IsDone)
+            {
+                float p = dl.PercentComplete;
+                if (intro != null)
+                    intro.ForceProgress(p); // nếu bạn muốn UI progress
+
+                yield return null;
+            }
+
+            if (dl.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError("[BootFlow] Scene dependency download FAILED");
+                if (intro != null)
+                    intro.ShowFatalFail("Scene download failed.");
+                yield break;
+            }
+
+            Addressables.Release(dl);
         }
+
+        // load scene (giờ chắc chắn từ cache)
+        Debug.Log("[BootFlow] Loading main scene from cache...");
+        Addressables.LoadSceneAsync(mainAddressableSceneKey, LoadSceneMode.Single, true);
+        yield break;
     }
+#endif
+
+    // fallback build index
+    Debug.Log("[BootFlow] Load main by BuildIndex: " + mainSceneBuildIndex);
+    SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
+}
+
 }
