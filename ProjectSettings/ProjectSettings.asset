@@ -142,7 +142,7 @@ PlayerSettings:
   loadStoreDebugModeEnabled: 0
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
-  bundleVersion: 1.0.3
+  bundleVersion: 1.0.4
   preloadedAssets:
   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   metroInputSource: 0
@@ -175,7 +175,7 @@ PlayerSettings:
     iPhone: 0
     tvOS: 0
   overrideDefaultApplicationIdentifier: 1
-  AndroidBundleVersionCode: 104
+  AndroidBundleVersionCode: 103
   AndroidMinSdkVersion: 26
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
@@ -847,24 +847,25 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: DOTWEEN
-    EmbeddedLinux: DOTWEEN
+    Android: ENABLE_JSON_CATALOG;DOTWEEN;ADDRESSABLES
+    EmbeddedLinux: ENABLE_JSON_CATALOG;DOTWEEN
     GameCoreScarlett: DOTWEEN
     GameCoreXboxOne: DOTWEEN
     Kepler: DOTWEEN
-    LinuxHeadlessSimulation: DOTWEEN
-    Nintendo Switch: DOTWEEN
-    PS4: DOTWEEN
+    LinuxHeadlessSimulation: ENABLE_JSON_CATALOG;DOTWEEN
+    Nintendo Switch: ENABLE_JSON_CATALOG;DOTWEEN
+    PS4: ENABLE_JSON_CATALOG;DOTWEEN
     PS5: DOTWEEN
-    QNX: DOTWEEN
+    QNX: ENABLE_JSON_CATALOG;DOTWEEN
     ReservedCFE: DOTWEEN
-    Standalone: DOTWEEN;WEATHER_MAKER_PRESENT
+    Server: ENABLE_JSON_CATALOG
+    Standalone: ENABLE_JSON_CATALOG;DOTWEEN;WEATHER_MAKER_PRESENT
     VisionOS: DOTWEEN
-    WebGL: DOTWEEN
-    Windows Store Apps: DOTWEEN
-    XboxOne: DOTWEEN
-    iPhone: DOTWEEN;WEATHER_MAKER_PRESENT
-    tvOS: DOTWEEN
+    WebGL: ENABLE_JSON_CATALOG;DOTWEEN
+    Windows Store Apps: ENABLE_JSON_CATALOG;DOTWEEN
+    XboxOne: ENABLE_JSON_CATALOG;DOTWEEN
+    iPhone: ENABLE_JSON_CATALOG;DOTWEEN;WEATHER_MAKER_PRESENT
+    tvOS: ENABLE_JSON_CATALOG;DOTWEEN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
