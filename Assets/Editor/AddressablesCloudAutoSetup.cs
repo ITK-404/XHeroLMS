@@ -333,18 +333,31 @@ public static void BuildAndUpload()
     if (!RunCmd(GsutilExePath, $"-m rsync -r \"{dstBuild}\" \"{dstLatest}\"", dumpLogFile: "gsutil_rsync_latest.txt"))
         return;
 
-    // ======= Optional: remove versioned catalogs on latest (keep only catalog.json/hash) =======
-    if (RemoveVersionedCatalogsOnLatest)
-    {
-        UnityEngine.Debug.Log("[AddressablesCloudAutoSetup] Removing catalog_*.json/hash on latest (keep catalog.json/hash) ...");
-        RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.json\"", dumpLogFile: "gsutil_rm_catalog_ver_json_latest.txt");
-        RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.hash\"", dumpLogFile: "gsutil_rm_catalog_ver_hash_latest.txt");
-    }
+        // ======= Optional: remove versioned catalogs on latest (keep only catalog.json/hash) =======
+        if (RemoveVersionedCatalogsOnLatest)
+        {
+            UnityEngine.Debug.Log("[AddressablesCloudAutoSetup] Removing catalog_*.json/hash on latest (keep catalog.json/hash) ...");
+            RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.json\"", dumpLogFile: "gsutil_rm_catalog_ver_json_latest.txt");
+            RunCmd(GsutilExePath, $"-m rm \"{dstLatest}catalog_*.hash\"", dumpLogFile: "gsutil_rm_catalog_ver_hash_latest.txt");
+        }
 
     // Verify catalog exists remotely
-    bool okLatestCatalog = RunCmd(GsutilExePath, $"ls \"{dstLatest}\" | findstr /i catalog", dumpLogFile: "gsutil_verify_latest_catalog.txt");
-    if (!okLatestCatalog)
-        UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Remote latest/ does NOT show catalog files. Check gsutil_verify_latest_catalog.txt");
+    // bool okLatestCatalog = RunCmd(GsutilExePath, $"ls \"{dstLatest}\" | findstr /i catalog", dumpLogFile: "gsutil_verify_latest_catalog.txt");
+string verifyCmd;
+#if UNITY_EDITOR_WIN
+verifyCmd = $"ls \"{dstLatest}\" | findstr /i catalog";
+#else
+verifyCmd = $"ls \"{dstLatest}\" | grep -i catalog";
+#endif
+
+    // bool okLatestCatalog = RunCmd(GsutilExePath, verifyCmd, dumpLogFile: "gsutil_verify_latest_catalog.txt");
+bool okLatestCatalog = VerifyLatestCatalogExists(dstLatest);
+if (!okLatestCatalog)
+    UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Remote latest/ missing catalog.json or catalog.hash. Check gsutil_verify_latest_catalog.txt");
+
+
+        if (!okLatestCatalog)
+            UnityEngine.Debug.LogError("[AddressablesCloudAutoSetup] Remote latest/ does NOT show catalog files. Check gsutil_verify_latest_catalog.txt");
 
     UnityEngine.Debug.Log(
         "[AddressablesCloudAutoSetup] Done.\n" +
@@ -354,6 +367,18 @@ public static void BuildAndUpload()
         $" - https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/catalog.json\n" +
         $" - https://storage.googleapis.com/{BucketName}/{RootFolder}/{ReleasesFolder}/{platformName}/latest/catalog.hash\n"
     );
+}
+private static bool VerifyLatestCatalogExists(string dstLatest)
+{
+    var r = RunCmdWithResult(GsutilExePath, $"ls \"{dstLatest}\"", 5 * 60 * 1000, "gsutil_verify_latest_catalog.txt");
+
+    if (r.ExitCode != 0) return false;
+
+    var s = (r.StdOut ?? "") + "\n" + (r.StdErr ?? "");
+    s = s.ToLowerInvariant();
+
+    // cần ít nhất catalog.json và catalog.hash
+    return s.Contains("catalog.json") && s.Contains("catalog.hash");
 }
 
     // ===================== HELPERS =====================
