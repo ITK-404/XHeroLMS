@@ -127,7 +127,7 @@ public class CertificateDisplayController : MonoBehaviour
 
             // ====== GÁN TEXT ======
             if (nameText != null)
-                nameText.text = cert.fullName ?? "";
+                nameText.text = cert.fullName ?? "Người dùng mới";
 
             if (certNameText != null)
                 certNameText.text = cert.certName ?? "";
