@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[RequireComponent(typeof(Collider))]
 public class LoadRoomTrigger : MonoBehaviour
 {
     [Header("Scene đích")]
