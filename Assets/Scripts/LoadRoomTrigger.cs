@@ -10,7 +10,6 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 #endif
 
-[RequireComponent(typeof(Collider))]
 public class LoadRoomTrigger : MonoBehaviour
 {
     [Header("Scene đích")]
