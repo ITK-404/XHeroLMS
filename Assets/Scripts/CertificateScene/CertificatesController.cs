@@ -6,6 +6,13 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+#if ADDRESSABLES
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+#endif
+
 public class CertificatesController : MonoBehaviour
 {
     [Header("Call option")]
@@ -155,7 +162,7 @@ public class CertificatesController : MonoBehaviour
                 LoadingUI.ShowErrorPopup(
                     "Bạn chưa có bằng nào để hiển thị!",
                     "Thông báo",
-                    () => LoadingTransition.Load("new scene")
+                    () => StartCoroutine(CoLoadSceneSmart("New Scene"))
                 );
 
                 yield break;
@@ -360,9 +367,43 @@ public class CertificatesController : MonoBehaviour
         public int __v;
     }
 
-public bool HasAnyCertificate()
+    public bool HasAnyCertificate()
+    {
+        return _certDataList != null && _certDataList.Count > 0;
+    }
+
+private IEnumerator CoLoadSceneSmart(string targetScene)
 {
-    return _certDataList != null && _certDataList.Count > 0;
+#if ADDRESSABLES
+    // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
+    bool isCloud = false;
+    yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+
+    if (isCloud)
+        LoadingTransition.LoadAssetBundle(targetScene);
+    else
+        LoadingTransition.Load(targetScene);
+#else
+    LoadingTransition.Load(targetScene);
+    yield break;
+#endif
 }
 
+#if ADDRESSABLES
+// Check: sceneName có tồn tại như 1 addressable scene không?
+private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
+    {
+    // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
+    var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
+
+    yield return h;
+
+    bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
+
+    // Release handle (tránh leak)
+    Addressables.Release(h);
+
+    result?.Invoke(ok);
+}
+#endif
 }

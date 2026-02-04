@@ -3,6 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+#if ADDRESSABLES
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+#endif
+
 [RequireComponent(typeof(Collider))]
 public class LoadRoomTrigger : MonoBehaviour
 {
@@ -68,19 +75,19 @@ public class LoadRoomTrigger : MonoBehaviour
         if (savePlayerPosition)
         {
 
-            
-                StartCoroutine(TryEnterCourse());
+            StartCoroutine(TryEnterCourse());
         }
         else
         {
-            LoadingTransition.Load(sceneName);
+            // LoadingTransition.Load(sceneName);
+            StartCoroutine(CoLoadSceneSmart(sceneName));
         }
-        
+
         var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
         var savePos = (returnPoint ? returnPoint.position : transform.position) + extraOffset;
         var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
         if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
-        
+
         TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
     }
 
@@ -91,7 +98,7 @@ public class LoadRoomTrigger : MonoBehaviour
         LoadingUI.Show(
                 timeoutSeconds: 60f,
                 timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
-                timeoutHeader:  "Lỗi Mạng"
+                timeoutHeader: "Lỗi Mạng"
             );
         SeoResolver.SetSeoCourse(sceneName);
         yield return new WaitForSecondsRealtime(1);
@@ -102,7 +109,8 @@ public class LoadRoomTrigger : MonoBehaviour
         if (SeoResolver.IsContainData())
         {
             Debug.Log("Đã tìm thấy seo URL để load");
-            LoadingTransition.Load(sceneName);
+            // LoadingTransition.Load(sceneName);
+            StartCoroutine(CoLoadSceneSmart(sceneName));
         }
         else
         {
@@ -117,4 +125,39 @@ public class LoadRoomTrigger : MonoBehaviour
     {
         _restoredSceneOnce = null;
     }
+
+private IEnumerator CoLoadSceneSmart(string targetScene)
+{
+#if ADDRESSABLES
+    // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
+    bool isCloud = false;
+    yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+
+    if (isCloud)
+        LoadingTransition.LoadAssetBundle(targetScene);
+    else
+        LoadingTransition.Load(targetScene);
+#else
+    LoadingTransition.Load(targetScene);
+    yield break;
+#endif
+}
+
+#if ADDRESSABLES
+// Check: sceneName có tồn tại như 1 addressable scene không?
+private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
+    {
+    // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
+    var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
+
+    yield return h;
+
+    bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
+
+    // Release handle (tránh leak)
+    Addressables.Release(h);
+
+    result?.Invoke(ok);
+}
+#endif
 }

@@ -5,6 +5,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+#if ADDRESSABLES
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+#endif
+
 public class LoadingScreenController : MonoBehaviour
 {
     [Header("UI References")]
@@ -81,25 +87,53 @@ public class LoadingScreenController : MonoBehaviour
     IEnumerator LoadByNameRoutine(string sceneName)
     {
         _isLoading = true;
-        _displayStartTime = Time.unscaledTime; // đếm thời gian hiển thị tối thiểu
+        _sceneLoadedFired = false;
+        _displayStartTime = Time.unscaledTime;
 
         SetProgress(0f);
-        var opUnLoad = SceneManager.UnloadSceneAsync(LoadingTransition.PreviousSceneName);
 
-        while (opUnLoad.progress < 0.9f)
+        // Unload scene cũ (nếu unload fail vẫn cứ tiếp tục)
+        var opUnLoad = SceneManager.UnloadSceneAsync(LoadingTransition.PreviousSceneName);
+        if (opUnLoad != null)
         {
-            yield return null;
+            while (!opUnLoad.isDone) yield return null;
         }
-        yield return null;
-        var op = SceneManager.LoadSceneAsync(sceneName);
-        op.allowSceneActivation = false;
-        _async = op;
 
         // bắt đầu đổi ảnh
         StartCoroutine(CycleRandomImages());
 
-        // === Phase 0 -> ~90%: chạy qua các mốc 30-50-60-70-80-90, clamp theo op.progress ===
+        // ======= LOAD THẬT (build vs addressables) =======
+        bool useAddr = LoadingTransition.UseAddressables;
+
+        AsyncOperation op = null;
+
+#if ADDRESSABLES
+        AsyncOperationHandle<SceneInstance> addrHandle = default;
+#endif
+
         float visual = 0f;
+
+        if (!useAddr)
+        {
+            // BUILD scene
+            op = SceneManager.LoadSceneAsync(sceneName);
+            op.allowSceneActivation = false;
+            _async = op;
+        }
+        else
+        {
+#if ADDRESSABLES
+            // ADDRESSABLE scene
+            // addrHandle = Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, activateOnLoad: false);
+            addrHandle = Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, activateOnLoad: true);
+#else
+        Debug.LogError("[LoadingScreenController] ADDRESSABLES define OFF but UseAddressables=true");
+        _isLoading = false;
+        yield break;
+#endif
+        }
+
+        // === Phase 0 -> ~90% ===
         for (int i = 0; i < milestonePercents.Length; i++)
         {
             float target = Mathf.Clamp01(milestonePercents[i]);
@@ -112,10 +146,19 @@ public class LoadingScreenController : MonoBehaviour
                 t += Time.unscaledDeltaTime;
                 float planned = Mathf.Lerp(start, target, t / dur);
 
-                // không cho hiển thị vượt quá tiến trình thật + headroom
-                float realCap = (op != null ? op.progress : planned);
-                float allowed = Mathf.Min(planned, realCap + headroom);
+                float realCap;
+                if (!useAddr)
+                    realCap = (op != null ? op.progress : planned);
+                else
+                {
+#if ADDRESSABLES
+                    realCap = addrHandle.PercentComplete; // 0..1
+#else
+                realCap = planned;
+#endif
+                }
 
+                float allowed = Mathf.Min(planned, realCap + headroom);
                 visual = Mathf.Clamp01(allowed);
                 SetProgress(visual);
 
@@ -125,52 +168,95 @@ public class LoadingScreenController : MonoBehaviour
             visual = target;
             SetProgress(visual);
 
-            // nếu Unity đã đạt 0.9 sớm, break khỏi vòng mốc
-            if (op.progress >= 0.9f) break;
+            // break sớm nếu load đã gần xong
+            if (!useAddr)
+            {
+                if (op != null && op.progress >= 0.9f) break;
+            }
+            else
+            {
+#if ADDRESSABLES
+                if (addrHandle.PercentComplete >= 0.9f) break;
+#endif
+            }
         }
 
-        // Nếu load thật còn <0.9, tiếp tục đẩy visual lên gần 0.9 nhưng không vượt
-        while (op.progress < 0.9f)
+        // đẩy lên gần 90% cho đến khi “ready-to-activate”
+        if (!useAddr)
         {
-            float allowed = Mathf.Min(0.90f, op.progress + headroom);
-            visual = Mathf.Max(visual, allowed);
-            SetProgress(visual);
-            yield return null;
+            while (op != null && op.progress < 0.9f)
+            {
+                float allowed = Mathf.Min(0.90f, op.progress + headroom);
+                visual = Mathf.Max(visual, allowed);
+                SetProgress(visual);
+                yield return null;
+            }
+        }
+        else
+        {
+#if ADDRESSABLES
+while (!addrHandle.IsDone)
+{
+    float allowed = Mathf.Min(0.90f, addrHandle.PercentComplete + headroom);
+    visual = Mathf.Max(visual, allowed);
+    SetProgress(visual);
+    yield return null;
+}
+#endif
         }
 
-        // đảm bảo visual ít nhất 90%
         visual = Mathf.Max(visual, 0.90f);
         SetProgress(visual);
 
+        // Bắt sự kiện sceneLoaded chỉ cần cho build scene; addressables ta tự check handle
         SceneManager.sceneLoaded += OnSceneLoaded;
         DontDestroyOnLoad(gameObject);
 
         float fakeStartTime = Time.unscaledTime;
-        float targetVisualBeforeDone = 0.98f; // không chạm 1.0 cho đến khi chắc chắn xong
+        float targetVisualBeforeDone = 0.98f;
 
-        op.allowSceneActivation = true;
+        // ACTIVATE
+        if (!useAddr)
+        {
+            op.allowSceneActivation = true;
+        }
+        else
+        {
+#if ADDRESSABLES
+            // addrHandle.ActivateAsync();
+            // addrHandle.Result.Activate();
+#endif
+        }
 
         while (true)
         {
-            // thời gian đã ở phase 90-100
             float fakeElapsed = Time.unscaledTime - fakeStartTime;
             float t01 = Mathf.Clamp01(fakeElapsed / fakeFillDuration);
-
-            // trong mọi trường hợp, visual sẽ tăng dần lên tối đa ~98%
             float planned = Mathf.Lerp(visual, targetVisualBeforeDone, t01);
             SetProgress(planned);
 
-            // Điều kiện thoát:
-            //  - Scene đích đã load xong (OnSceneLoaded bắn)
-            //  - và đã qua fakeFillDuration (đảm bảo tối thiểu ~3s cho phase 90-100)
-            if (_sceneLoadedFired && fakeElapsed >= fakeFillDuration)
+            bool done;
+            if (!useAddr)
+            {
+                done = _sceneLoadedFired; // build scene bắn event
+            }
+            else
+            {
+#if ADDRESSABLES
+                done = addrHandle.IsDone && addrHandle.Status == AsyncOperationStatus.Succeeded;
+#else
+            done = false;
+#endif
+            }
+
+            if (done && fakeElapsed >= fakeFillDuration)
                 break;
 
             yield return null;
         }
 
-        // Từ đây mới cho thanh chạy lên 100%
-        float endLerpTime = 0.3f; // thời gian kéo 98% -> 100% cho đẹp
+        // 98% -> 100%
+        float endLerpTime = 0.3f;
         float endElapsed = 0f;
         float startValue = _currentProgress;
 
@@ -185,15 +271,14 @@ public class LoadingScreenController : MonoBehaviour
 
         SetProgress(1f);
 
-        // Đảm bảo tổng thời gian hiển thị >= minDisplaySeconds
+        // min display
         float totalDisplayTime = Time.unscaledTime - _displayStartTime;
         float remain = Mathf.Max(0f, minDisplaySeconds - totalDisplayTime);
         if (remain > 0f)
             yield return new WaitForSecondsRealtime(remain);
 
-        _isLoading = false; // dừng dots + đổi ảnh
+        _isLoading = false;
 
-        // Xoá overlay loading
         SceneManager.sceneLoaded -= OnSceneLoaded;
         Destroy(gameObject);
     }
