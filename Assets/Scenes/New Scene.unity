@@ -97244,6 +97244,22 @@ PrefabInstance:
       propertyPath: scrollView
       value: 
       objectReference: {fileID: 994882411}
+    - target: {fileID: 7643738863393719088, guid: 0d5f83d90dc6b48b5aef322722cc98bd, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.99392784
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643738863393719088, guid: 0d5f83d90dc6b48b5aef322722cc98bd, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.110033795
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643738863393719088, guid: 0d5f83d90dc6b48b5aef322722cc98bd, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -30
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643738863393719088, guid: 0d5f83d90dc6b48b5aef322722cc98bd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 12.635
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -104669,12 +104685,13 @@ MonoBehaviour:
   startAngle: 35
   angleStep: -15
   offset: {x: -380, y: 96.72}
-  fadeMinAngle: 35
-  fadeMaxAngle: 65
   scrollAngle: 0
+  innerPx: 180
+  fadePx: 480
+  scaleFadeWithScreen: 1
+  referenceHeight: 1080
+  rootCanvas: {fileID: 0}
   keepLastPercentWhenQueryReturnsZero: 1
-  innerRange: 65
-  fadeRange: 22
 --- !u!1001 &996459354
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -183554,7 +183571,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 3e4b2492a67e44336b4a4b23b57ea7ad, type: 3}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000015258789
+      value: 0.000005722046
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x
