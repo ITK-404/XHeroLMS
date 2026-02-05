@@ -7,6 +7,7 @@ public static class LoadingUI
     private const string DEFAULT_IMG1_PATH   = "IMG_XHeroLMS/Img1";
     private const string DEFAULT_IMG2_PATH   = "IMG_XHeroLMS/Img2";
     private const string DEFAULT_POPUP_PATH  = "Login_Popup/Failed Login Popup UI Variant";
+    private const string DEFAULT_POPUP_Update  = "Login_Popup/Failed Login Popup UI Variant";
     private const string DEFAULT_PREFAB_PATH = "Loading_UI/Loading_UI";
 
     private static Sprite _cachedCenter;
@@ -289,6 +290,53 @@ public static class LoadingUI
         };
 
         ui.Init(header, message, combined);
+    }
+
+    public static void ShowUpdatePopup(string message,
+                                     UnityAction onReturn = null)
+    {
+        GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
+        if (prefab == null)
+        {
+            Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
+            return;
+        }
+
+        var popupCanvasGO = new GameObject("~LoadingUpdateCanvas",
+            typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
+
+        var canvas = popupCanvasGO.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 32761;
+
+        var scaler = popupCanvasGO.GetComponent<UnityEngine.UI.CanvasScaler>();
+        scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
+        var ui = popup.GetComponent<UpdatePopupUI>();
+
+        if (ui == null)
+        {
+            Debug.LogError("Prefab popup không chứa UpdatePopupUI!");
+            return;
+        }
+
+        var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
+        if (headerTMP != null)
+        {
+            headerTMP.enableAutoSizing = false;
+            headerTMP.fontSize = 28;
+        }
+
+        UnityAction combined = () =>
+        {
+            onReturn?.Invoke();
+            Hide();
+            Object.Destroy(popupCanvasGO);
+        };
+
+        ui.Init(message, combined);
     }
 
     private static LoadingUICoroutineHost EnsureHost()
