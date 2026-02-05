@@ -12,6 +12,9 @@ using Google.Play.Common;
 
 public class StoreUpdateChecker : MonoBehaviour
 {
+    // ===================== CONST / DISPLAY =====================
+    private const string APP_DISPLAY_NAME = "HỌC VIỆN PHONG THỦY ĐẠI NAM";
+
     [Header("Store URLs")]
     public string iosStoreUrl = "https://apps.apple.com/vn/app/%C4%91%C3%A0o-t%E1%BA%A1o-phong-thu%E1%BB%B7-%C4%91%E1%BA%A1i-nam/id6756565267";
     public string androidStoreUrl = "https://play.google.com/store/apps/details?id=com.xherozone.xherolms&hl=vi&gl=VN";
@@ -32,7 +35,7 @@ public class StoreUpdateChecker : MonoBehaviour
     public ReturnAction onReturn = ReturnAction.OpenStore;
 
     [Header("Popup text")]
-    public string popupHeader = "Thông báo";
+    [Tooltip("Sẽ được override bởi message động có ver mới/cũ nếu lấy được.")]
     public string popupMessage = "Hiện tại đã có phiên bản mới, vui lòng cập nhật.";
 
     private bool _shown;
@@ -41,134 +44,184 @@ public class StoreUpdateChecker : MonoBehaviour
     private AppUpdateManager _appUpdateManager;
 #endif
 
-private void Start()
-{
-    Debug.Log("[StoreUpdateChecker] Start() called");
+    private void Start()
+    {
+        Debug.Log("[StoreUpdateChecker] Start() called");
 
 #if UNITY_ANDROID
-    // Log package + versionName + versionCode (runtime)
-    string pkg = Application.identifier;
-    string vName = Application.version;
-    int vCode = GetCurrentVersionCodeSafe();
+        string pkg = Application.identifier;
+        string vName = Application.version;
+        int vCode = GetCurrentVersionCodeSafe();
 
-    Debug.Log($"[StoreUpdateChecker] ANDROID pkg={pkg} versionName={vName} versionCode={vCode}");
+        Debug.Log($"[StoreUpdateChecker] ANDROID pkg={pkg} versionName={vName} versionCode={vCode}");
 #elif UNITY_IOS
-    Debug.Log($"[StoreUpdateChecker] IOS versionName={Application.version}");
+        Debug.Log($"[StoreUpdateChecker] IOS versionName={Application.version}");
 #else
-    Debug.Log("[StoreUpdateChecker] OTHER PLATFORM: skip");
+        Debug.Log("[StoreUpdateChecker] OTHER PLATFORM: skip");
 #endif
 
-    if (enableCheckOnStart)
-    {
-        Debug.Log("[StoreUpdateChecker] enableCheckOnStart=true -> StartCoroutine(CoCheck)");
-        StartCoroutine(CoCheck());
+        if (enableCheckOnStart)
+        {
+            Debug.Log("[StoreUpdateChecker] enableCheckOnStart=true -> StartCoroutine(CoCheck)");
+            StartCoroutine(CoCheck());
+        }
+        else
+        {
+            Debug.Log("[StoreUpdateChecker] enableCheckOnStart=false");
+        }
     }
-    else
-    {
-        Debug.Log("[StoreUpdateChecker] enableCheckOnStart=false");
-    }
-}
 
-private IEnumerator CoCheck()
-{
-    Debug.Log($"[StoreUpdateChecker] CoCheck() enter. _shown={_shown}");
-    if (_shown) yield break;
+    private IEnumerator CoCheck()
+    {
+        Debug.Log($"[StoreUpdateChecker] CoCheck() enter. _shown={_shown}");
+        if (_shown) yield break;
 
 #if UNITY_ANDROID
-    yield return CoCheckAndroid_UsingPlayCore();
+        yield return CoCheckAndroid_UsingPlayCore();
 #elif UNITY_IOS
-    yield return CoCheckIos();
+        yield return CoCheckIos();
 #else
-    yield break;
+        yield break;
 #endif
-}
+    }
 
+    // ===================== Message builder =====================
+    private string BuildUpdateMessage(string storeVersion, string localVersion)
+    {
+        if (string.IsNullOrEmpty(storeVersion) || string.IsNullOrEmpty(localVersion))
+            return popupMessage;
+
+        return $"{APP_DISPLAY_NAME} đã có phiên bản mới.\n" +
+               $"Phiên bản {storeVersion} đã sẵn sàng. Quý học viên đang dùng {localVersion}";
+    }
+
+    // ===================== Android =====================
 #if UNITY_ANDROID
-private IEnumerator CoCheckAndroid_UsingPlayCore()
-{
-    Debug.Log("[StoreUpdateChecker] CoCheckAndroid_UsingPlayCore() enter");
-
-    if (_appUpdateManager == null)
+    private IEnumerator CoCheckAndroid_UsingPlayCore()
     {
-        _appUpdateManager = new AppUpdateManager();
-        Debug.Log("[StoreUpdateChecker] AppUpdateManager created");
+        Debug.Log("[StoreUpdateChecker] CoCheckAndroid_UsingPlayCore() enter");
+
+        if (_appUpdateManager == null)
+        {
+            _appUpdateManager = new AppUpdateManager();
+            Debug.Log("[StoreUpdateChecker] AppUpdateManager created");
+        }
+
+        var infoOp = _appUpdateManager.GetAppUpdateInfo();
+        Debug.Log("[StoreUpdateChecker] GetAppUpdateInfo() requested");
+        yield return infoOp;
+
+        Debug.Log("[StoreUpdateChecker] GetAppUpdateInfo() finished. error=" + infoOp.Error);
+
+        if (infoOp.Error != AppUpdateErrorCode.NoError)
+        {
+            Debug.LogWarning("[StoreUpdateChecker] Android GetAppUpdateInfo error: " + infoOp.Error);
+            yield break;
+        }
+
+        var info = infoOp.GetResult();
+
+        Debug.Log($"[StoreUpdateChecker] UpdateAvailability={info.UpdateAvailability} AppUpdateStatus={info.AppUpdateStatus}");
+
+        bool updateAvailableFlag = info.UpdateAvailability == UpdateAvailability.UpdateAvailable;
+
+        int currentVC = GetCurrentVersionCodeSafe();
+        int availableVC = TryGetAvailableVersionCode(info);
+
+        Debug.Log($"[StoreUpdateChecker] currentVC={currentVC} availableVC={availableVC} updateAvailableFlag={updateAvailableFlag}");
+
+        bool canFlexible = info.IsUpdateTypeAllowed(AppUpdateOptions.FlexibleAppUpdateOptions());
+        bool canImmediate = info.IsUpdateTypeAllowed(AppUpdateOptions.ImmediateAppUpdateOptions());
+        Debug.Log($"[StoreUpdateChecker] allowed: flexible={canFlexible} immediate={canImmediate}");
+
+        bool updateByVersionCode = (availableVC > 0 && currentVC > 0 && availableVC > currentVC);
+        Debug.Log($"[StoreUpdateChecker] updateByVersionCode={updateByVersionCode}");
+
+        if (!updateAvailableFlag && !updateByVersionCode)
+        {
+            Debug.Log("[StoreUpdateChecker] No update detected -> return");
+            yield break;
+        }
+
+        _shown = true;
+
+        // Build dynamic message: storeVerName (preferred) -> fallback versionCode
+        string localVer = Application.version;
+
+        string storeVerName = null;
+        yield return CoFetchAndroidStoreVersionName(v => storeVerName = v);
+
+        string storeVerDisplay = !string.IsNullOrEmpty(storeVerName) ? storeVerName :
+                                 (availableVC > 0 ? $"(code {availableVC})" : "mới hơn");
+
+        string msg = BuildUpdateMessage(storeVerDisplay, localVer);
+
+        if (!canFlexible && !canImmediate)
+        {
+            Debug.LogWarning("[StoreUpdateChecker] Update available but no allowed update type -> fallback open store");
+            LoadingUI.ShowUpdatePopup(msg, () =>
+            {
+                if (onReturn == ReturnAction.QuitApp) Application.Quit();
+                else Application.OpenURL(androidStoreUrl);
+            });
+            yield break;
+        }
+
+        Debug.Log("[StoreUpdateChecker] Update detected -> showing popup");
+        UnityAction act = () =>
+        {
+            Debug.Log("[StoreUpdateChecker] Popup action clicked -> start update flow");
+            StartCoroutine(CoStartAndroidUpdate(info, canFlexible, canImmediate));
+        };
+
+        LoadingUI.ShowUpdatePopup(msg, act);
     }
-
-    var infoOp = _appUpdateManager.GetAppUpdateInfo();
-    Debug.Log("[StoreUpdateChecker] GetAppUpdateInfo() requested");
-    yield return infoOp;
-
-    Debug.Log("[StoreUpdateChecker] GetAppUpdateInfo() finished. error=" + infoOp.Error);
-
-    if (infoOp.Error != AppUpdateErrorCode.NoError)
-    {
-        Debug.LogWarning("[StoreUpdateChecker] Android GetAppUpdateInfo error: " + infoOp.Error);
-
-        // nếu bạn muốn luôn thấy popup khi fail (debug), bật dòng dưới:
-        // LoadingUI.ShowErrorPopup("GetAppUpdateInfo error: " + infoOp.Error, "DEBUG", null);
-
-        yield break;
-    }
-
-    var info = infoOp.GetResult();
-
-    // Log full state
-    Debug.Log($"[StoreUpdateChecker] UpdateAvailability={info.UpdateAvailability} AppUpdateStatus={info.AppUpdateStatus}");
-
-    bool updateAvailable = info.UpdateAvailability == UpdateAvailability.UpdateAvailable;
-
-    int currentVC = GetCurrentVersionCodeSafe();
-    int availableVC = TryGetAvailableVersionCode(info);
-
-    Debug.Log($"[StoreUpdateChecker] currentVC={currentVC} availableVC={availableVC} updateAvailableFlag={updateAvailable}");
-
-    bool canFlexible = info.IsUpdateTypeAllowed(AppUpdateOptions.FlexibleAppUpdateOptions());
-    bool canImmediate = info.IsUpdateTypeAllowed(AppUpdateOptions.ImmediateAppUpdateOptions());
-    Debug.Log($"[StoreUpdateChecker] allowed: flexible={canFlexible} immediate={canImmediate}");
-
-    bool updateByVersionCode = (availableVC > 0 && currentVC > 0 && availableVC > currentVC);
-    Debug.Log($"[StoreUpdateChecker] updateByVersionCode={updateByVersionCode}");
-
-    if (!updateAvailable && !updateByVersionCode)
-    {
-        Debug.Log("[StoreUpdateChecker] No update detected -> return");
-        yield break;
-    }
-
-    _shown = true;
-
-    if (!canFlexible && !canImmediate)
-    {
-        Debug.LogWarning("[StoreUpdateChecker] Update available but no allowed update type -> fallback open store");
-        ShowPopup_OpenStoreOrQuit();
-        yield break;
-    }
-
-    Debug.Log("[StoreUpdateChecker] Update detected -> showing popup");
-    UnityAction act = () =>
-    {
-        Debug.Log("[StoreUpdateChecker] Popup action clicked -> start update flow");
-        StartCoroutine(CoStartAndroidUpdate(info, canFlexible, canImmediate));
-    };
-
-    LoadingUI.ShowErrorPopup(popupMessage, popupHeader, act);
-}
 
 // --- Try read AvailableVersionCode (plugin tùy version có/không)
-private int TryGetAvailableVersionCode(AppUpdateInfo info)
-{
-    try
+    private int TryGetAvailableVersionCode(AppUpdateInfo info)
     {
-        // Nhiều bản plugin có property này
-        return info.AvailableVersionCode;
+        try { return info.AvailableVersionCode; }
+        catch { return -1; }
     }
-    catch
+
+    // Fetch versionName từ Play Store HTML (itemprop="softwareVersion")
+    private IEnumerator CoFetchAndroidStoreVersionName(Action<string> onDone)
     {
-        // Không có property -> return -1
-        return -1;
+        if (string.IsNullOrEmpty(androidStoreUrl))
+        {
+            onDone?.Invoke(null);
+            yield break;
+        }
+
+        using (var req = UnityWebRequest.Get(androidStoreUrl))
+        {
+            req.timeout = 10;
+            yield return req.SendWebRequest();
+
+#if UNITY_2020_2_OR_NEWER
+            bool err = req.result != UnityWebRequest.Result.Success;
+#else
+            bool err = req.isNetworkError || req.isHttpError;
+#endif
+            if (err)
+            {
+                if (!failSilentlyIfUnknown)
+                    Debug.LogWarning("[StoreUpdateChecker] Android store page fetch failed: " + req.error);
+                onDone?.Invoke(null);
+                yield break;
+            }
+
+            string html = req.downloadHandler.text;
+
+            // itemprop="softwareVersion">1.0.4</span>
+            var m = Regex.Match(html, "itemprop=\"softwareVersion\"[^>]*>\\s*([^<\\s]+)\\s*<",
+                RegexOptions.IgnoreCase);
+
+            onDone?.Invoke(m.Success ? m.Groups[1].Value.Trim() : null);
+        }
     }
-}
-private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, bool canImmediate)
+
+    private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, bool canImmediate)
     {
         if (_appUpdateManager == null)
             _appUpdateManager = new AppUpdateManager();
@@ -272,15 +325,21 @@ private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, b
         }
     }
 
-    private void ShowPopup_OpenStoreOrQuit()
+    private void ShowPopup_OpenStoreOrQuit(string msg)
     {
         UnityAction act = () =>
         {
             if (onReturn == ReturnAction.QuitApp) Application.Quit();
+#if UNITY_ANDROID
             else Application.OpenURL(androidStoreUrl);
+#elif UNITY_IOS
+            else Application.OpenURL(iosStoreUrl);
+#else
+            else { }
+#endif
         };
 
-        LoadingUI.ShowErrorPopup(popupMessage, popupHeader, act);
+        LoadingUI.ShowUpdatePopup(msg, act);
     }
 
     // ===================== iOS =====================
@@ -305,12 +364,16 @@ private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, b
         if (cmp < 0)
         {
             _shown = true;
+
+            string msg = BuildUpdateMessage(store, local);
+
             UnityAction act = () =>
             {
                 if (onReturn == ReturnAction.QuitApp) Application.Quit();
                 else Application.OpenURL(iosStoreUrl);
             };
-            LoadingUI.ShowErrorPopup(popupMessage, popupHeader, act);
+
+            LoadingUI.ShowUpdatePopup(msg, act);
         }
     }
 
@@ -319,6 +382,7 @@ private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, b
         string url = $"https://itunes.apple.com/lookup?id={UnityWebRequest.EscapeURL(iosAppId)}&country={UnityWebRequest.EscapeURL(iosCountry)}";
         using (var req = UnityWebRequest.Get(url))
         {
+            req.timeout = 10;
             yield return req.SendWebRequest();
 #if UNITY_2020_2_OR_NEWER
             bool err = req.result != UnityWebRequest.Result.Success;
