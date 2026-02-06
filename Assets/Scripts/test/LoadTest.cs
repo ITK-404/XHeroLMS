@@ -41,8 +41,7 @@ public class LoadTest : MonoBehaviour
         if (isCloud)
             LoadingTransition.LoadAssetBundle(targetScene);
         else
-            // LoadingTransition.Load(targetScene);
-            StartCoroutine(CoLoadSceneSmart(targetScene));
+            LoadingTransition.Load(targetScene);
 #else
     LoadingTransition.Load(targetScene);
     yield break;
