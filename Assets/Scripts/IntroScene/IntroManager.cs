@@ -170,25 +170,47 @@ public class IntroManager : MonoBehaviour
         vp.sendFrameReadyEvents = true;
     }
 
-    private IEnumerator CoPrepareAndPlayVideo_Robust()
-    {
-        string persistentPath = Path.Combine(Application.persistentDataPath, streamingAssetsVideoName);
+private IEnumerator CoPrepareAndPlayVideo_Robust()
+{
+    string persistentPath = Path.Combine(Application.persistentDataPath, streamingAssetsVideoName);
 
-        bool needCopy = true;
-        try
+    bool needCopy = true;
+    try
+    {
+        if (File.Exists(persistentPath))
         {
-            if (File.Exists(persistentPath))
+            var fi = new FileInfo(persistentPath);
+            needCopy = fi.Length <= 0;
+        }
+    }
+    catch { needCopy = true; }
+
+    if (needCopy)
+    {
+        string src = Path.Combine(Application.streamingAssetsPath, streamingAssetsVideoName);
+
+            bool srcLooksLikeUrl = src.Contains("://") || src.Contains("jar:");
+
+        if (!srcLooksLikeUrl && File.Exists(src))
+        {
+            // iOS/Editor/Standalone (local file)
+            try
             {
-                var fi = new FileInfo(persistentPath);
-                needCopy = fi.Length <= 0;
+                File.Copy(src, persistentPath, true);
+            }
+            catch (System.Exception e)
+            {
+                FailVideo("[Intro] File.Copy StreamingAssets -> persistent failed: " + e);
+                yield break;
             }
         }
-        catch { needCopy = true; }
-
-        if (needCopy)
+        else
         {
-            string src = Path.Combine(Application.streamingAssetsPath, streamingAssetsVideoName);
-            Debug.Log($"[Intro] Copy video: {src} -> {persistentPath}");
+            // Android (jar) hoặc trường hợp src là URL
+            // Ensure proper URL for local paths
+            string srcUrl = src;
+            if (!srcUrl.Contains("://") && !srcUrl.Contains("jar:"))
+                srcUrl = new System.Uri(srcUrl).AbsoluteUri; // => file://...
 
             using (UnityWebRequest req = UnityWebRequest.Get(src))
             {
@@ -208,14 +230,15 @@ public class IntroManager : MonoBehaviour
                 }
             }
         }
+    }
 
-        string url = "file://" + persistentPath;
-        Debug.Log($"[Intro] Video url = {url}");
+    string url = new System.Uri(persistentPath).AbsoluteUri;
+    Debug.Log($"[Intro] Video url = {url}");
 
-        videoPlayer.source = VideoSource.Url;
-        videoPlayer.url = url;
+    videoPlayer.source = VideoSource.Url;
+    videoPlayer.url = url;
 
-        videoPlayer.Prepare();
+    videoPlayer.Prepare();
         yield return null;
     }
 
