@@ -3,6 +3,13 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 
+#if ADDRESSABLES
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+#endif
+
 public class BookHandler : MonoBehaviour
 {
     public string book_sku;
@@ -133,14 +140,16 @@ public class BookHandler : MonoBehaviour
         if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
         {
             AudioManager.Instance.Resume();
-            LoadingTransition.Load("dai_dao_chi_gian_2");
+            // LoadingTransition.Load("dai_dao_chi_gian_2");
+            StartCoroutine(CoLoadSceneSmart("dai_dao_chi_gian_2"));
         }
         else if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
                  book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
                  book_seo == "cong-dong-phong-thuy-khoa-hoc" ||
                  book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
         {
-            LoadingTransition.Load(SeoResolver.DefaultScene);
+            // LoadingTransition.Load(SeoResolver.DefaultScene);
+            StartCoroutine(CoLoadSceneSmart(SeoResolver.DefaultScene));
             AudioManager.Instance.Resume();
         }
         else
@@ -172,4 +181,38 @@ public class BookHandler : MonoBehaviour
         }
         gameObject.name = $"Book_:{book_name}_Sku:{book_sku}";
     }
+    private IEnumerator CoLoadSceneSmart(string targetScene)
+    {
+#if ADDRESSABLES
+        // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
+        bool isCloud = false;
+        yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+
+        if (isCloud)
+            LoadingTransition.LoadAssetBundle(targetScene);
+        else
+            LoadingTransition.Load(targetScene);
+#else
+    LoadingTransition.Load(targetScene);
+    yield break;
+#endif
+    }
+
+#if ADDRESSABLES
+    // Check: sceneName có tồn tại như 1 addressable scene không?
+    private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
+    {
+        // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
+        var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
+
+        yield return h;
+
+        bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
+
+        // Release handle (tránh leak)
+        Addressables.Release(h);
+
+        result?.Invoke(ok);
+    }
+#endif
 }
