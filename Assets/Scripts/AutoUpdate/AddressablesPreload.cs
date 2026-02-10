@@ -21,31 +21,22 @@ public class AddressablesPreload : MonoBehaviour
 
     public enum PreloadStage
     {
-        None, Probe, ClearCache, Initialize, CheckCatalog, UpdateCatalog, GetSize, Download, Verify, Done, Failed
+        None, Probe, ClearCache, Initialize, ForceLoadCatalog, CheckCatalog, UpdateCatalog, GetSize, Download, Verify, Done, Failed
     }
 
     [Header("State (Read-only)")]
     public PreloadStage Stage { get; private set; } = PreloadStage.None;
 
-    /// <summary>
-    /// Ready = flow hoàn tất và đã verify label preload không còn bytes cần tải.
-    /// </summary>
     public bool IsReady { get; private set; }
-
     public bool HasFailed { get; private set; }
     public string LastError { get; private set; } = "";
     public float DownloadPercent01 { get; private set; }
     public long BytesToDownload { get; private set; }
-
-    /// <summary>
-    /// Cờ “đúng ý bạn”: chỉ true khi label "cloud" đã tải xong hết (size = 0 sau verify).
-    /// BootFlow sẽ chờ cờ này.
-    /// </summary>
     public bool IsCloudFullyDownloaded { get; private set; }
 
 #if ADDRESSABLES
     [Header("Label to Preload")]
-    private List<string> preloadLabels = new List<string> { "cloud" };
+    [SerializeField] private List<string> preloadLabels = new List<string> { "cloud" };
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxRetries = 3;
@@ -53,10 +44,7 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private float downloadTimeoutSeconds = 300f;
 
     [Header("Verify downloaded (important)")]
-    [Tooltip("Sau khi DownloadDependencies xong sẽ GetDownloadSize lại để confirm bytes=0. Nếu vẫn >0 -> fail để retry.")]
     [SerializeField] private bool verifyAfterDownload = true;
-
-    [Tooltip("Cho phép chênh lệch nhỏ (đề phòng vài bytes báo sai). Thường để 0.")]
     [SerializeField] private long verifySizeThresholdBytes = 0;
 
     [Header("Probe remote catalog (optional)")]
@@ -68,6 +56,10 @@ public class AddressablesPreload : MonoBehaviour
 
     [SerializeField] private string remoteCatalogJsonUrl =
         "https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.json";
+
+    [Header("Force latest catalog (Recommended)")]
+    [Tooltip("Nếu bật: sau Initialize sẽ LoadContentCatalogAsync(remoteCatalogJsonUrl) để ép runtime dùng catalog latest.")]
+    [SerializeField] private bool forceLoadRemoteCatalog = true;
 
     [Header("Cache")]
     [SerializeField] private bool clearCatalogCacheOnRetryOnly = true;
@@ -143,7 +135,7 @@ public class AddressablesPreload : MonoBehaviour
             if (_retryRequested)
             {
                 _retryRequested = false;
-                attempt = 0; // reset attempts
+                attempt = 0;
             }
 
             yield return new WaitForSecondsRealtime(1f);
@@ -166,7 +158,7 @@ public class AddressablesPreload : MonoBehaviour
 
     private IEnumerator CoPreloadOnce(int attempt)
     {
-        // 0) PROBE
+        // để báo lỗi sớm
         if (enableProbeRemoteCatalog &&
             !string.IsNullOrWhiteSpace(remoteCatalogHashUrl) &&
             !string.IsNullOrWhiteSpace(remoteCatalogJsonUrl))
@@ -181,7 +173,7 @@ public class AddressablesPreload : MonoBehaviour
             if (HasFailed) yield break;
         }
 
-        // 0.5) Clear cache on retry
+        // Clear cache on retry
         if (clearCatalogCacheOnRetryOnly && attempt >= 2)
         {
             Stage = PreloadStage.ClearCache;
@@ -189,12 +181,13 @@ public class AddressablesPreload : MonoBehaviour
             ClearAddressablesCatalogCache();
         }
 
-        // 1) Initialize
+        // Khởi tạo
         Stage = PreloadStage.Initialize;
         SetStageProgress(0.05f);
 
         var init = Addressables.InitializeAsync();
-        yield return init;
+        yield return WaitWithTimeout(init, stepTimeoutSeconds, $"InitializeAsync timeout (attempt {attempt})");
+        if (HasFailed) { SafeRelease(init); yield break; }
 
         if (!init.IsValid())
         {
@@ -210,12 +203,33 @@ public class AddressablesPreload : MonoBehaviour
         }
         SafeRelease(init);
 
-        // 2) Check catalog updates
+        // đảm bảo luôn dùng /latest/
+        if (forceLoadRemoteCatalog && !string.IsNullOrWhiteSpace(remoteCatalogJsonUrl))
+        {
+            Stage = PreloadStage.ForceLoadCatalog;
+            SetStageProgress(0.08f);
+
+            var loadCat = Addressables.LoadContentCatalogAsync(remoteCatalogJsonUrl, true);
+            yield return WaitWithTimeout(loadCat, stepTimeoutSeconds, $"LoadContentCatalogAsync timeout (attempt {attempt})");
+            if (HasFailed) { SafeRelease(loadCat); yield break; }
+
+            if (!loadCat.IsValid() || loadCat.Status != AsyncOperationStatus.Succeeded)
+            {
+                Fail("[Preload] LoadContentCatalogAsync failed: " +
+                     (loadCat.OperationException != null ? loadCat.OperationException.Message : loadCat.Status.ToString()));
+                SafeRelease(loadCat);
+                yield break;
+            }
+            SafeRelease(loadCat);
+        }
+
+        // Check catalog updates
         Stage = PreloadStage.CheckCatalog;
         SetStageProgress(0.10f);
 
         var check = Addressables.CheckForCatalogUpdates(false);
         yield return WaitWithTimeout(check, stepTimeoutSeconds, $"CheckForCatalogUpdates timeout (attempt {attempt})");
+        if (HasFailed) { SafeRelease(check); yield break; }
 
         if (!check.IsValid())
         {
@@ -233,7 +247,7 @@ public class AddressablesPreload : MonoBehaviour
         IList<string> catalogs = check.Result;
         SafeRelease(check);
 
-        // 3) Update catalogs
+        // Update catalogs
         if (catalogs != null && catalogs.Count > 0)
         {
             Stage = PreloadStage.UpdateCatalog;
@@ -241,6 +255,7 @@ public class AddressablesPreload : MonoBehaviour
 
             var update = Addressables.UpdateCatalogs(catalogs, false);
             yield return WaitWithTimeout(update, stepTimeoutSeconds, $"UpdateCatalogs timeout (attempt {attempt})");
+            if (HasFailed) { SafeRelease(update); yield break; }
 
             if (!update.IsValid())
             {
@@ -264,7 +279,6 @@ public class AddressablesPreload : MonoBehaviour
             yield break;
         }
 
-        // remove null/empty + distinct
         List<string> labels = new List<string>();
         for (int i = 0; i < preloadLabels.Count; i++)
         {
@@ -279,7 +293,7 @@ public class AddressablesPreload : MonoBehaviour
             yield break;
         }
 
-        // 4) Get total size (trước download) - SUM all labels
+        // SUM all labels
         Stage = PreloadStage.GetSize;
         SetStageProgress(0.30f);
 
@@ -292,6 +306,7 @@ public class AddressablesPreload : MonoBehaviour
 
             var sizeHandle = Addressables.GetDownloadSizeAsync(lb);
             yield return WaitWithTimeout(sizeHandle, stepTimeoutSeconds, $"GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
+            if (HasFailed) { SafeRelease(sizeHandle); yield break; }
 
             if (!sizeHandle.IsValid())
             {
@@ -314,9 +329,8 @@ public class AddressablesPreload : MonoBehaviour
         }
 
         BytesToDownload = totalBytes;
-        // Nếu totalBytes = 0 thì vẫn đi verify (để chắc chắn) nếu bạn muốn.
 
-        // 5) Download deps (ALL labels)
+        // Download deps (ALL labels)
         if (BytesToDownload > 0)
         {
             Stage = PreloadStage.Download;
@@ -337,7 +351,6 @@ public class AddressablesPreload : MonoBehaviour
                 float t = 0f;
                 while (!dl.IsDone)
                 {
-                    // approx overall progress: base 0.35 -> 1.0
                     float labelProgress01 = Mathf.Clamp01(dl.PercentComplete);
                     long labelDownloadedApprox = (long)(thisLabelBytes * labelProgress01);
 
@@ -366,13 +379,13 @@ public class AddressablesPreload : MonoBehaviour
 
                 SafeRelease(dl);
 
-                // after done label
                 downloadedBytesApprox += thisLabelBytes;
-                DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f, (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes)));
+                DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f,
+                    (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes)));
             }
         }
 
-        // 6) Verify (TỔNG remain của ALL labels phải = 0)
+        // Verify (remain total == 0)
         if (verifyAfterDownload)
         {
             Stage = PreloadStage.Verify;
@@ -386,6 +399,7 @@ public class AddressablesPreload : MonoBehaviour
 
                 var verifyHandle = Addressables.GetDownloadSizeAsync(lb);
                 yield return WaitWithTimeout(verifyHandle, stepTimeoutSeconds, $"Verify GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
+                if (HasFailed) { SafeRelease(verifyHandle); yield break; }
 
                 if (!verifyHandle.IsValid())
                 {
@@ -406,7 +420,6 @@ public class AddressablesPreload : MonoBehaviour
                 remainTotal += remain;
             }
 
-            // Cập nhật để UI/Log nhìn được (remain tổng)
             BytesToDownload = remainTotal;
 
             if (remainTotal > verifySizeThresholdBytes)
@@ -416,9 +429,8 @@ public class AddressablesPreload : MonoBehaviour
             }
         }
 
-        // DONE
         DownloadPercent01 = 1f;
-        IsCloudFullyDownloaded = true; // “coi như cloud pack” của bạn đã xong (theo danh sách labels)
+        IsCloudFullyDownloaded = true;
         IsReady = true;
         Stage = PreloadStage.Done;
     }
@@ -456,10 +468,26 @@ public class AddressablesPreload : MonoBehaviour
         DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Clamp01(p01));
     }
 
+    /// <summary>
+    /// Timeout thật. Nếu timeout -> Fail và yield break.
+    /// </summary>
     private IEnumerator WaitWithTimeout(AsyncOperationHandle handle, float timeoutSeconds, string timeoutMsg)
     {
+        float t = 0f;
+
         while (!handle.IsDone)
+        {
+            if (timeoutSeconds > 0f)
+            {
+                t += Time.unscaledDeltaTime;
+                if (t >= timeoutSeconds)
+                {
+                    Fail($"[Preload] {timeoutMsg} (timeout after {timeoutSeconds}s)");
+                    yield break;
+                }
+            }
             yield return null;
+        }
     }
 
     private void SafeRelease(AsyncOperationHandle handle)
