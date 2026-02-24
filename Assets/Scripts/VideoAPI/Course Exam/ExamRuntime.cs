@@ -228,7 +228,7 @@ public static class ExamParser
             return items;
         }
 
-        // 2) Không có "</p>-<p>" → strip HTML sang plain text
+        // 2) Không có "</p>-<p>" --> strip HTML sang plain text
         var plain = HtmlToText(html);   // ví dụ: "Kim-Thuỷ-Mộc-Hoả-Thổ"
 
         // Chuẩn hoá các loại gạch ngang thành '-'

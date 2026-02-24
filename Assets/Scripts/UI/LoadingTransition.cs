@@ -17,30 +17,29 @@ public static class LoadingTransition
     /// Gọi hàm này để chuyển sang LoadingScene.
     /// LoadingScene sẽ đọc TargetSceneName và load async scene đích.
     /// </summary>
-    public static void Load(string sceneName)
-    {
-        PreviousSceneName = SceneManager.GetActiveScene().name;
-        Debug.Log($"Previous scene name: " + PreviousSceneName);
-        TargetSceneName = sceneName;
-        UseAddressables = false;
-        SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
-    }
-    public static void LoadAssetBundle(string sceneName)
-    {
-        PreviousSceneName = SceneManager.GetActiveScene().name;
-        TargetSceneName = sceneName;
-        UseAddressables = true;
+public static void Load(string sceneName)
+{
+    PreviousSceneName = SceneManager.GetActiveScene().name;
+    TargetSceneName = sceneName;
+    UseAddressables = false;
 
-        Debug.Log($"[LoadingTransition] Load ADDRESSABLE scene → {sceneName}");
+    SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
+}
 
-        SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
-    }
+public static void LoadAssetBundle(string sceneName)
+{
+    PreviousSceneName = SceneManager.GetActiveScene().name;
+    TargetSceneName = sceneName;
+    UseAddressables = true;
 
+    Debug.Log($"[LoadingTransition] Load ADDRESSABLE scene --> {sceneName}");
+    SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
+}
 
 #if ADDRESSABLES
     public static AsyncOperationHandle<SceneInstance> LoadAddressableAsync()
     {
-        Debug.Log($"[LoadingTransition] Addressables.LoadSceneAsync → {TargetSceneName}");
+        Debug.Log($"[LoadingTransition] Addressables.LoadSceneAsync --> {TargetSceneName}");
 
         return Addressables.LoadSceneAsync(
             TargetSceneName,
