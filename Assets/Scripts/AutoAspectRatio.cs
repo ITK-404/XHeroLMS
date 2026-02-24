@@ -1,106 +1,11 @@
-using System;
-using System.Collections;
-using UnityEngine;
 
-public class AutoAspectRatio : MonoBehaviour
+
+// Refactor: Extract shared logic into a base class and have the two component classes inherit from it.
+
+// The original simple behavior: base cache comes from the rect itself.
+public class AutoAspectRatio : BaseAutoAspectRatio
 {
-    private RectTransform rect;
-
-    [Header("Target aspect (x:y) e.g. 16:9")]
-    public Vector2 aspectRatio = new Vector2(16, 9);
-
-    [Header("Apply on start (safer for layouts)")]
-    public bool applyOnStart = true;
-
-    [Header("If true, size will update when screen size changes (cheap check)")]
-    public bool updateOnScreenChange = false;
-
-    private float originalWidth, originalHeight;
-    private int lastW, lastH;
-    private bool hasCachedSize = false;
-    private void Awake()
-    {
-        rect = GetComponent<RectTransform>();
-    }
-
-    private void OnEnable()
-    {
-        if (hasCachedSize && applyOnStart)
-            Apply();
-    }
-
-    private void Start()
-    {
-        CacheOriginalSize();
-        if (applyOnStart) Apply();
-        lastW = Screen.width;
-        lastH = Screen.height;
-    }
-
-    private void Update()
-    {
-        if (!updateOnScreenChange) return;
-
-        if (Screen.width != lastW || Screen.height != lastH)
-        {
-            hasCachedSize = false;    
-            CacheOriginalSize();      
-            Apply();
-            lastW = Screen.width;
-            lastH = Screen.height;
-        }
-    }
-
-    private void CacheOriginalSize()
-    {
-        RectTransform parent = rect.parent as RectTransform;
-        if (parent != null)
-        {
-            originalWidth = parent.rect.width;
-            originalHeight = parent.rect.height;
-        }
-        else
-        {
-            originalWidth = Screen.width;
-            originalHeight = Screen.height;
-        }
-        hasCachedSize = originalWidth > 0f && originalHeight > 0f;
-    }
-
-    [ContextMenu("Apply")]
-    public void Apply()
-    {
-        float W = originalWidth;
-        float H = originalHeight;
-
-        if (aspectRatio.x <= 0f || aspectRatio.y <= 0f || W <= 0f || H <= 0f)
-            return;
-
-        float targetRatio = aspectRatio.x / aspectRatio.y;
-
-        float hFromWidth = W / targetRatio;
-
-        float newWidth, newHeight;
-
-        if (hFromWidth <= H)
-        {
-            newWidth = W;
-            newHeight = hFromWidth;
-        }
-        else
-        {
-            newHeight = H;
-            newWidth = H * targetRatio;
-        }
-
-        rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, newWidth);
-        rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, newHeight);
-    }
-
-    public void ResetCachedSize()
-    {
-        hasCachedSize = false;
-        CacheOriginalSize();
-        Apply();
-    }
+    // No overrides required; uses BaseAutoAspectRatio behavior.
 }
+
+// FullScreen variant: cache original size from parent rect (or screen) and recompute on screen change.
