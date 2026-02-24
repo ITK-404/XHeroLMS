@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class AutoAspectRatio : MonoBehaviour
@@ -16,8 +17,7 @@ public class AutoAspectRatio : MonoBehaviour
 
     private float originalWidth, originalHeight;
     private int lastW, lastH;
-    private bool hasCachedSize = false; 
-
+    private bool hasCachedSize = false;
     private void Awake()
     {
         rect = GetComponent<RectTransform>();
@@ -43,6 +43,8 @@ public class AutoAspectRatio : MonoBehaviour
 
         if (Screen.width != lastW || Screen.height != lastH)
         {
+            hasCachedSize = false;    
+            CacheOriginalSize();      
             Apply();
             lastW = Screen.width;
             lastH = Screen.height;
@@ -51,13 +53,18 @@ public class AutoAspectRatio : MonoBehaviour
 
     private void CacheOriginalSize()
     {
-        if (hasCachedSize) return; 
-
-        originalWidth = rect.rect.width;
-        originalHeight = rect.rect.height;
-
-        if (originalWidth > 0f && originalHeight > 0f)
-            hasCachedSize = true;
+        RectTransform parent = rect.parent as RectTransform;
+        if (parent != null)
+        {
+            originalWidth = parent.rect.width;
+            originalHeight = parent.rect.height;
+        }
+        else
+        {
+            originalWidth = Screen.width;
+            originalHeight = Screen.height;
+        }
+        hasCachedSize = originalWidth > 0f && originalHeight > 0f;
     }
 
     [ContextMenu("Apply")]
