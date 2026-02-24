@@ -4949,6 +4949,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5165105561906739961, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      propertyPath: isUsingParent
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5165105561906739961, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: updateOnScreenChange
       value: 1
       objectReference: {fileID: 0}
@@ -5142,12 +5146,20 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9094949413797586316, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: m_AspectRatio
-      value: 1.3333334
+      value: 2.5619469
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 9134903083417484563, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      propertyPath: updateOnScreenChange
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 5165105561906739961, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5195623888933858139, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3167378557974760783}
   m_SourcePrefab: {fileID: 100100000, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
 --- !u!224 &475505702143741731 stripped
 RectTransform:
@@ -5181,6 +5193,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2ac4e961eb940fab0c46b561b797ff8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStandUI
+--- !u!1 &1245433355275907419 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5195623888933858139, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+  m_PrefabInstance: {fileID: 6436272167587617280}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3167378557974760783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1245433355275907419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3abf2dc98fca412c813b9ae1184b4eb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoAspectRatioFullScreen
+  aspectRatio: {x: 16, y: 9}
+  applyOnStart: 1
+  updateOnScreenChange: 1
 --- !u!224 &4114720642540881400 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6937891914978353144, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
