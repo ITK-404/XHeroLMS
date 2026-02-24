@@ -16,10 +16,17 @@ public class AutoAspectRatio : MonoBehaviour
 
     private float originalWidth, originalHeight;
     private int lastW, lastH;
+    private bool hasCachedSize = false; 
 
     private void Awake()
     {
         rect = GetComponent<RectTransform>();
+    }
+
+    private void OnEnable()
+    {
+        if (hasCachedSize && applyOnStart)
+            Apply();
     }
 
     private void Start()
@@ -36,20 +43,21 @@ public class AutoAspectRatio : MonoBehaviour
 
         if (Screen.width != lastW || Screen.height != lastH)
         {
+            Apply();
             lastW = Screen.width;
             lastH = Screen.height;
-
-            CacheOriginalSize(); // nếu layout thay đổi theo resolution
-            Apply();
         }
     }
 
     private void CacheOriginalSize()
     {
-        // Trong nhiều case layout chưa cập nhật đúng ở Awake, nên cache ở Start/Update sẽ ổn hơn.
-        // sizeDelta là kích thước "logic" của RectTransform (phù hợp cho set lại).
+        if (hasCachedSize) return; 
+
         originalWidth = rect.rect.width;
         originalHeight = rect.rect.height;
+
+        if (originalWidth > 0f && originalHeight > 0f)
+            hasCachedSize = true;
     }
 
     [ContextMenu("Apply")]
@@ -58,33 +66,34 @@ public class AutoAspectRatio : MonoBehaviour
         float W = originalWidth;
         float H = originalHeight;
 
-        // Guard
         if (aspectRatio.x <= 0f || aspectRatio.y <= 0f || W <= 0f || H <= 0f)
             return;
 
         float targetRatio = aspectRatio.x / aspectRatio.y;
 
-        // Fit inside: thử theo width
         float hFromWidth = W / targetRatio;
 
         float newWidth, newHeight;
 
         if (hFromWidth <= H)
         {
-            // giữ width, giảm height
             newWidth = W;
             newHeight = hFromWidth;
         }
         else
         {
-            // giữ height, giảm width
             newHeight = H;
             newWidth = H * targetRatio;
         }
 
-        // Apply: giữ nguyên anchor/pivot, set sizeDelta theo kích thước mới
         rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, newWidth);
         rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, newHeight);
     }
-    
+
+    public void ResetCachedSize()
+    {
+        hasCachedSize = false;
+        CacheOriginalSize();
+        Apply();
+    }
 }
