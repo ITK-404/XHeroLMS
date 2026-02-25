@@ -17,6 +17,10 @@ public class BuyReviewCourseManager : MonoBehaviour
     [SerializeField] private Button replayButton;
     [SerializeField] private Button enterCourseBtn;
 
+    [SerializeField] private UniWebView uniWebView;
+
+    public UniWebView UniWebView => uniWebView;
+    
     private BookHandler currentBookSelect;
 
     private bool autoSkipVideo = false;

@@ -82,14 +82,19 @@ public class BookHandler : MonoBehaviour
             );
             return;
         }
-
         string url =
             "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
             "?course=" + UnityWebRequest.EscapeURL(course_id)+
             "&accessToken=" + UnityWebRequest.EscapeURL(token) ;
 
-        Application.OpenURL(url);
-        BookHandler.CanSelectBook = true;
+        var uniWebView = BuyReviewCourseManager.Instance.UniWebView;
+        IWebOpener opener = new OpenWebviewService(uniWebView);
+
+        var result = opener.Open(url);
+        if (result.IsCompleted)
+        {
+            BookHandler.CanSelectBook = true;
+        }
     }
 
     private void OnPlayerClickBook()
