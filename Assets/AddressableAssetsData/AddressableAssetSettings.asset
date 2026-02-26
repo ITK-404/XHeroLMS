@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 468a46d0ae32c3544b7d98094e6448a9, type: 3}
   m_Name: AddressableAssetSettings
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetSettings
-  m_DefaultGroup: 7c461db5f43248a4c80015eabfc4d78c
+  m_DefaultGroup: 
   m_currentHash:
     serializedVersion: 2
-    Hash: 98202ef8e5a7cb609ab0f40b403ca655
+    Hash: 0018b361c01c80d97fa27071d0220583
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 1
   m_BundleLocalCatalog: 0
-  m_CatalogRequestsTimeout: 15
+  m_CatalogRequestsTimeout: 0
   m_DisableCatalogUpdateOnStart: 0
   m_InternalIdNamingMode: 0
   m_InternalBundleIdMode: 1
@@ -37,7 +37,7 @@ MonoBehaviour:
   m_AllowNestedBundleFolders: 0
   m_CCDEnabled: 0
   m_maxConcurrentWebRequests: 3
-  m_UseUWRForLocalBundles: 1
+  m_UseUWRForLocalBundles: 0
   m_BundleTimeout: 0
   m_BundleRetryCount: 0
   m_BundleRedirectLimit: -1
@@ -52,9 +52,9 @@ MonoBehaviour:
   m_CheckForContentUpdateRestrictionsOption: 0
   m_MonoScriptBundleCustomNaming: 
   m_RemoteCatalogBuildPath:
-    m_Id: 469f4ce7c50406b48acded6250418538
+    m_Id: d4a8e294432d8406cb2c80299f8d19c3
   m_RemoteCatalogLoadPath:
-    m_Id: 95818312aaa02e9429f9799c09bb60eb
+    m_Id: 8cb7ed44159d54bcf9f3505bd8793de0
   m_ContentStateBuildPathProfileVariableName: <default settings path>
   m_CustomContentStateBuildPath: 
   m_ContentStateBuildPath: 
@@ -62,6 +62,7 @@ MonoBehaviour:
   m_overridePlayerVersion: '[UnityEditor.PlayerSettings.bundleVersion]'
   m_GroupAssets:
   - {fileID: 11400000, guid: c7e5de421fa636f47bd03e30dbb4b3b5, type: 2}
+  - {fileID: 11400000, guid: 39d2c9026f3bd487f8422ba027e34ba4, type: 2}
   - {fileID: 11400000, guid: 2d77be7448c09234285b8dfeced1b6ea, type: 2}
   - {fileID: 11400000, guid: 8b9fac02c279fa84188978a4ccb1a9a2, type: 2}
   - {fileID: 11400000, guid: 4e89201eee210694ba5e2a421af870d9, type: 2}
@@ -75,97 +76,97 @@ MonoBehaviour:
   m_ProfileSettings:
     m_Profiles:
     - m_InheritedParent: 
-      m_Id: 7c927fdb926bb9f4eba0c2cf84f6b575
+      m_Id: 4ac626baf0ee64ce292ca1369ccb0091
       m_ProfileName: Default
       m_Values:
-      - m_Id: 16f6254ed324e164cb9f61da1713de1e
-        m_Value: https://storage.googleapis.com/{GCS_BUCKET}/addressables/releases/{PLATFORM_NAME}/latest
-      - m_Id: 469f4ce7c50406b48acded6250418538
-        m_Value: 'ServerData/[BuildTarget]'
-      - m_Id: 4be67fd94d07a5347acb9bc554f12233
-        m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
-      - m_Id: 4d5191c36c3cbf04ea53750f0213a08c
-        m_Value: '{UnityEngine.AddressableAssets.Addressables.StreamingAssetsPath}/aa/[BuildTarget]'
-      - m_Id: 6f67effbe7ea4584281b3e50a44bf654
-        m_Value: 'ServerData/[BuildTarget]'
-      - m_Id: 8be714c16790b8b41a257e731e88df54
-        m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
-      - m_Id: 95818312aaa02e9429f9799c09bb60eb
-        m_Value: <undefined>
-      - m_Id: 99aa7475047c53142991531540cd6932
-        m_Value: dlc-lms
-      - m_Id: aaf6510451955da4e955b2fe86acb9df
+      - m_Id: 1377796fc554340e09f78a1ee36ad847
         m_Value: '[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]'
-      - m_Id: b3adbcd713f36aa4d98048754566f41b
-        m_Value: 0.0.0
-      - m_Id: c13faef7c930b134bacc39e42e85e4cd
+      - m_Id: 4f067ced4579c4d938d7756d7d156f5c
+        m_Value: 1.0.4
+      - m_Id: 54a090bc58ac342af8ab5144b8ead48b
+        m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
+      - m_Id: 71881ba73130141f3b7c2505d9610ad1
+        m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
+      - m_Id: 71d45492654f7400d8a6c7656bf3c181
         m_Value: '{UnityEngine.AddressableAssets.Addressables.BuildPath}/aa/[BuildTarget]'
-      - m_Id: db5ad5a9435e5af41bf92ef0956586f6
-        m_Value: unknown
+      - m_Id: 7cb1410987d444a78a3c14349834bc5e
+        m_Value: mac
+      - m_Id: 88e462097b31845c2b91f1855eaf525b
+        m_Value: https://storage.googleapis.com/dlc-lms/addressables/releases/mac/latest
+      - m_Id: 8cb7ed44159d54bcf9f3505bd8793de0
+        m_Value: <undefined>
+      - m_Id: 9a6df41865a3a49f091605eb7d6eade2
+        m_Value: '{UnityEngine.AddressableAssets.Addressables.StreamingAssetsPath}/aa/[BuildTarget]'
+      - m_Id: af3677dca15f9495c8506a5e34b6a43c
+        m_Value: dlc-lms
+      - m_Id: d4a8e294432d8406cb2c80299f8d19c3
+        m_Value: 'ServerData/[BuildTarget]'
+      - m_Id: fa0c87b3876874990b6903d27e5283ab
+        m_Value: 'ServerData/[BuildTarget]'
     - m_InheritedParent: 
-      m_Id: fead762deb0388e4792f343a2f833fd3
+      m_Id: d990e7a26671d4dd59fec229f2818b8d
       m_ProfileName: GCS
       m_Values:
-      - m_Id: 16f6254ed324e164cb9f61da1713de1e
-        m_Value: https://storage.googleapis.com/dlc-lms/addressables/releases/ios/latest
-      - m_Id: 469f4ce7c50406b48acded6250418538
-        m_Value: 'ServerData/[BuildTarget]'
-      - m_Id: 4be67fd94d07a5347acb9bc554f12233
-        m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
-      - m_Id: 4d5191c36c3cbf04ea53750f0213a08c
-        m_Value: '{UnityEngine.AddressableAssets.Addressables.StreamingAssetsPath}/aa/[BuildTarget]'
-      - m_Id: 6f67effbe7ea4584281b3e50a44bf654
-        m_Value: 'ServerData/[BuildTarget]'
-      - m_Id: 8be714c16790b8b41a257e731e88df54
-        m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
-      - m_Id: 95818312aaa02e9429f9799c09bb60eb
-        m_Value: https://storage.googleapis.com/dlc-lms/addressables/releases/ios/latest
-      - m_Id: 99aa7475047c53142991531540cd6932
-        m_Value: dlc-lms
-      - m_Id: aaf6510451955da4e955b2fe86acb9df
+      - m_Id: 1377796fc554340e09f78a1ee36ad847
         m_Value: '[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]'
-      - m_Id: b3adbcd713f36aa4d98048754566f41b
+      - m_Id: 4f067ced4579c4d938d7756d7d156f5c
         m_Value: 1.0.4
-      - m_Id: c13faef7c930b134bacc39e42e85e4cd
+      - m_Id: 54a090bc58ac342af8ab5144b8ead48b
+        m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
+      - m_Id: 71881ba73130141f3b7c2505d9610ad1
+        m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
+      - m_Id: 71d45492654f7400d8a6c7656bf3c181
         m_Value: '{UnityEngine.AddressableAssets.Addressables.BuildPath}/aa/[BuildTarget]'
-      - m_Id: db5ad5a9435e5af41bf92ef0956586f6
+      - m_Id: 7cb1410987d444a78a3c14349834bc5e
         m_Value: ios
+      - m_Id: 88e462097b31845c2b91f1855eaf525b
+        m_Value: https://storage.googleapis.com/dlc-lms/addressables/releases/ios/latest
+      - m_Id: 8cb7ed44159d54bcf9f3505bd8793de0
+        m_Value: https://storage.googleapis.com/dlc-lms/addressables/releases/ios/latest
+      - m_Id: 9a6df41865a3a49f091605eb7d6eade2
+        m_Value: '{UnityEngine.AddressableAssets.Addressables.StreamingAssetsPath}/aa/[BuildTarget]'
+      - m_Id: af3677dca15f9495c8506a5e34b6a43c
+        m_Value: dlc-lms
+      - m_Id: d4a8e294432d8406cb2c80299f8d19c3
+        m_Value: 'ServerData/[BuildTarget]'
+      - m_Id: fa0c87b3876874990b6903d27e5283ab
+        m_Value: 'ServerData/[BuildTarget]'
     m_ProfileEntryNames:
-    - m_Id: 16f6254ed324e164cb9f61da1713de1e
-      m_Name: RemoteLoadPath
-      m_InlineUsage: 0
-    - m_Id: 469f4ce7c50406b48acded6250418538
-      m_Name: Remote.BuildPath
-      m_InlineUsage: 0
-    - m_Id: 4be67fd94d07a5347acb9bc554f12233
-      m_Name: Local.LoadPath
-      m_InlineUsage: 0
-    - m_Id: 4d5191c36c3cbf04ea53750f0213a08c
-      m_Name: LocalLoadPath
-      m_InlineUsage: 0
-    - m_Id: 6f67effbe7ea4584281b3e50a44bf654
-      m_Name: RemoteBuildPath
-      m_InlineUsage: 0
-    - m_Id: 8be714c16790b8b41a257e731e88df54
-      m_Name: BuildTarget
-      m_InlineUsage: 0
-    - m_Id: 95818312aaa02e9429f9799c09bb60eb
-      m_Name: Remote.LoadPath
-      m_InlineUsage: 0
-    - m_Id: 99aa7475047c53142991531540cd6932
-      m_Name: GCS_BUCKET
-      m_InlineUsage: 0
-    - m_Id: aaf6510451955da4e955b2fe86acb9df
+    - m_Id: 1377796fc554340e09f78a1ee36ad847
       m_Name: Local.BuildPath
       m_InlineUsage: 0
-    - m_Id: b3adbcd713f36aa4d98048754566f41b
+    - m_Id: 4f067ced4579c4d938d7756d7d156f5c
       m_Name: APP_VERSION
       m_InlineUsage: 0
-    - m_Id: c13faef7c930b134bacc39e42e85e4cd
+    - m_Id: 54a090bc58ac342af8ab5144b8ead48b
+      m_Name: BuildTarget
+      m_InlineUsage: 0
+    - m_Id: 71881ba73130141f3b7c2505d9610ad1
+      m_Name: Local.LoadPath
+      m_InlineUsage: 0
+    - m_Id: 71d45492654f7400d8a6c7656bf3c181
       m_Name: LocalBuildPath
       m_InlineUsage: 0
-    - m_Id: db5ad5a9435e5af41bf92ef0956586f6
+    - m_Id: 7cb1410987d444a78a3c14349834bc5e
       m_Name: PLATFORM_NAME
+      m_InlineUsage: 0
+    - m_Id: 88e462097b31845c2b91f1855eaf525b
+      m_Name: RemoteLoadPath
+      m_InlineUsage: 0
+    - m_Id: 8cb7ed44159d54bcf9f3505bd8793de0
+      m_Name: Remote.LoadPath
+      m_InlineUsage: 0
+    - m_Id: 9a6df41865a3a49f091605eb7d6eade2
+      m_Name: LocalLoadPath
+      m_InlineUsage: 0
+    - m_Id: af3677dca15f9495c8506a5e34b6a43c
+      m_Name: GCS_BUCKET
+      m_InlineUsage: 0
+    - m_Id: d4a8e294432d8406cb2c80299f8d19c3
+      m_Name: Remote.BuildPath
+      m_InlineUsage: 0
+    - m_Id: fa0c87b3876874990b6903d27e5283ab
+      m_Name: RemoteBuildPath
       m_InlineUsage: 0
     m_ProfileVersion: 1
   m_LabelTable:
@@ -184,4 +185,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1d018df562876de4892b6a67dcff35f1, type: 2}
   - {fileID: 11400000, guid: 47e35bfae27ea9f44a6133db3d0cf1c7, type: 2}
   - {fileID: 11400000, guid: d375194394bb5474abfddef3e2e4e796, type: 2}
-  m_ActiveProfileId: fead762deb0388e4792f343a2f833fd3
+  m_ActiveProfileId: d990e7a26671d4dd59fec229f2818b8d
