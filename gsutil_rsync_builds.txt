@@ -1,4 +1,4 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "C:\_khoa\XHeroLMS\ServerData\Android" "gs://dlc-lms/addressables/releases/android/builds/1.0.4/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "/Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS" "gs://dlc-lms/addressables/releases/ios/builds/1.0.4/"
 ExitCode=0
 
 --- STDOUT ---
@@ -6,14 +6,33 @@ ExitCode=0
 
 --- STDERR ---
 Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
 Starting synchronization...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.hash [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.4.json [Content-Type=application/json]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.4.hash [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_newscene_scenes_all_f29b5bc27c283d9f8233ef951284c91a.bundle [Content-Type=application/octet-stream]...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_coursescene_scenes_all_195e440c15f481658c58abd69a1800af.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.4.hash [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_all_7e3d8a4eb84cecc6df723668ac73599f.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.json [Content-Type=application/json]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.4.json [Content-Type=application/json]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_dai_dao_chi_gian_1_scenes_all_717c3ba350a80f7347c1b8010fc150b2.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_dai_dao_chi_gian_2_scenes_all_bec2930a36eae19d1e12018acc7b0fd3.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/483192958c2089719c8dc303377b0b39_unitybuiltinassets_da338c50e693973a3d07b870d2df0251.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/483192958c2089719c8dc303377b0b39_monoscripts_4dcb135669733ff601dc3e23cb4c338e.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_preview_certificates_scenes_all_4a1ffd90b330ce89b36a045b8b0e1add.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_phong_tuyen_sinh_scenes_all_e38dd76a863a66d2f5da33def2c1f2a6.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.hash [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_all_4198eb6c8e93966cb9e50e2c1e34f3e9.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
 ==> NOTE: You are uploading one or more large file(s), which would run
 significantly faster if you enable parallel composite uploads. This
 feature can be enabled by editing the
@@ -26,198 +45,227 @@ compiled crcmod installed (see "gsutil help crcmod"). This is because
 without a compiled crcmod, computing checksums on composite objects is
 so slow that gsutil disables downloads of composite objects.
 
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_preview_certificates_scenes_all_64392e12003c0d813feb90f737fcf40c.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_dai_dao_chi_gian_2_scenes_all_cd02d6b1b6ad6d285b8d2c3e4628b916.bundle [Content-Type=application/octet-stream]...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.json [Content-Type=application/json]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_shared_assets_all_19eaa1b52cfc56090b936b9a4ee81b0d.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_phong_tuyen_sinh_scenes_all_73c755b552b0fdef228902b85c2a66a1.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_dai_dao_chi_gian_1_scenes_all_122be2c3c00c4062df16de38b263ca73.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_coursescene_scenes_all_78092732d8ef07342c2d6d2d48d3b323.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/685.6 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [0/13 files][    0.0 B/652.1 MiB]   0% Done                                   
+/ [1/13 files][600.4 KiB/652.1 MiB]   0% Done                                   
+/ [2/13 files][600.4 KiB/652.1 MiB]   0% Done                                   
 -
-- [1/11 files][   64.0 B/685.6 MiB]   0% Done                                   
-- [2/11 files][160.6 KiB/685.6 MiB]   0% Done                                   
-- [3/11 files][641.1 KiB/685.6 MiB]   0% Done                                   
+- [3/13 files][  1.3 MiB/652.1 MiB]   0% Done                                   
+- [4/13 files][  1.3 MiB/652.1 MiB]   0% Done                                   
+- [5/13 files][  2.6 MiB/652.1 MiB]   0% Done                                   
+- [6/13 files][  3.9 MiB/652.1 MiB]   0% Done                                   
+- [7/13 files][  5.3 MiB/652.1 MiB]   0% Done                                   
 \
-\ [4/11 files][961.1 KiB/685.6 MiB]   0% Done                                   
-\ [5/11 files][  4.1 MiB/685.6 MiB]   0% Done                                   
-|
-| [6/11 files][  5.9 MiB/685.6 MiB]   0% Done                                   
-/
-/ [6/11 files][ 23.8 MiB/685.6 MiB]   3% Done                                   
--
-\
-\ [6/11 files][ 36.2 MiB/685.6 MiB]   5% Done                                   
+\ [8/13 files][ 19.7 MiB/652.1 MiB]   3% Done                                   
 |
 /
-/ [6/11 files][ 47.2 MiB/685.6 MiB]   6% Done                                   
+/ [8/13 files][ 28.7 MiB/652.1 MiB]   4% Done                                   
 -
-- [6/11 files][ 59.1 MiB/685.6 MiB]   8% Done                                   
+- [8/13 files][ 34.2 MiB/652.1 MiB]   5% Done                                   
 \
 |
-| [6/11 files][ 70.6 MiB/685.6 MiB]  10% Done                                   
+| [8/13 files][ 42.9 MiB/652.1 MiB]   6% Done                                   
 /
+/ [8/13 files][ 50.1 MiB/652.1 MiB]   7% Done                                   
 -
-- [6/11 files][ 81.9 MiB/685.6 MiB]  11% Done                                   
 \
-\ [6/11 files][ 92.5 MiB/685.6 MiB]  13% Done                                   
+\ [8/13 files][ 58.1 MiB/652.1 MiB]   8% Done                                   
 |
 /
-/ [6/11 files][103.4 MiB/685.6 MiB]  15% Done                                   
+/ [8/13 files][ 65.6 MiB/652.1 MiB]  10% Done                                   
 -
-\
-\ [6/11 files][114.7 MiB/685.6 MiB]  16% Done  11.0 MiB/s ETA 00:00:52          
-|
-| [6/11 files][125.9 MiB/685.6 MiB]  18% Done  11.0 MiB/s ETA 00:00:51          
-/
--
-- [6/11 files][137.2 MiB/685.6 MiB]  20% Done  11.0 MiB/s ETA 00:00:50          
+- [8/13 files][ 73.1 MiB/652.1 MiB]  11% Done                                   
 \
 |
-| [6/11 files][148.1 MiB/685.6 MiB]  21% Done  11.0 MiB/s ETA 00:00:49          
-/
-/ [6/11 files][159.7 MiB/685.6 MiB]  23% Done  11.0 MiB/s ETA 00:00:48          
--
-\
-\ [6/11 files][170.6 MiB/685.6 MiB]  24% Done  11.0 MiB/s ETA 00:00:47          
-|
-| [6/11 files][181.9 MiB/685.6 MiB]  26% Done  11.0 MiB/s ETA 00:00:46          
+| [8/13 files][ 81.6 MiB/652.1 MiB]  12% Done                                   
 /
 -
-- [6/11 files][193.1 MiB/685.6 MiB]  28% Done  11.0 MiB/s ETA 00:00:45          
+- [8/13 files][ 89.8 MiB/652.1 MiB]  13% Done   7.6 MiB/s ETA 00:01:14          
 \
 |
-| [6/11 files][203.1 MiB/685.6 MiB]  29% Done  10.8 MiB/s ETA 00:00:45          
+| [8/13 files][ 99.9 MiB/652.1 MiB]  15% Done   8.0 MiB/s ETA 00:01:09          
 /
-/ [6/11 files][213.4 MiB/685.6 MiB]  31% Done  10.0 MiB/s ETA 00:00:47          
+/ [8/13 files][109.2 MiB/652.1 MiB]  16% Done   8.4 MiB/s ETA 00:01:05          
 -
 \
-\ [6/11 files][223.8 MiB/685.6 MiB]  32% Done   9.8 MiB/s ETA 00:00:47          
+\ [8/13 files][119.0 MiB/652.1 MiB]  18% Done   8.8 MiB/s ETA 00:01:01          
 |
-| [6/11 files][233.1 MiB/685.6 MiB]  34% Done   9.5 MiB/s ETA 00:00:48          
+| [8/13 files][128.8 MiB/652.1 MiB]  19% Done   9.0 MiB/s ETA 00:00:58          
 /
 -
-- [6/11 files][244.4 MiB/685.6 MiB]  35% Done   9.5 MiB/s ETA 00:00:47          
-\
-|
-| [6/11 files][255.3 MiB/685.6 MiB]  37% Done  10.2 MiB/s ETA 00:00:42          
-/
-/ [6/11 files][265.0 MiB/685.6 MiB]  38% Done   9.5 MiB/s ETA 00:00:44          
--
-- [7/11 files][266.9 MiB/685.6 MiB]  38% Done   9.4 MiB/s ETA 00:00:44          
-\
-\ [7/11 files][278.4 MiB/685.6 MiB]  40% Done  10.6 MiB/s ETA 00:00:38          
-|
-/
-/ [7/11 files][289.4 MiB/685.6 MiB]  42% Done  10.7 MiB/s ETA 00:00:37          
--
-\
-\ [7/11 files][300.6 MiB/685.6 MiB]  43% Done  10.6 MiB/s ETA 00:00:36          
-|
-| [7/11 files][311.6 MiB/685.6 MiB]  45% Done  10.6 MiB/s ETA 00:00:35          
-/
--
-- [7/11 files][320.6 MiB/685.6 MiB]  46% Done  10.6 MiB/s ETA 00:00:34          
-- [8/11 files][322.2 MiB/685.6 MiB]  46% Done  10.6 MiB/s ETA 00:00:34          
+- [8/13 files][139.3 MiB/652.1 MiB]  21% Done   9.4 MiB/s ETA 00:00:54          
 \
 |
-| [8/11 files][332.8 MiB/685.6 MiB]  48% Done  10.5 MiB/s ETA 00:00:34          
+| [8/13 files][150.4 MiB/652.1 MiB]  23% Done   9.7 MiB/s ETA 00:00:52          
 /
-/ [8/11 files][343.4 MiB/685.6 MiB]  50% Done  10.4 MiB/s ETA 00:00:33          
+/ [9/13 files][152.9 MiB/652.1 MiB]  23% Done   9.0 MiB/s ETA 00:00:55          
 -
-\
-\ [8/11 files][354.7 MiB/685.6 MiB]  51% Done  10.5 MiB/s ETA 00:00:32          
-|
-/
-/ [8/11 files][365.3 MiB/685.6 MiB]  53% Done  10.4 MiB/s ETA 00:00:31          
--
-- [8/11 files][376.6 MiB/685.6 MiB]  54% Done  10.8 MiB/s ETA 00:00:29          
+- [9/13 files][159.4 MiB/652.1 MiB]  24% Done   8.3 MiB/s ETA 00:00:59          
 \
 |
-| [8/11 files][388.1 MiB/685.6 MiB]  56% Done  10.9 MiB/s ETA 00:00:27          
+| [9/13 files][165.5 MiB/652.1 MiB]  25% Done   7.5 MiB/s ETA 00:01:05          
 /
-/ [8/11 files][399.4 MiB/685.6 MiB]  58% Done  11.0 MiB/s ETA 00:00:26          
 -
+- [9/13 files][172.5 MiB/652.1 MiB]  26% Done   7.1 MiB/s ETA 00:01:08          
 \
-\ [8/11 files][410.3 MiB/685.6 MiB]  59% Done  10.9 MiB/s ETA 00:00:25          
+\ [9/13 files][180.5 MiB/652.1 MiB]  27% Done   6.5 MiB/s ETA 00:01:13          
 |
 /
-/ [8/11 files][421.6 MiB/685.6 MiB]  61% Done  11.0 MiB/s ETA 00:00:24          
--
-- [8/11 files][433.6 MiB/685.6 MiB]  63% Done  11.2 MiB/s ETA 00:00:23          
-\
-|
-| [9/11 files][438.9 MiB/685.6 MiB]  64% Done  10.8 MiB/s ETA 00:00:23          
-/
-/ [9/11 files][449.9 MiB/685.6 MiB]  65% Done  10.8 MiB/s ETA 00:00:22          
+/ [9/13 files][188.2 MiB/652.1 MiB]  28% Done   6.8 MiB/s ETA 00:01:09          
 -
 \
-\ [9/11 files][460.8 MiB/685.6 MiB]  67% Done  10.8 MiB/s ETA 00:00:21          
+\ [9/13 files][197.0 MiB/652.1 MiB]  30% Done   7.2 MiB/s ETA 00:01:03          
 |
-| [9/11 files][473.6 MiB/685.6 MiB]  69% Done  10.2 MiB/s ETA 00:00:21          
+| [9/13 files][206.0 MiB/652.1 MiB]  31% Done   7.7 MiB/s ETA 00:00:58          
 /
 -
-- [9/11 files][488.0 MiB/685.6 MiB]  71% Done  10.9 MiB/s ETA 00:00:18          
+- [9/13 files][216.1 MiB/652.1 MiB]  33% Done   8.2 MiB/s ETA 00:00:53          
 \
 |
-| [9/11 files][498.9 MiB/685.6 MiB]  72% Done  11.2 MiB/s ETA 00:00:17          
+| [9/13 files][226.4 MiB/652.1 MiB]  34% Done   8.6 MiB/s ETA 00:00:49          
 /
-/ [9/11 files][510.2 MiB/685.6 MiB]  74% Done  11.2 MiB/s ETA 00:00:16          
+/ [9/13 files][234.9 MiB/652.1 MiB]  36% Done   8.7 MiB/s ETA 00:00:48          
 -
 \
-\ [9/11 files][521.1 MiB/685.6 MiB]  76% Done  11.2 MiB/s ETA 00:00:15          
+\ [9/13 files][242.9 MiB/652.1 MiB]  37% Done   8.4 MiB/s ETA 00:00:48          
 |
 /
-/ [9/11 files][532.4 MiB/685.6 MiB]  77% Done  10.9 MiB/s ETA 00:00:14          
+/ [9/13 files][247.0 MiB/652.1 MiB]  37% Done   7.4 MiB/s ETA 00:00:55          
 -
-- [9/11 files][541.9 MiB/685.6 MiB]  79% Done  10.4 MiB/s ETA 00:00:14          
-\
-\ [10/11 files][545.1 MiB/685.6 MiB]  79% Done   9.9 MiB/s ETA 00:00:14         
-|
-/
-/ [10/11 files][552.2 MiB/685.6 MiB]  80% Done   9.1 MiB/s ETA 00:00:15         
--
-- [10/11 files][561.3 MiB/685.6 MiB]  81% Done   8.6 MiB/s ETA 00:00:14         
+- [9/13 files][253.7 MiB/652.1 MiB]  38% Done   6.6 MiB/s ETA 00:01:00          
 \
 |
-| [10/11 files][570.4 MiB/685.6 MiB]  83% Done   8.2 MiB/s ETA 00:00:14         
+| [9/13 files][259.6 MiB/652.1 MiB]  39% Done   6.0 MiB/s ETA 00:01:05          
 /
+/ [9/13 files][266.6 MiB/652.1 MiB]  40% Done   5.6 MiB/s ETA 00:01:08          
 -
-- [10/11 files][580.1 MiB/685.6 MiB]  84% Done   8.1 MiB/s ETA 00:00:13         
 \
-\ [10/11 files][590.1 MiB/685.6 MiB]  86% Done   9.1 MiB/s ETA 00:00:11         
+\ [9/13 files][274.3 MiB/652.1 MiB]  42% Done   6.2 MiB/s ETA 00:01:01          
 |
 /
-/ [10/11 files][600.7 MiB/685.6 MiB]  87% Done   9.5 MiB/s ETA 00:00:09         
+/ [9/13 files][281.8 MiB/652.1 MiB]  43% Done   6.6 MiB/s ETA 00:00:56          
 -
-\
-\ [10/11 files][611.3 MiB/685.6 MiB]  89% Done   9.8 MiB/s ETA 00:00:08         
-|
-| [10/11 files][621.9 MiB/685.6 MiB]  90% Done  10.2 MiB/s ETA 00:00:06         
-/
--
-- [10/11 files][633.2 MiB/685.6 MiB]  92% Done  10.4 MiB/s ETA 00:00:05         
+- [9/13 files][289.3 MiB/652.1 MiB]  44% Done   7.1 MiB/s ETA 00:00:51          
 \
 |
-| [10/11 files][643.8 MiB/685.6 MiB]  93% Done  10.6 MiB/s ETA 00:00:04         
+| [9/13 files][297.5 MiB/652.1 MiB]  45% Done   7.3 MiB/s ETA 00:00:49          
 /
-/ [10/11 files][654.4 MiB/685.6 MiB]  95% Done  10.6 MiB/s ETA 00:00:03         
+/ [9/13 files][305.3 MiB/652.1 MiB]  46% Done   7.4 MiB/s ETA 00:00:47          
 -
 \
-\ [10/11 files][665.1 MiB/685.6 MiB]  96% Done  10.6 MiB/s ETA 00:00:02         
+\ [9/13 files][314.0 MiB/652.1 MiB]  48% Done   7.6 MiB/s ETA 00:00:44          
 |
 /
-/ [10/11 files][675.7 MiB/685.6 MiB]  98% Done  10.6 MiB/s ETA 00:00:01         
+/ [9/13 files][323.1 MiB/652.1 MiB]  49% Done   7.9 MiB/s ETA 00:00:42          
 -
-- [11/11 files][685.6 MiB/685.6 MiB] 100% Done   9.8 MiB/s ETA 00:00:00         
+- [9/13 files][332.1 MiB/652.1 MiB]  50% Done   8.1 MiB/s ETA 00:00:39          
 \
-
-Operation completed over 11 objects/685.6 MiB.                                   
+\ [10/13 files][336.4 MiB/652.1 MiB]  51% Done   7.9 MiB/s ETA 00:00:40         
+|
+/
+/ [10/13 files][346.2 MiB/652.1 MiB]  53% Done   8.5 MiB/s ETA 00:00:36         
+-
+\
+\ [10/13 files][355.2 MiB/652.1 MiB]  54% Done   8.4 MiB/s ETA 00:00:35         
+|
+| [10/13 files][363.9 MiB/652.1 MiB]  55% Done   8.6 MiB/s ETA 00:00:34         
+/
+-
+- [10/13 files][371.7 MiB/652.1 MiB]  56% Done   8.2 MiB/s ETA 00:00:34         
+\
+\ [10/13 files][381.0 MiB/652.1 MiB]  58% Done   8.4 MiB/s ETA 00:00:32         
+|
+/
+/ [10/13 files][389.5 MiB/652.1 MiB]  59% Done   8.4 MiB/s ETA 00:00:31         
+-
+\
+\ [10/13 files][398.2 MiB/652.1 MiB]  61% Done   8.0 MiB/s ETA 00:00:32         
+|
+| [10/13 files][408.8 MiB/652.1 MiB]  62% Done   8.3 MiB/s ETA 00:00:29         
+/
+-
+- [10/13 files][419.1 MiB/652.1 MiB]  64% Done   8.9 MiB/s ETA 00:00:26         
+\
+|
+| [10/13 files][429.7 MiB/652.1 MiB]  65% Done   9.1 MiB/s ETA 00:00:24         
+/
+/ [10/13 files][439.2 MiB/652.1 MiB]  67% Done   9.6 MiB/s ETA 00:00:22         
+-
+\
+\ [10/13 files][449.3 MiB/652.1 MiB]  68% Done   9.6 MiB/s ETA 00:00:21         
+|
+/
+/ [10/13 files][459.3 MiB/652.1 MiB]  70% Done   9.6 MiB/s ETA 00:00:20         
+-
+- [10/13 files][469.9 MiB/652.1 MiB]  72% Done   9.7 MiB/s ETA 00:00:19         
+\
+|
+| [10/13 files][480.5 MiB/652.1 MiB]  73% Done   9.8 MiB/s ETA 00:00:18         
+/
+-
+- [10/13 files][491.0 MiB/652.1 MiB]  75% Done  10.0 MiB/s ETA 00:00:16         
+\
+\ [10/13 files][501.4 MiB/652.1 MiB]  76% Done  10.0 MiB/s ETA 00:00:15         
+|
+/
+/ [10/13 files][510.6 MiB/652.1 MiB]  78% Done   9.7 MiB/s ETA 00:00:15         
+-
+- [10/13 files][520.4 MiB/652.1 MiB]  79% Done   9.5 MiB/s ETA 00:00:14         
+\
+|
+| [10/13 files][529.2 MiB/652.1 MiB]  81% Done   9.3 MiB/s ETA 00:00:13         
+/
+-
+- [10/13 files][540.0 MiB/652.1 MiB]  82% Done   9.2 MiB/s ETA 00:00:12         
+\
+|
+| [10/13 files][550.8 MiB/652.1 MiB]  84% Done   9.5 MiB/s ETA 00:00:11         
+/
+/ [10/13 files][559.4 MiB/652.1 MiB]  85% Done   9.2 MiB/s ETA 00:00:10         
+-
+\
+\ [11/13 files][565.1 MiB/652.1 MiB]  86% Done   8.9 MiB/s ETA 00:00:10         
+|
+| [11/13 files][571.8 MiB/652.1 MiB]  87% Done   8.6 MiB/s ETA 00:00:09         
+/
+-
+- [11/13 files][578.5 MiB/652.1 MiB]  88% Done   7.8 MiB/s ETA 00:00:09         
+\
+\ [11/13 files][585.0 MiB/652.1 MiB]  89% Done   7.0 MiB/s ETA 00:00:10         
+|
+| [12/13 files][586.0 MiB/652.1 MiB]  89% Done   7.1 MiB/s ETA 00:00:09         
+/
+/ [12/13 files][591.5 MiB/652.1 MiB]  90% Done   6.3 MiB/s ETA 00:00:10         
+-
+\
+\ [12/13 files][597.6 MiB/652.1 MiB]  91% Done   6.2 MiB/s ETA 00:00:09         
+|
+| [12/13 files][602.8 MiB/652.1 MiB]  92% Done   5.9 MiB/s ETA 00:00:08         
+/
+-
+- [12/13 files][608.2 MiB/652.1 MiB]  93% Done   5.6 MiB/s ETA 00:00:08         
+\
+|
+| [12/13 files][613.9 MiB/652.1 MiB]  94% Done   5.5 MiB/s ETA 00:00:07         
+/
+/ [12/13 files][619.8 MiB/652.1 MiB]  95% Done   5.6 MiB/s ETA 00:00:06         
+-
+\
+\ [12/13 files][626.0 MiB/652.1 MiB]  95% Done   5.5 MiB/s ETA 00:00:05         
+|
+/
+/ [12/13 files][631.4 MiB/652.1 MiB]  96% Done   5.6 MiB/s ETA 00:00:04         
+-
+- [12/13 files][637.4 MiB/652.1 MiB]  97% Done   5.8 MiB/s ETA 00:00:03         
+\
+|
+| [12/13 files][643.5 MiB/652.1 MiB]  98% Done   5.8 MiB/s ETA 00:00:01         
+/
+/ [12/13 files][650.0 MiB/652.1 MiB]  99% Done   5.8 MiB/s ETA 00:00:00         
+-
+- [13/13 files][652.1 MiB/652.1 MiB] 100% Done   5.4 MiB/s ETA 00:00:00         
+\
+Operation completed over 13 objects/652.1 MiB.                                   
 
