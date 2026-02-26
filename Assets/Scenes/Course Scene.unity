@@ -341,11 +341,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3861683379443599689, guid: fabfead75855840cb8acbd304539a8a8, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 146.29999
+      value: 146.30005
       objectReference: {fileID: 0}
     - target: {fileID: 3861683379443599689, guid: fabfead75855840cb8acbd304539a8a8, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -52.299988
+      value: -52.30005
       objectReference: {fileID: 0}
     - target: {fileID: 3861683379443599689, guid: fabfead75855840cb8acbd304539a8a8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -597,6 +597,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5004992641395800240, guid: 1af947cd78120044f9c533b868482ac7, type: 3}
   m_PrefabInstance: {fileID: 1092920922}
   m_PrefabAsset: {fileID: 0}
+--- !u!224 &660524198 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 1564315562102897270, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
+  m_PrefabInstance: {fileID: 5288624806819820971}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &697685452 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3411863386904332705, guid: 1af947cd78120044f9c533b868482ac7, type: 3}
@@ -645,6 +650,7 @@ MonoBehaviour:
   playVideoHandleUI: {fileID: 1515374330}
   replayButton: {fileID: 569231858}
   enterCourseBtn: {fileID: 1252605943}
+  uniWebView: {fileID: 1613740300}
   automaticTextPreview: {fileID: 1515374327}
 --- !u!4 &828022997
 Transform:
@@ -1313,6 +1319,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0.0000011920929
       objectReference: {fileID: 0}
+    - target: {fileID: 2666056910776931116, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -4.649658
+      objectReference: {fileID: 0}
     - target: {fileID: 2848707641918950209, guid: 9f4894a3e53276543b5ff052cb8394de, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -1544,6 +1554,108 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6073860483040753019, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
   m_PrefabInstance: {fileID: 5288624806819820971}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1613740298
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1613740299}
+  - component: {fileID: 1613740302}
+  - component: {fileID: 1613740301}
+  - component: {fileID: 1613740300}
+  m_Layer: 5
+  m_Name: UniWebView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1613740299
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613740298}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 660524198}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: -52.429993}
+  m_SizeDelta: {x: -220, y: -335.47998}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1613740300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613740298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 598e18fb001004a81960f552978ecf4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UniWebView-CSharp::UniWebView
+  urlOnStart: 
+  showOnStart: 0
+  fullScreen: 0
+  useToolbar: 1
+  toolbarPosition: 0
+  useEmbeddedToolbar: 1
+  embeddedToolbarPosition: 0
+  frame:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  referenceRectTransform: {fileID: 1613740299}
+--- !u!114 &1613740301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613740298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1613740302
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613740298}
+  m_CullTransparentMesh: 1
 --- !u!224 &1626244899 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8083226197352661124, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
@@ -1888,6 +2000,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Buy Course Canvas mobile
       objectReference: {fileID: 0}
+    - target: {fileID: 8725212282993601159, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9044831304378957974, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1915,6 +2031,9 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1564315562102897270, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1613740299}
     - targetCorrespondingSourceObject: {fileID: 4274508002384748036, guid: fbc9ad6daf59b72499d111fd18ba6bb8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 582891712}
