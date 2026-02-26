@@ -247,8 +247,11 @@ public static class AddressablesCloudAutoSetup
         }
 
         // ======= Ensure standard catalog.json + catalog.hash exist =======
-        string versionedJson = Directory.GetFiles(localSrc, "catalog_*.json").OrderByDescending(f => f).FirstOrDefault();
-        string versionedHash = Directory.GetFiles(localSrc, "catalog_*.hash").OrderByDescending(f => f).FirstOrDefault();
+        string versionedJson = Directory.GetFiles(localSrc, "catalog_*.json", SearchOption.AllDirectories)
+            .OrderByDescending(f => f).FirstOrDefault();
+
+        string versionedHash = Directory.GetFiles(localSrc, "catalog_*.hash", SearchOption.AllDirectories)
+            .OrderByDescending(f => f).FirstOrDefault();
 
         if (string.IsNullOrEmpty(versionedJson) || string.IsNullOrEmpty(versionedHash))
         {
@@ -259,8 +262,10 @@ public static class AddressablesCloudAutoSetup
             return;
         }
 
-        string dstCatalogJson = Path.Combine(localSrc, "catalog.json");
-        string dstCatalogHash = Path.Combine(localSrc, "catalog.hash");
+        var catalogDir = Path.GetDirectoryName(versionedJson);
+
+        string dstCatalogJson = Path.Combine(catalogDir, "catalog.json");
+        string dstCatalogHash = Path.Combine(catalogDir, "catalog.hash");
 
         try
         {
@@ -280,7 +285,8 @@ public static class AddressablesCloudAutoSetup
         );
 
         // (Optional) quick sanity about bundles
-        int bundleCount = Directory.GetFiles(localSrc, "*.bundle", SearchOption.TopDirectoryOnly).Length;
+        // int bundleCount = Directory.GetFiles(localSrc, "*.bundle", SearchOption.TopDirectoryOnly).Length;
+        int bundleCount = Directory.GetFiles(localSrc, "*.bundle", SearchOption.AllDirectories).Length;
         UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Bundles in output: {bundleCount}");
 
         // ======= Credentials =======
@@ -295,7 +301,7 @@ public static class AddressablesCloudAutoSetup
                 $" - Project slot: {ProjectKeyJsonPath}\n" +
                 $" - Fallback: {DefaultKeyPath}\n"
             );
-            return;
+            return; 
         }
 
         UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Using key source: {keySourceInfo}");
