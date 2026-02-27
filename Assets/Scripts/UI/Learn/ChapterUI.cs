@@ -21,8 +21,7 @@ public class ChapterUI : ChapterBaseUI
     [Header("Setting")]
     [SerializeField] private bool isOpenSerialized; // preserved for inspector compatibility
 
-    public List<LessonUI> lessonList = new();
-
+    [SerializeField] List<LessonUI> lessonList = new();
     [SerializeField] Color finishColor;
     [SerializeField] Color unFinishColor;
 
@@ -130,7 +129,10 @@ public class ChapterUI : ChapterBaseUI
             item.SetActive(item == lessonUI);
         }
 
-        LessonProgressTracker.Instance.UpdateLesson(lessonUI);
+        if (LessonProgressTracker.Instance != null)
+        {
+            LessonProgressTracker.Instance.UpdateLesson(lessonUI);
+        }
     }
 
     public void ResetLessonState()
