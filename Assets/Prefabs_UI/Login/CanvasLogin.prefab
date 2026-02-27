@@ -5007,7 +5007,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &7678277730916420217
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5394,6 +5394,7 @@ GameObject:
   - component: {fileID: 9078158382308709103}
   - component: {fileID: 6021082721984814481}
   - component: {fileID: 4180239880816961027}
+  - component: {fileID: 8725238869082823594}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -5520,6 +5521,22 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8725238869082823594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2401911670934103874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b87a9f30f9041394d9b493e2fe326c9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickableTermsText
+  targetText: {fileID: 4180239880816961027}
+  privacyPolicyUrl: https://xherozone.com/chinh-sach-bao-mat
+  termsOfUseUrl: https://xherozone.com/dieu-khoan-dich-vu
+  linkColor: {r: 1, g: 0.5, b: 0, a: 1}
 --- !u!1 &2518810218876088319
 GameObject:
   m_ObjectHideFlags: 0
@@ -14594,6 +14611,7 @@ GameObject:
   - component: {fileID: 1632365846098568490}
   - component: {fileID: 7775143221065465437}
   - component: {fileID: 5974351511332282659}
+  - component: {fileID: 3712500310631053040}
   m_Layer: 5
   m_Name: ObjectManager
   m_TagString: Untagged
@@ -14948,12 +14966,14 @@ MonoBehaviour:
   requestTimeout: 10
   xheroScheme: xhero
   xheroAndroidHost: com.xhero_app
+  xheroAndroidPackageName: com.xhero_app
   xheroIosHost: com.xhero.app
   xheroPath: /
   codeParamName: authLMSCode
   timestampParamName: timestamp
   functionParamName: function
   functionValue: auth-for-lms
+  xheroHost: xhero.deeplink
   waitTokenTimeoutSeconds: 25
   antiSpamSeconds: 3
   onLoginSuccess:
@@ -14980,7 +15000,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6531063588248528658}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b87a9f30f9041394d9b493e2fe326c9d, type: 3}
   m_Name: 
@@ -14989,6 +15009,21 @@ MonoBehaviour:
   privacyPolicyUrl: https://phongthuydainam.vn/vi/chinh-sach-bao-mat
   termsOfUseUrl: https://daotao.phongthuydainam.vn/vi/chinh-sach
   linkColor: {r: 1, g: 0.5, b: 0, a: 1}
+--- !u!114 &3712500310631053040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531063588248528658}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04b3a13f1ec3cba49a0aeeca04835226, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlatformObjectToggle
+  targetObjects:
+  - {fileID: 8817080076768686345}
+  - {fileID: 6007127251144978230}
 --- !u!1 &6578883303574130239
 GameObject:
   m_ObjectHideFlags: 0
@@ -20198,7 +20233,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 10
   m_TargetDisplay: 0
 --- !u!114 &6644240060079955506
 MonoBehaviour:
@@ -22122,7 +22157,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 586262251226727352, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
   m_PrefabInstance: {fileID: 5679745296260620957}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 8817080076768686345}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -22131,6 +22166,11 @@ MonoBehaviour:
 --- !u!224 &5398595694651932943 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 304318909041992594, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
+  m_PrefabInstance: {fileID: 5679745296260620957}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8817080076768686345 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3786979577184113556, guid: 9f76ec1296bcd3b419eb6cd793e1e3ed, type: 3}
   m_PrefabInstance: {fileID: 5679745296260620957}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6413168351757276779
