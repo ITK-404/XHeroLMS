@@ -10,21 +10,12 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 #endif
-
-public enum PlayerState
-{
-    Unlogged,
-    LoggedIn,
-    Learning,
-    Examining,
-}
-
+[DefaultExecutionOrder(-999)]
 public class PlayerPanelUI : MonoBehaviour
 {
     public static PlayerPanelUI Instance;
     public GameObject container;
-    [Header("Containers")]
-    public GameObject loginContainer;
+    [Header("Containers")] public GameObject loginContainer;
     public GameObject unLogginContainer;
     public GameObject defaultContainer;
     public PlayerInformationUI playerInformation;
@@ -39,12 +30,16 @@ public class PlayerPanelUI : MonoBehaviour
     public GameObject pathfindPanel;
     public Button exitPathBtn;
     public Action OnClickTryExitAutoFindWay;
-    
+
+    public PlayerControllerUI controllerUI;
     // users 
     public string deleteUserPath = "/users"; // <-- chỉnh theo API thật
     public bool disableButtonsWhileDeleting = true;
 
     private bool _isDeleting = false;
+
+    private DeleteAccountApi _deleteAccountApi;
+    
     private void Awake()
     {
         Instance = this;
@@ -67,9 +62,9 @@ public class PlayerPanelUI : MonoBehaviour
         LogoutPopupUI.OnReturn += OnReturn;
         LogoutPopupUI.OnLogout += OnLogout;
         TryLogoutButton.OnTryLogout += TryLogoutButtonOnOnTryLogout;
-        
+
         exitPathBtn.onClick.AddListener(TryExitAutoFinding);
-        
+
         HidePathfinding();
     }
 
@@ -78,7 +73,7 @@ public class PlayerPanelUI : MonoBehaviour
         OnClickTryExitAutoFindWay?.Invoke();
         HidePathfinding();
     }
-    
+
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;
@@ -87,8 +82,8 @@ public class PlayerPanelUI : MonoBehaviour
         LogoutPopupUI.OnLogout -= OnLogout;
         TryLogoutButton.OnTryLogout -= TryLogoutButtonOnOnTryLogout;
         exitPathBtn.onClick.RemoveListener(TryExitAutoFinding);
-        
     }
+
     private bool isLoaded = false;
 
     private void OnLogout()
@@ -103,7 +98,7 @@ public class PlayerPanelUI : MonoBehaviour
             StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
         }
     }
-    
+
     public void OnDeleteAccount()
     {
         if (_isDeleting || isLoaded) return;
@@ -114,84 +109,31 @@ public class PlayerPanelUI : MonoBehaviour
             return;
         }
 
-        StartCoroutine(DeleteAccountRoutine(
+        _isDeleting = true;
+        if (disableButtonsWhileDeleting && logoutPopupUI != null)
+            logoutPopupUI.SetInteractable(false);
+
+        StartCoroutine(_deleteAccountApi.DeleteAccountRoutine(
             onSuccess: () =>
             {
-                // Xóa local token + load lại scene
+                _isDeleting = false;
+                if (disableButtonsWhileDeleting && logoutPopupUI != null)
+                    logoutPopupUI.SetInteractable(true);
+
                 isLoaded = true;
                 TokenStore.Clear();
-                // LoadingTransition.Load(defaultLoadScene);
                 StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
             },
             onFail: (err) =>
             {
+                _isDeleting = false;
+                if (disableButtonsWhileDeleting && logoutPopupUI != null)
+                    logoutPopupUI.SetInteractable(true);
+
                 Debug.LogError("[PlayerPanelUI] Delete account failed: " + err);
             }
         ));
     }
-
-    private IEnumerator DeleteAccountRoutine(Action onSuccess, Action<string> onFail)
-    {
-        _isDeleting = true;
-
-        if (disableButtonsWhileDeleting)
-        {
-            if (logoutPopupUI != null) logoutPopupUI.SetInteractable(false);
-        }
-
-        string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
-        if (string.IsNullOrEmpty(baseUrl))
-        {
-            _isDeleting = false;
-            onFail?.Invoke("BaseUrl empty");
-            yield break;
-        }
-
-        string path = (deleteUserPath ?? "/users").Trim();
-        if (!path.StartsWith("/")) path = "/" + path;
-
-        string url = baseUrl + path;
-
-        using (UnityWebRequest www = UnityWebRequest.Delete(url))
-        {
-            www.downloadHandler = new DownloadHandlerBuffer();
-            www.SetRequestHeader("Accept", "application/json");
-
-            // Bearer token
-            string token = TokenStore.AccessToken?.Trim();
-            if (!string.IsNullOrEmpty(token))
-            {
-                if (!token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                    token = "Bearer " + token;
-                www.SetRequestHeader("Authorization", token);
-            }
-
-            yield return www.SendWebRequest();
-
-            if (www.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log("[PlayerPanelUI] Delete account success: " + www.downloadHandler.text);
-                _isDeleting = false;
-                onSuccess?.Invoke();
-                yield break;
-            }
-
-            long code = www.responseCode;
-            string body = www.downloadHandler != null ? www.downloadHandler.text : "";
-            string err = $"HTTP {code} | {www.error} | {body}";
-
-            _isDeleting = false;
-
-            if (disableButtonsWhileDeleting)
-            {
-                if (logoutPopupUI != null) logoutPopupUI.SetInteractable(true);
-            }
-
-            onFail?.Invoke(err);
-        }
-    }
-
-
 
     private void TryLogoutButtonOnOnTryLogout()
     {
@@ -209,6 +151,10 @@ public class PlayerPanelUI : MonoBehaviour
     {
         loginContainer.gameObject.SetActive(true);
         unLogginContainer.gameObject.SetActive(false);
+        
+        string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
+        string accessToken = TokenStore.AccessToken;
+        _deleteAccountApi = new DeleteAccountApi(baseUrl: baseUrl, accessToken:accessToken, deleteUserPath: null);
     }
 
     public void HideAll()
@@ -239,6 +185,7 @@ public class PlayerPanelUI : MonoBehaviour
         pathfindPanel.gameObject.SetActive(false);
         playerInformation.gameObject.SetActive(true);
     }
+
     private IEnumerator CoLoadSceneSmart(string targetScene)
     {
 #if ADDRESSABLES

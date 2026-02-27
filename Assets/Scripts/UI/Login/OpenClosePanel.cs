@@ -15,12 +15,10 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 public class OpenClosePanel : MonoBehaviour
 {
     [Header("UI References")]
-    public Button buttonOpen;
 
     public Button buttonClose;
     public Image  targetImage;          // nền mờ (optional)
     public GameObject targetPanel;      // panel đăng nhập
-    public GameObject warningPopup;    // popup cảnh báo đăng xuất
     public GameObject[] showWhenLoggedIn;
     
     public GameObject[] showWhenLoggedOut;
@@ -30,16 +28,16 @@ public class OpenClosePanel : MonoBehaviour
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
     CursorGameManager cursorMgr;
+    
 
     void OnEnable()
     {
         LoginController.OnLoginComplete += HandleLoginComplete;
-
+        var controller = PlayerPanelUI.Instance.controllerUI;
         // gán click handler an toàn
-        if (buttonOpen != null)
+        if (controller != null)
         {
-            buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
-            buttonOpen.onClick.AddListener(OnOpenButtonClicked);
+            controller.OnLoginBtnClicked += OnOpenButtonClicked;
         }
         if (buttonClose != null)
         {
@@ -53,7 +51,13 @@ public class OpenClosePanel : MonoBehaviour
     {
         LoginController.OnLoginComplete -= HandleLoginComplete;
 
-        if (buttonOpen != null) buttonOpen.onClick.RemoveListener(OnOpenButtonClicked);
+        var controller = PlayerPanelUI.Instance.controllerUI;
+        // gán click handler an toàn
+        if (controller != null)
+        {
+            controller.OnLoginBtnClicked += OnOpenButtonClicked;
+        }
+        
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
 
@@ -127,40 +131,6 @@ public class OpenClosePanel : MonoBehaviour
         InputBlocker.SetBlocked(false);
     }
 
-    // ====== Logout ======
-    void DoLogout()
-    {
-        TokenStore.Clear();
-        Debug.Log("[OpenClosePanel] Đã đăng xuất.");
-        
-        CloseUI();
-
-        UpdateVisualState();
-
-        if (reloadSceneOnLogout && !string.IsNullOrEmpty(sceneNameAfterLogout))
-        {
-            if (loadDelay <= 0f)
-            {
-                // LoadingTransition.Load(sceneNameAfterLogout);
-                StartCoroutine(CoLoadSceneSmart(sceneNameAfterLogout));
-            }
-            else
-            {
-                StartCoroutine(LoadSceneDelayed());
-            }
-        }
-    }
-
-    System.Collections.IEnumerator LoadSceneDelayed()
-    {
-        yield return new WaitForSecondsRealtime(loadDelay);
-        SceneManager.LoadScene(sceneNameAfterLogout);
-        LoadingUI.Show(
-                timeoutSeconds: 60f,
-                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
-                timeoutHeader: "Lỗi Mạng"
-            );
-    }
     
 private IEnumerator CoLoadSceneSmart(string targetScene)
 {
