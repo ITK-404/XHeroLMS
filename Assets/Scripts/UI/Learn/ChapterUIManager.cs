@@ -13,6 +13,11 @@ public class ChapterUIManager : MonoBehaviour
         Instance = this;
     }
 
+    private void OnDestroy()
+    {
+        Instance = null;
+    }
+
     public void ClearList()
     {
         chaptersList.Clear();

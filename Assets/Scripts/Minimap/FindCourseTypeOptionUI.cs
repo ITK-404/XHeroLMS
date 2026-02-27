@@ -4,8 +4,6 @@ using UnityEngine.UI;
 
 public class FindCourseTypeOptionUI : MonoBehaviour
 {
-    [Header("Others")]
-    [SerializeField] private CourseLessonTabID TabID;
     [SerializeField] private Toggle toggle;
     public Toggle Toggle => toggle;
     [Header("UI")] 
