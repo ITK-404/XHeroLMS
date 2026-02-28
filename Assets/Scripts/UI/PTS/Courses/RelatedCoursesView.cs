@@ -25,6 +25,7 @@ public class RelatedCoursesView : MonoBehaviour
 
     private void OnShowCourse()
     {
-        // 
+        // for test
+        LoadingUI.Show(3);
     }
 }
