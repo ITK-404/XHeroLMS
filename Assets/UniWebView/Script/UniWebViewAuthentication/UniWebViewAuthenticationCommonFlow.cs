@@ -31,6 +31,7 @@ public abstract class UniWebViewAuthenticationCommonFlow: MonoBehaviour {
     /// Whether to start authentication as soon as the script `Start`s.
     /// </summary>
     public bool authorizeOnStart;
+    
     /// <summary>
     /// Whether to use private mode to authenticate the user. If `true` and the device supports, the authentication
     /// will begin under the incognito mode.
@@ -45,11 +46,10 @@ public abstract class UniWebViewAuthenticationCommonFlow: MonoBehaviour {
     
     // Security. Store the state.
     private string state;
+
     // Security. Store the code challenge verifier. 
-    private string codeVerify;
-    
-    protected string CodeVerify => codeVerify;
-    
+    protected string CodeVerify { get; private set; }
+
     public void Start() {
         if (authorizeOnStart) {
             StartAuthenticationFlow();
@@ -79,8 +79,8 @@ public abstract class UniWebViewAuthenticationCommonFlow: MonoBehaviour {
     // Child classes are expected to call this method to request a `code_challenge`. Later when exchanging the access
     // token, the `code_verifier` will be used to verify the `code_challenge`. Subclass can read it from `CodeVerify`.
     protected string GenerateCodeChallengeAndStoreCodeVerify(UniWebViewAuthenticationPKCE method) {
-        codeVerify = UniWebViewAuthenticationUtils.GenerateCodeVerifier();
-        return UniWebViewAuthenticationUtils.CalculateCodeChallenge(codeVerify, method);
+        CodeVerify = UniWebViewAuthenticationUtils.GenerateCodeVerifier();
+        return UniWebViewAuthenticationUtils.CalculateCodeChallenge(CodeVerify, method);
     }
     
     // Perform verifying for `state`.

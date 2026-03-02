@@ -21,7 +21,9 @@ using System.Linq;
 using UnityEngine;
 
 enum UniWebViewChannelMethod {
-    ShouldUniWebViewHandleRequest
+    ShouldUniWebViewHandleRequest,
+    RequestMediaCapturePermission,
+    ChannelMessage
 }
 
 class UniWebViewChannelMethodManager {
@@ -49,8 +51,7 @@ class UniWebViewChannelMethodManager {
         }
         var methodName = method.ToString();
         channels[webViewName][methodName] = handler;
-        UniWebViewLogger.Instance.Info("Channel method is registered for web view: " + webViewName + ", method: " +
-                                       methodName);
+        UniWebViewLogger.Instance.Info(() => $"Channel method is registered for web view: {webViewName}, method: {methodName}");
     }
     
     internal void UnregisterChannel(string webViewName) {
@@ -58,7 +59,7 @@ class UniWebViewChannelMethodManager {
             return;
         }
         channels.Remove(webViewName);
-        UniWebViewLogger.Instance.Debug("All channel methods are unregistered for web view: " + webViewName);
+        UniWebViewLogger.Instance.Debug(() => $"All channel methods are unregistered for web view: {webViewName}");
     }
     
     internal void UnregisterChannelMethod(string webViewName, UniWebViewChannelMethod method) {
@@ -67,8 +68,7 @@ class UniWebViewChannelMethodManager {
             return;
         }
         channels[webViewName].Remove(methodName);
-        UniWebViewLogger.Instance.Debug("Channel method is unregistered for web view: " + webViewName + ", method: " +
-                                       methodName);
+        UniWebViewLogger.Instance.Debug(() => $"Channel method is unregistered for web view: {webViewName}, method: {methodName}");
     }
 
     bool HasRegisteredChannel(string webViewName) {
@@ -85,32 +85,87 @@ class UniWebViewChannelMethodManager {
 
     internal string InvokeMethod(string webViewName, string methodName, string parameters) {
         if (!HasRegisteredMethod(webViewName, methodName)) {
-            UniWebViewLogger.Instance.Info("There is no handler for the channel method. Ignoring.");
+            UniWebViewLogger.Instance.Info(() => "There is no handler for the channel method. Ignoring.");
             return null;
         }
         var func = channels[webViewName][methodName];
 
         if (!Enum.TryParse<UniWebViewChannelMethod>(methodName, out var method)) {
-            UniWebViewLogger.Instance.Info("Unknown method name: " + methodName + ". Please check, ignoring.");
+            UniWebViewLogger.Instance.Info(() => $"Unknown method name: {methodName}. Please check, ignoring.");
             return null;
         }
         
-        UniWebViewLogger.Instance.Verbose("Channel method invoking received for web view: " + webViewName + ", method: " +
-                                          methodName + ", parameters: " + parameters);
+        UniWebViewLogger.Instance.Verbose(() => $"Channel method invoking received for web view: {webViewName}, method: {methodName}, parameters: {parameters}");
+        string result;
         switch (method) {
-            case UniWebViewChannelMethod.ShouldUniWebViewHandleRequest:
+            case UniWebViewChannelMethod.ShouldUniWebViewHandleRequest: {
                 // (UniWebViewChannelMethodHandleRequest) -> bool
                 var input = JsonUtility.FromJson<UniWebViewChannelMethodHandleRequest>(parameters);
                 bool Func(UniWebViewChannelMethodHandleRequest i) => (bool)func(i);
-                var result = ResultJsonWith(Func(input));
-                UniWebViewLogger.Instance.Debug("Channel method handler responded. Result: " + result);
-                return result;
+                result = ResultJsonWith(Func(input));
+                break;
+            }
+            case UniWebViewChannelMethod.RequestMediaCapturePermission: {
+                // (UniWebViewChannelMethodMediaCapturePermission) -> UniWebViewMediaCapturePermissionDecision
+                var input = JsonUtility.FromJson<UniWebViewChannelMethodMediaCapturePermission>(parameters);
+                UniWebViewMediaCapturePermissionDecision Func(UniWebViewChannelMethodMediaCapturePermission i) => (UniWebViewMediaCapturePermissionDecision)func(i);
+                result = ResultJsonWith(Func(input));
+                break;
+            }
+            case UniWebViewChannelMethod.ChannelMessage: {
+                // Direct string parameters for channel message
+                // (UniWebViewChannelMessage) -> JSON object
+                UniWebViewChannelMessage input;
+                try {
+                    input = JsonUtility.FromJson<UniWebViewChannelMessage>(parameters);
+                } catch (System.Exception e) {
+                    UniWebViewLogger.Instance.Critical(() => $"Failed to parse channel message: {e.Message}");
+                    result = null;
+                    break;
+                }
+                
+                // Validate required action field
+                if (string.IsNullOrEmpty(input.action)) {
+                    UniWebViewLogger.Instance.Critical(() => "Channel message missing required 'action' field");
+                    result = null;
+                    break;
+                }
+                
+                UniWebViewChannelMessageResponse Func(UniWebViewChannelMessage i) => (UniWebViewChannelMessageResponse)func(i);
+
+                var response = Func(input);
+                if (response == null) {
+                    result = null;
+                } else {
+                    result = response.ToJson();
+                }
+                break;
+            }
             default:
-                return null;
+                result = null;
+                break;
         }
+        UniWebViewLogger.Instance.Debug(() => $"Channel method handler responded. Result: {result}");
+        return result;
     }
 
     string ResultJsonWith(bool value) {
         return value ? "{\"result\":true}" : "{\"result\":false}";
+    }
+    
+    string ResultJsonWith(UniWebViewMediaCapturePermissionDecision decision) {
+        switch (decision) {
+            case UniWebViewMediaCapturePermissionDecision.Prompt:
+                return "{\"result\":\"prompt\"}";
+            case UniWebViewMediaCapturePermissionDecision.Grant:
+                return "{\"result\":\"grant\"}";
+            case UniWebViewMediaCapturePermissionDecision.Deny:
+                return "{\"result\":\"deny\"}";
+            default:
+                UniWebViewLogger.Instance.Critical(() => $"Unknown decision: {decision}");
+                break;
+        }
+        Debug.LogAssertion("Unrecognized UniWebViewMediaCapturePermissionDecision. Fallback to prompt.");
+        return "{\"result\":\"prompt\"}";
     }
 }

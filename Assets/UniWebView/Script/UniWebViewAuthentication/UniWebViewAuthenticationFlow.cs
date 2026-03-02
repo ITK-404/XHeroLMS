@@ -66,6 +66,19 @@ public interface IUniWebViewAuthenticationFlow<TTokenType>
     Dictionary<string, string> GetAuthenticationUriArguments();
     
     /// <summary>
+    /// Returns additional query arguments that are used to construct the query string of the authentication request.
+    /// 
+    /// If you want to add some extra query arguments to the authentication request, you can override this method and 
+    /// return a string that contains the additional query arguments. The returned string will be appended to the query 
+    /// string that constructed from `GetAuthenticationUriArguments`.
+    /// 
+    /// </summary>
+    /// <returns>
+    /// The additional query arguments that are used to construct the query string of the authentication request.
+    /// </returns>
+    string GetAdditionalAuthenticationUriQuery();
+    
+    /// <summary>
     /// Returns a dictionary contains the parameters that are used to perform the access token exchange request.
     /// The key value pairs in the dictionary are used to construct the HTTP form body of the access token exchange request.
     /// </summary>
@@ -133,6 +146,8 @@ public interface IUniWebViewAuthenticationFlow<TTokenType>
 public class UniWebViewAuthenticationFlow<TTokenType> {
     
     private IUniWebViewAuthenticationFlow<TTokenType> service;
+    private UniWebViewAuthenticationSession session;
+    private Uri callbackUri;
 
     public UniWebViewAuthenticationFlow(
         IUniWebViewAuthenticationFlow<TTokenType> service
@@ -146,24 +161,57 @@ public class UniWebViewAuthenticationFlow<TTokenType> {
     /// </summary>
     public void StartAuth()
     {
-        var callbackUri = new Uri(service.GetCallbackUrl());
+        callbackUri = new Uri(service.GetCallbackUrl());
         var authUrl = GetAuthUrl();
-        var session = UniWebViewAuthenticationSession.Create(authUrl, callbackUri.Scheme);
+        session = UniWebViewAuthenticationSession.Create(authUrl, callbackUri.Scheme);
         var flow = service as UniWebViewAuthenticationCommonFlow;
         if (flow != null && flow.privateMode) {
             session.SetPrivateMode(true);
         }
+        
+        #if UNITY_IOS
+        #if UNITY_EDITOR
+        // Editor does not support deep link.
+        UniWebViewLogger.Instance.Info("Seems you are trying to perform OAuth with a universal link. It is not supported in editor. Try on a real device.");
+        #else
+        // The callback URL seems to be a universal link. We need to handle it in a different way.
+        if (callbackUri.Scheme == "https") {
+            Application.deepLinkActivated += HandleUniversalLink;
+        }
+        
+        #endif // UNITY_EDITOR
+        #endif // UNITY_IOS
+        
         session.OnAuthenticationFinished += (_, resultUrl) =>  {
             UniWebViewLogger.Instance.Verbose("Auth flow received callback url: " + resultUrl);
             ExchangeToken(resultUrl);
+            Application.deepLinkActivated -= HandleUniversalLink;
         };
 
         session.OnAuthenticationErrorReceived += (_, errorCode, message) => {
+            UniWebViewLogger.Instance.Verbose("Auth flow received error: " + errorCode + ". Detail: " + message);
             ExchangeTokenErrored(errorCode, message);
+            Application.deepLinkActivated -= HandleUniversalLink;
         };
         
         UniWebViewLogger.Instance.Verbose("Starting auth flow with url: " + authUrl + "; Callback scheme: " + callbackUri.Scheme);
         session.Start();
+    }
+    
+    private void HandleUniversalLink(string url) {
+        if (callbackUri == null)
+        {
+            UniWebViewLogger.Instance.Critical("Callback URI is not set. Skip handling universal link. Make " +
+                                               "sure you have set a correct callback URL.");
+            return;
+        }
+        
+        if (url.StartsWith(callbackUri.ToString(), StringComparison.InvariantCultureIgnoreCase)) {
+            UniWebViewLogger.Instance.Verbose("HandleUniversalLink: " + url);
+            Application.deepLinkActivated -= HandleUniversalLink;
+            session.Cancel();
+            ExchangeToken(url);
+        }
     }
 
     private void ExchangeToken(string response) {
@@ -206,11 +254,12 @@ public class UniWebViewAuthenticationFlow<TTokenType> {
 
     private string GetAuthUrl() {
         var builder = new UriBuilder(service.GetAuthenticationConfiguration().authorizationEndpoint);
-        var query = new NameValueCollection();
+        var query = new Dictionary<string, string>();
         foreach (var kv in service.GetAuthenticationUriArguments()) {
             query.Add(kv.Key, kv.Value);
         }
-        builder.Query = UniWebViewAuthenticationUtils.CreateQueryString(query);
+        var additionalQuery = service.GetAdditionalAuthenticationUriQuery();
+        builder.Query = UniWebViewAuthenticationUtils.CreateQueryString(query, additionalQuery);
         return builder.ToString();
     }
 
@@ -231,37 +280,37 @@ public class UniWebViewAuthenticationFlow<TTokenType> {
         return SendTokenRequest(request, RefreshTokenFinished, RefreshTokenErrored);
     }
 
-    private IEnumerator SendTokenRequest(UnityWebRequest request, Action<TTokenType> finishAction, Action<long, string>errorAction) {
-        using (var www = request) {
-            yield return www.SendWebRequest();
-            if (www.result != UnityWebRequest.Result.Success) {
-                string errorMessage = null;
-                string errorBody = null;
-                if (www.error != null) {
-                    errorMessage = www.error;
+    private IEnumerator SendTokenRequest(UnityWebRequest request, Action<TTokenType> finishAction, Action<long, string>errorAction)
+    {
+        using var www = request;
+        yield return www.SendWebRequest();
+        if (www.result != UnityWebRequest.Result.Success) {
+            string errorMessage = null;
+            string errorBody = null;
+            if (www.error != null) {
+                errorMessage = www.error;
+            }
+            if (www.downloadHandler != null && www.downloadHandler.text != null) {
+                errorBody = www.downloadHandler.text;
+            }
+            UniWebViewLogger.Instance.Critical("Failed to get access token. Error: " + errorMessage + ". " + errorBody);
+            errorAction(www.responseCode, errorBody ?? errorMessage);
+        } else {
+            var responseText = www.downloadHandler.text;
+            UniWebViewLogger.Instance.Info("Token exchange request succeeded. Response: " + responseText);
+            try {
+                var token = service.GenerateTokenFromExchangeResponse(www.downloadHandler.text);
+                finishAction(token);
+            } catch (Exception e) {
+                var message = e.Message;
+                var code = -1;
+                if (e is AuthenticationResponseException ex) {
+                    code = ex.Code;
                 }
-                if (www.downloadHandler != null && www.downloadHandler.text != null) {
-                    errorBody = www.downloadHandler.text;
-                }
-                UniWebViewLogger.Instance.Critical("Failed to get access token. Error: " + errorMessage + ". " + errorBody);
-                errorAction(www.responseCode, errorBody ?? errorMessage);
-            } else {
-                var responseText = www.downloadHandler.text;
-                UniWebViewLogger.Instance.Info("Token exchange request succeeded. Response: " + responseText);
-                try {
-                    var token = service.GenerateTokenFromExchangeResponse(www.downloadHandler.text);
-                    finishAction(token);
-                } catch (Exception e) {
-                    var message = e.Message;
-                    var code = -1;
-                    if (e is AuthenticationResponseException ex) {
-                        code = ex.Code;
-                    }
-                    UniWebViewLogger.Instance.Critical(
-                        "Exception on parsing token response: " + e + ". Code: " + code + ". Message: " + 
-                        message + ". Response: " + responseText);
-                    errorAction(code, message);
-                }
+                UniWebViewLogger.Instance.Critical(
+                    "Exception on parsing token response: " + e + ". Code: " + code + ". Message: " + 
+                    message + ". Response: " + responseText);
+                errorAction(code, message);
             }
         }
     }

@@ -121,9 +121,16 @@ public class UniWebViewAuthenticationFlowGitHub: UniWebViewAuthenticationCommonF
             if (!optional.allowSignup) { // The default value is true.
                 authorizeArgs.Add("allow_signup", "false");
             }
+            if (!String.IsNullOrEmpty(optional.prompt)) {
+                authorizeArgs.Add("prompt", optional.prompt);
+            }
         }
 
         return authorizeArgs;
+    }
+
+    public string GetAdditionalAuthenticationUriQuery() {
+        return optional.additionalAuthenticationUriQuery;
     }
 
     /// <summary>
@@ -144,7 +151,7 @@ public class UniWebViewAuthenticationFlowGitHub: UniWebViewAuthenticationCommonF
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
     public Dictionary<string, string> GetAccessTokenRequestParameters(string authResponse) {
-        if (!authResponse.StartsWith(callbackUrl)) {
+        if (!authResponse.StartsWith(callbackUrl, StringComparison.InvariantCultureIgnoreCase)) {
             throw AuthenticationResponseException.UnexpectedAuthCallbackUrl;
         }
         var uri = new Uri(authResponse);
@@ -210,9 +217,27 @@ public class UniWebViewAuthenticationFlowGitHubOptional {
     /// </summary>
     public bool enableState = false;
     /// <summary>
-    /// Whether or not unauthenticated users will be offered an option to sign up for GitHub during the OAuth flow.
+    /// Whether unauthenticated users will be offered an option to sign up for GitHub during the OAuth flow.
     /// </summary>
     public bool allowSignup = true;
+    
+    /// <summary>
+    /// The prompt that will be set to the authentication request query. For example, the possible values can be 
+    /// `login`, `consent`, `select_account` and so on.
+    /// 
+    /// See https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+    /// </summary>
+    public string prompt = "";
+    
+    /// <summary>
+    /// The additional query arguments that are used to construct the query string of the authentication request.
+    /// 
+    /// This is useful when you want to add some custom parameters to the authentication request. This string will be 
+    /// appended to the query string that constructed from `GetAuthenticationUriArguments`. 
+    /// 
+    /// For example, if you set `prompt=consent&ui_locales=en`, it will be contained in the final authentication query.
+    /// </summary>
+    public string additionalAuthenticationUriQuery = "";
 }
 
 /// <summary>

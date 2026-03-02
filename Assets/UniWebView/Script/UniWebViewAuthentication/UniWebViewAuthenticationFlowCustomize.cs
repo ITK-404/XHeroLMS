@@ -91,7 +91,7 @@ public class UniWebViewAuthenticationFlowCustomize : UniWebViewAuthenticationCom
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public UniWebViewAuthenticationConfiguration GetAuthenticationConfiguration() {
+    public virtual UniWebViewAuthenticationConfiguration GetAuthenticationConfiguration() {
         return new UniWebViewAuthenticationConfiguration(
             config.authorizationEndpoint, 
             config.tokenEndpoint
@@ -101,14 +101,14 @@ public class UniWebViewAuthenticationFlowCustomize : UniWebViewAuthenticationCom
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public string GetCallbackUrl() {
+    public virtual string GetCallbackUrl() {
         return redirectUri;
     }
 
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public Dictionary<string, string> GetAuthenticationUriArguments() {
+    public virtual Dictionary<string, string> GetAuthenticationUriArguments() {
         var authorizeArgs = new Dictionary<string, string> {
             { "client_id", clientId },
             { "redirect_uri", redirectUri },
@@ -132,12 +132,16 @@ public class UniWebViewAuthenticationFlowCustomize : UniWebViewAuthenticationCom
 
         return authorizeArgs;
     }
+    
+    public string GetAdditionalAuthenticationUriQuery() {
+        return optional.additionalAuthenticationUriQuery;
+    }
 
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public Dictionary<string, string> GetAccessTokenRequestParameters(string authResponse) {
-        if (!authResponse.StartsWith(redirectUri)) {
+    public virtual Dictionary<string, string> GetAccessTokenRequestParameters(string authResponse) {
+        if (!authResponse.StartsWith(redirectUri, StringComparison.InvariantCultureIgnoreCase)) {
             throw AuthenticationResponseException.UnexpectedAuthCallbackUrl;
         }
         
@@ -168,7 +172,7 @@ public class UniWebViewAuthenticationFlowCustomize : UniWebViewAuthenticationCom
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public Dictionary<string, string> GetRefreshTokenRequestParameters(string refreshToken) {
+    public virtual Dictionary<string, string> GetRefreshTokenRequestParameters(string refreshToken) {
         var parameters = new Dictionary<string, string> {
             { "client_id", clientId },
             { "refresh_token", refreshToken },
@@ -183,7 +187,7 @@ public class UniWebViewAuthenticationFlowCustomize : UniWebViewAuthenticationCom
     /// <summary>
     /// Implements required method in `IUniWebViewAuthenticationFlow`.
     /// </summary>
-    public UniWebViewAuthenticationStandardToken GenerateTokenFromExchangeResponse(string exchangeResponse) {
+    public virtual UniWebViewAuthenticationStandardToken GenerateTokenFromExchangeResponse(string exchangeResponse) {
         return UniWebViewAuthenticationTokenFactory<UniWebViewAuthenticationStandardToken>.Parse(exchangeResponse);
     }
 
@@ -227,4 +231,5 @@ public class UniWebViewAuthenticationFlowCustomizeOptional {
     public UniWebViewAuthenticationPKCE PKCESupport = UniWebViewAuthenticationPKCE.None; 
     public bool enableState = false;
     public string clientSecret = "";
+    public string additionalAuthenticationUriQuery = "";
 }
