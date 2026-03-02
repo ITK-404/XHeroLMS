@@ -1,5 +1,6 @@
 #if UNITY_EDITOR_WIN || UNITY_EDITOR_LINUX || (!UNITY_EDITOR_OSX && !UNITY_STANDALONE_OSX && !UNITY_IOS && !UNITY_ANDROID)
 
+using System;
 using UnityEngine;
 
 public class UniWebViewInterface {
@@ -17,32 +18,52 @@ public class UniWebViewInterface {
     public static void SetFrame(string name, int x, int y, int width, int height) { CheckPlatform(); }
     public static void SetPosition(string name, int x, int y) { CheckPlatform(); }
     public static void SetSize(string name, int width, int height) { CheckPlatform(); }
+    public static void SetTransform(string name, float rotation, float scaleX, float scaleY) { CheckPlatform(); }
+    public static void SetRoundCornerRadius(string name, float topLeft, float topRight, float bottomLeft, float bottomRight) { CheckPlatform(); }
+    public static void SetShadow(string name, float red, float green, float blue, float alpha, float opacity, float radius, float offsetX, float offsetY, float spread) { CheckPlatform(); }
     public static bool Show(string name, bool fade, int edge, float duration, bool useAsync, string identifier) { CheckPlatform(); return false; }
     public static bool Hide(string name, bool fade, int edge, float duration, bool useAsync, string identifier) { CheckPlatform(); return false; }
     public static bool AnimateTo(string name, int x, int y, int width, int height, float duration, float delay, string identifier) { CheckPlatform(); return false; }
     public static void AddJavaScript(string name, string jsString, string identifier) { CheckPlatform(); }
     public static void EvaluateJavaScript(string name, string jsString, string identifier) { CheckPlatform(); }
+    public static void ClosePopupWindow(string name, string popupId) { CheckPlatform(); }
+    public static void GoBackPopupWindow(string name, string popupId) { CheckPlatform(); }
+    public static void GoForwardPopupWindow(string name, string popupId) { CheckPlatform(); }
+    public static void EvaluateJavaScriptInPopupWindow(string name, string popupId, string jsString, string identifier) { CheckPlatform(); }
+    public static void CloseAllPopupWindows(string name) { CheckPlatform(); }
+    public static void SetPopupPageEventEnabled(string name, bool enabled) { CheckPlatform(); }
     public static void AddUrlScheme(string name, string scheme) { CheckPlatform(); }
     public static void RemoveUrlScheme(string name, string scheme) { CheckPlatform(); }
+    [Obsolete("AddSslExceptionDomain is deprecated. Use AddSslPinnedFingerprint instead.")]
     public static void AddSslExceptionDomain(string name, string domain) { CheckPlatform(); }
+    [Obsolete("RemoveSslExceptionDomain is deprecated. Use RemoveSslPinnedFingerprint instead.")]
     public static void RemoveSslExceptionDomain(string name, string domain) { CheckPlatform(); }
+    public static void AddSslPinnedFingerprint(string name, string domain, string fingerprint) { CheckPlatform(); }
+    public static void RemoveSslPinnedFingerprint(string name, string domain, string fingerprint) { CheckPlatform(); }
     public static void SetHeaderField(string name, string key, string value) { CheckPlatform(); }
     public static void SetUserAgent(string name, string userAgent) { CheckPlatform(); }
     public static string GetUserAgent(string name) { CheckPlatform(); return ""; }
     public static void SetAllowAutoPlay(bool flag) { CheckPlatform(); }
     public static void SetAllowInlinePlay(bool flag) { CheckPlatform(); }
     public static void SetAllowJavaScriptOpenWindow(bool flag) { CheckPlatform(); }
+    public static void SetForwardWebConsoleToNativeOutput(bool flag) { CheckPlatform(); }
     public static void SetAllowFileAccess(string name, bool flag) { CheckPlatform(); }
     public static void SetAllowFileAccessFromFileURLs(string name, bool flag) { CheckPlatform(); }
     public static void SetAllowUniversalAccessFromFileURLs(bool flag) { CheckPlatform(); }
     public static void SetJavaScriptEnabled(bool flag) { CheckPlatform(); }
     public static void SetLimitsNavigationsToAppBoundDomains(bool enabled) { CheckPlatform(); }
-    public static void CleanCache(string name) { CheckPlatform(); }
+    public static void CleanCache(string name, bool includeStorage, string identifier) { CheckPlatform(); }
+    public static void SetCacheMode(string name, int mode) { CheckPlatform(); }
     public static void ClearCookies() { CheckPlatform(); }
+    public static void ClearCookies(string identifier) { CheckPlatform(); }
     public static void SetCookie(string url, string cookie, bool skipEncoding) { CheckPlatform(); }
+    public static void SetCookie(string url, string cookie, bool skipEncoding, string identifier) { CheckPlatform(); }
     public static void RemoveCookies(string url, bool skipEncoding) { CheckPlatform(); }
+    public static void RemoveCookies(string url, bool skipEncoding, string identifier) { CheckPlatform(); }
     public static void RemoveCookie(string url, string key, bool skipEncoding) { CheckPlatform(); }
+    public static void RemoveCookie(string url, string key, bool skipEncoding, string identifier) { CheckPlatform(); }
     public static string GetCookie(string url, string key, bool skipEncoding) { CheckPlatform(); return ""; }
+    public static void GetCookie(string url, string key, bool skipEncoding, string identifier) { CheckPlatform(); }
     public static void ClearHttpAuthUsernamePassword(string host, string realm) { CheckPlatform(); }
     public static void SetBackgroundColor(string name, float r, float g, float b, float a) { CheckPlatform(); }
     public static void SetWebViewAlpha(string name, float alpha) { CheckPlatform(); }
@@ -69,8 +90,11 @@ public class UniWebViewInterface {
     public static void SetToolbarTextColor(string name, float r, float g, float b) { CheckPlatform(); }
     public static void SetUserInteractionEnabled(string name, bool enabled) { CheckPlatform(); }
     public static void SetTransparencyClickingThroughEnabled(string name, bool enabled) { CheckPlatform(); }
+    public static void RefreshTransparencyClickingThroughLayout(string name) { CheckPlatform(); }
     public static void SetWebContentsDebuggingEnabled(bool enabled) { CheckPlatform(); }
     public static void SetAllowHTTPAuthPopUpWindow(string name, bool flag) { CheckPlatform(); }
+    public static void SetAllowUserEditFileNameBeforeDownloading(string name, bool allowed) { CheckPlatform(); }
+    public static void SetAutoDownloadEnabled(string name, bool enabled) { CheckPlatform(); }
     public static void Print(string name) { CheckPlatform(); }
     public static void CaptureSnapshot(string name, string filename) { CheckPlatform(); }
     public static void SetCalloutEnabled(string name, bool flag) { CheckPlatform(); }
@@ -82,6 +106,7 @@ public class UniWebViewInterface {
     public static void SafeBrowsingInit(string name, string url) { CheckPlatform(); }
     public static void SafeBrowsingSetToolbarColor(string name, float r, float g, float b) { CheckPlatform(); }
     public static void SafeBrowsingShow(string name) { CheckPlatform(); }
+    public static void SafeBrowsingInvalidate(string name) { CheckPlatform(); }
     public static bool IsAuthenticationIsSupported() { CheckPlatform(); return false; }
     public static void AuthenticationInit(string name, string url, string scheme) { CheckPlatform(); }
     public static void AuthenticationStart(string name) { CheckPlatform(); }
@@ -96,6 +121,12 @@ public class UniWebViewInterface {
     public static void SetEmbeddedToolbarButtonTextColor(string name, Color color) { CheckPlatform(); }
     public static void SetEmbeddedToolbarTitleTextColor(string name, Color color) { CheckPlatform(); }
     public static void SetEmeddedToolbarNavigationButtonsShow(string name, bool show) { CheckPlatform(); }
+    public static void SetEmbeddedToolbarMaxHeight(string name, float height) { CheckPlatform(); }
+    public static void StartSnapshotForRendering(string name, string identifier) { CheckPlatform(); }
+    public static void StopSnapshotForRendering(string name) { CheckPlatform(); }
+    public static byte[] GetRenderedData(string name, int x, int y, int width, int height) { CheckPlatform(); return null; }
+    public static string CopyBackForwardList(string name) { CheckPlatform(); return ""; }
+    public static void GoToIndexInBackForwardList(string listenerName, int index) { CheckPlatform(); }
 
     public static void CheckPlatform() {
         if (!alreadyLoggedWarning) {

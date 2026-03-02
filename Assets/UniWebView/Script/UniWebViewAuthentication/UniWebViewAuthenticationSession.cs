@@ -17,6 +17,7 @@
 
 using UnityEngine;
 using System;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// Represents a session that can be used to authenticate a user through a web service.
@@ -37,7 +38,7 @@ using System;
 /// 
 /// See https://docs.uniwebview.com/guide/oauth2.html for a more detailed guide of authentication in UniWebView.
 /// </remarks>
-public class UniWebViewAuthenticationSession: UnityEngine.Object {
+public class UniWebViewAuthenticationSession {
   /// <summary>
   /// Delegate for authentication session finished event.
   /// </summary>
@@ -71,7 +72,7 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
   /// </summary>
   public event AuthErrorReceivedDelegate OnAuthenticationErrorReceived;
 
-  private string id = Guid.NewGuid().ToString();
+  private readonly string id = Guid.NewGuid().ToString();
   private UniWebViewNativeListener listener;
   
   /// <summary>
@@ -90,7 +91,8 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
       OnAuthenticationFinished(this, url);
     }
     UniWebViewNativeListener.RemoveListener(listener.Name);
-    Destroy(listener.gameObject);
+    Object.Destroy(listener.gameObject);
+    listener = null;
   }
 
   internal void InternalAuthenticationErrorReceived(UniWebViewNativeResultPayload payload) {
@@ -100,7 +102,8 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
     }
     
     UniWebViewNativeListener.RemoveListener(listener.Name);
-    Destroy(listener.gameObject);
+    Object.Destroy(listener.gameObject);
+    listener = null;
   }
 
   private UniWebViewAuthenticationSession() {  
@@ -134,11 +137,7 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
   /// Returns `true` if the safe browsing mode is supported and the page will be opened in safe browsing 
   /// mode. Otherwise, `false`.
   /// </returns>
-  public static bool IsAuthenticationSupported { 
-    get {
-      return UniWebViewInterface.IsAuthenticationIsSupported(); 
-    }
-  }
+  public static bool IsAuthenticationSupported => UniWebViewInterface.IsAuthenticationIsSupported();
 
   /// <summary>
   /// Creates a new authentication session with a given authentication page URL and a callback scheme.
@@ -149,13 +148,16 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
   /// </param>
   /// <param name="callbackScheme">The URL scheme which the service will use to navigate back to your client app.</param>
   /// <returns></returns>
-  public static UniWebViewAuthenticationSession Create(string url, string callbackScheme) {
+  public static UniWebViewAuthenticationSession Create(string url, string callbackScheme, bool initializeSession = true) {
     var session = new UniWebViewAuthenticationSession();
     session.listener.session = session;
     session.Url = url;
     session.CallbackScheme = callbackScheme;
 
-    UniWebViewInterface.AuthenticationInit(session.listener.Name, url, callbackScheme);
+    // Skip in test mode due to a dangling call will cause a native crash.
+    if (initializeSession) {
+      UniWebViewInterface.AuthenticationInit(session.listener.Name, url, callbackScheme);
+    }
 
     return session;
   }
@@ -165,6 +167,17 @@ public class UniWebViewAuthenticationSession: UnityEngine.Object {
   /// </summary>
   public void Start() {
     UniWebViewInterface.AuthenticationStart(listener.Name);
+  }
+
+  /// <summary>
+  /// Cancels the authentication session.
+  /// 
+  /// This method is only available on iOS.
+  /// </summary>
+  internal void Cancel() {
+#if UNITY_IOS && !UNITY_EDITOR
+    UniWebViewInterface.AuthenticationCancel(listener.Name);
+#endif
   }
 
   /// <summary>

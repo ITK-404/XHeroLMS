@@ -1,4 +1,4 @@
-[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases/ios/builds/1.0.4/" "gs://dlc-lms/addressables/releases/ios/latest/"
+[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases/android/builds/1.0.4/" "gs://dlc-lms/addressables/releases/android/latest/"
 ExitCode=0
 
 --- STDOUT ---
@@ -6,22 +6,29 @@ ExitCode=0
 
 --- STDERR ---
 Building synchronization state...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
-
 Starting synchronization...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog.json [Content-Type=application/json]...
+/ [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+-
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_dai_dao_chi_gian_1_scenes_all_4e4941f6c302652618f424e876f92c32.bundle [Content-Type=application/octet-stream]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_dai_dao_chi_gian_2_scenes_all_d07c1de33b2e076eb52bab0f4434388a.bundle [Content-Type=application/octet-stream]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog_1.0.4.hash [Content-Type=application/octet-stream]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog.hash [Content-Type=application/octet-stream]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog_1.0.4.json [Content-Type=application/json]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_newscene_scenes_all_870bba4fedbcd46e2a41b027730e89b5.bundle [Content-Type=application/octet-stream]...
+- [0/7 files][    0.0 B/429.2 MiB]   0% Done                                    
+- [1/7 files][120.9 MiB/429.2 MiB]  28% Done                                    
+- [2/7 files][120.9 MiB/429.2 MiB]  28% Done                                    
+- [3/7 files][121.1 MiB/429.2 MiB]  28% Done                                    
+- [4/7 files][429.1 MiB/429.2 MiB]  99% Done                                    
+- [5/7 files][429.1 MiB/429.2 MiB]  99% Done                                    
+- [6/7 files][429.1 MiB/429.2 MiB]  99% Done                                    
+- [7/7 files][429.2 MiB/429.2 MiB] 100% Done                                    
 
-Copying gs://dlc-lms/addressables/releases/ios/builds/1.0.4/catalog_1.0.4.hash [Content-Type=application/octet-stream]...
-/ [0/4 files][    0.0 B/321.0 KiB]   0% Done                                    
-Copying gs://dlc-lms/addressables/releases/ios/builds/1.0.4/catalog.hash [Content-Type=application/octet-stream]...
-/ [0/4 files][    0.0 B/321.0 KiB]   0% Done                                    
-Copying gs://dlc-lms/addressables/releases/ios/builds/1.0.4/catalog.json [Content-Type=application/json]...
-/ [0/4 files][    0.0 B/321.0 KiB]   0% Done                                    
-Copying gs://dlc-lms/addressables/releases/ios/builds/1.0.4/catalog_1.0.4.json [Content-Type=application/json]...
-/ [0/4 files][    0.0 B/321.0 KiB]   0% Done                                    
-/ [1/4 files][   32.0 B/321.0 KiB]   0% Done                                    
-/ [2/4 files][   64.0 B/321.0 KiB]   0% Done                                    
-/ [3/4 files][160.5 KiB/321.0 KiB]  50% Done                                    
-/ [4/4 files][321.0 KiB/321.0 KiB] 100% Done                                    
-Operation completed over 4 objects/321.0 KiB.                                    
+Operation completed over 7 objects/429.2 MiB.                                    
 

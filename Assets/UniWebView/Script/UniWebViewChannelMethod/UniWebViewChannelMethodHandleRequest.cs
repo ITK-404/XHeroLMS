@@ -25,9 +25,20 @@ using UnityEngine;
 public class UniWebViewChannelMethodHandleRequest {
     [SerializeField]
     private string url;
-    
+    [SerializeField]
+    private bool isMainFrame = true;
+
     /// <summary>
     /// The URL of the request.
     /// </summary>
     public string Url => url;
+    /// <summary>
+    /// Whether the request is for the main frame (top-level document) or an embedded frame (iframe).
+    /// 
+    /// Returns true for main frame requests, false for iframe requests.
+    /// 
+    /// Note: On older Android versions (API level < 24), this may always return true due to 
+    /// platform limitations in distinguishing between main frame and iframe requests.
+    /// </summary>
+    public bool IsMainFrame => isMainFrame;
 }

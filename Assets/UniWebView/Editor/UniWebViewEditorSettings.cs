@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 
-class UniWebViewEditorSettings: ScriptableObject
+public class UniWebViewEditorSettings: ScriptableObject
 {
-    const string assetPath = "Assets/Editor/UniWebView/settings.asset";
+    private const string AssetPath = "Assets/Editor/UniWebView/settings.asset";
+    private const string MinBrowserVersion = defaultAndroidBrowserVersion;
+    private const string MinKotlinVersion = defaultKotlinVersion;
 
     [SerializeField]
     internal bool usesCleartextTraffic = false;
@@ -44,18 +46,82 @@ class UniWebViewEditorSettings: ScriptableObject
     [SerializeField]
     internal bool supportLINELogin = false;
 
-    internal static string defaultKotlinVersion = "1.6.21";
-    internal static string defaultAndroidBrowserVersion = "1.2.0";
-    internal static string defaultAndroidXCoreVersion = "1.5.0";
+    [SerializeField]
+    internal string[] androidAssetsFolders = { };
+
+    internal const string defaultKotlinVersion = "1.8.22";
+    internal const string defaultAndroidBrowserVersion = "1.5.0";
+    internal const string defaultAndroidXCoreVersion = "1.5.0";
+
+    private void OnValidate() {
+        androidBrowserVersion = ClampBrowserVersion(androidBrowserVersion);
+        kotlinVersion = ClampKotlinVersion(kotlinVersion);
+    }
+
+    private string ClampBrowserVersion(string value) {
+        if (string.IsNullOrWhiteSpace(value)) {
+            return "";
+        }
+
+        if (TryParseVersion(value, out var parsedCandidate) &&
+            TryParseVersion(MinBrowserVersion, out var parsedMin) &&
+            parsedCandidate < parsedMin) {
+            Debug.LogWarning($"<UniWebView> Browser version {value} lower than supported minimum {MinBrowserVersion}, resetting to {MinBrowserVersion}.");
+            return MinBrowserVersion;
+        }
+
+        return value;
+    }
+
+    private string ClampKotlinVersion(string value) {
+        if (string.IsNullOrWhiteSpace(value)) {
+            return "";
+        }
+
+        if (TryParseVersion(value, out var parsedCandidate) &&
+            TryParseVersion(MinKotlinVersion, out var parsedMin) &&
+            parsedCandidate < parsedMin) {
+            Debug.LogWarning($"<UniWebView> Kotlin version {value} lower than supported minimum {MinKotlinVersion}, resetting to {MinKotlinVersion}.");
+            return MinKotlinVersion;
+        }
+
+        return value;
+    }
+
+    internal static bool TryParseVersion(string versionString, out Version version) {
+        version = null;
+        if (string.IsNullOrWhiteSpace(versionString)) {
+            return false;
+        }
+
+        // Strip suffix like -alpha05 / +build before parsing.
+        var trimmed = versionString.Trim();
+        var dashIndex = trimmed.IndexOfAny(new[] { '-', '+' });
+        if (dashIndex > 0) {
+            trimmed = trimmed.Substring(0, dashIndex);
+        }
+
+        if (Version.TryParse(trimmed, out var parsed)) {
+            // Normalize negative build/revision to zero for comparison safety.
+            version = new Version(
+                parsed.Major,
+                parsed.Minor,
+                parsed.Build < 0 ? 0 : parsed.Build,
+                parsed.Revision < 0 ? 0 : parsed.Revision);
+            return true;
+        }
+
+        return false;
+    }
 
     internal static UniWebViewEditorSettings GetOrCreateSettings() {
-        var settings = AssetDatabase.LoadAssetAtPath<UniWebViewEditorSettings>(assetPath);
+        var settings = AssetDatabase.LoadAssetAtPath<UniWebViewEditorSettings>(AssetPath);
 
         if (settings == null) {
             settings = ScriptableObject.CreateInstance<UniWebViewEditorSettings>();
 
             Directory.CreateDirectory("Assets/Editor/UniWebView/");
-            AssetDatabase.CreateAsset(settings, assetPath);
+            AssetDatabase.CreateAsset(settings, AssetPath);
             AssetDatabase.SaveAssets();
         }
 
@@ -65,6 +131,25 @@ class UniWebViewEditorSettings: ScriptableObject
     internal static SerializedObject GetSerializedSettings() {
         return new SerializedObject(GetOrCreateSettings());
     }
+}
+
+// UniWebViewEditorSettings is not working well with AndroidProjectFilesModifier.
+// (reading it requires main thread, but the OnModifyAndroidProjectFiles is not in main thread)
+[Serializable]
+public class UniWebViewEditorSettingsReading {
+    public bool usesCleartextTraffic = false;
+    public bool writeExternalStorage = false;
+    public bool accessFineLocation = false;
+    public bool addsKotlin = true;
+    public string kotlinVersion = null;
+    public bool addsAndroidBrowser = true;
+    public string androidBrowserVersion = null;
+    public bool addsAndroidXCore = false;
+    public string androidXCoreVersion = null;
+    public bool enableJetifier = true;
+    public string[] authCallbackUrls = { };
+    public bool supportLINELogin = false;
+    public string[] androidAssetsFolders = { };
 }
 
 static class UniWebViewSettingsProvider {
@@ -168,6 +253,16 @@ static class UniWebViewSettingsProvider {
         EditorGUILayout.PropertyField(settings.FindProperty("supportLINELogin"));
         DrawDetailLabel("LINE Login is using a custom fixed scheme. If you want to support LINE Login, turn on this.");
         
+        EditorGUI.indentLevel--;
+        EditorGUILayout.EndVertical();
+
+        // Android Assets
+        EditorGUILayout.Space();
+        EditorGUILayout.BeginVertical();
+        EditorGUILayout.LabelField("Android Assets", EditorStyles.boldLabel);
+        EditorGUI.indentLevel++;
+        EditorGUILayout.PropertyField(settings.FindProperty("androidAssetsFolders"), true);
+        DrawDetailLabel("Asset folders to copy to Android assets (relative to Assets directory). Leave empty to disable.");
         EditorGUI.indentLevel--;
         EditorGUILayout.EndVertical();
 

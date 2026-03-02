@@ -50,9 +50,10 @@ public class UniWebViewAuthenticationFlowFacebook: UniWebViewAuthenticationCommo
     public UniWebViewAuthenticationFlowFacebookOptional optional;
     
     // The redirect URL should be exactly this one. Web view should inspect the loading of this URL to handle the result.
-    private string redirectUri = "https://www.facebook.com/connect/login_success.html";
+    private const string redirectUri = "https://www.facebook.com/connect/login_success.html";
+
     // Only `token` response type is supported to use Facebook Login as the manual flow.
-    private string responseType = "token";
+    private const string responseType = "token";
     
     [field: SerializeField]
     public UnityEvent<UniWebViewAuthenticationFacebookToken> OnAuthenticationFinished { get; set; }
@@ -128,7 +129,7 @@ public class UniWebViewAuthenticationFlowFacebook: UniWebViewAuthenticationCommo
         };
         webView.Frame = new Rect(0, 0, Screen.width, Screen.height);
         webView.Load(GetAuthUrl());
-        webView.SetShowToolbar(true, adjustInset: true);
+        webView.EmbeddedToolbar.Show();
         webView.Show(false, UniWebViewTransitionEdge.Bottom, 0.25f);
     }
 
@@ -144,12 +145,12 @@ public class UniWebViewAuthenticationFlowFacebook: UniWebViewAuthenticationCommo
 
     private string GetAuthUrl() {
         var builder = new UriBuilder(config.authorizationEndpoint);
-        var query = new NameValueCollection();
+        var query = new Dictionary<string, string>();
         foreach (var kv in GetAuthenticationUriArguments()) {
             query.Add(kv.Key, kv.Value);
         }
 
-        builder.Query = UniWebViewAuthenticationUtils.CreateQueryString(query);
+        builder.Query = UniWebViewAuthenticationUtils.CreateQueryString(query, optional.additionalAuthenticationUriQuery);
         return builder.ToString();
     }
 
@@ -181,6 +182,16 @@ public class UniWebViewAuthenticationFlowFacebookOptional {
     /// The scope string of all your required scopes.
     /// </summary>
     public string scope = "";
+
+    /// <summary>
+    /// The additional query arguments that are used to construct the query string of the authentication request.
+    /// 
+    /// This is useful when you want to add some custom parameters to the authentication request. This string will be 
+    /// appended to the query string that constructed from `GetAuthenticationUriArguments`. 
+    /// 
+    /// For example, if you set `prompt=consent&ui_locales=en`, it will be contained in the final authentication query.
+    /// </summary>
+    public string additionalAuthenticationUriQuery = "";
 }
 
 /// The token object from Facebook. 
@@ -205,7 +216,7 @@ public class UniWebViewAuthenticationFacebookToken {
     
     public UniWebViewAuthenticationFacebookToken(string response, Dictionary<string, string> values) {
         RawValue = response;
-        AccessToken = values.ContainsKey("access_token") ? values["access_token"] as string : null ;
+        AccessToken = values.ContainsKey("access_token") ? values["access_token"] : null ;
         if (AccessToken == null) {
             throw AuthenticationResponseException.InvalidResponse(response);
         }

@@ -37,19 +37,7 @@ namespace UniWebViewExternal {
     //
     //  using UnityEngine;
     //  using System.Collections;
-    //  using System.Collection
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //   s.Generic;
+    //  using System.Collections.Generic;
     //  using MiniJSON;
     //
     //  public class MiniJSONTest : MonoBehaviour {
@@ -323,17 +311,9 @@ namespace UniWebViewExternal {
                 }
             }
 
-            char PeekChar {
-                get {
-                    return Convert.ToChar(json.Peek());
-                }
-            }
+            char PeekChar => Convert.ToChar(json.Peek());
 
-            char NextChar {
-                get {
-                    return Convert.ToChar(json.Read());
-                }
-            }
+            char NextChar => Convert.ToChar(json.Read());
 
             string NextWord {
                 get {

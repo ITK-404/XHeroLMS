@@ -38,6 +38,11 @@ public class UniWebViewLogger {
         /// Info level. When set to `Info`, the logger will log out up to info messages.
         /// </summary>
         Info = 20,
+        
+        /// <summary>
+        /// Warning level. When set to `Warning`, the logger will log out warnings and non-critical error messages.
+        /// </summary>
+        Warning = 30,
 
         /// <summary>
         /// Critical level. When set to `Critical`, the logger will only log out errors or exceptions.
@@ -58,7 +63,7 @@ public class UniWebViewLogger {
     /// Default is `Critical`, which means the logger only prints errors and exceptions.
     /// </summary>
     public Level LogLevel {
-        get { return level; }
+        get => level;
         set {
             Log(Level.Off, "Setting UniWebView logger level to: " + value);
             level = value;
@@ -90,10 +95,22 @@ public class UniWebViewLogger {
     public void Verbose(string message) { Log(Level.Verbose, message); }
 
     /// <summary>
+    /// Log a verbose message with lazy evaluation.
+    /// </summary>
+    /// <param name="messageProvider">The message provider function.</param>
+    public void Verbose(System.Func<string> messageProvider) { Log(Level.Verbose, messageProvider); }
+
+    /// <summary>
     /// Log a debug message.
     /// </summary>
     /// <param name="message">The message to log.</param>
     public void Debug(string message) { Log(Level.Debug, message); }
+
+    /// <summary>
+    /// Log a debug message with lazy evaluation.
+    /// </summary>
+    /// <param name="messageProvider">The message provider function.</param>
+    public void Debug(System.Func<string> messageProvider) { Log(Level.Debug, messageProvider); }
 
     /// <summary>
     /// Log an info message.
@@ -102,20 +119,64 @@ public class UniWebViewLogger {
     public void Info(string message) { Log(Level.Info, message); }
 
     /// <summary>
+    /// Log an info message with lazy evaluation.
+    /// </summary>
+    /// <param name="messageProvider">The message provider function.</param>
+    public void Info(System.Func<string> messageProvider) { Log(Level.Info, messageProvider); }
+
+    /// <summary>
+    /// Log a warning message.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
+    public void Warning(string message) { Log(Level.Warning, message); }
+    
+    /// <summary>
+    /// Log a warning message with lazy evaluation.
+    /// </summary>
+    /// <param name="messageProvider">The message provider function.</param>
+    public void Warning(System.Func<string> messageProvider) { Log(Level.Warning, messageProvider); }
+    
+    /// <summary>
     /// Log a critical message.
     /// </summary>
     /// <param name="message">The message to log.</param>
     public void Critical(string message) { Log(Level.Critical, message); }
 
+    /// <summary>
+    /// Log a critical message with lazy evaluation.
+    /// </summary>
+    /// <param name="messageProvider">The message provider function.</param>
+    public void Critical(System.Func<string> messageProvider) { Log(Level.Critical, messageProvider); }
+
     // ReSharper disable Unity.PerformanceAnalysis
     private void Log(Level targetLevel, string message) {
         if (targetLevel >= this.LogLevel) {
-            var logMessage = "<UniWebView> " + message;
+            var truncatedMessage = TruncateMessage(message);
+            var logMessage = "<UniWebView> " + truncatedMessage;
             if (targetLevel == Level.Critical) {
                 UnityEngine.Debug.LogError(logMessage);
             } else {
                 UnityEngine.Debug.Log(logMessage);
             }
         }
+    }
+
+    // ReSharper disable Unity.PerformanceAnalysis
+    private void Log(Level targetLevel, System.Func<string> messageProvider) {
+        if (targetLevel >= this.LogLevel) {
+            Log(targetLevel, messageProvider());
+        }
+    }
+
+    private string TruncateMessage(string message) {
+        if (string.IsNullOrEmpty(message)) {
+            return message;
+        }
+        
+        if (message.Length > 5000) {
+            return message.Substring(0, 5000) + "...truncated";
+        }
+        
+        return message;
     }
 }

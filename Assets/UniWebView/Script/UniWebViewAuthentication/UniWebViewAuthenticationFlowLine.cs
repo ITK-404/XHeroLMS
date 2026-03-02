@@ -58,8 +58,8 @@ public class UniWebViewAuthenticationFlowLine : UniWebViewAuthenticationCommonFl
     /// </summary>
     public UniWebViewAuthenticationFlowLineOptional optional;
     
-    private string responseType = "code";
-    private string grantType = "authorization_code";
+    private const string responseType = "code";
+    private const string grantType = "authorization_code";
 
     private string RedirectUri {
         get {
@@ -125,9 +125,13 @@ public class UniWebViewAuthenticationFlowLine : UniWebViewAuthenticationCommonFl
         
         return authorizeArgs;
     }
+    
+    public string GetAdditionalAuthenticationUriQuery() {
+        return optional.additionalAuthenticationUriQuery;
+    }
 
     private string GenerateReturnUri() {
-        var query = new NameValueCollection {
+        var query = new Dictionary<string, string> {
             { "response_type", responseType },
             { "client_id", clientId },
             { "redirect_uri", RedirectUri }
@@ -151,7 +155,8 @@ public class UniWebViewAuthenticationFlowLine : UniWebViewAuthenticationCommonFl
                 query.Add("code_challenge_method", method);
             }
         }
-        return "/oauth2/v2.1/authorize/consent?" + UniWebViewAuthenticationUtils.CreateQueryString(query);
+        var additionalQuery = GetAdditionalAuthenticationUriQuery();
+        return "/oauth2/v2.1/authorize/consent?" + UniWebViewAuthenticationUtils.CreateQueryString(query, additionalQuery);
     }
 
     /// <summary>
@@ -159,7 +164,7 @@ public class UniWebViewAuthenticationFlowLine : UniWebViewAuthenticationCommonFl
     /// </summary>
     public Dictionary<string, string> GetAccessTokenRequestParameters(string authResponse) {
         var normalizedRedirectUri = UniWebViewAuthenticationUtils.ConvertIntentUri(RedirectUri);
-        if (!authResponse.StartsWith(normalizedRedirectUri)) {
+        if (!authResponse.StartsWith(normalizedRedirectUri, StringComparison.InvariantCultureIgnoreCase)) {
             throw AuthenticationResponseException.UnexpectedAuthCallbackUrl;
         }
         
@@ -219,6 +224,16 @@ public class UniWebViewAuthenticationFlowLineOptional {
     /// Whether to enable PKCE when performing authentication. Default is `S256`.
     /// </summary>
     public UniWebViewAuthenticationPKCE PKCESupport = UniWebViewAuthenticationPKCE.S256;
+    
+    /// <summary>
+    /// The additional query arguments that are used to construct the query string of the authentication request.
+    /// 
+    /// This is useful when you want to add some custom parameters to the authentication request. This string will be 
+    /// appended to the query string that constructed from `GetAuthenticationUriArguments`. 
+    /// 
+    /// For example, if you set `prompt=consent&ui_locales=en`, it will be contained in the final authentication query.
+    /// </summary>
+    public string additionalAuthenticationUriQuery = "";
 }
 
 /// <summary>

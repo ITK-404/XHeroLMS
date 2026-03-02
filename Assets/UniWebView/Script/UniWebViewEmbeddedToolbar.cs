@@ -118,4 +118,16 @@ public class UniWebViewEmbeddedToolbar {
     public void ShowNavigationButtons() {
         UniWebViewInterface.SetEmeddedToolbarNavigationButtonsShow(listener.Name, true);
     }
+    
+    /// <summary>
+    /// Sets the maximum height of the toolbar. If the specified height is smaller than the toolbar's standard height,
+    /// the toolbar will be resized to this height. Otherwise, the standard height will be used.
+    ///
+    /// This method only works on iOS and Android. On macOS Unity Editor, the toolbar will always be displayed in the
+    /// window's title bar and the height is fixed.
+    /// </summary>
+    /// <param name="height">The maximum height value.</param>
+    public void SetMaxHeight(float height) {
+        UniWebViewInterface.SetEmbeddedToolbarMaxHeight(listener.Name, height);
+    }
 }
