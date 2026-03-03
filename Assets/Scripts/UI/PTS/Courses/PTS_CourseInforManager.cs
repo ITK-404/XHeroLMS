@@ -14,7 +14,7 @@ public class PTS_CourseInforManager : MonoBehaviour
 
     public void ShowDefault()
     {
-        toggles[0].isOn = true;
+        // toggles[0].isOn = true;
     }
     
     private void Binding()
