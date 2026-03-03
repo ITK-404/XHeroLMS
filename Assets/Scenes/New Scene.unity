@@ -10086,6 +10086,8 @@ GameObject:
   - component: {fileID: 53969497}
   - component: {fileID: 53969496}
   - component: {fileID: 53969498}
+  - component: {fileID: 53969500}
+  - component: {fileID: 53969499}
   m_Layer: 0
   m_Name: Core API
   m_TagString: Untagged
@@ -10142,6 +10144,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SceneCourseRouter
   resourceJsonName: courses
   autoFetchPrivateIfMissing: 1
+--- !u!114 &53969499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53969495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5ec5d2e0f192514497fc82a5eac4aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseApiClient
+  overrideAccessToken: 
+  useTokenFromStore: 1
+  limitPerPage: 100
+  keyword: 
+  category: 
+  sortBy: 
+  order: 
+--- !u!114 &53969500
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53969495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91c27f40055e2f64cb69faa3d512da5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseBootstrapLoader
+  api: {fileID: 53969499}
 --- !u!1 &54567604 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2218950664386406373, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
@@ -183685,7 +183719,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 3e4b2492a67e44336b4a4b23b57ea7ad, type: 3}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0000076293945
+      value: 0.000015258789
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x

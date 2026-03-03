@@ -874,6 +874,50 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1af947cd78120044f9c533b868482ac7, type: 3}
+--- !u!1 &933427142
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 933427144}
+  - component: {fileID: 933427143}
+  m_Layer: 0
+  m_Name: test_data
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &933427143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 933427142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53be23ef208ec264996d2c6b7c6a0add, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseStoreTest
+--- !u!4 &933427144
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 933427142}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: 0, z: -0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &949784992 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3411863386904332705, guid: 1af947cd78120044f9c533b868482ac7, type: 3}
@@ -1607,8 +1651,6 @@ MonoBehaviour:
   urlOnStart: 
   showOnStart: 0
   fullScreen: 0
-  useToolbar: 1
-  toolbarPosition: 0
   useEmbeddedToolbar: 1
   embeddedToolbarPosition: 0
   frame:
@@ -1618,6 +1660,8 @@ MonoBehaviour:
     width: 0
     height: 0
   referenceRectTransform: {fileID: 1613740299}
+  useToolbar: 1
+  toolbarPosition: 0
 --- !u!114 &1613740301
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2091,3 +2135,4 @@ SceneRoots:
   - {fileID: 1085196624}
   - {fileID: 2107872537}
   - {fileID: 1515374325}
+  - {fileID: 933427144}
