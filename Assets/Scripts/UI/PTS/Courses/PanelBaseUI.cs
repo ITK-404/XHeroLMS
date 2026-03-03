@@ -1,15 +1,21 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PanelBaseUI : MonoBehaviour
 {
     [SerializeField] private CanvasGroup _canvasGroup;
-    
+    [SerializeField] private ScrollRect scrollView;
     private void OnValidate()
     {
         if (_canvasGroup == null)
         {
             _canvasGroup = GetComponent<CanvasGroup>();
+        }
+
+        if (scrollView == null)
+        {
+            scrollView = GetComponent<ScrollRect>();
         }
     }
 
@@ -22,7 +28,17 @@ public class PanelBaseUI : MonoBehaviour
     
     public void Show()
     {
+        ResetScrollView();
         SetCanvasGroup(true);
+    }
+
+    private void ResetScrollView()
+    {
+        if (scrollView)
+        {
+            scrollView.horizontalNormalizedPosition = 1;
+            scrollView.verticalNormalizedPosition = 1;
+        }
     }
 
     public void Hide()
