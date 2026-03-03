@@ -31,10 +31,11 @@ public class ExamNavigation : MonoBehaviour
             Debug.Log("Navigation không tồn tại index này");
             return;
         }
-
-        CenterOnItem(target.GetComponent<RectTransform>());
+        moveTween?.Kill();
+        moveTween = scrollRect.CenterOnItem(target.GetComponent<RectTransform>());
     }
 
+    private Tween moveTween;
     public void ClampTarget(int index)
     {
         var target = spawnContainer.GetChild(index);
@@ -43,11 +44,23 @@ public class ExamNavigation : MonoBehaviour
             Debug.Log("Navigation không tồn tại index này");
             return;
         }
-
-        ClampItemByIndex(target.GetComponent<RectTransform>());
+        moveTween?.Kill();
+        moveTween = scrollRect.ClampItemByIndex(target.GetComponent<RectTransform>());
     }
 
-    public void CenterOnItem(RectTransform target)
+    public void Show() => container.gameObject.SetActive(true);
+    public void Hide() => container.gameObject.SetActive(false);
+
+    public void CenterOnItem(RectTransform rectTransform)
+    {
+        moveTween?.Kill();
+        moveTween = scrollRect.CenterOnItem(rectTransform);
+    }
+}
+
+public static class ScrollRectSupport
+{
+     public static Tween CenterOnItem(this ScrollRect scrollRect,RectTransform target)
     {
         Debug.Log("Set center of item");
         var content = scrollRect.content;
@@ -71,20 +84,18 @@ public class ExamNavigation : MonoBehaviour
 
         // 6. Đổi sang normalized position
         float normalized = desiredPos / (contentWidth - viewportWidth);
-        if (tween != null)
-        {
-            tween.Kill();
-        }
 
-        tween = DOTween.To(
+        var tween = DOTween.To(
             () => scrollRect.horizontalNormalizedPosition,
             x => scrollRect.horizontalNormalizedPosition = x,
             normalized,
             0.3f
         ).SetEase(Ease.OutCubic);
+
+        return tween;
     }
 
-    public void ClampItemByIndex(RectTransform target)
+    public static Tween ClampItemByIndex(this ScrollRect scrollRect,RectTransform target)
     {
         var content = scrollRect.content;
         var viewport = scrollRect.viewport;
@@ -118,7 +129,7 @@ public class ExamNavigation : MonoBehaviour
         else
         {
             // Item đã nằm trong viewport -> không cần scroll
-            return;
+            return null;
         }
 
         // 6. Clamp để không kéo vượt quá content
@@ -127,17 +138,13 @@ public class ExamNavigation : MonoBehaviour
         // 7. Convert sang normalized
         float normalized = desiredPos / (contentWidth - viewportWidth);
 
-        if (tween != null)
-            tween.Kill();
-
-        tween = DOTween.To(
+        var tween = DOTween.To(
             () => scrollRect.horizontalNormalizedPosition,
             x => scrollRect.horizontalNormalizedPosition = x,
             normalized,
             0.25f
         ).SetEase(Ease.OutCubic);
-    }
 
-    public void Show() => container.gameObject.SetActive(true);
-    public void Hide() => container.gameObject.SetActive(false);
+        return tween;
+    }
 }
