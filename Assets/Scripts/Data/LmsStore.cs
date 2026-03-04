@@ -623,8 +623,15 @@ public class LmsCoursePrivate
     //
     public LmsSettings settings; // phòng khi BE trả trong private
     public string finalExam;     // luôn != null ("" nếu không có)
-}
+    // ===== ADD THESE (from private JSON) =====
+    public LmsInstructor instructor;
 
+    public int totalDuration;     // JSON: totalDuration (seconds)
+    public float stars;           // JSON: stars
+    public int evaluate;          // JSON: evaluate (count đánh giá)
+
+    public long startSellTime;    // JSON: startSellTime (unix seconds). Nếu BE đôi lúc null -> đổi sang string/object tuỳ bạn.
+}
 // Chương trong private
 [Serializable]
 public class LmsChapter
@@ -633,6 +640,16 @@ public class LmsChapter
     public string type;            // "learn" ...
     public string chapterTitle;    // tiêu đề chương
     public List<LmsPrivateLesson> lessons;
+}
+[Serializable]
+public class LmsInstructor
+{
+    public string _id;
+    public string fullName;
+    public string title;
+    public string description;
+    public int courses;
+    public int learners;
 }
 [Serializable]
 public class LmsProduct
