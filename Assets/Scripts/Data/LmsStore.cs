@@ -618,6 +618,8 @@ public class LmsCoursePrivate
     public SeoInfo seo;
     public string image;
 
+    public List<LmsProduct> products;
+
     //
     public LmsSettings settings; // phòng khi BE trả trong private
     public string finalExam;     // luôn != null ("" nếu không có)
@@ -632,7 +634,14 @@ public class LmsChapter
     public string chapterTitle;    // tiêu đề chương
     public List<LmsPrivateLesson> lessons;
 }
-
+[Serializable]
+public class LmsProduct
+{
+    public int _id;
+    public string productName;
+    public string image;
+    public string externalUrl;
+}
 [Serializable]
 public class LmsPrivateLesson
 {

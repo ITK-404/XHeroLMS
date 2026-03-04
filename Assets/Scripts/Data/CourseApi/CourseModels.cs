@@ -33,6 +33,8 @@ public static class CourseModels
         public int learners;
         public float stars;
 
+        public int evaluate;
+
         public string learningMode;
         public object startSellTime;
         public bool isSelling;
