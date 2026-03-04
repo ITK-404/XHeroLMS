@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
@@ -123,7 +124,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 txt_rating.text = $"{starsText} ({FormatCountCompact(count)})";
             }
         }
-        
+
         // ===== Status: resolve -> apply object (icon/text) =====
         var status = ResolveStatus(course);
         ApplyStatus(status);
@@ -225,17 +226,48 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     private void OnDirectClick()
     {
-        PTS_CourseDetailView.Instance.ShowBriefView(_courseId);
         Debug.Log($"[PTS] Direct click courseId = {_courseId}");
 
-        if (courseDetailLoader != null)
-        {
-            courseDetailLoader.Load(_courseId);
-        }
-        else
+        if (courseDetailLoader == null)
         {
             Debug.LogError("CourseDetailLoader not assigned");
+            return;
         }
+
+        // đăng ký chờ store
+        StartCoroutine(WaitCourseThenShow(_courseId));
+
+        // bắt đầu load
+        courseDetailLoader.Load(_courseId);
+    }
+
+    private IEnumerator WaitCourseThenShow(string courseId)
+    {
+        float timeout = 8f; // chống treo
+        float t = 0f;
+
+        // chờ store load xong đúng courseId
+        while (t < timeout)
+        {
+            // nếu lỗi
+            if (!string.IsNullOrEmpty(CourseDetailStaticStore.LastError))
+                yield break;
+
+            // nếu đã có data đúng id
+            if (CourseDetailStaticStore.HasData &&
+                CourseDetailStaticStore.CurrentCourseId == courseId &&
+                !CourseDetailStaticStore.IsLoading)
+            {
+                PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+                yield break;
+            }
+
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // timeout: tuỳ bạn, có thể vẫn mở view để user thấy loading/error
+        PTS_CourseDetailView.Instance.ShowBriefView(courseId);
     }
 
     private void OnLoadImgFx()
