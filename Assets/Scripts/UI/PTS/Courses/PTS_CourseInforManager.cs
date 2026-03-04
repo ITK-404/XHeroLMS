@@ -1,46 +1,23 @@
 using UnityEngine;
-using UnityEngine.UI;
 
-public class PTS_CourseInforManager : MonoBehaviour
+public class PTS_CourseInforManager : PTS_CourseSectionBase
 {
-    [SerializeField] private Toggle[] toggles;
-    [SerializeField] private PanelBaseUI[] panelBaseUIList;
-
-    private void Start()
+    [SerializeField] private GameObject videoScreen;
+    [SerializeField] private GameObject fullScreen;
+    [SerializeField] private GameObject navigationGroup;
+    [SerializeField] private GameObject leftSide;
+    public override void Show()
     {
-        Binding();
-        ShowDefault();
+        videoScreen.gameObject.SetActive(true);
+        navigationGroup.gameObject.SetActive(true);
+        leftSide.gameObject.SetActive(true);
     }
 
-    public void ShowDefault()
+    public override void Hide()
     {
-        // toggles[0].isOn = true;
-    }
-    
-    private void Binding()
-    {
-        for (int i = 0; i < toggles.Length; i++)
-        {
-            var toggle = toggles[i];
-            var index = i;
-            toggle.onValueChanged.AddListener((isOn) =>
-            {
-                ShowPanel(index);
-            });
-        }
-    }
-    
-    private void ShowPanel(int index)
-    {
-        var newPanel = panelBaseUIList[index];
-        newPanel.Show();
-
-        foreach (var item in panelBaseUIList)
-        {
-            if (item != newPanel)
-            {
-                item.Hide();
-            }
-        }
+        videoScreen.gameObject.SetActive(false);
+        fullScreen.gameObject.SetActive(false);
+        navigationGroup.gameObject.SetActive(false);
+        leftSide.gameObject.SetActive(false);
     }
 }
