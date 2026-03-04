@@ -6280,13 +6280,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 302467006}
+  - component: {fileID: 302467007}
   m_Layer: 5
-  m_Name: GameObject
+  m_Name: ObjectManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &302467006
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6306,6 +6307,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0.00048828, y: 15.938}
   m_SizeDelta: {x: 708.49, y: 386.76}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &302467007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 302467005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f25503bf9a2dce24694e833c1db59ef6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseListBuilder
+  itemPrefab: {fileID: 4652152576786437940, guid: 8eab89f243743af42b00479550c6e0ce, type: 3}
+  contentParent: {fileID: 352420293}
+  clearOldChildren: 1
 --- !u!1001 &305052753
 PrefabInstance:
   m_ObjectHideFlags: 0
