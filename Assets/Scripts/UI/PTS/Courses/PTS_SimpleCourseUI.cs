@@ -225,6 +225,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     private void OnDirectClick()
     {
+        PTS_CourseDetailView.Instance.ShowBriefView(_courseId);
         Debug.Log($"[PTS] Direct click courseId = {_courseId}");
 
         if (courseDetailLoader != null)
