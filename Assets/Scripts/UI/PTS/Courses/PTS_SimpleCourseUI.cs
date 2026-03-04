@@ -27,6 +27,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txt_priceDiscount;
     [SerializeField] private TextMeshProUGUI txt_priceOrigin;
 
+    [SerializeField] private CourseDetailLoader courseDetailLoader;
+
     // ===== Status mapping =====
     public enum StatusKey
     {
@@ -105,8 +107,23 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (txt_name != null) txt_name.text = course.title ?? "";
 
         if (txt_rating != null)
-            txt_rating.text = course.stars > 0 ? $"{course.stars:0.0}" : "0.0";
+        {
+            float stars = course.stars;
+            int count = course.evaluate;
 
+            string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
+
+            // evaluate = 0 -> chỉ hiện sao
+            if (count <= 0)
+            {
+                txt_rating.text = starsText;
+            }
+            else
+            {
+                txt_rating.text = $"{starsText} ({FormatCountCompact(count)})";
+            }
+        }
+        
         // ===== Status: resolve -> apply object (icon/text) =====
         var status = ResolveStatus(course);
         ApplyStatus(status);
@@ -204,46 +221,20 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         img_status.sprite = s.icon;
     }
 
-    // ================= PRICE LOGIC =================
-
-    private static string FormatVnd(long v)
-    {
-        if (v < 0) return "";
-        if (v == 0) return "Liên hệ";   // hoặc "0 đ"
-        return $"{v:N0} đ";
-    }
-
-    private static string FormatCoursePriceCurrent(CourseModels.CoursePriceLite price)
-    {
-        if (price == null) return "";
-
-        if (price.isFree) return "Miễn phí";
-
-        // ƯU TIÊN HIỂN THỊ GIÁ nếu có
-        if (price.currentPrice > 0) return $"{price.currentPrice:N0} đ";
-
-        // Không có giá mới show label
-        if (price.isQuotation) return "Báo giá";
-        if (price.isContract) return "Hợp đồng";
-
-        return "Liên hệ";
-    }
-
-    private static string FormatCoursePriceOriginal(CourseModels.CoursePriceLite price)
-    {
-        if (price == null) return "";
-        if (price.isFree) return "";
-        if (price.originalPrice <= 0) return "";
-
-        // luôn show originalPrice
-        return $"{price.originalPrice:N0} đ";
-    }
-
     // ================= UI EVENTS =================
 
     private void OnDirectClick()
     {
         Debug.Log($"[PTS] Direct click courseId = {_courseId}");
+
+        if (courseDetailLoader != null)
+        {
+            courseDetailLoader.Load(_courseId);
+        }
+        else
+        {
+            Debug.LogError("CourseDetailLoader not assigned");
+        }
     }
 
     private void OnLoadImgFx()
@@ -285,7 +276,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             );
 
             target.sprite = sprite;
-            
+
             target.preserveAspect = false;     // <- tắt để khỏi letterbox
             // target.SetNativeSize();         // <- bỏ, kẻo ảnh nhảy size
 
@@ -303,5 +294,13 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     {
         if (v <= 0) return "—";
         return v.ToString("N0").Replace(",", ".") + "đ";
+    }
+
+    private static string FormatCountCompact(int n)
+    {
+        if (n <= 0) return "0";
+        if (n < 1000) return n.ToString();
+        if (n < 1_000_000) return (n / 1000f).ToString("0.#") + "k";
+        return (n / 1_000_000f).ToString("0.#") + "M";
     }
 }
