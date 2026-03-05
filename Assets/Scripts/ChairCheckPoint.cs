@@ -33,7 +33,7 @@ public class ChairCheckPoint : MonoBehaviour
 
     private void LateUpdate()
     {
-        if(player == null)
+        if(player == null || targetCamera == null)
         {
             return;
         }
@@ -57,7 +57,7 @@ public class ChairCheckPoint : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (IsPlayer(other.gameObject))
+        if (IsPlayer(other.gameObject) && PlayerChairManager.Instance)
         {
             //Debug.Log("Enter d�nh player", other.gameObject);
             PlayerChairManager.Instance.TrySetChair(this);
@@ -66,7 +66,7 @@ public class ChairCheckPoint : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (IsPlayer(other.gameObject))
+        if (IsPlayer(other.gameObject) && PlayerChairManager.Instance)
         {
             //Debug.Log("Exit d�nh player",gameObject);
             PlayerChairManager.Instance.TryRemoveChair(this);

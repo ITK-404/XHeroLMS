@@ -4,8 +4,7 @@ using UnityEngine;
 
 public class PTS_ParticleE : MonoBehaviour
 {
-    [SerializeField] private List<GameObject> activeParticleList = new();
-
+    [SerializeField] private List<ParticleSystem> activeParticleList = new();
     private void Awake()
     {
         //DeActive();
@@ -25,7 +24,7 @@ public class PTS_ParticleE : MonoBehaviour
     {
         foreach (var item in activeParticleList)
         {
-            item.gameObject.SetActive(isEnable);
+            gameObject.SetActive(isEnable);
         }
     }
     

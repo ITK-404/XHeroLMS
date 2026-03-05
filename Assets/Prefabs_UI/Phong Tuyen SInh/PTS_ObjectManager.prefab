@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2419355428890684258
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1039168555169562744}
+  - component: {fileID: 3151455768899955837}
+  - component: {fileID: 5686410686716971329}
+  - component: {fileID: 1041702787621309021}
+  m_Layer: 5
+  m_Name: PTS_ObjectManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1039168555169562744
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2419355428890684258}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 3.6133335, y: 3.6133335, z: 3.6133335}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 354.24408, y: 216.6703}
+  m_SizeDelta: {x: 708.49, y: 386.76}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &3151455768899955837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2419355428890684258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f25503bf9a2dce24694e833c1db59ef6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseListBuilder
+  itemPrefab: {fileID: 4652152576786437940, guid: 8eab89f243743af42b00479550c6e0ce, type: 3}
+  contentParent: {fileID: 0}
+  usePooling: 1
+  prewarmCount: 20
+  buildFromStoreOnStartIfNoSearch: 1
+  applyDefaultPrioritySortOnFallback: 1
+--- !u!114 &5686410686716971329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2419355428890684258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91c27f40055e2f64cb69faa3d512da5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseBootstrapLoader
+  api: {fileID: 1041702787621309021}
+--- !u!114 &1041702787621309021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2419355428890684258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5ec5d2e0f192514497fc82a5eac4aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseApiClient
+  overrideAccessToken: 
+  useTokenFromStore: 1
+  limitPerPage: 100
+  keyword: 
+  category: 
+  sortBy: 
+  order: 

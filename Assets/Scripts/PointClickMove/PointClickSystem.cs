@@ -296,12 +296,16 @@ public class PointClickSystem : MonoBehaviour
                 return;
             }
 
-            // Case click vào checkpoint ghế: giữ nguyên behavior cũ
-            if (PlayerChairManager.Instance)
+            if (TryMoveTest(ray))
             {
-                if (MoveToChairHandle(ray))
-                    return;
+                return;
             }
+            
+            // normal check
+            if (MoveToChairHandle(ray))
+                return;
+            // Case click vào checkpoint ghế: giữ nguyên behavior cũ
+       
 
             if (TutorialHandler.Instance != null)
             {
@@ -401,8 +405,9 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    public void MoveToPosition(Vector3 position)
+    public void MoveToPosition(Vector3 position, bool _rotateWhenMove = true)
     {
+        transform.DOKill();
         var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
 
         Vector3 groundPos = (Vector3)node.position;
@@ -416,7 +421,7 @@ public class PointClickSystem : MonoBehaviour
 
         lastPickPosition = groundPos;
 
-        rotateWhenMove = true;
+        rotateWhenMove = _rotateWhenMove;
     }
     
     private bool TryHandleMoveToHouse(Ray ray)
@@ -433,6 +438,23 @@ public class PointClickSystem : MonoBehaviour
             }
         }
      
+        return false;
+    }
+
+    private bool TryMoveTest(Ray ray)
+    {
+        var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
+        foreach (var hit in results)
+        {
+            if (hit.collider.CompareTag("CheckPoint") &&
+                hit.collider.TryGetComponent(out InteractionPoint interactionPoint))
+            {
+                interactionPoint.Interact(this);
+                Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -487,16 +509,25 @@ public class PointClickSystem : MonoBehaviour
 
     private bool MoveToChairHandle(Ray ray)
     {
-        if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, QueryTriggerInteraction.Ignore))
+        // Choose query type based on whether PlayerChairManager singleton exists (previously duplicated code paths)
+        QueryTriggerInteraction query = PlayerChairManager.Instance ? QueryTriggerInteraction.Ignore : QueryTriggerInteraction.Collide;
+
+        if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, query))
         {
+            Debug.Log("Hit check point");
             if (chairHit.collider.CompareTag("CheckPoint"))
             {
-                // hardcode
-                if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
-                    return false;
                 // set to global variable
                 currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
 
+                // If PlayerChairManager exists, honor the Sitdown state check (preserves previous behavior)
+                if (PlayerChairManager.Instance && PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
+                {
+                    Debug.Log("trang thai khong phu hop de ngoi");
+                    return false;
+                }
+
+                Debug.Log("Move to check point");
                 return MoveToChairCheckPoint(currentCheckPoint);
             }
         }
@@ -513,24 +544,33 @@ public class PointClickSystem : MonoBehaviour
     {
         if (chairCheckPoint != null)
         {
-            if (TutorialHandler.Instance.IsStep(0) && TutorialHandler.Instance.IsPlayedBefore() == false)
+            // hard code logic
+            var tutorialInstance = TutorialHandler.Instance;
+            if ( tutorialInstance != null)
             {
-                var isNotTutorialChair = chairCheckPoint.GetComponent<TutorialChair>() == null;
-
-                if (isNotTutorialChair)
+                if (tutorialInstance.IsStep(0) && tutorialInstance.IsPlayedBefore() == false)
                 {
-                    Debug.Log($"Player is in tutorial state and check point hit not tutorial chair");
-                    return true;
+                    var isNotTutorialChair = chairCheckPoint.GetComponent<TutorialChair>() == null;
+
+                    if (isNotTutorialChair)
+                    {
+                        Debug.Log($"Player is in tutorial state and check point hit not tutorial chair");
+                        return true;
+                    }
+
+                    tutorialInstance.worldTutorialStep.SetActive(false);
                 }
-
-                TutorialHandler.Instance.worldTutorialStep.SetActive(false);
             }
+            
         }
-
+        StopWaitToMoveChair();
         waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
         {
             Debug.Log("Hiện UI Xem bước chân");
-            PlayerChairManager.Instance.currentCheckPoint = chairCheckPoint;
+            if (PlayerChairManager.Instance)
+            {
+                PlayerChairManager.Instance.currentCheckPoint = chairCheckPoint;
+            }
             //TutorialHandler.Instance.ShowStep(1);
         }));
 
@@ -623,3 +663,4 @@ public class PointClickSystem : MonoBehaviour
         }
     }
 }
+
