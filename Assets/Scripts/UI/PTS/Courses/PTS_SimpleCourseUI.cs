@@ -73,13 +73,13 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         BuildStatusMap();
 
         if (panelBtn != null) panelBtn.onClick.AddListener(OnLoadImgFx);
-        if (directBtn != null) directBtn.onClick.AddListener(OnDirectClick);
+        if (directBtn != null) panelBtn.onClick.AddListener(OnLoadImgFx);
     }
 
     private void OnDestroy()
     {
         if (panelBtn != null) panelBtn.onClick.RemoveListener(OnLoadImgFx);
-        if (directBtn != null) directBtn.onClick.RemoveListener(OnDirectClick);
+        if (directBtn != null) panelBtn.onClick.RemoveListener(OnLoadImgFx);
 
         if (_loadImgCo != null) StopCoroutine(_loadImgCo);
     }
@@ -251,13 +251,18 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         {
             // nếu lỗi
             if (!string.IsNullOrEmpty(CourseDetailStaticStore.LastError))
+            {
+                CourseLoading = false;
                 yield break;
+            }
+                
 
             // nếu đã có data đúng id
             if (CourseDetailStaticStore.HasData &&
                 CourseDetailStaticStore.CurrentCourseId == courseId &&
                 !CourseDetailStaticStore.IsLoading)
             {
+                CourseLoading = false;
                 PTS_CourseDetailView.Instance.ShowBriefView(courseId);
                 yield break;
             }
@@ -266,19 +271,35 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             yield return null;
         }
 
+        CourseLoading = false;
         // timeout: tuỳ bạn, có thể vẫn mở view để user thấy loading/error
         PTS_CourseDetailView.Instance.ShowBriefView(courseId);
     }
 
+    private static bool CourseLoading = false;
     private void OnLoadImgFx()
     {
         if (bgImg == null) return;
-
-        bgImg.DOKill();
-        bgImg.DOFade(1, 0.5f).OnComplete(() =>
+        if (CourseLoading)
         {
-            bgImg.DOFade(0, 0.3f).SetDelay(0.2f);
-        });
+            return;
+        }
+
+        CourseLoading = true;
+        bgImg.DOKill();
+
+        Sequence seq = DOTween.Sequence();
+        seq.Append(bgImg.DOFade(1f, 0.2f));
+        seq.AppendInterval(0.2f);
+        seq.Append(bgImg.DOFade(0f, 0.15f));
+        seq.AppendCallback(OnDirectClick);
+        
+        // bgImg.DOKill();
+        // bgImg.DOFade(1, 0.5f).OnComplete(() =>
+        // {
+        //     bgImg.DOFade(0, 0.3f).SetDelay(0.2f);
+        //     OnDirectClick();
+        // });
     }
 
     // ================= IMAGE LOADER =================
