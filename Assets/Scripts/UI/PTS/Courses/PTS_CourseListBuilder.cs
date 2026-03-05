@@ -6,7 +6,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     [Header("Prefab & Parent")]
     [SerializeField] private PTS_SimpleCourseUI itemPrefab;
     [SerializeField] private Transform contentParent;
-
+    public Transform ContentParent => contentParent;
     [Header("Build Options")]
     [SerializeField] private bool usePooling = true;
 
