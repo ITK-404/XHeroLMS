@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,23 +8,74 @@ public class PTS_CourseListBuilder : MonoBehaviour
     [SerializeField] private Transform contentParent;
 
     [Header("Build Options")]
-    [SerializeField] private bool clearOldChildren = true;
+    [SerializeField] private bool usePooling = true;
 
-    private readonly List<PTS_SimpleCourseUI> _spawned = new();
+    [SerializeField] private int prewarmCount = 20;
 
-    private void Start()
+    [SerializeField] private bool buildFromStoreOnStartIfNoSearch = true;
+    [SerializeField] private bool applyDefaultPrioritySortOnFallback = true;
+
+    private readonly List<PTS_SimpleCourseUI> _items = new();
+    private CourseSearch _search;
+
+    private void Awake()
     {
-        Build();
-        CourseStaticStore.OnChanged += Build;
+        if (usePooling && prewarmCount > 0)
+            Prewarm(prewarmCount);
     }
 
-    private void OnDestroy()
+    private void OnEnable()
     {
-        CourseStaticStore.OnChanged -= Build;
+        TryBindSearch();
+
+        if (_search != null)
+        {
+            var last = _search.LastResults;
+            if (last != null && last.Count > 0)
+            {
+                BuildFromList(last);
+                return;
+            }
+        }
+
+        if (buildFromStoreOnStartIfNoSearch)
+            BuildFromStoreFallback();
     }
 
-    [ContextMenu("Build")]
-    public void Build()
+    private void OnDisable()
+    {
+        UnbindSearch();
+    }
+
+    private void TryBindSearch()
+    {
+        _search = CourseSearch.Instance;
+        if (_search == null)
+            _search = FindFirstObjectByType<CourseSearch>();
+
+        if (_search != null)
+        {
+            _search.OnResultsChanged -= HandleSearchResultsChanged;
+            _search.OnResultsChanged += HandleSearchResultsChanged;
+
+            _search.SearchNow();
+        }
+    }
+
+    private void UnbindSearch()
+    {
+        if (_search != null)
+            _search.OnResultsChanged -= HandleSearchResultsChanged;
+        _search = null;
+    }
+
+    private void HandleSearchResultsChanged(List<CourseModels.CourseLite> results)
+    {
+        BuildFromList(results);
+    }
+
+    // ---------- search results ----------
+    public void BuildFromList(IReadOnlyList<CourseModels.CourseLite> list)
     {
         if (itemPrefab == null || contentParent == null)
         {
@@ -33,17 +83,103 @@ public class PTS_CourseListBuilder : MonoBehaviour
             return;
         }
 
-        var all = CourseStaticStore.GetAll();
-        if (all == null || all.Count == 0)
+        int count = (list == null) ? 0 : list.Count;
+
+        if (!usePooling)
         {
-            Debug.LogWarning("[PTS] CourseStaticStore has no data");
-            ClearSpawned();
+            // fallback old-way if you really want
+            ClearAllDestroy();
+            if (count == 0) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                var c = list[i];
+                if (c == null) continue;
+
+                var item = Instantiate(itemPrefab, contentParent);
+                item.gameObject.SetActive(true);
+                item.Bind(c);
+                _items.Add(item);
+            }
             return;
         }
 
-        if (clearOldChildren) ClearSpawned();
+        // POOLING WAY
+        EnsureItemCount(count);
 
-        // copy + sort theo ưu tiên zoom > offline > online
+        // Bind + show needed
+        for (int i = 0; i < count; i++)
+        {
+            var course = list[i];
+            var item = _items[i];
+
+            if (course == null)
+            {
+                item.gameObject.SetActive(false);
+                continue;
+            }
+
+            if (!item.gameObject.activeSelf) item.gameObject.SetActive(true);
+            item.Bind(course);
+        }
+
+        for (int i = count; i < _items.Count; i++)
+        {
+            if (_items[i].gameObject.activeSelf)
+                _items[i].gameObject.SetActive(false);
+        }
+    }
+
+    private void Prewarm(int count)
+    {
+        if (itemPrefab == null || contentParent == null) return;
+
+        EnsureItemCount(count);
+        for (int i = 0; i < _items.Count; i++)
+            _items[i].gameObject.SetActive(false);
+    }
+
+    private void EnsureItemCount(int needed)
+    {
+        while (_items.Count < needed)
+        {
+            var item = Instantiate(itemPrefab, contentParent);
+            item.gameObject.SetActive(false);
+            _items.Add(item);
+        }
+    }
+
+    private void ClearAllDestroy()
+    {
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (_items[i] != null)
+                Destroy(_items[i].gameObject);
+        }
+        _items.Clear();
+    }
+
+    // ---------- Fallback ----------
+    private void BuildFromStoreFallback()
+    {
+        var all = CourseStaticStore.GetAll();
+        if (all == null || all.Count == 0)
+        {
+            if (usePooling)
+            {
+                // hide all
+                for (int i = 0; i < _items.Count; i++)
+                    if (_items[i] != null) _items[i].gameObject.SetActive(false);
+            }
+            else
+            {
+                ClearAllDestroy();
+            }
+
+            Debug.LogWarning("[PTS] CourseStaticStore has no data");
+            return;
+        }
+
         var list = new List<CourseModels.CourseLite>(all.Count);
         for (int i = 0; i < all.Count; i++)
         {
@@ -51,54 +187,32 @@ public class PTS_CourseListBuilder : MonoBehaviour
             if (c != null) list.Add(c);
         }
 
-        list.Sort((a, b) =>
+        if (applyDefaultPrioritySortOnFallback)
         {
-            int pa = LearningModePriority(a?.learningMode);
-            int pb = LearningModePriority(b?.learningMode);
-            int cmp = pa.CompareTo(pb);
-            if (cmp != 0) return cmp;
+            list.Sort((a, b) =>
+            {
+                int pa = LearningModePriority(a?.learningMode);
+                int pb = LearningModePriority(b?.learningMode);
+                int cmp = pa.CompareTo(pb);
+                if (cmp != 0) return cmp;
 
-            float sa = a != null ? a.stars : 0f;
-            float sb = b != null ? b.stars : 0f;
-            return sb.CompareTo(sa);
-        });
-
-        for (int i = 0; i < list.Count; i++)
-        {
-            var course = list[i];
-
-            var item = Instantiate(itemPrefab, contentParent);
-            item.gameObject.SetActive(true);
-            item.Bind(course);
-
-            _spawned.Add(item);
+                float sa = a != null ? a.stars : 0f;
+                float sb = b != null ? b.stars : 0f;
+                return sb.CompareTo(sa);
+            });
         }
 
-        Debug.Log($"[PTS] Built {list.Count} course items.");
+        BuildFromList(list);
     }
 
     private static int LearningModePriority(string mode)
     {
-        // số càng nhỏ càng ưu tiên trước
         if (string.IsNullOrEmpty(mode)) return 999;
-
         mode = mode.Trim().ToLowerInvariant();
 
-        // Ưu tiên theo yêu cầu: zoom, offline, online
         if (mode == "zoom") return 0;
         if (mode == "offline") return 1;
         if (mode == "online") return 2;
-
-        // fallback: các mode khác xếp sau
         return 100;
-    }
-
-    private void ClearSpawned()
-    {
-        for (int i = 0; i < _spawned.Count; i++)
-        {
-            if (_spawned[i] != null) Destroy(_spawned[i].gameObject);
-        }
-        _spawned.Clear();
     }
 }
