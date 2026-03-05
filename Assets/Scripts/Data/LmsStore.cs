@@ -613,6 +613,9 @@ public class LmsCoursePrivate
     public string _id;
     public string title;
     public string description;
+
+    public List<string> banner;        // JSON: "banner": ["url1","url2"...]
+    public string introduction;        // JSON: "introduction": "<p>...</p>"
     public string videoLink;
     public List<LmsChapter> chapters;
     public SeoInfo seo;
