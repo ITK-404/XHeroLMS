@@ -93,6 +93,7 @@ MonoBehaviour:
   txt_priceDiscount: {fileID: 1363203884486736280}
   txt_priceOrigin: {fileID: 849151144260183112}
   courseDetailLoader: {fileID: 7924522241096191256}
+  courseReviewLoader: {fileID: 1898604581004078193}
   statusConfigs:
   - key: 3
     text: 
@@ -120,6 +121,7 @@ GameObject:
   - component: {fileID: 2208084014930501705}
   - component: {fileID: 7924522241096191256}
   - component: {fileID: 5306415698054171768}
+  - component: {fileID: 1898604581004078193}
   m_Layer: 0
   m_Name: API_Detail
   m_TagString: Untagged
@@ -163,13 +165,32 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1529336725379057267}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 46323dbf7c6ca0a49af285da08fa3d86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CourseProductTest
   loader: {fileID: 7924522241096191256}
   debugLog: 1
+--- !u!114 &1898604581004078193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1529336725379057267}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96f5f9c4b16745145a21f845933ad47f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseReviewLoader
+  limit: 10
+  useAuthHeader: 1
+  useXDataHeader: 1
+  autoLoadOnEnable: 1
+  listenCourseDetailStore: 1
+  forceReloadSameCourse: 0
+  currentCourseId: 
 --- !u!1 &1742560501900269185
 GameObject:
   m_ObjectHideFlags: 0
