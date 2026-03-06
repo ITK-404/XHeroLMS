@@ -326,9 +326,9 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
         Sequence seq = DOTween.Sequence();
         seq.Append(bgImg.DOFade(1f, 0.2f));
+        seq.AppendCallback(OnDirectClick);
         seq.AppendInterval(0.2f);
         seq.Append(bgImg.DOFade(0f, 0.15f));
-        seq.AppendCallback(OnDirectClick);
         
         // bgImg.DOKill();
         // bgImg.DOFade(1, 0.5f).OnComplete(() =>

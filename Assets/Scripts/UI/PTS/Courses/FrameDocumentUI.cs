@@ -1,14 +1,31 @@
 using System;
 using UnityEngine;
 
-public class FrameDocumentUI : MonoBehaviour
+public class FrameDocumentUI : PanelBaseUI
 {
     [SerializeField] private UniWebView UniWebViewPrefab;
     [SerializeField] private Transform emptyUI;
 
+    private UniWebView page;
+    
     private void Start()
     {
+        // ShowDocument("https://drive.google.com/file/d/19yJFo1MIqQjJiE-BlU1kn6JHXkC189NN/view?usp=sharing");
+    }
+
+    public override void Show()
+    {
+        base.Show();
         ShowDocument("https://drive.google.com/file/d/19yJFo1MIqQjJiE-BlU1kn6JHXkC189NN/view?usp=sharing");
+    }
+
+    public override void Hide()
+    {
+        base.Hide();
+        if (page != null)
+        {
+            Destroy(page.gameObject);
+        }
     }
 
     public void ShowDocument(string pageUrl)
@@ -19,7 +36,7 @@ public class FrameDocumentUI : MonoBehaviour
             return;
         }
 
-        var page = Instantiate(UniWebViewPrefab, transform);
+        page = Instantiate(UniWebViewPrefab, transform);
         page.gameObject.SetActive(true);
         page.Load(pageUrl);
         page.Show();

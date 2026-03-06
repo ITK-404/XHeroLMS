@@ -26,7 +26,7 @@ public class PanelBaseUI : MonoBehaviour
 
     private bool isTranstion = false;
     
-    public void Show()
+    public virtual void Show()
     {
         ResetScrollView();
         SetCanvasGroup(true);
@@ -41,7 +41,7 @@ public class PanelBaseUI : MonoBehaviour
         }
     }
 
-    public void Hide()
+    public virtual void Hide()
     {
         SetCanvasGroup(false);
     }
