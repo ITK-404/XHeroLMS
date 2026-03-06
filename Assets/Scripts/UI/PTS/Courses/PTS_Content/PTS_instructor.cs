@@ -28,10 +28,18 @@ public class PTS_Instructor : MonoBehaviour
 
     void Refresh()
     {
-        if (!CourseDetailStaticStore.HasData) return;
+        if (!CourseDetailStaticStore.HasData)
+        {
+            ClearUI();
+            return;
+        }
 
         var course = CourseDetailStaticStore.CurrentCourse;
-        if (course == null || course.instructor == null) return;
+        if (course == null || course.instructor == null)
+        {
+            ClearUI();
+            return;
+        }
 
         var ins = course.instructor;
 
@@ -54,10 +62,25 @@ public class PTS_Instructor : MonoBehaviour
         }
     }
 
+    private void ClearUI()
+    {
+        if (txtInstructorName != null)
+            txtInstructorName.text = "";
+
+        if (txtLearners != null)
+            txtLearners.text = "";
+
+        if (txtTotalCourses != null)
+            txtTotalCourses.text = "";
+
+        if (txtDescription != null)
+            txtDescription.text = "";
+    }
+
     // =========================
     // HTML -> Plain text
     // =========================
-    static string HtmlToPlainTextWithNewlines(string html)
+    private static string HtmlToPlainTextWithNewlines(string html)
     {
         if (string.IsNullOrEmpty(html)) return "";
 
@@ -76,7 +99,7 @@ public class PTS_Instructor : MonoBehaviour
         return s;
     }
 
-    static string DecodeHtmlEntities(string s)
+    private static string DecodeHtmlEntities(string s)
     {
         if (string.IsNullOrEmpty(s)) return s;
 

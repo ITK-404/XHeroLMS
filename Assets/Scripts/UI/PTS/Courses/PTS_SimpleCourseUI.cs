@@ -20,7 +20,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private Image img_course;
 
     [Header("Status UI")]
-    [SerializeField] private Image img_status;              // icon trạng thái
+    [SerializeField] private Image img_status;
 
     [Header("Text UI")]
     [SerializeField] private TextMeshProUGUI txt_name;
@@ -29,22 +29,17 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txt_priceOrigin;
 
     [SerializeField] private CourseDetailLoader courseDetailLoader;
+    [SerializeField] private CourseReviewLoader courseReviewLoader;
 
-    // ===== Status mapping =====
     public enum StatusKey
     {
         None = 0,
-
-        // Selling state
         Selling,
         NotSelling,
-
-        // Modes
         Zoom,
         Offline,
         Online,
-
-        // Special price states        Free,
+        Free,
         Quotation,
         Contract
     }
@@ -67,21 +62,25 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     private string _courseId;
     private string _imageUrl;
     private Coroutine _loadImgCo;
+    private Coroutine _waitDataCo;
+
+    private static bool CourseLoading = false;
 
     private void Awake()
     {
         BuildStatusMap();
 
         if (panelBtn != null) panelBtn.onClick.AddListener(OnLoadImgFx);
-        if (directBtn != null) panelBtn.onClick.AddListener(OnLoadImgFx);
+        if (directBtn != null) directBtn.onClick.AddListener(OnLoadImgFx);
     }
 
     private void OnDestroy()
     {
         if (panelBtn != null) panelBtn.onClick.RemoveListener(OnLoadImgFx);
-        if (directBtn != null) panelBtn.onClick.RemoveListener(OnLoadImgFx);
+        if (directBtn != null) directBtn.onClick.RemoveListener(OnLoadImgFx);
 
         if (_loadImgCo != null) StopCoroutine(_loadImgCo);
+        if (_waitDataCo != null) StopCoroutine(_waitDataCo);
     }
 
     private void BuildStatusMap()
@@ -93,11 +92,10 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         {
             var s = statusConfigs[i];
             if (s == null) continue;
-            _statusMap[s.key] = s; // key trùng -> lấy cái sau cùng
+            _statusMap[s.key] = s;
         }
     }
 
-    /// <summary>Bind data course vào prefab UI</summary>
     public void Bind(CourseModels.CourseLite course)
     {
         if (course == null) return;
@@ -111,52 +109,39 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         {
             float stars = course.stars;
             int count = course.evaluate;
-
             string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
 
-            // evaluate = 0 -> chỉ hiện sao
-            if (count <= 0)
-            {
-                txt_rating.text = starsText;
-            }
-            else
-            {
-                txt_rating.text = $"{starsText} ({FormatCountCompact(count)})";
-            }
+            txt_rating.text = count <= 0
+                ? starsText
+                : $"{starsText} ({FormatCountCompact(count)})";
         }
 
-        // ===== Status: resolve -> apply object (icon/text) =====
         var status = ResolveStatus(course);
         ApplyStatus(status);
 
-        // ===== Price =====
         var price = course.coursePrice;
-
         long cur = price != null ? price.currentPrice : 0;
         long org = price != null ? price.originalPrice : 0;
 
-        // Giá mới: to + màu
         if (txt_priceDiscount != null)
         {
             string curText = (price != null && price.isFree) ? "Miễn phí" : FormatVndCompact(cur);
             txt_priceDiscount.text = $"<size=100%><color=#E95F18>{curText}</color></size>";
         }
 
-        // Giá cũ: luôn gạch ngang (kể cả = cur)
         if (txt_priceOrigin != null)
         {
             string orgText = (price != null && price.isFree) ? "" : FormatVndCompact(org);
-
             if (string.IsNullOrEmpty(orgText)) orgText = "—";
 
             txt_priceOrigin.text = $"<size=80%><s>{orgText}</s></size>";
             txt_priceOrigin.gameObject.SetActive(true);
         }
 
-        // ===== Image =====
         if (img_course != null)
         {
             img_course.sprite = null;
+
             if (!string.IsNullOrEmpty(_imageUrl))
             {
                 if (_loadImgCo != null) StopCoroutine(_loadImgCo);
@@ -165,14 +150,10 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         }
     }
 
-    // ================= STATUS LOGIC =================
-
     private StatusData ResolveStatus(CourseModels.CourseLite course)
     {
         var modeKey = ModeToStatusKey(course.learningMode);
         if (modeKey != StatusKey.None) return GetStatus(modeKey, fallbackText: course.learningMode);
-
-        // không match thì return null để ẩn icon
         return null;
     }
 
@@ -182,13 +163,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
         mode = mode.Trim().ToLowerInvariant();
 
-        // match mềm để backend đổi format vẫn ăn
         if (mode.Contains("zoom")) return StatusKey.Zoom;
-
-        // offline hay bị ghi onsite / on-site
-        if (mode.Contains("offline") || mode.Contains("onsite") || mode.Contains("on-site"))
-            return StatusKey.Offline;
-
+        if (mode.Contains("offline") || mode.Contains("onsite") || mode.Contains("on-site")) return StatusKey.Offline;
         if (mode.Contains("online")) return StatusKey.Online;
 
         return StatusKey.None;
@@ -198,12 +174,10 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     {
         if (_statusMap.TryGetValue(key, out var s) && s != null)
         {
-            // nếu config không set text thì fallback
             if (string.IsNullOrEmpty(s.text)) s.text = fallbackText;
             return s;
         }
 
-        // nếu không config trong inspector -> tạo tạm
         return new StatusData { key = key, text = fallbackText, icon = null };
     }
 
@@ -222,46 +196,82 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         img_status.sprite = s.icon;
     }
 
-    // ================= UI EVENTS =================
-
     private void OnDirectClick()
     {
         Debug.Log($"[PTS] Direct click courseId = {_courseId}");
 
-        if (courseDetailLoader == null)
+        if (string.IsNullOrEmpty(_courseId))
         {
-            Debug.LogError("CourseDetailLoader not assigned");
+            Debug.LogWarning("[PTS] courseId is null/empty");
+            CourseLoading = false;
             return;
         }
 
-        // đăng ký chờ store
-        StartCoroutine(WaitCourseThenShow(_courseId));
+        if (courseDetailLoader == null)
+        {
+            Debug.LogError("[PTS] CourseDetailLoader not assigned");
+            CourseLoading = false;
+            return;
+        }
 
-        // bắt đầu load
+        if (courseReviewLoader == null)
+        {
+            Debug.LogError("[PTS] CourseReviewLoader not assigned");
+            CourseLoading = false;
+            return;
+        }
+
+        if (_waitDataCo != null)
+            StopCoroutine(_waitDataCo);
+
+        // Reset store cũ nếu bạn muốn tránh dính data màn trước
+        // CourseDetailStaticStore.Reset();
+        // CourseReviewStaticStore.Reset();
+
         courseDetailLoader.Load(_courseId);
+        courseReviewLoader.LoadReviews(_courseId);
+
+        _waitDataCo = StartCoroutine(WaitAllDataThenShow(_courseId));
     }
 
-    private IEnumerator WaitCourseThenShow(string courseId)
+    private IEnumerator WaitAllDataThenShow(string courseId)
     {
-        float timeout = 8f; // chống treo
+        float timeout = 10f;
         float t = 0f;
 
-        // chờ store load xong đúng courseId
         while (t < timeout)
         {
-            // nếu lỗi
-            if (!string.IsNullOrEmpty(CourseDetailStaticStore.LastError))
+            bool detailDone = IsCourseDetailLoaded(courseId);
+            bool reviewDone = IsCourseReviewLoaded();
+
+            bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
+            bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
+
+            if (detailError)
             {
+                Debug.LogWarning("[PTS] Course detail load error: " + CourseDetailStaticStore.LastError);
                 CourseLoading = false;
                 yield break;
             }
-                
 
-            // nếu đã có data đúng id
-            if (CourseDetailStaticStore.HasData &&
-                CourseDetailStaticStore.CurrentCourseId == courseId &&
-                !CourseDetailStaticStore.IsLoading)
+            // review lỗi thì tùy business:
+            // - nếu bắt buộc phải có review mới mở => yield break
+            // - nếu review lỗi vẫn cho vào detail => vẫn show
+            if (reviewError)
             {
+                Debug.LogWarning("[PTS] Course review load error: " + CourseReviewStaticStore.LastError);
+
+                if (detailDone)
+                {
+                    CourseLoading = false;
+                    PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+                    yield break;
+                }
+            }
+
+            if (detailDone && reviewDone)
+            {
+                Debug.Log("[PTS] Detail + Review loaded successfully");
                 CourseLoading = false;
                 PTS_CourseDetailView.Instance.ShowBriefView(courseId);
                 yield break;
@@ -271,19 +281,45 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             yield return null;
         }
 
+        Debug.LogWarning("[PTS] WaitAllDataThenShow timeout");
+
+        // hết timeout: nếu detail đã có thì vẫn cho qua
+        if (IsCourseDetailLoaded(courseId))
+        {
+            CourseLoading = false;
+            PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+            yield break;
+        }
+
         CourseLoading = false;
-        // timeout: tuỳ bạn, có thể vẫn mở view để user thấy loading/error
-        PTS_CourseDetailView.Instance.ShowBriefView(courseId);
     }
 
-    private static bool CourseLoading = false;
+    private bool IsCourseDetailLoaded(string courseId)
+    {
+        return CourseDetailStaticStore.HasData
+               && !CourseDetailStaticStore.IsLoading
+               && CourseDetailStaticStore.CurrentCourseId == courseId
+               && CourseDetailStaticStore.CurrentCourse != null;
+    }
+
+    private bool IsCourseReviewLoaded()
+    {
+        // Nếu store review của bạn có Reviews = null khi chưa load
+        // và List rỗng khi load xong nhưng không có review,
+        // thì check kiểu này sẽ an toàn hơn.
+        return !CourseReviewStaticStore.IsLoading
+               && string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
+    }
+
     private void OnLoadImgFx()
     {
-        if (bgImg == null) return;
-        if (CourseLoading)
+        if (bgImg == null)
         {
+            OnDirectClick();
             return;
         }
+
+        if (CourseLoading) return;
 
         CourseLoading = true;
         bgImg.DOKill();
@@ -302,9 +338,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         // });
     }
 
-    // ================= IMAGE LOADER =================
-
-    private static System.Collections.IEnumerator LoadImageTo(Image target, string url)
+    private static IEnumerator LoadImageTo(Image target, string url)
     {
         using (var req = UnityWebRequestTexture.GetTexture(url))
         {
@@ -313,7 +347,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 #if UNITY_2020_3_OR_NEWER
             if (req.result != UnityWebRequest.Result.Success)
 #else
-        if (req.isNetworkError || req.isHttpError)
+            if (req.isNetworkError || req.isHttpError)
 #endif
             {
                 Debug.LogWarning($"[PTS] Load image failed: {url} | {req.error}");
@@ -330,11 +364,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             );
 
             target.sprite = sprite;
+            target.preserveAspect = false;
 
-            target.preserveAspect = false;     // <- tắt để khỏi letterbox
-            // target.SetNativeSize();         // <- bỏ, kẻo ảnh nhảy size
-
-            // Update AspectRatioFitter theo ảnh
             var fitter = target.GetComponent<AspectRatioFitter>();
             if (fitter != null)
             {

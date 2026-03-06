@@ -633,7 +633,9 @@ public class LmsCoursePrivate
     public float stars;           // JSON: stars
     public int evaluate;          // JSON: evaluate (count đánh giá)
 
-    public long startSellTime;    // JSON: startSellTime (unix seconds). Nếu BE đôi lúc null -> đổi sang string/object tuỳ bạn.
+    public long startSellTime;    // JSON: startSellTime (unix seconds). Nếu BE đôi lúc null -> đổi sang string/object.
+
+    public List<LmsRelatedCourse> upsell;
 }
 // Chương trong private
 [Serializable]
@@ -674,7 +676,29 @@ public class LmsPrivateLesson
     public int progressTime = -1;
     public CompletionCondition completionCondition;
 }
-
+[Serializable]
+public class LmsRelatedCourse
+{
+    public string _id;
+    public string title;
+    public string image;
+    public int learners;
+    public int stars;
+    public bool isSelling;
+    public bool isJoined;
+    public string promotionText;
+    public SeoInfo seo;
+    public LmsCoursePrice coursePrice;
+}
+[Serializable]
+public class LmsCoursePrice
+{
+    public bool isFree;
+    public float originalPrice;
+    public float currentPrice;
+    public bool isQuotation;
+    public bool isContract;
+}
 [Serializable]
 public class CompletionCondition
 {
