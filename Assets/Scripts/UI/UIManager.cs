@@ -14,12 +14,14 @@ public class UIManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-        minimapManager.OnMinimapActiveAction += OnMinimapActiveAction;
+        if(minimapManager)
+            minimapManager.OnMinimapActiveAction += OnMinimapActiveAction;
     }
 
     private void OnDestroy()
     {
-        minimapManager.OnMinimapActiveAction -= OnMinimapActiveAction;
+        if(minimapManager)
+            minimapManager.OnMinimapActiveAction -= OnMinimapActiveAction;
     }
 
     private void OnMinimapActiveAction(bool isEnable)

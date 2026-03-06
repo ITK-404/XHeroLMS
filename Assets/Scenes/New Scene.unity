@@ -22389,7 +22389,7 @@ PrefabInstance:
     - target: {fileID: 4205671785661816492, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
       propertyPath: Location
       value: 
-      objectReference: {fileID: 477463032}
+      objectReference: {fileID: 0}
     - target: {fileID: 4205671785661816492, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
       propertyPath: titleName
       value: "\u0110\u1EA1i \u0110\u1EA1o Ch\xED Gi\u1EA3n"
@@ -22438,23 +22438,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 6112508209789150799, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3012173740827862817, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 477463032}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
 --- !u!4 &123563908 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8811605213294457038, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
-  m_PrefabInstance: {fileID: 123563907}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &123563909 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3012173740827862817, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
   m_PrefabInstance: {fileID: 123563907}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &126257660 stripped
@@ -37899,17 +37890,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4049549666258935569, guid: 07b4b2481d0f079499cfb42571595ebd, type: 3}
   m_PrefabInstance: {fileID: 294503926}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &294503928 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3233402511638246943, guid: 07b4b2481d0f079499cfb42571595ebd, type: 3}
-  m_PrefabInstance: {fileID: 294503926}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9384fece7b03b2c44a8de9c5d723f729, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HouseHandler
 --- !u!114 &296236070
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -55450,25 +55430,12 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4205671785661816492, guid: d8f458ef35f1f43b398155b0a78d84f9, type: 3}
   m_PrefabInstance: {fileID: 123563907}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 123563909}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4744bb858de9497d9acf8be356af3680, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlotArea
---- !u!114 &477463032
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 123563909}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 57478c830a03436f88d0ff70af7cb467, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AreaMapLocationByHouse
-  houseHandler: {fileID: 294503928}
 --- !u!1 &478015475 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7105665098759610954, guid: e7a94ead4bff76d44a8c75b04abaca90, type: 3}
