@@ -1,34 +1,56 @@
+using System;
 using UnityEngine;
 
 public class InteractionManagerUI : MonoBehaviour
 {
     [SerializeField] private GameObject player;
-    [SerializeField] private GameObject uiInstance;
+    [SerializeField] private PTS_CourseDetailView uiInstance;
     [SerializeField] private GameObject apiInstance;
     [SerializeField] private CourseMenuButtons courseMenuBtns;
     [SerializeField] private PTS_ParticleE[] particleSystems;
     [SerializeField] private float stopEmitDistance = 0.5f;
 
+    private UIManager UIManager;
+    
+    private void Awake()
+    {
+        uiInstance.OnEnterNoneView += OnExitNoneView;
+    }
+
+    private void Start()
+    {
+        UIManager = UIManager.Instance;
+    }
+
+    private void OnDestroy()
+    {
+        uiInstance.OnEnterNoneView -= OnExitNoneView;
+    }
+
+    private void OnExitNoneView()
+    {
+        InputBlocker.SetBlocked(false);
+        uiInstance.Hide();
+        apiInstance.gameObject.SetActive(false);
+        
+        UIManager.CourseMenuButtons.Show();
+        UIManager.InputCanvas.Hide();
+        UIManager.PlayerPanelUI.ShowAll();
+    }
+
+    public void OnEnterCourseView()
+    {
+        InputBlocker.SetBlocked(true);
+        uiInstance.ShowIntroView();
+        apiInstance.gameObject.SetActive(true);
+        
+        UIManager.CourseMenuButtons.Hide();
+        UIManager.InputCanvas.Hide();
+        UIManager.PlayerPanelUI.HideAll();
+    }
+    
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            InputBlocker.SetBlocked(true);
-            uiInstance.gameObject.SetActive(true);
-            apiInstance.gameObject.SetActive(true);
-            courseMenuBtns.Hide();
-            PlayerPanelUI.Instance.HideAll();
-        }
-
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            InputBlocker.SetBlocked(false);
-            uiInstance.gameObject.SetActive(false);
-            apiInstance.gameObject.SetActive(false);
-            courseMenuBtns.Show();
-            PlayerPanelUI.Instance.ShowAll();
-        }
-        
         CheckParticles();
     }
 
