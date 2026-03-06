@@ -2180,8 +2180,8 @@ MonoBehaviour:
   m_ChildAlignment: 3
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 200, y: 200}
-  m_Spacing: {x: 100, y: 0}
+  m_CellSize: {x: 350, y: 200}
+  m_Spacing: {x: 10, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
 --- !u!114 &9002945186553743344
@@ -5615,10 +5615,10 @@ RectTransform:
   - {fileID: 5390023859612227353}
   m_Father: {fileID: 4406243147812419784}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 114.07456, y: -35.7}
-  m_SizeDelta: {x: 218.14912, y: 41.4}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 41.4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2732129923388621197
 MonoBehaviour:
@@ -6777,7 +6777,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 5122742135206157650}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999998
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -7106,7 +7106,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "34 h\u1ECDc vi\xEAn"
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
   m_sharedMaterial: {fileID: -4822623081317619843, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
@@ -8636,7 +8636,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 8207669192845121381}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999998
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -12723,9 +12723,9 @@ RectTransform:
   m_Father: {fileID: 220693096648696502}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -17, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &6895589528759237762
 MonoBehaviour:
@@ -13235,6 +13235,104 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &3652321525381703106
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1981930346284820649}
+  - component: {fileID: 8937119677629493513}
+  - component: {fileID: 7352193101791517220}
+  - component: {fileID: 7793647550279804818}
+  m_Layer: 5
+  m_Name: All-View Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1981930346284820649
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652321525381703106}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1139257708167247566}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &8937119677629493513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652321525381703106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 116faf9106588f741b9bb6974d7b5f00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_Introduce
+  bindToCourseDetailStaticStore: 1
+  bannerCheck: {fileID: 2786421394218383335}
+  bannerContainer: {fileID: 2110393814668212211}
+  bannerImagePrefab: {fileID: 5846505323927629789, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
+  clearOldBanners: 1
+  introductionText: {fileID: 2278267275069824562}
+  downloadImages: 1
+  placeholderSprite: {fileID: 0}
+  enableDebugLogs: 1
+  autoFallbackContainerToThisTransform: 0
+--- !u!114 &7352193101791517220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652321525381703106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681f625f35780d243ab195ac34f09502, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_ListCourse
+  filterByCourseId: 0
+  expectedCourseId: 
+  waitStoreSeconds: 5
+  chapterPrefab: {fileID: 4065018219018977313, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+  contentParent: {fileID: 2718397583392137096}
+  lessonItemPrefab: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
+  clearChildrenBeforeBuild: 1
+  buildOnEnable: 1
+--- !u!114 &7793647550279804818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652321525381703106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f90a2df162fea345b2dd823dcb1c5c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_Instructor
+  txtInstructorName: {fileID: 1693250672587524553}
+  txtLearners: {fileID: 6447237011214817371}
+  txtTotalCourses: {fileID: 5225388884555952398}
+  txtDescription: {fileID: 1836580477655427896}
+  formatNumbers: 1
+  tidyDescription: 1
 --- !u!1 &3663547330205610716
 GameObject:
   m_ObjectHideFlags: 0
@@ -14196,10 +14294,10 @@ RectTransform:
   - {fileID: 4345898857773091450}
   m_Father: {fileID: 6985293145676605339}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 114.07456, y: -35.7}
-  m_SizeDelta: {x: 218.14912, y: 41.4}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 41.4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2608491751736914845
 MonoBehaviour:
@@ -15111,10 +15209,10 @@ RectTransform:
   - {fileID: 220693096648696502}
   m_Father: {fileID: 2096940894995763219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1063.6719, y: -34.45}
-  m_SizeDelta: {x: 248.04912, y: 68.9}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1265693523855665909
 CanvasRenderer:
@@ -15956,10 +16054,10 @@ RectTransform:
   - {fileID: 5076179400960339480}
   m_Father: {fileID: 2096940894995763219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 795.6728, y: -34.45}
-  m_SizeDelta: {x: 245.94913, y: 68.9}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3736289022469083757
 CanvasRenderer:
@@ -19894,7 +19992,7 @@ RectTransform:
   m_Father: {fileID: 3514936529963503714}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 10}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -20002,18 +20100,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "- Ch\u1EE7 t\u1ECBch H\u1ED9i \u0111\u1ED3ng Khoa h\u1ECDc - Vi\u1EC7n
-    Phong Thu\u1EF7 Khoa H\u1ECDc To\xE0n C\u1EA7u.\n- Nguy\xEAn Ph\xF3 Vi\u1EC7n
-    tr\u01B0\u1EDFng Vi\u1EC7n Nghi\xEAn C\u1EE9u \u1EE8ng D\u1EE5ng Ti\u1EC1m N\u0103ng
-    Con Ng\u01B0\u1EDDi.\nThS.NCS. Qu\u1EA3n l\xFD Kinh t\u1EBF, Phong th\u1EE7y
-    s\u01B0 Qu\u1ED1c t\u1EBF Nguy\u1EC5n Tr\u1ECDng M\u1EA1nh\_hi\u1EC7n l\xE0 Ch\u1EE7
-    t\u1ECBch H\u1ED9i \u0111\u1ED3ng Khoa h\u1ECDc c\u1EE7a Vi\u1EC7n Phong Th\u1EE7y
-    Khoa H\u1ECDc To\xE0n C\u1EA7u v\xE0 \u0111\u1ED3ng th\u1EDDi l\xE0 nh\xE0 s\xE1ng
-    l\u1EADp H\u1EC7 sinh th\xE1i Phong Th\u1EE7y \u0110\u1EA1i Nam. V\u1EDBi ki\u1EBFn
-    th\u1EE9c s\xE2u r\u1ED9ng, Th\u1EA7y am hi\u1EC3u t\u01B0\u1EDDng t\u1EADn m\u1ECDi
-    kh\xEDa c\u1EA1nh trong l\u0129nh v\u1EF1c phong th\u1EE7y. Th\u1EA7y Nguy\u1EC5n
-    Tr\u1ECDng M\u1EA1nh \u0111\xE3 mang l\u1EA1i nhi\u1EC1u gi\xE1 tr\u1ECB thi\u1EBFt
-    th\u1EF1c cho c\u1ED9ng \u0111\u1ED3ng c\xE1c doanh nghi\u1EC7p v\xE0 gia \u0111\xECnh."
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0c913a96a6d476d4595e71a7431085d7, type: 2}
   m_sharedMaterial: {fileID: 2820299104998081884, guid: 0c913a96a6d476d4595e71a7431085d7, type: 2}
@@ -20133,9 +20220,9 @@ RectTransform:
   m_Father: {fileID: 5076179400960339480}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -17, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &5411893670236513573
 MonoBehaviour:
@@ -21359,6 +21446,7 @@ GameObject:
   - component: {fileID: 8882665040474747218}
   - component: {fileID: 4179467652454125419}
   - component: {fileID: 8203193170719144560}
+  - component: {fileID: 3192989476092130773}
   m_Layer: 5
   m_Name: Frame_Detail
   m_TagString: Untagged
@@ -21482,6 +21570,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
   _canvasGroup: {fileID: 4179467652454125419}
   scrollView: {fileID: 8882665040474747218}
+--- !u!114 &3192989476092130773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5715370166774719974}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681f625f35780d243ab195ac34f09502, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_ListCourse
+  filterByCourseId: 0
+  expectedCourseId: 
+  waitStoreSeconds: 5
+  chapterPrefab: {fileID: 4065018219018977313, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+  contentParent: {fileID: 2718397583392137096}
+  lessonItemPrefab: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
+  clearChildrenBeforeBuild: 1
+  buildOnEnable: 1
 --- !u!1 &5731669296333110203
 GameObject:
   m_ObjectHideFlags: 0
@@ -23770,7 +23878,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4540123733866688618
 RectTransform:
   m_ObjectHideFlags: 0
@@ -24773,7 +24881,7 @@ RectTransform:
   m_Father: {fileID: 6755195418531177006}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0.9999998}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 10}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -25334,7 +25442,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &589165643404460423
 RectTransform:
   m_ObjectHideFlags: 0
@@ -25886,7 +25994,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "34 h\u1ECDc vi\xEAn"
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
   m_sharedMaterial: {fileID: -4822623081317619843, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
@@ -26365,10 +26473,10 @@ RectTransform:
   - {fileID: 3365535118151007981}
   m_Father: {fileID: 2096940894995763219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 529.1237, y: -34.45}
-  m_SizeDelta: {x: 245.14912, y: 68.9}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6082340328332348721
 CanvasRenderer:
@@ -27336,10 +27444,10 @@ RectTransform:
   - {fileID: 632638753761657302}
   m_Father: {fileID: 2096940894995763219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 197.77457, y: -34.45}
-  m_SizeDelta: {x: 375.54913, y: 68.9}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4220948870703523035
 CanvasRenderer:
@@ -28256,159 +28364,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Gi\u1EDBi thi\u1EC7u kh\xF3a h\u1ECDc\n\nK\u1EC3 t\u1EEB ng\xE0y 30 th\xE1ng
-    5 n\u0103m 2025, C\xF4ng ty TNHH Th\u01B0\u01A1ng m\u1EA1i Phong th\u1EE7y \u0110\u1EA1i
-    Nam ch\xEDnh th\u1EE9c cho ra m\u1EAFt kh\xF3a h\u1ECDc \u201C\u0110\u1EA1o l\u1ED9
-    Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i Nam\u201D, c\u1EE5 th\u1EC3 nh\u01B0
-    sau:\n\nI.     KH\xD3A H\u1ECCC PHONG TH\u1EE6Y C\u1ED4 H\u1ECCC TRUNG C\u1EA4P\n\n1.1
-    L\u1ED9 tr\xECnh \u0111\xE0o t\u1EA1o, bao g\u1ED3m 03 giai \u0111o\u1EA1n:\n\n+
-    Giai \u0111o\u1EA1n 1: H\u1ECDc Online kh\xF3a h\u1ECDc \u0110\u1EA1i \u0111\u1EA1o
-    ch\xED gi\u1EA3n - Phong th\u1EE7y c\u1ED5 h\u1ECDc I, \u0110\u1EA1i \u0111\u1EA1o
-    ch\xED gi\u1EA3n - Phong th\u1EE7y c\u1ED5 h\u1ECDc II.\n\n+ Giai \u0111o\u1EA1n
-    2: Tham gia \u0111\xE0o t\u1EA1o tr\u1EF1c ti\u1EBFp 04 bu\u1ED5i.\n\n + Giai
-    \u0111o\u1EA1n 3: H\u1ECDc vi\xEAn ho\xE0n th\xE0nh \u0111\u1EC1 thi th\u1EF1c
-    h\xE0nh c\u1EE7a kh\xF3a trung c\u1EA5p\n\n\xB7      H\u1ECDc vi\xEAn kh\u1EA3o
-    s\xE1t 05 c\xF4ng tr\xECnh th\u1EF1c t\u1EBF t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng
-    \u0111ang sinh s\u1ED1ng: Nh\xE0 h\u1ECDc vi\xEAn \u0111ang \u1EDF, nh\xE0 b\u1ED1
-    m\u1EB9, nh\xE0 anh/ch\u1ECB/em...\n\n\xB7      Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa ph\u01B0\u01A1ng ki\u1EC3m duy\u1EC7t.\n\nGhi
-    ch\xFA: \u0110\u1EC1 thi th\u1EF1c h\xE0nh s\u1EBD \u0111\u01B0\u1EE3c cho h\u1ECDc
-    vi\xEAn sau khi k\u1EBFt th\xFAc kh\xF3a h\u1ECDc tr\u1EF1c ti\u1EBFp.\n\nCh\u01B0\u01A1ng
-    tr\xECnh \u0111\xE0o t\u1EA1o (giai \u0111o\u1EA1n 2) tr\u1EF1c ti\u1EBFp c\xF9ng
-    Th\u1EA7y Nguy\u1EC5n Tr\u1ECDng M\u1EA1nh\n\n+ B\xE0i 1: Nh\u1EEFng l\u01B0u
-    \xFD trong c\xE1c kh\xF3a h\u1ECDc c\u01A1 b\u1EA3n\n\n+ B\xE0i 2: Lu\u1EADn
-    kh\xED cho nh\xE0 \u1EDF\n\n+ B\xE0i 3: C\xE1ch x\u1EED l\xFD c\xE1c l\u1ED7i
-    phong th\u1EE7y trong gia \u0111\xECnh v\xE0 doanh nghi\u1EC7p\n\n+ B\xE0i 4:
-    L\u1EADp b\u1EA3n \u0111\u1ED3 phong th\u1EE7y n\u0103ng l\u01B0\u1EE3ng doanh
-    nghi\u1EC7p\n\n+ B\xE0i 5: \xC2m tr\u1EA1ch c\u01A1 b\u1EA3n: N\u1EC1n t\u1EA3ng
-    ch\u1ECDn \u0111\u1EA5t \xE2m ph\u1EA7n\n\n+ B\xE0i 6: Th\u1EF1c h\xE0nh x\u1EED
-    l\xFD l\u1ED7i nh\xE0 \u1EDF, doanh nghi\u1EC7p\n\n \n\nII.   KH\xD3A H\u1ECCC
-    PHONG TH\u1EE6Y C\u1ED4 H\u1ECCC CAO C\u1EA4P\n\n2.1 L\u1ED9 tr\xECnh \u0111\xE0o
-    t\u1EA1o:\n\n+ Giai \u0111o\u1EA1n 1: Tham gia \u0111\xE0o t\u1EA1o tr\u1EF1c
-    ti\u1EBFp 06 bu\u1ED5i.\n\n+ Giai \u0111o\u1EA1n 2: H\u1ECDc vi\xEAn ho\xE0n
-    th\xE0nh \u0111\u1EC1 thi th\u1EF1c h\xE0nh c\u1EE7a kh\xF3a cao c\u1EA5p\n\n\xB7     
-    H\u1ECDc vi\xEAn kh\u1EA3o s\xE1t, lu\u1EADn \u0111o\xE1n v\xE0 \u0111\u1EC1
-    xu\u1EA5t ph\u01B0\u01A1ng \xE1n s\u1EEDa l\u1ED7i cho 05 c\xF4ng tr\xECnh th\u1EF1c
-    t\u1EBF t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng \u0111ang sinh s\u1ED1ng: Nh\xE0
-    h\u1ECDc vi\xEAn \u0111ang \u1EDF, nh\xE0 b\u1ED1 m\u1EB9, nh\xE0 anh/ch\u1ECB/em...\n\n\xB7     
-    Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i Nam t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa
-    ph\u01B0\u01A1ng ki\u1EC3m duy\u1EC7t.\n\nGhi ch\xFA: \u0110\u1EC1 thi th\u1EF1c
-    h\xE0nh s\u1EBD \u0111\u01B0\u1EE3c cho h\u1ECDc vi\xEAn sau khi k\u1EBFt th\xFAc
-    kh\xF3a h\u1ECDc tr\u1EF1c ti\u1EBFp.\n\n2.2 Ch\u01B0\u01A1ng tr\xECnh \u0111\xE0o
-    t\u1EA1o tr\u1EF1c ti\u1EBFp (giai \u0111o\u1EA1n 2) c\xF9ng Th\u1EA7y Nguy\u1EC5n
-    Tr\u1ECDng M\u1EA1nh\n\n+ B\xE0i 1: Ngo\u1EA1i quan \u0111\u1EA5t v\u01B0\u1EE3ng
-    - \u0111\u1ECDc \u0111\u1ECBa th\u1EBF b\u1EB1ng t\u01B0 duy khoa h\u1ECDc\n\n+
-    B\xE0i 2: Nguy\xEAn l\xFD, c\xE1ch s\u1EED d\u1EE5ng \u0111i\u1EC3m ho\xE0ng
-    c\u1EF1c (\u0111i\u1EC3m t\u1EED)\n\n+ B\xE0i 3: C\xE1c ph\u01B0\u01A1ng ph\xE1p
-    chi\xEAu t\xE0i\n\n+ B\xE0i 4: Xem ng\xE0y v\u01B0\u1EE3ng c\xE1t\n\n+ B\xE0i
-    5: Nguy\xEAn t\u1EAFc quy ho\u1EA1ch d\u1EF1 \xE1n theo phong th\u1EE7y khoa
-    h\u1ECDc\n\n+ B\xE0i 6: Ph\u01B0\u01A1ng ph\xE1p \u0111\u1ECBnh v\u1ECB tr\xED
-    huy\u1EC7t m\u1ED9\n\n+ B\xE0i 7: Th\u1EF1c h\xE0nh quy ho\u1EA1ch d\u1EF1 \xE1n
-    khu d\xE2n c\u01B0, c\xF4ng vi\xEAn ngh\u0129a trang, nh\xE0 m\xE1y,\u2026\n\n+
-    B\xE0i 8: K\u1EF9 n\u0103ng t\u01B0 v\u1EA5n v\xE0 h\xE0nh tr\xECnh x\xE2y d\u1EF1ng
-    ni\u1EC1m tin \u0111\u1EBFn gia ch\u1EE7\n\n \n\nIII. KH\xD3A H\u1ECCC COACHING
-    1-1 C\xD9NG TH\u1EA6Y TRUY\u1EC0N TH\u1EEAA\n\n3.1 L\u1ED9 tr\xECnh \u0111\xE0o
-    t\u1EA1o (03 th\xE1ng)\n\n   + Giai \u0111o\u1EA1n 1: Tham gia ch\u01B0\u01A1ng
-    tr\xECnh \u0111\xE0o t\u1EA1o 06 b\xE0i bao g\u1ED3m l\xFD thuy\u1EBFt v\xE0
-    th\u1EF1c h\xE0nh theo n\u1ED9i dung kh\xF3a h\u1ECDc Coaching 1-1 c\xF9ng Th\u1EA7y
-    Truy\u1EC1n th\u1EEBa \u0110\u1EA1i Nam Chi nh\xE1nh t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng.\n\n+
-    Giai \u0111o\u1EA1n 2: Thi s\xE1t h\u1EA1ch Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam v\xE0 c\u1EA5p Gi\u1EA5y ch\u1EE9ng nh\u1EADn Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam.\n\n+ Giai \u0111o\u1EA1n 3: H\u1ECDc vi\xEAn \u0111\u0103ng k\xFD \u0111i
-    th\u1EF1c h\xE0nh th\u1EF1c t\u1EBF c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa Phong
-    th\u1EE7y \u0110\u1EA1i Nam t\u1EA1i \u0111\u1ECBa \u0111i\u1EC3m nh\xE0 kh\xE1ch
-    h\xE0ng.\n\n 3.2 Ch\u01B0\u01A1ng tr\xECnh \u0111\xE0o t\u1EA1o (giai \u0111o\u1EA1n
-    1) Coaching 1-1 c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa \u0110\u1EA1i Nam\n\n+
-    B\xE0i 1: Quy tr\xECnh t\u01B0 v\u1EA5n c\u1EE7a Th\u1EA7y Phong th\u1EE7y\n\n+
-    B\xE0i 2: Nguy\xEAn t\u1EAFc v\xE0ng trong t\u01B0 v\u1EA5n Phong th\u1EE7y\n\n+
-    B\xE0i 3: L\u1ED9 tr\xECnh ph\xE1t tri\u1EC3n c\u1EE7a Phong th\u1EE7y s\u01B0\n\n+
-    B\xE0i 4: X\xE2y d\u1EF1ng th\u01B0\u01A1ng hi\u1EC7u Th\u1EA7y Phong th\u1EE7y\n\n+
-    B\xE0i 5: Th\u1EF1c h\xE0nh t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng\n\n+ B\xE0i
-    6: Th\u1EF1c h\xE0nh tham gia c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa l\xE0m
-    \xE2m ph\u1EA7n\n\n 3.3 Th\u1EDDi gian Coaching:\n\n+ H\u1ECDc vi\xEAn vui l\xF2ng
-    th\xF4ng b\xE1o cho \u0110\u1EA1i Nam th\u1EDDi gian \u0111\u0103ng k\xFD h\u1ECDc
-    Coaching 1-1 tr\u01B0\u1EDBc 10 ng\xE0y l\xE0m vi\u1EC7c \u0111\u1EC3 \u0110\u1EA1i
-    Nam c\xF3 k\u1EBF ho\u1EA1ch s\u1EAFp x\u1EBFp Th\u1EA7y Truy\u1EC1n th\u1EEBa
-    \u0111\xE0o t\u1EA1o Coaching 1-1 t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa ph\u01B0\u01A1ng.\n\n3.4:
-    Thi c\u1EA5p Gi\u1EA5y ch\u1EE9ng nh\u1EADn Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam\n\nSau khi ho\xE0n th\xE0nh v\xE0 \u0111\u1EA1t y\xEAu c\u1EA7u ph\u1EA7n
-    Th\u1EF1c h\xE0nh, h\u1ECDc vi\xEAn s\u1EBD tham gia thi s\xE1t h\u1EA1ch v\u1EDBi
-    H\u1ED9i \u0111\u1ED3ng chuy\xEAn m\xF4n \u0111\u1EC3 c\u1EA5p Gi\u1EA5y ch\u1EE9ng
-    nh\u1EADn \u201CTh\u1EA7y Phong th\u1EE7y \u0110\u1EA1i Nam\u201D\n\nI.     KH\xD3A
-    H\u1ECCC PHONG TH\u1EE6Y C\u1ED4 H\u1ECCC TRUNG C\u1EA4P\n\n1.1 L\u1ED9 tr\xECnh
-    \u0111\xE0o t\u1EA1o, bao g\u1ED3m 03 giai \u0111o\u1EA1n:\n\n+ Giai \u0111o\u1EA1n
-    1: H\u1ECDc Online kh\xF3a h\u1ECDc \u0110\u1EA1i \u0111\u1EA1o ch\xED gi\u1EA3n
-    - Phong th\u1EE7y c\u1ED5 h\u1ECDc I, \u0110\u1EA1i \u0111\u1EA1o ch\xED gi\u1EA3n
-    - Phong th\u1EE7y c\u1ED5 h\u1ECDc II.\n\n+ Giai \u0111o\u1EA1n 2: Tham gia \u0111\xE0o
-    t\u1EA1o tr\u1EF1c ti\u1EBFp 04 bu\u1ED5i.\n\n + Giai \u0111o\u1EA1n 3: H\u1ECDc
-    vi\xEAn ho\xE0n th\xE0nh \u0111\u1EC1 thi th\u1EF1c h\xE0nh c\u1EE7a kh\xF3a
-    trung c\u1EA5p\n\n\xB7      H\u1ECDc vi\xEAn kh\u1EA3o s\xE1t 05 c\xF4ng tr\xECnh
-    th\u1EF1c t\u1EBF t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng \u0111ang sinh s\u1ED1ng:
-    Nh\xE0 h\u1ECDc vi\xEAn \u0111ang \u1EDF, nh\xE0 b\u1ED1 m\u1EB9, nh\xE0 anh/ch\u1ECB/em...\n\n\xB7     
-    Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i Nam t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa
-    ph\u01B0\u01A1ng ki\u1EC3m duy\u1EC7t.\n\nGhi ch\xFA: \u0110\u1EC1 thi th\u1EF1c
-    h\xE0nh s\u1EBD \u0111\u01B0\u1EE3c cho h\u1ECDc vi\xEAn sau khi k\u1EBFt th\xFAc
-    kh\xF3a h\u1ECDc tr\u1EF1c ti\u1EBFp.\n\nCh\u01B0\u01A1ng tr\xECnh \u0111\xE0o
-    t\u1EA1o (giai \u0111o\u1EA1n 2) tr\u1EF1c ti\u1EBFp c\xF9ng Th\u1EA7y Nguy\u1EC5n
-    Tr\u1ECDng M\u1EA1nh\n\n+ B\xE0i 1: Nh\u1EEFng l\u01B0u \xFD trong c\xE1c kh\xF3a
-    h\u1ECDc c\u01A1 b\u1EA3n\n\n+ B\xE0i 2: Lu\u1EADn kh\xED cho nh\xE0 \u1EDF\n\n+
-    B\xE0i 3: C\xE1ch x\u1EED l\xFD c\xE1c l\u1ED7i phong th\u1EE7y trong gia \u0111\xECnh
-    v\xE0 doanh nghi\u1EC7p\n\n+ B\xE0i 4: L\u1EADp b\u1EA3n \u0111\u1ED3 phong th\u1EE7y
-    n\u0103ng l\u01B0\u1EE3ng doanh nghi\u1EC7p\n\n+ B\xE0i 5: \xC2m tr\u1EA1ch c\u01A1
-    b\u1EA3n: N\u1EC1n t\u1EA3ng ch\u1ECDn \u0111\u1EA5t \xE2m ph\u1EA7n\n\n+ B\xE0i
-    6: Th\u1EF1c h\xE0nh x\u1EED l\xFD l\u1ED7i nh\xE0 \u1EDF, doanh nghi\u1EC7p\n\n
-    \n\nII.   KH\xD3A H\u1ECCC PHONG TH\u1EE6Y C\u1ED4 H\u1ECCC CAO C\u1EA4P\n\n2.1
-    L\u1ED9 tr\xECnh \u0111\xE0o t\u1EA1o:\n\n+ Giai \u0111o\u1EA1n 1: Tham gia \u0111\xE0o
-    t\u1EA1o tr\u1EF1c ti\u1EBFp 06 bu\u1ED5i.\n\n+ Giai \u0111o\u1EA1n 2: H\u1ECDc
-    vi\xEAn ho\xE0n th\xE0nh \u0111\u1EC1 thi th\u1EF1c h\xE0nh c\u1EE7a kh\xF3a
-    cao c\u1EA5p\n\n\xB7      H\u1ECDc vi\xEAn kh\u1EA3o s\xE1t, lu\u1EADn \u0111o\xE1n
-    v\xE0 \u0111\u1EC1 xu\u1EA5t ph\u01B0\u01A1ng \xE1n s\u1EEDa l\u1ED7i cho 05
-    c\xF4ng tr\xECnh th\u1EF1c t\u1EBF t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng \u0111ang
-    sinh s\u1ED1ng: Nh\xE0 h\u1ECDc vi\xEAn \u0111ang \u1EDF, nh\xE0 b\u1ED1 m\u1EB9,
-    nh\xE0 anh/ch\u1ECB/em...\n\n\xB7      Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa ph\u01B0\u01A1ng ki\u1EC3m duy\u1EC7t.\n\nGhi
-    ch\xFA: \u0110\u1EC1 thi th\u1EF1c h\xE0nh s\u1EBD \u0111\u01B0\u1EE3c cho h\u1ECDc
-    vi\xEAn sau khi k\u1EBFt th\xFAc kh\xF3a h\u1ECDc tr\u1EF1c ti\u1EBFp.\n\n2.2
-    Ch\u01B0\u01A1ng tr\xECnh \u0111\xE0o t\u1EA1o tr\u1EF1c ti\u1EBFp (giai \u0111o\u1EA1n
-    2) c\xF9ng Th\u1EA7y Nguy\u1EC5n Tr\u1ECDng M\u1EA1nh\n\n+ B\xE0i 1: Ngo\u1EA1i
-    quan \u0111\u1EA5t v\u01B0\u1EE3ng - \u0111\u1ECDc \u0111\u1ECBa th\u1EBF b\u1EB1ng
-    t\u01B0 duy khoa h\u1ECDc\n\n+ B\xE0i 2: Nguy\xEAn l\xFD, c\xE1ch s\u1EED d\u1EE5ng
-    \u0111i\u1EC3m ho\xE0ng c\u1EF1c (\u0111i\u1EC3m t\u1EED)\n\n+ B\xE0i 3: C\xE1c
-    ph\u01B0\u01A1ng ph\xE1p chi\xEAu t\xE0i\n\n+ B\xE0i 4: Xem ng\xE0y v\u01B0\u1EE3ng
-    c\xE1t\n\n+ B\xE0i 5: Nguy\xEAn t\u1EAFc quy ho\u1EA1ch d\u1EF1 \xE1n theo phong
-    th\u1EE7y khoa h\u1ECDc\n\n+ B\xE0i 6: Ph\u01B0\u01A1ng ph\xE1p \u0111\u1ECBnh
-    v\u1ECB tr\xED huy\u1EC7t m\u1ED9\n\n+ B\xE0i 7: Th\u1EF1c h\xE0nh quy ho\u1EA1ch
-    d\u1EF1 \xE1n khu d\xE2n c\u01B0, c\xF4ng vi\xEAn ngh\u0129a trang, nh\xE0 m\xE1y,\u2026\n\n+
-    B\xE0i 8: K\u1EF9 n\u0103ng t\u01B0 v\u1EA5n v\xE0 h\xE0nh tr\xECnh x\xE2y d\u1EF1ng
-    ni\u1EC1m tin \u0111\u1EBFn gia ch\u1EE7\n\n \n\nIII. KH\xD3A H\u1ECCC COACHING
-    1-1 C\xD9NG TH\u1EA6Y TRUY\u1EC0N TH\u1EEAA\n\n3.1 L\u1ED9 tr\xECnh \u0111\xE0o
-    t\u1EA1o (03 th\xE1ng)\n\n   + Giai \u0111o\u1EA1n 1: Tham gia ch\u01B0\u01A1ng
-    tr\xECnh \u0111\xE0o t\u1EA1o 06 b\xE0i bao g\u1ED3m l\xFD thuy\u1EBFt v\xE0
-    th\u1EF1c h\xE0nh theo n\u1ED9i dung kh\xF3a h\u1ECDc Coaching 1-1 c\xF9ng Th\u1EA7y
-    Truy\u1EC1n th\u1EEBa \u0110\u1EA1i Nam Chi nh\xE1nh t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng.\n\n+
-    Giai \u0111o\u1EA1n 2: Thi s\xE1t h\u1EA1ch Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam v\xE0 c\u1EA5p Gi\u1EA5y ch\u1EE9ng nh\u1EADn Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam.\n\n+ Giai \u0111o\u1EA1n 3: H\u1ECDc vi\xEAn \u0111\u0103ng k\xFD \u0111i
-    th\u1EF1c h\xE0nh th\u1EF1c t\u1EBF c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa Phong
-    th\u1EE7y \u0110\u1EA1i Nam t\u1EA1i \u0111\u1ECBa \u0111i\u1EC3m nh\xE0 kh\xE1ch
-    h\xE0ng.\n\n 3.2 Ch\u01B0\u01A1ng tr\xECnh \u0111\xE0o t\u1EA1o (giai \u0111o\u1EA1n
-    1) Coaching 1-1 c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa \u0110\u1EA1i Nam\n\n+
-    B\xE0i 1: Quy tr\xECnh t\u01B0 v\u1EA5n c\u1EE7a Th\u1EA7y Phong th\u1EE7y\n\n+
-    B\xE0i 2: Nguy\xEAn t\u1EAFc v\xE0ng trong t\u01B0 v\u1EA5n Phong th\u1EE7y\n\n+
-    B\xE0i 3: L\u1ED9 tr\xECnh ph\xE1t tri\u1EC3n c\u1EE7a Phong th\u1EE7y s\u01B0\n\n+
-    B\xE0i 4: X\xE2y d\u1EF1ng th\u01B0\u01A1ng hi\u1EC7u Th\u1EA7y Phong th\u1EE7y\n\n+
-    B\xE0i 5: Th\u1EF1c h\xE0nh t\u1EA1i \u0111\u1ECBa ph\u01B0\u01A1ng\n\n+ B\xE0i
-    6: Th\u1EF1c h\xE0nh tham gia c\xF9ng Th\u1EA7y Truy\u1EC1n th\u1EEBa l\xE0m
-    \xE2m ph\u1EA7n\n\n 3.3 Th\u1EDDi gian Coaching:\n\n+ H\u1ECDc vi\xEAn vui l\xF2ng
-    th\xF4ng b\xE1o cho \u0110\u1EA1i Nam th\u1EDDi gian \u0111\u0103ng k\xFD h\u1ECDc
-    Coaching 1-1 tr\u01B0\u1EDBc 10 ng\xE0y l\xE0m vi\u1EC7c \u0111\u1EC3 \u0110\u1EA1i
-    Nam c\xF3 k\u1EBF ho\u1EA1ch s\u1EAFp x\u1EBFp Th\u1EA7y Truy\u1EC1n th\u1EEBa
-    \u0111\xE0o t\u1EA1o Coaching 1-1 t\u1EA1i Chi nh\xE1nh \u0111\u1ECBa ph\u01B0\u01A1ng.\n\n3.4:
-    Thi c\u1EA5p Gi\u1EA5y ch\u1EE9ng nh\u1EADn Th\u1EA7y Phong th\u1EE7y \u0110\u1EA1i
-    Nam\n\nSau khi ho\xE0n th\xE0nh v\xE0 \u0111\u1EA1t y\xEAu c\u1EA7u ph\u1EA7n
-    Th\u1EF1c h\xE0nh, h\u1ECDc vi\xEAn s\u1EBD tham gia thi s\xE1t h\u1EA1ch v\u1EDBi
-    H\u1ED9i \u0111\u1ED3ng chuy\xEAn m\xF4n \u0111\u1EC3 c\u1EA5p Gi\u1EA5y ch\u1EE9ng
-    nh\u1EADn \u201CTh\u1EA7y Phong th\u1EE7y \u0110\u1EA1i Nam\u201D"
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
   m_sharedMaterial: {fileID: -4822623081317619843, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
@@ -29037,7 +28993,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4749281925927237699
 RectTransform:
   m_ObjectHideFlags: 0
@@ -29554,8 +29510,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "ThS.NCS. Qu\u1EA3n l\xFD Kinh t\u1EBF, Phong th\u1EE7y s\u01B0 Qu\u1ED1c
-    t\u1EBF Nguy\u1EC5n Tr\u1ECDng M\u1EA1nh"
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
   m_sharedMaterial: {fileID: -4822623081317619843, guid: d4cc6bcb708254341a8a5b1b72d24102, type: 2}
@@ -29922,10 +29877,10 @@ RectTransform:
   - {fileID: 5743876832386107194}
   m_Father: {fileID: 8384059576245968834}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 144.54807, y: -35.7}
-  m_SizeDelta: {x: 279.09613, y: 41.4}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 41.4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &3117803188472222109
 MonoBehaviour:
@@ -32041,9 +31996,9 @@ RectTransform:
   m_Father: {fileID: 3365535118151007981}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -17, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1122447440849740000
 MonoBehaviour:
@@ -32124,6 +32079,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1981930346284820649}
   - {fileID: 5431829760185182855}
   - {fileID: 2822150050297197428}
   - {fileID: 2096940894995763219}
@@ -32385,7 +32341,7 @@ RectTransform:
   m_Father: {fileID: 5373541809096550636}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0.9999998}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 10}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -34134,6 +34090,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Image
       objectReference: {fileID: 0}
+    - target: {fileID: 7976572041485861646, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -35782,6 +35742,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -61.495
       objectReference: {fileID: 0}
+    - target: {fileID: 6360732606183293115, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7540988137943557283, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -35810,9 +35774,17 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -30.5
       objectReference: {fileID: 0}
+    - target: {fileID: 7813452021717543667, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
       propertyPath: m_Name
       value: Chapter UI
+      objectReference: {fileID: 0}
+    - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9217261876564598133, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
       propertyPath: m_AnchorMax.y
@@ -37057,6 +37029,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Chapter UI (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -37988,6 +37964,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Chapter UI (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -38165,6 +38145,10 @@ PrefabInstance:
     - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
       propertyPath: m_Name
       value: Chapter UI (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8928962124120286802, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
