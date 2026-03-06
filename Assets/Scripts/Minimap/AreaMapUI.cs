@@ -2,18 +2,47 @@ using System;
 using TMPro;
 using UnityEngine;
 
-public class AreaMapUI : MonoBehaviour
+public class WorldSpaceUI : MonoBehaviour
 {
-    [SerializeField] private AreaMapLocation areaMapLocation;
-    Camera wrapperCamera;
+    protected RectTransform uiElement;
+    [SerializeField] protected bool isWorldSpaceUI = false;
+    protected Camera wrapperCamera;
 
-    private RectTransform uiElement;
-    private bool isWorldSpaceUI = false;
-
-    private void Awake()
+    protected virtual void Awake()
     {
         uiElement = GetComponent<RectTransform>();
     }
+
+    protected void HandleFollowTarget()
+    {
+        var worldSpacePos = GetTargetPosition();
+
+        if (!isWorldSpaceUI)
+        {
+            var screenPosition = wrapperCamera.WorldToScreenPoint(worldSpacePos);
+
+            uiElement.position = screenPosition;
+        }
+        else
+        {
+            uiElement.position = worldSpacePos;
+        }
+    }
+
+    public void SetCamera(Camera playerCamera)
+    {
+        wrapperCamera = playerCamera;
+    }
+
+    protected virtual Vector3 GetTargetPosition()
+    {
+        return transform.position;
+    }
+}
+
+public class AreaMapUI : WorldSpaceUI
+{
+    [SerializeField] private AreaMapLocation areaMapLocation;
 
     private void LateUpdate()
     {
@@ -23,18 +52,16 @@ public class AreaMapUI : MonoBehaviour
 
         if (areaMapLocation == null)
             return;
-        
-        var worldSpacePos = areaMapLocation.GetItemWorldPosition();
-        
-        if (!isWorldSpaceUI)
-        {
-            var screenPosition = wrapperCamera.WorldToScreenPoint(worldSpacePos);
 
-            uiElement.position = screenPosition;
-        }
+        HandleFollowTarget();
     }
 
-    public void Setup(Camera cam, AreaMapLocation location,bool worldSpaceUI = false)
+    protected override Vector3 GetTargetPosition()
+    {
+        return areaMapLocation.GetItemWorldPosition();
+    }
+
+    public void Setup(Camera cam, AreaMapLocation location, bool worldSpaceUI = false)
     {
         wrapperCamera = cam;
         areaMapLocation = location;
