@@ -330,7 +330,6 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         seq.AppendInterval(0.2f);
         seq.Append(bgImg.DOFade(0f, 0.15f));
         
-        // bgImg.DOKill();
         // bgImg.DOFade(1, 0.5f).OnComplete(() =>
         // {
         //     bgImg.DOFade(0, 0.3f).SetDelay(0.2f);
