@@ -54,9 +54,11 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
 
     public override void Show()
     {
-        ShowPanel(0);
         itemNeedUI.gameObject.SetActive(true);
         leftSide.gameObject.SetActive(true);
+        // ShowPanel(0);
+        toggles[0].isOn = true;
+ 
         // call to show button group
     }
 
