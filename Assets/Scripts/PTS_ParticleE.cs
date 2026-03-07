@@ -20,19 +20,11 @@ public class PTS_ParticleE : MonoBehaviour
         Show(false);
     }
 
-
     public void Show(bool isEnable)
     {
-        foreach (var particle in activeParticleList)
+        foreach (var item in activeParticleList)
         {
-            if (isEnable)
-            {
-                particle.Play();
-            }
-            else
-            {
-                particle.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            }
+            gameObject.SetActive(isEnable);
         }
     }
     
