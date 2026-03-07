@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +8,6 @@ public class CourseReviewLoader : MonoBehaviour
     [Header("API")]
     private string baseUrlOverride = "";
     [SerializeField] private int limit = 10;
-    [SerializeField] private int timeoutSeconds = 20;
     [SerializeField] private bool useAuthHeader = true;
     [SerializeField] private bool useXDataHeader = true;
 
@@ -19,17 +17,9 @@ public class CourseReviewLoader : MonoBehaviour
     [SerializeField] private bool forceReloadSameCourse = false;
 
     [Header("Debug")]
-    [SerializeField] private bool debugLog = true;
     [SerializeField] private string currentCourseId;
 
-    // runtime
-    private Coroutine _loadRoutine;
-    private UnityWebRequest _activeRequest;
-
-    // chặn request cũ ghi đè request mới
-    private int _loadVersion = 0;
-
-    // lưu course load thành công gần nhất
+    private Coroutine loadRoutine;
     private string lastLoadedCourseId;
 
     private void OnEnable()
@@ -41,7 +31,7 @@ public class CourseReviewLoader : MonoBehaviour
         {
             string courseId = ResolveCurrentCourseId();
             if (!string.IsNullOrEmpty(courseId))
-                LoadReviews(courseId, forceReloadSameCourse);
+                LoadReviews(courseId);
         }
     }
 
@@ -51,37 +41,19 @@ public class CourseReviewLoader : MonoBehaviour
             CourseDetailStaticStore.OnChanged -= HandleCourseDetailChanged;
     }
 
-    private void OnDestroy()
-    {
-        Dispose();
-    }
-
     private void HandleCourseDetailChanged()
     {
         string courseId = ResolveCurrentCourseId();
-
-        if (debugLog)
-        {
-            Debug.Log($"[CourseReviewLoader] HandleCourseDetailChanged | resolvedCourseId='{courseId}' | currentCourseId='{currentCourseId}' | lastLoadedCourseId='{lastLoadedCourseId}'");
-        }
-
         if (string.IsNullOrEmpty(courseId))
         {
-            Dispose();
-            currentCourseId = null;
-            lastLoadedCourseId = null;
             CourseReviewStaticStore.Reset();
             return;
         }
 
-        if (!forceReloadSameCourse && CourseReviewStaticStore.HasData && CourseReviewStaticStore.CurrentCourseId == courseId)
-        {
-            if (debugLog)
-                Debug.Log("[CourseReviewLoader] Skip reload because review store already has this courseId.");
+        if (!forceReloadSameCourse && courseId == lastLoadedCourseId)
             return;
-        }
 
-        LoadReviews(courseId, forceReloadSameCourse);
+        LoadReviews(courseId);
     }
 
     private string ResolveCurrentCourseId()
@@ -97,208 +69,107 @@ public class CourseReviewLoader : MonoBehaviour
 
     public void LoadReviews(string courseId)
     {
-        LoadReviews(courseId, false);
-    }
-
-    public void LoadReviews(string courseId, bool forceReload)
-    {
-        if (string.IsNullOrWhiteSpace(courseId))
+        if (string.IsNullOrEmpty(courseId))
         {
-            if (debugLog)
-                Debug.LogWarning("[CourseReviewLoader] courseId null/empty");
+            Debug.LogWarning("[PTS_CourseReviewLoader] courseId null/empty");
             CourseReviewStaticStore.Reset();
-            return;
-        }
-
-        courseId = courseId.Trim();
-
-        if (debugLog)
-        {
-            Debug.Log($"[CourseReviewLoader] LoadReviews('{courseId}') forceReload={forceReload} | StoreId={CourseReviewStaticStore.CurrentCourseId} | HasData={CourseReviewStaticStore.HasData}");
-        }
-
-        // Nếu store đã có đúng course này rồi thì bỏ qua, trừ khi force reload
-        if (!forceReload &&
-            CourseReviewStaticStore.HasData &&
-            CourseReviewStaticStore.CurrentCourseId == courseId)
-        {
-            if (debugLog)
-                Debug.Log("[CourseReviewLoader] Skip reload because store already has this courseId.");
             return;
         }
 
         currentCourseId = courseId;
 
-        // hủy request/coroutine cũ
-        Dispose();
+        if (loadRoutine != null)
+            StopCoroutine(loadRoutine);
 
-        // invalidate mọi request cũ
-        _loadVersion++;
-
-        bool isDifferentCourse = courseId != lastLoadedCourseId;
-
-        // Nếu đổi course thì clear data cũ luôn
-        if (isDifferentCourse)
-            CourseReviewStaticStore.Reset();
-
-        _loadRoutine = StartCoroutine(CoLoadReviews(courseId, _loadVersion, isDifferentCourse));
+        loadRoutine = StartCoroutine(CoLoadReviews(courseId));
     }
 
     public void ReloadCurrent()
     {
         if (!string.IsNullOrEmpty(currentCourseId))
-            LoadReviews(currentCourseId, true);
+            LoadReviews(currentCourseId);
     }
 
-    public void Dispose()
+    private IEnumerator CoLoadReviews(string courseId)
     {
-        if (_loadRoutine != null)
+        bool isDifferentCourse = courseId != lastLoadedCourseId;
+
+        CourseReviewStaticStore.SetLoading(courseId, clearOldData: isDifferentCourse);
+
+        string baseUrl = !string.IsNullOrEmpty(baseUrlOverride)
+            ? baseUrlOverride
+            : LmsStore.Instance.baseUrl;
+
+        string url = $"{baseUrl}/lms/reviews/{courseId}?limit={limit}";
+
+        using (UnityWebRequest req = UnityWebRequest.Get(url))
         {
-            StopCoroutine(_loadRoutine);
-            _loadRoutine = null;
-        }
+            req.SetRequestHeader("Accept", "application/json");
 
-        if (_activeRequest != null)
-        {
-            try { _activeRequest.Abort(); } catch { /* ignore */ }
-            try { _activeRequest.Dispose(); } catch { /* ignore */ }
-            _activeRequest = null;
-        }
-    }
+            if (useAuthHeader && !string.IsNullOrEmpty(TokenStore.AccessToken))
+                req.SetRequestHeader("Authorization", "Bearer " + TokenStore.AccessToken);
 
-    private IEnumerator CoLoadReviews(string courseId, int version, bool clearOldData)
-    {
-        CourseReviewStaticStore.SetLoading(courseId, clearOldData);
+            if (useXDataHeader)
+            {
+                string xData = LmsSecurityHeader.BuildXDataHeader();
+                if (!string.IsNullOrEmpty(xData))
+                    req.SetRequestHeader("x-data", xData);
+            }
 
-        string baseUrl = !string.IsNullOrWhiteSpace(baseUrlOverride)
-            ? baseUrlOverride.Trim().TrimEnd('/')
-            : (LmsStore.Instance != null ? (LmsStore.Instance.baseUrl ?? "").Trim().TrimEnd('/') : "");
-
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            CourseReviewStaticStore.SetError(courseId, "baseUrl is empty");
-            _loadRoutine = null;
-            yield break;
-        }
-
-        string url = $"{baseUrl}/lms/reviews/{courseId}?limit={limit}&t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
-
-        if (debugLog)
-            Debug.Log($"[CourseReviewLoader] v{version} GET: {url}");
-
-        _activeRequest = UnityWebRequest.Get(url);
-        _activeRequest.timeout = timeoutSeconds;
-        _activeRequest.SetRequestHeader("Accept", "application/json");
-
-        // chặn cache ở client/proxy
-        _activeRequest.SetRequestHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        _activeRequest.SetRequestHeader("Pragma", "no-cache");
-        _activeRequest.SetRequestHeader("Expires", "0");
-
-        if (useAuthHeader && !string.IsNullOrEmpty(TokenStore.AccessToken))
-            _activeRequest.SetRequestHeader("Authorization", "Bearer " + TokenStore.AccessToken);
-
-        if (useXDataHeader)
-        {
-            string xData = LmsSecurityHeader.BuildXDataHeader();
-            if (!string.IsNullOrEmpty(xData))
-                _activeRequest.SetRequestHeader("x-data", xData);
-        }
-
-        yield return _activeRequest.SendWebRequest();
-
-        // Nếu đã có request mới hơn thì bỏ kết quả cũ
-        if (version != _loadVersion)
-        {
-            if (debugLog)
-                Debug.LogWarning($"[CourseReviewLoader] v{version} ignored (newer loadVersion={_loadVersion}).");
-            SafeDisposeRequest();
-            _loadRoutine = null;
-            yield break;
-        }
-
-        if (_activeRequest == null)
-        {
-            if (debugLog)
-                Debug.LogWarning($"[CourseReviewLoader] v{version} request was disposed during wait.");
-            _loadRoutine = null;
-            yield break;
-        }
+            Debug.Log("[PTS_CourseReviewLoader] GET " + url);
+            yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-        bool hasError = _activeRequest.result == UnityWebRequest.Result.ConnectionError ||
-                        _activeRequest.result == UnityWebRequest.Result.ProtocolError;
+            bool hasError = req.result == UnityWebRequest.Result.ConnectionError ||
+                            req.result == UnityWebRequest.Result.ProtocolError;
 #else
-        bool hasError = _activeRequest.isNetworkError || _activeRequest.isHttpError;
+            bool hasError = req.isNetworkError || req.isHttpError;
 #endif
 
-        string body = _activeRequest.downloadHandler != null
-            ? _activeRequest.downloadHandler.text
-            : null;
+            string body = req.downloadHandler.text;
 
-        if (hasError)
-        {
-            Debug.LogError($"[CourseReviewLoader] v{version} HTTP Error: {_activeRequest.responseCode} | {_activeRequest.error}\n{body}");
-            CourseReviewStaticStore.SetError(courseId, $"HTTP {_activeRequest.responseCode}: {_activeRequest.error}");
-            SafeDisposeRequest();
-            _loadRoutine = null;
-            yield break;
-        }
-
-        CourseReviewApiResponse response = null;
-
-        try
-        {
-            if (debugLog)
-                Debug.Log("[CourseReviewLoader] v" + version + " body = " + body);
-
-            string normalized = NormalizeReviewJson(body);
-            response = JsonUtility.FromJson<CourseReviewApiResponse>(normalized);
-
-            if (debugLog)
+            if (hasError)
             {
-                Debug.Log("[CourseReviewLoader] v" + version + " response null = " + (response == null));
-                Debug.Log("[CourseReviewLoader] v" + version + " review count = " + (response?.data != null ? response.data.Count : -1));
-                Debug.Log("[CourseReviewLoader] v" + version + " total = " + (response?.statistics != null ? response.statistics.total : -1));
+                Debug.LogError($"[PTS_CourseReviewLoader] HTTP Error: {req.responseCode} | {req.error}\n{body}");
+                CourseReviewStaticStore.SetError(courseId, $"HTTP {req.responseCode}: {req.error}");
+                yield break;
             }
+
+            CourseReviewApiResponse response = null;
+            try
+            {
+                Debug.Log("[PTS_CourseReviewLoader] body = " + body);
+
+                string normalized = NormalizeReviewJson(body);
+                response = JsonUtility.FromJson<CourseReviewApiResponse>(normalized);
+
+                Debug.Log("[PTS_CourseReviewLoader] response null = " + (response == null));
+                Debug.Log("[PTS_CourseReviewLoader] review count = " + (response?.data != null ? response.data.Count : -1));
+                Debug.Log("[PTS_CourseReviewLoader] total = " + (response?.statistics != null ? response.statistics.total : -1));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[PTS_CourseReviewLoader] Parse Error: " + e.Message);
+                CourseReviewStaticStore.SetError(courseId, "Parse response failed");
+                yield break;
+            }
+
+            if (response == null)
+            {
+                CourseReviewStaticStore.SetError(courseId, "Response null");
+                yield break;
+            }
+
+            var reviews = response.data ?? new List<LmsCourseReviewItem>();
+            var statistics = response.statistics;
+
+            CourseReviewStaticStore.SetData(courseId, reviews, statistics);
+            lastLoadedCourseId = courseId;
+
+            Debug.Log($"[PTS_CourseReviewLoader] Loaded {reviews.Count} reviews for courseId={courseId}");
         }
-        catch (Exception e)
-        {
-            Debug.LogError("[CourseReviewLoader] v" + version + " Parse Error: " + e.Message);
-            CourseReviewStaticStore.SetError(courseId, "Parse response failed");
-            SafeDisposeRequest();
-            _loadRoutine = null;
-            yield break;
-        }
 
-        if (response == null)
-        {
-            CourseReviewStaticStore.SetError(courseId, "Response null");
-            SafeDisposeRequest();
-            _loadRoutine = null;
-            yield break;
-        }
-
-        var reviews = response.data ?? new List<LmsCourseReviewItem>();
-        var statistics = response.statistics;
-
-        CourseReviewStaticStore.SetData(courseId, reviews, statistics);
-        lastLoadedCourseId = courseId;
-
-        if (debugLog)
-            Debug.Log($"[CourseReviewLoader] v{version} Loaded {reviews.Count} reviews for courseId={courseId}");
-
-        SafeDisposeRequest();
-        _loadRoutine = null;
-    }
-
-    private void SafeDisposeRequest()
-    {
-        if (_activeRequest != null)
-        {
-            try { _activeRequest.Dispose(); } catch { /* ignore */ }
-            _activeRequest = null;
-        }
+        loadRoutine = null;
     }
 
     // JsonUtility không map được key "1","2","3","4","5"
