@@ -224,7 +224,6 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (_waitDataCo != null)
             StopCoroutine(_waitDataCo);
 
-        // Reset store cũ nếu bạn muốn tránh dính data màn trước
         // CourseDetailStaticStore.Reset();
         // CourseReviewStaticStore.Reset();
 
@@ -242,7 +241,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         while (t < timeout)
         {
             bool detailDone = IsCourseDetailLoaded(courseId);
-            bool reviewDone = IsCourseReviewLoaded();
+            // bool reviewDone = IsCourseReviewLoaded();
+            bool reviewDone = IsCourseReviewLoaded(courseId);
 
             bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
             bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
@@ -302,12 +302,10 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                && CourseDetailStaticStore.CurrentCourse != null;
     }
 
-    private bool IsCourseReviewLoaded()
+    private bool IsCourseReviewLoaded(string courseId)
     {
-        // Nếu store review của bạn có Reviews = null khi chưa load
-        // và List rỗng khi load xong nhưng không có review,
-        // thì check kiểu này sẽ an toàn hơn.
-        return !CourseReviewStaticStore.IsLoading
+        return CourseReviewStaticStore.CurrentCourseId == courseId
+               && !CourseReviewStaticStore.IsLoading
                && string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
     }
 
