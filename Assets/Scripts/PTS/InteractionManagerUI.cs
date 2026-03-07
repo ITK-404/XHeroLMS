@@ -31,10 +31,10 @@ public class InteractionManagerUI : MonoBehaviour
     {
         InputBlocker.SetBlocked(false);
         uiInstance.Hide();
-        apiInstance.gameObject.SetActive(false);
+        //apiInstance.gameObject.SetActive(false);
         
         UIManager.CourseMenuButtons.Show();
-        UIManager.InputCanvas.Hide();
+        UIManager.InputCanvas.Show();
         UIManager.PlayerPanelUI.ShowAll();
     }
 

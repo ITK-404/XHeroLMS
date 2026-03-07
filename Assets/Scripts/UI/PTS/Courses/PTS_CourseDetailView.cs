@@ -34,7 +34,7 @@ public class PTS_CourseDetailView : MonoBehaviour
     [SerializeField] private PTS_CourseDetailManager detail;
     [SerializeField] private PTS_CourseInforManager infor;
     [SerializeField] private PTS_CourseListManager intro;
-
+    [SerializeField] private PTS_CourseTitle title;
     [Header("Settings")]
     [SerializeField] private PTS_ButtonGroupHandle btnGroupHandle;
     [SerializeField] private Button btnReturn;
@@ -51,7 +51,8 @@ public class PTS_CourseDetailView : MonoBehaviour
         sectionBases.Add(detail);
         sectionBases.Add(infor);
         sectionBases.Add(intro);
-
+        
+        title.gameObject.SetActive(false);
         btnReturn.onClick.AddListener(GoBackward);
         Hide();
     }
@@ -73,6 +74,7 @@ public class PTS_CourseDetailView : MonoBehaviour
         Hide();
         current = CourseDetailSection.None;
         OnEnterNoneView?.Invoke();
+      
     }
 
     private void NavigateTo(CourseDetailSection target, bool saveHistory = true)
@@ -97,16 +99,19 @@ public class PTS_CourseDetailView : MonoBehaviour
             case CourseDetailSection.Intro:
                 btnGroupHandle.TryShow(PTS_ButtonGroupHandle.State.None);
                 background.Switch(PTS_Image.Courses);
+                title.gameObject.SetActive(false);
                 break;
 
             case CourseDetailSection.Brief:
                 btnGroupHandle.TryShow(PTS_ButtonGroupHandle.State.Brief);
                 background.Switch(PTS_Image.Courses);
+                title.gameObject.SetActive(true);
                 break;
 
             case CourseDetailSection.Detail:
                 btnGroupHandle.TryShow(PTS_ButtonGroupHandle.State.Detail);
                 background.Switch(PTS_Image.Detail);
+                title.gameObject.SetActive(true);
                 break;
         }
     }

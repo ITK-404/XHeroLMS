@@ -24,7 +24,7 @@ public class FrameDocumentUI : PanelBaseUI
         base.Hide();
         if (page != null)
         {
-            Destroy(page.gameObject);
+            page.Hide();
         }
     }
 
@@ -36,8 +36,12 @@ public class FrameDocumentUI : PanelBaseUI
             return;
         }
 
-        page = Instantiate(UniWebViewPrefab, transform);
-        page.gameObject.SetActive(true);
+        if (page == null)
+        {
+            page = Instantiate(UniWebViewPrefab, transform);
+            page.gameObject.SetActive(true);
+        }
+            
         page.Load(pageUrl);
         page.Show();
     }
