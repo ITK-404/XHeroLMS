@@ -13,6 +13,19 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
         Binding();
     }
 
+    private void OnDestroy()
+    {
+        for (int i = 0; i < toggles.Length; i++)
+        {
+            var toggle = toggles[i];
+            var index = i;
+            toggle.onValueChanged.RemoveListener((isOn) =>
+            {
+                ShowPanel(index);
+            });
+        }
+    }
+
     private void Binding()
     {
         for (int i = 0; i < toggles.Length; i++)
