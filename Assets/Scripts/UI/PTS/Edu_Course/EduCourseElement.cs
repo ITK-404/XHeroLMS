@@ -1,0 +1,14 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class EduCourseElement : MonoBehaviour
+{
+    [SerializeField] private Image courseImg;
+    [SerializeField] private TextMeshProUGUI courseTitle;
+    [SerializeField] private TextMeshProUGUI courseDate;
+    [SerializeField] private TextMeshProUGUI coursSeatTmp;
+    [SerializeField] private Button goToDetailBtn;
+    [SerializeField] private CourseTagHandle courseTag;
+    
+}

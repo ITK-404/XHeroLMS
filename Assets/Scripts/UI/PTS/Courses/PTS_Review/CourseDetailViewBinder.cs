@@ -12,7 +12,6 @@ public class CourseDetailViewBinder : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txtDuration;
     [SerializeField] private TextMeshProUGUI txtTotalLessons;
     [SerializeField] private TextMeshProUGUI txtStar;
-
     private void OnEnable()
     {
         CourseDetailStaticStore.OnChanged += HandleStoreChanged;
