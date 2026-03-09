@@ -4,8 +4,8 @@ using UnityEngine.UI;
 
 public class PanelBaseUI : MonoBehaviour
 {
-    [SerializeField] private CanvasGroup _canvasGroup;
-    [SerializeField] private ScrollRect scrollView;
+    [SerializeField] protected CanvasGroup _canvasGroup;
+    [SerializeField] protected ScrollRect scrollView;
     private void OnValidate()
     {
         if (_canvasGroup == null)
