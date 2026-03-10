@@ -1,5 +1,59 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8968031339577038041
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 991228077388419739}
+  - component: {fileID: 8030749147868546281}
+  m_Layer: 5
+  m_Name: All-View Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &991228077388419739
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8968031339577038041}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3853693293427196913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &8030749147868546281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8968031339577038041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2baa7062830b8841be5d9aa9d2bace8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseDetailBatchLoader
+  baseUrl: 
+  timeoutSeconds: 20
+  autoLoadOnStart: 0
+  clearStoreBeforeLoad: 1
+  delayBetweenRequests: 0.05
+  debugLog: 1
 --- !u!1001 &4230117518475769151
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -83,6 +137,10 @@ PrefabInstance:
     - target: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Name
       value: PTS_Khai Giang Canvas Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 1634584894604828635, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: m_Size
+      value: 0.71147364
       objectReference: {fileID: 0}
     - target: {fileID: 1675263637573249006, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_AnchorMax.x
@@ -1184,6 +1242,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9183015353638008387, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: m_Value
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 2950598073262229221, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -1195,7 +1257,10 @@ PrefabInstance:
     - {fileID: 5809307412894556814, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
     - {fileID: 4411656362164904062, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
     - {fileID: 7747262937302855401, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1139257708167247566, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      insertIndex: 0
+      addedObject: {fileID: 991228077388419739}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       insertIndex: -1
@@ -1239,6 +1304,12 @@ MonoBehaviour:
   frameEduCourse: {fileID: 412381944459524923}
   arrowNavigation: {fileID: 6236049493234195748}
   courseDetailInformation: {fileID: 5345919644416974994}
+  coursePanel: {fileID: 0}
+--- !u!224 &3853693293427196913 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 1139257708167247566, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 4230117518475769151}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &5083288043516667736 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8952895421306016359, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}

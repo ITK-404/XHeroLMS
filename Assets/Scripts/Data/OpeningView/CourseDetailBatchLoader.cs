@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class CourseDetailBatchLoader : MonoBehaviour
 {
     [Header("API")]
-    [SerializeField] private string baseUrl = "";
+    private string baseUrl = "";
     [SerializeField] private int timeoutSeconds = 20;
 
     [Header("Options")]
