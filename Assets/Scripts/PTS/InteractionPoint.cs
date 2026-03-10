@@ -6,7 +6,6 @@ using UnityEngine;
 public class InteractionPoint : MonoBehaviour
 {
     public Transform standPosition;
-    
     public void Interact(PointClickSystem pointClickSystem)
     {
         pointClickSystem.MoveToPosition(transform.position,false);

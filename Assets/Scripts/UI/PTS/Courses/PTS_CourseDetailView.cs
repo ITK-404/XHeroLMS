@@ -24,7 +24,16 @@ public class PTS_CourseSectionBase : MonoBehaviour
     }
 }
 
-public class PTS_CourseDetailView : MonoBehaviour
+public class PTS_BaseView : UIView
+{
+    public Action OnEnterNoneView;
+    [Header("Settings")]
+    [SerializeField] protected PTS_ButtonGroupHandle btnGroupHandle;
+    [SerializeField] protected Button btnReturn;
+
+  
+}
+public class PTS_CourseDetailView : PTS_BaseView
 {
     public static PTS_CourseDetailView Instance;
 
@@ -35,17 +44,15 @@ public class PTS_CourseDetailView : MonoBehaviour
     [SerializeField] private PTS_CourseInforManager infor;
     [SerializeField] private PTS_CourseListManager intro;
     [SerializeField] private PTS_CourseTitle title;
-    [Header("Settings")]
-    [SerializeField] private PTS_ButtonGroupHandle btnGroupHandle;
-    [SerializeField] private Button btnReturn;
 
     private readonly List<PTS_CourseSectionBase> sectionBases = new();
     private readonly Stack<CourseDetailSection> simpleHistory = new();
-    public Action OnEnterNoneView;
+    
     private CourseDetailSection current = CourseDetailSection.None;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         Instance = this;
 
         sectionBases.Add(detail);
@@ -54,6 +61,7 @@ public class PTS_CourseDetailView : MonoBehaviour
         
         title.gameObject.SetActive(false);
         btnReturn.onClick.AddListener(GoBackward);
+        NavigateTo(CourseDetailSection.Intro);
         Hide();
     }
 
@@ -137,21 +145,5 @@ public class PTS_CourseDetailView : MonoBehaviour
     {
         Show();
         NavigateTo(CourseDetailSection.Detail);
-    }
-
-    public void ShowIntroView()
-    {
-        Show();
-        NavigateTo(CourseDetailSection.Intro);
-    }
-
-    public void Show()
-    {
-        container.gameObject.SetActive(true);
-    }
-
-    public void Hide()
-    {
-        container.gameObject.SetActive(false);
     }
 }

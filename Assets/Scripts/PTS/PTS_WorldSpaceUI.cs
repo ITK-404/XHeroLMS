@@ -1,19 +1,28 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PTS_WorldSpaceUI : WorldSpaceUI
 {
-    [SerializeField] private Transform target;
-    [SerializeField] private Vector3 offset;
-    [SerializeField] private Button btn;
 
-    public static Action OnClickButtonEvent;
+
+    [Header("Settings")]
+    [SerializeField] private Vector3 offset;
+    [Header("UI")]
+    [SerializeField] private string buttonNameText;
+    [SerializeField] private TextMeshProUGUI displayTmp;
+    [SerializeField] private Button btn;
+    [Header("References")]
+    [SerializeField] private UIView bindingView;
+    [SerializeField] private Transform target;
+    public static Action<UIView> OnClickButtonEvent;
     
     protected override void Awake()
     {
         base.Awake();
         btn.onClick.AddListener(OnClickButton);
+        displayTmp.text = buttonNameText;
     }
 
     private void OnDestroy()
@@ -23,7 +32,12 @@ public class PTS_WorldSpaceUI : WorldSpaceUI
 
     private void OnClickButton()
     {
-        OnClickButtonEvent?.Invoke();
+        if (bindingView == null)
+        {
+            Debug.LogError("Binding View is null");
+            return;
+        }
+        OnClickButtonEvent?.Invoke(bindingView);
     }
 
     private void LateUpdate()
