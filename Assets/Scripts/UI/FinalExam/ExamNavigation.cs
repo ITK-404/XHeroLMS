@@ -211,7 +211,7 @@ public static class ScrollRectSupport
             },
             targetAnchoredX,
             duration
-        ).SetEase(Ease.InOutSine);
+        ).SetEase(Ease.OutSine);
 
         if (preserveMovementType)
         {
