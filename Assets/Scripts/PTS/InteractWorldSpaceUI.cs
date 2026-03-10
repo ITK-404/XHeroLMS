@@ -4,31 +4,15 @@ using UnityEngine;
 
 public class InteractWorldSpaceUI : MonoBehaviour
 {
-    [SerializeField] private PTS_WorldSpaceUI uiPrefab;
-    [SerializeField] private Transform container;
-
     [SerializeField] private Camera playerCamera;
     [SerializeField] private List<PTS_WorldSpaceUI> uiList = new();
     [SerializeField] private Vector3 offset;
 
-    private InteractionManagerUI interactHandle;
-    
+    private PTS_ViewManager viewManager;
     private void Awake()
     {
-        interactHandle = GetComponent<InteractionManagerUI>();
+        viewManager = GetComponent<PTS_ViewManager>();
         Init();
-        
-        PTS_WorldSpaceUI.OnClickButtonEvent += OnClickButtonEvent;
-    }
-
-    private void OnDestroy()
-    {
-        PTS_WorldSpaceUI.OnClickButtonEvent -= OnClickButtonEvent;
-    }
-
-    private void OnClickButtonEvent(UIView bindingView)
-    {
-        interactHandle.OnEnterCourseView(bindingView);
     }
 
     private void Init()
@@ -36,9 +20,14 @@ public class InteractWorldSpaceUI : MonoBehaviour
         foreach (var item in uiList)
         {
             if(item.gameObject.activeSelf == false) continue;
-            
+            item.OnPressedButton = ShowTarget;
             item.SetCamera(playerCamera);
         }
+    }
+
+    private void ShowTarget(string target)
+    {
+        viewManager.TryShow(target);
     }
 
     private void LateUpdate()

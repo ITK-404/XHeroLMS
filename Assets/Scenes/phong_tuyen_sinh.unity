@@ -12510,6 +12510,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 798416836}
     - target: {fileID: 3009848367178230570, guid: ce59df15bc2674609b054c3a61df37aa, type: 3}
+      propertyPath: targetID
+      value: 01
+      objectReference: {fileID: 0}
+    - target: {fileID: 3009848367178230570, guid: ce59df15bc2674609b054c3a61df37aa, type: 3}
       propertyPath: canvasGroup
       value: 
       objectReference: {fileID: 798416837}
@@ -16194,6 +16198,10 @@ PrefabInstance:
       propertyPath: target
       value: 
       objectReference: {fileID: 2006819640}
+    - target: {fileID: 4731120389279533717, guid: bb417b62398c143a08816ade15c26321, type: 3}
+      propertyPath: targetId
+      value: 01
+      objectReference: {fileID: 0}
     - target: {fileID: 4731120389279533717, guid: bb417b62398c143a08816ade15c26321, type: 3}
       propertyPath: bindingView
       value: 
@@ -20939,6 +20947,7 @@ GameObject:
   - component: {fileID: 1285679052}
   - component: {fileID: 1285679053}
   - component: {fileID: 1285679054}
+  - component: {fileID: 1285679055}
   m_Layer: 0
   m_Name: Interaction Group
   m_TagString: Untagged
@@ -21010,6 +21019,18 @@ MonoBehaviour:
   - {fileID: 1390312258}
   - {fileID: 1072476371}
   offset: {x: 0, y: 3, z: 0}
+--- !u!114 &1285679055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285679051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30cdf9e72e77441baa17da53086ee979, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_ViewManager
 --- !u!1 &1297529247 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1245006558584958560, guid: 7b3e6db10d22f504dbc606110b2cb5e7, type: 3}
@@ -22693,12 +22714,16 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 620639087}
     - target: {fileID: 4731120389279533717, guid: bb417b62398c143a08816ade15c26321, type: 3}
+      propertyPath: targetId
+      value: 02
+      objectReference: {fileID: 0}
+    - target: {fileID: 4731120389279533717, guid: bb417b62398c143a08816ade15c26321, type: 3}
       propertyPath: bindingView
       value: 
       objectReference: {fileID: 1953802330}
     - target: {fileID: 4731120389279533717, guid: bb417b62398c143a08816ade15c26321, type: 3}
       propertyPath: buttonNameText
-      value: "Xem l\u1ECBch khai gi\u1EA3nggi\u1EA3ng"
+      value: "Xem l\u1ECBch khai gi\u1EA3ng"
       objectReference: {fileID: 0}
     - target: {fileID: 6983610762681464889, guid: bb417b62398c143a08816ade15c26321, type: 3}
       propertyPath: m_AnchorMax.y
@@ -29627,6 +29652,10 @@ PrefabInstance:
       propertyPath: root
       value: 
       objectReference: {fileID: 110801869}
+    - target: {fileID: 2446913184943749330, guid: 94d35e738f61d4c54a5ea3657c5ee6f1, type: 3}
+      propertyPath: targetID
+      value: 02
+      objectReference: {fileID: 0}
     - target: {fileID: 2446913184943749330, guid: 94d35e738f61d4c54a5ea3657c5ee6f1, type: 3}
       propertyPath: canvasGroup
       value: 

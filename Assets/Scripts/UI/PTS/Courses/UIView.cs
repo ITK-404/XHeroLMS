@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -10,9 +11,12 @@ public class UIView : MonoBehaviour
     [Header("Animation")]
     [SerializeField] protected float fadeDuration = 0.2f;
     [SerializeField] protected bool useFade = true;
-
+    [SerializeField] protected string targetID;
     protected Coroutine transitionCoroutine;
-
+    public string TargetID
+    {
+        get => targetID;
+    }
     public bool IsShowing { get; private set; }
     public bool IsTransitioning { get; private set; }
 
@@ -109,7 +113,7 @@ public class UIView : MonoBehaviour
 
         IsShowing = false;
         IsTransitioning = false;
-
+        
         OnAfterHide();
     }
 

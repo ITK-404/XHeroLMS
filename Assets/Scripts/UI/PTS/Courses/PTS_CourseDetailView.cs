@@ -24,14 +24,29 @@ public class PTS_CourseSectionBase : MonoBehaviour
     }
 }
 
+
 public class PTS_BaseView : UIView
 {
+    
     public Action OnEnterNoneView;
     [Header("Settings")]
     [SerializeField] protected PTS_ButtonGroupHandle btnGroupHandle;
     [SerializeField] protected Button btnReturn;
 
-  
+    public Action OnViewOpened;
+    public Action OnViewClosed;
+
+    protected override void OnBeforeShow()
+    {
+        base.OnBeforeShow();
+        OnViewOpened?.Invoke();
+    }
+
+    protected override void OnAfterHide()
+    {
+        base.OnAfterHide();
+        OnViewClosed?.Invoke();
+    }
 }
 public class PTS_CourseDetailView : PTS_BaseView
 {

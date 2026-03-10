@@ -5,8 +5,6 @@ using UnityEngine.UI;
 
 public class PTS_WorldSpaceUI : WorldSpaceUI
 {
-
-
     [Header("Settings")]
     [SerializeField] private Vector3 offset;
     [Header("UI")]
@@ -14,10 +12,10 @@ public class PTS_WorldSpaceUI : WorldSpaceUI
     [SerializeField] private TextMeshProUGUI displayTmp;
     [SerializeField] private Button btn;
     [Header("References")]
-    [SerializeField] private UIView bindingView;
     [SerializeField] private Transform target;
-    public static Action<UIView> OnClickButtonEvent;
-    
+
+    public string targetId;
+    public Action<string> OnPressedButton;
     protected override void Awake()
     {
         base.Awake();
@@ -32,12 +30,7 @@ public class PTS_WorldSpaceUI : WorldSpaceUI
 
     private void OnClickButton()
     {
-        if (bindingView == null)
-        {
-            Debug.LogError("Binding View is null");
-            return;
-        }
-        OnClickButtonEvent?.Invoke(bindingView);
+        OnPressedButton?.Invoke(targetId);
     }
 
     private void LateUpdate()
