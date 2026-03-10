@@ -21,7 +21,7 @@ public class FrameEduCourseUI : PanelBaseUI
     {
         if (ChildCount == 0) return;
         currentIndex = 0;
-        CenterOnIndex(currentIndex);
+        CenterOnIndex(currentIndex,false);
     }
 
     [ContextMenu("Previous Index")]
@@ -49,7 +49,7 @@ public class FrameEduCourseUI : PanelBaseUI
         CenterOnIndex(currentIndex);
     }
 
-    private void CenterOnIndex(int index)
+    private void CenterOnIndex(int index, bool anim = true)
     {
         if (scrollView == null || scrollView.content == null) return;
         if (ChildCount == 0) return;
@@ -59,8 +59,9 @@ public class FrameEduCourseUI : PanelBaseUI
         var rect = target.GetComponent<RectTransform>();
         if (rect == null) return;
         moveTween?.Kill();
+        float duration = anim ? 0.5f : 0;
         // Use ForceCenterOnItem so the element is centered even if it requires moving content beyond normal bounds
-        moveTween = scrollView.ForceCenterOnItem(rect, 1, false);
+        moveTween = scrollView.ForceCenterOnItem(rect, duration, false);
     }
 
     [ContextMenu("Force Center Current Index")]

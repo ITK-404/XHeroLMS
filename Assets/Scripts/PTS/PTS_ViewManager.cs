@@ -45,6 +45,5 @@ public class PTS_ViewManager : MonoBehaviour
                 view.Show();
             }
         }
-
     }
 }

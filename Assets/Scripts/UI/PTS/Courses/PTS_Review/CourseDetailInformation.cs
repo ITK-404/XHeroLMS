@@ -21,6 +21,7 @@ public class CourseDetailInformation : MonoBehaviour
 
    public void Show(InformationType type)
    {
+      gameObject.SetActive(true);
       switch (type)
       {
          case InformationType.JustInformation:
@@ -37,5 +38,10 @@ public class CourseDetailInformation : MonoBehaviour
       }
       
       reviewTmp.gameObject.SetActive(type == InformationType.JustInformation);
+   }
+
+   public void Hide()
+   {
+      gameObject.SetActive(false);
    }
 }
