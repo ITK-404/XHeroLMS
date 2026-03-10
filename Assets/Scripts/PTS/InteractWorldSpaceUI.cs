@@ -6,7 +6,6 @@ public class InteractWorldSpaceUI : MonoBehaviour
 {
     [SerializeField] private PTS_WorldSpaceUI uiPrefab;
     [SerializeField] private Transform container;
-    [SerializeField] private List<Transform> items = new();
 
     [SerializeField] private Camera playerCamera;
     [SerializeField] private List<PTS_WorldSpaceUI> uiList = new();
@@ -27,21 +26,18 @@ public class InteractWorldSpaceUI : MonoBehaviour
         PTS_WorldSpaceUI.OnClickButtonEvent -= OnClickButtonEvent;
     }
 
-    private void OnClickButtonEvent()
+    private void OnClickButtonEvent(UIView bindingView)
     {
-        interactHandle.OnEnterCourseView();
+        interactHandle.OnEnterCourseView(bindingView);
     }
 
     private void Init()
     {
-        foreach (var item in items)
+        foreach (var item in uiList)
         {
             if(item.gameObject.activeSelf == false) continue;
             
-            var ui = Instantiate(uiPrefab, container);
-            ui.SetCamera(playerCamera);
-            ui.SetTarget(item);
-            uiList.Add(ui);
+            item.SetCamera(playerCamera);
         }
     }
 

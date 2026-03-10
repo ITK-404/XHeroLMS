@@ -9,12 +9,18 @@ public class InteractionManagerUI : MonoBehaviour
     [SerializeField] private CourseMenuButtons courseMenuBtns;
     [SerializeField] private PTS_ParticleE[] particleSystems;
     [SerializeField] private float stopEmitDistance = 0.5f;
-
+    private UIView bindingView;
     private UIManager UIManager;
     
+    private PTS_BaseView[] catchView;
     private void Awake()
     {
-        uiInstance.OnEnterNoneView += OnExitNoneView;
+        // gắn sự kiện khi thoát ra khỏi View
+        catchView = GetComponentsInChildren<PTS_BaseView>();
+        foreach (var view in catchView)
+        {
+            view.OnEnterNoneView += OnExitNoneView;
+        }
     }
 
     private void Start()
@@ -24,13 +30,15 @@ public class InteractionManagerUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        uiInstance.OnEnterNoneView -= OnExitNoneView;
+        foreach (var view in catchView)
+        {
+            view.OnEnterNoneView -= OnExitNoneView;
+        }
     }
 
     private void OnExitNoneView()
     {
         InputBlocker.SetBlocked(false);
-        uiInstance.Hide();
         //apiInstance.gameObject.SetActive(false);
         
         UIManager.CourseMenuButtons.Show();
@@ -38,10 +46,11 @@ public class InteractionManagerUI : MonoBehaviour
         UIManager.PlayerPanelUI.ShowAll();
     }
 
-    public void OnEnterCourseView()
+    public void OnEnterCourseView(UIView bindingView)
     {
+        this.bindingView = bindingView;
+        bindingView.Show();
         InputBlocker.SetBlocked(true);
-        uiInstance.ShowIntroView();
         apiInstance.gameObject.SetActive(true);
         
         UIManager.CourseMenuButtons.Hide();
