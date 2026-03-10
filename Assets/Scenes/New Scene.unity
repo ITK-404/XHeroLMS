@@ -20,9 +20,9 @@ RenderSettings:
   m_FogDensity: 0.012
   m_LinearFogStart: 200
   m_LinearFogEnd: 250
-  m_AmbientSkyColor: {r: 1, g: 1, b: 1, a: 1}
-  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
-  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  m_AmbientSkyColor: {r: 0.38216457, g: 0.40260613, b: 0.5, a: 0.5}
+  m_AmbientEquatorColor: {r: 0.25, g: 0.25, b: 0.25, a: 0.25}
+  m_AmbientGroundColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.41960785, g: 0.47843137, b: 0.627451, a: 1}
@@ -183567,7 +183567,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 3e4b2492a67e44336b4a4b23b57ea7ad, type: 3}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000015258789
+      value: -0.00010108948
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x
@@ -184249,6 +184249,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      propertyPath: m_ClearFlags
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: field of view
       value: 60.000004
       objectReference: {fileID: 0}
@@ -184331,6 +184335,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5691813381713268117, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8692491915194145260}
+    - targetCorrespondingSourceObject: {fileID: 5691813381713268117, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8692491915194145261}
   m_SourcePrefab: {fileID: 100100000, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
 --- !u!1001 &1101700593233274580
 PrefabInstance:
@@ -188081,6 +188088,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PathVisualize
   _lineRenderer: {fileID: 197015262}
+--- !u!114 &8692491915194145261
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8692491915194145231}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30d3bc80155feaf439028559f790498d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DigitalRuby.WeatherMaker.WeatherMakerSoundZoneScript
+  Sounds: []
+  addSounds: 1
 --- !u!1001 &8883687795022728684
 PrefabInstance:
   m_ObjectHideFlags: 0
