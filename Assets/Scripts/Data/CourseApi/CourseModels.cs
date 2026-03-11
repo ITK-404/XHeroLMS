@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class CourseModels
@@ -32,7 +33,6 @@ public static class CourseModels
         public string level;
         public int learners;
         public float stars;
-
         public int evaluate;
 
         public string learningMode;
@@ -48,8 +48,22 @@ public static class CourseModels
 
         public object endTime;
         public string promotionText;
-    }
 
+        public List<CourseStartDateItem> courseStartDate; // thêm dòng này
+    }
+[Serializable]
+public class CourseStartDateItem
+{
+    public CourseDatePart start;
+}
+
+[Serializable]
+public class CourseDatePart
+{
+    public int day;
+    public int month;
+    public int year;
+}
     [Serializable]
     public class CoursePriceLite
     {
