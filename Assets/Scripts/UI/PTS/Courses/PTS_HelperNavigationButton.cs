@@ -8,6 +8,11 @@ public class PTS_HelperNavigationButton : MonoBehaviour
     {
         var view = PTS_ViewManager.Instance.Current.GetComponent<PTS_CourseDetailView>();
 
+        if (view == null)
+        {
+            return;
+        }
+        
         switch (section)
         {
             case CourseDetailSection.Brief:
