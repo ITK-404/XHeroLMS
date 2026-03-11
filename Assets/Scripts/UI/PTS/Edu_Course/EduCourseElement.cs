@@ -1,8 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
@@ -17,6 +17,8 @@ public class EduCourseElement : MonoBehaviour
 
     [Header("Fallback")]
     [SerializeField] private Sprite fallbackSprite;
+
+    [SerializeField] private UnityEvent OnChangeViewClicked;
 
     private string _courseId;
     private Coroutine _loadImageRoutine;
@@ -77,10 +79,9 @@ public class EduCourseElement : MonoBehaviour
 
     private void GoToDetail()
     {
-        if (PTS_CourseOpeningView.Instance != null)
-        {
-            PTS_CourseOpeningView.Instance.ShowCourseInformation();
-        }
+        // PTS_CourseOpeningView.Instance.ShowCourseInformation();
+
+        OnChangeViewClicked?.Invoke();
     }
 
     private string GetFirstStartDateText(List<CourseModels.CourseStartDateItem> dates)

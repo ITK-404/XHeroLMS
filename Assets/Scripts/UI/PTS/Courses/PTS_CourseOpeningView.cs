@@ -2,9 +2,6 @@ using UnityEngine;
 
 public class PTS_CourseOpeningView : PTS_BaseView
 {
-    public static PTS_CourseOpeningView Instance;
-
-    
     [SerializeField] private FrameEduCourseUI frameEduCourse;
     [SerializeField] private Transform arrowNavigation;
     [SerializeField] private CourseDetailInformation courseDetailInformation;
@@ -12,7 +9,6 @@ public class PTS_CourseOpeningView : PTS_BaseView
     protected override void Awake()
     {
         base.Awake();
-        Instance = this;
         btnReturn.onClick.AddListener(OnReturn);
     }
 
@@ -45,5 +41,4 @@ public class PTS_CourseOpeningView : PTS_BaseView
         var informationType = CourseDetailInformation.InformationType.ContainClass;
         courseDetailInformation.Show(informationType);
     }
-
 }
