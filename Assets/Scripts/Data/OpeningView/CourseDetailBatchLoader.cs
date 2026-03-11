@@ -11,7 +11,6 @@ public class CourseDetailBatchLoader : MonoBehaviour
     [SerializeField] private int timeoutSeconds = 20;
 
     [Header("Options")]
-    [SerializeField] private bool autoLoadOnStart = false;
     [SerializeField] private bool clearStoreBeforeLoad = true;
     [SerializeField] private float delayBetweenRequests = 0.05f;
 
@@ -40,8 +39,7 @@ public class CourseDetailBatchLoader : MonoBehaviour
 
     private void Start()
     {
-        if (autoLoadOnStart)
-            LoadAllCourseDetails();
+        LoadAllCourseDetails();
     }
 
     public void LoadAllCourseDetails()
@@ -52,6 +50,9 @@ public class CourseDetailBatchLoader : MonoBehaviour
 
     public void LoadAllCourseDetails(IReadOnlyList<CourseModels.CourseLite> courses)
     {
+        if (debugLog)
+            Debug.Log($"[CourseDetailBatchLoader] Input course count = {(courses == null ? 0 : courses.Count)}");
+
         if (courses == null || courses.Count == 0)
         {
             if (debugLog) Debug.LogWarning("[CourseDetailBatchLoader] No courses to load.");
@@ -61,6 +62,16 @@ public class CourseDetailBatchLoader : MonoBehaviour
 
         Dispose();
         _loadVersion++;
+
+        if (debugLog)
+        {
+            for (int i = 0; i < courses.Count; i++)
+            {
+                var c = courses[i];
+                Debug.Log($"[CourseDetailBatchLoader] CourseLite[{i}] id = {c?._id}");
+            }
+        }
+
         _loadRoutine = StartCoroutine(LoadAllRoutine(courses, _loadVersion));
     }
 
@@ -117,7 +128,12 @@ public class CourseDetailBatchLoader : MonoBehaviour
         }
 
         if (version == _loadVersion)
+        {
+            if (debugLog)
+                Debug.Log($"[CourseDetailBatchLoader] Finished loading. Detail count = {result.Count}");
+
             CourseDetailSummaryStore.SetAll(result);
+        }
 
         IsLoading = false;
         _loadRoutine = null;

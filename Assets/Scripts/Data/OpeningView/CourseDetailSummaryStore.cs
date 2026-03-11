@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 public static class CourseDetailSummaryStore
 {
@@ -42,6 +43,8 @@ public static class CourseDetailSummaryStore
                 _byId[item.courseId] = item;
             }
         }
+
+        Debug.Log($"[CourseDetailSummaryStore] Stored detail count = {_items.Count}");
 
         OnChanged?.Invoke();
     }
