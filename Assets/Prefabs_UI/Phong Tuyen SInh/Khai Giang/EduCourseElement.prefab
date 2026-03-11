@@ -191,6 +191,72 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 6.6
+--- !u!1 &2306578051214402910
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6171054461695774185}
+  - component: {fileID: 403382722512244570}
+  - component: {fileID: 8184018935964148704}
+  m_Layer: 0
+  m_Name: API_Detail
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6171054461695774185
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2306578051214402910}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -863.9939, y: 22.716064, z: 0}
+  m_LocalScale: {x: 0.88888896, y: 0.88888896, z: 0.88888896}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2834278709166888924}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &403382722512244570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2306578051214402910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8cd0f3e7c114b84b91d382ed097d7cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseDetailLoader
+  timeoutSeconds: 20
+  debugLog: 1
+--- !u!114 &8184018935964148704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2306578051214402910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96f5f9c4b16745145a21f845933ad47f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseReviewLoader
+  limit: 10
+  useAuthHeader: 1
+  useXDataHeader: 1
+  autoLoadOnEnable: 1
+  listenCourseDetailStore: 1
+  forceReloadSameCourse: 0
+  currentCourseId: 
 --- !u!1 &3483237994177773812
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,6 +564,7 @@ RectTransform:
   - {fileID: 6051181888583898017}
   - {fileID: 2435067332441036018}
   - {fileID: 4998863385788554911}
+  - {fileID: 6171054461695774185}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -587,6 +654,9 @@ MonoBehaviour:
   coursSeatTmp: {fileID: 7687665728604163960}
   goToDetailBtn: {fileID: 6623711732520951799}
   courseTag: {fileID: 4646598749512883466}
+  courseDetailLoader: {fileID: 403382722512244570}
+  courseReviewLoader: {fileID: 8184018935964148704}
+  fallbackSprite: {fileID: 0}
   OnChangeViewClicked:
     m_PersistentCalls:
       m_Calls:

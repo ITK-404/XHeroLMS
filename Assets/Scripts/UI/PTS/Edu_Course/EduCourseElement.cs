@@ -15,6 +15,9 @@ public class EduCourseElement : MonoBehaviour
     [SerializeField] private Button goToDetailBtn;
     [SerializeField] private CourseTagHandle courseTag;
 
+    [SerializeField] private CourseDetailLoader courseDetailLoader;
+    [SerializeField] private CourseReviewLoader courseReviewLoader;
+
     [Header("Fallback")]
     [SerializeField] private Sprite fallbackSprite;
 
@@ -22,6 +25,9 @@ public class EduCourseElement : MonoBehaviour
 
     private string _courseId;
     private Coroutine _loadImageRoutine;
+    private Coroutine _waitDataRoutine;
+
+    private static bool _isLoadingCourse;
 
     private void Awake()
     {
@@ -36,6 +42,9 @@ public class EduCourseElement : MonoBehaviour
 
         if (_loadImageRoutine != null)
             StopCoroutine(_loadImageRoutine);
+
+        if (_waitDataRoutine != null)
+            StopCoroutine(_waitDataRoutine);
     }
 
     public void Setup(CourseModels.CourseLite data)
@@ -63,6 +72,7 @@ public class EduCourseElement : MonoBehaviour
 
         if (courseTag != null)
         {
+            // setup tag nếu cần
         }
 
         if (_loadImageRoutine != null)
@@ -79,9 +89,102 @@ public class EduCourseElement : MonoBehaviour
 
     private void GoToDetail()
     {
-        // PTS_CourseOpeningView.Instance.ShowCourseInformation();
+        if (_isLoadingCourse)
+            return;
 
-        OnChangeViewClicked?.Invoke();
+        if (string.IsNullOrEmpty(_courseId))
+        {
+            Debug.LogWarning("[EduCourseElement] courseId is null/empty");
+            return;
+        }
+
+        if (_waitDataRoutine != null)
+            StopCoroutine(_waitDataRoutine);
+
+        _isLoadingCourse = true;
+
+        Debug.Log($"[EduCourseElement] Start load detail/review for courseId = {_courseId}");
+
+        courseDetailLoader.Load(_courseId);
+        courseReviewLoader.LoadReviews(_courseId);
+
+        _waitDataRoutine = StartCoroutine(WaitAllDataThenShow(_courseId));
+    }
+
+    private IEnumerator WaitAllDataThenShow(string courseId)
+    {
+        float timeout = 10f;
+        float t = 0f;
+
+        while (t < timeout)
+        {
+            bool detailDone = IsCourseDetailLoaded(courseId);
+            bool reviewDone = IsCourseReviewLoaded(courseId);
+
+            bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
+            bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
+
+            if (detailError)
+            {
+                Debug.LogWarning("[EduCourseElement] Course detail load error: " + CourseDetailStaticStore.LastError);
+                _isLoadingCourse = false;
+                _waitDataRoutine = null;
+                yield break;
+            }
+
+            if (reviewError)
+            {
+                Debug.LogWarning("[EduCourseElement] Course review load error: " + CourseReviewStaticStore.LastError);
+
+                if (detailDone)
+                {
+                    _isLoadingCourse = false;
+                    _waitDataRoutine = null;
+                    OnChangeViewClicked?.Invoke();
+                    yield break;
+                }
+            }
+
+            if (detailDone && reviewDone)
+            {
+                Debug.Log("[EduCourseElement] Detail + Review loaded successfully");
+                _isLoadingCourse = false;
+                _waitDataRoutine = null;
+                OnChangeViewClicked?.Invoke();
+                yield break;
+            }
+
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        Debug.LogWarning("[EduCourseElement] WaitAllDataThenShow timeout");
+
+        if (IsCourseDetailLoaded(courseId))
+        {
+            _isLoadingCourse = false;
+            _waitDataRoutine = null;
+            OnChangeViewClicked?.Invoke();
+            yield break;
+        }
+
+        _isLoadingCourse = false;
+        _waitDataRoutine = null;
+    }
+
+    private bool IsCourseDetailLoaded(string courseId)
+    {
+        return CourseDetailStaticStore.HasData
+               && !CourseDetailStaticStore.IsLoading
+               && CourseDetailStaticStore.CurrentCourseId == courseId
+               && CourseDetailStaticStore.CurrentCourse != null;
+    }
+
+    private bool IsCourseReviewLoaded(string courseId)
+    {
+        return CourseReviewStaticStore.CurrentCourseId == courseId
+               && !CourseReviewStaticStore.IsLoading
+               && string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
     }
 
     private string GetFirstStartDateText(List<CourseModels.CourseStartDateItem> dates)
