@@ -14,7 +14,10 @@ public class PTS_ButtonGroupHandle : MonoBehaviour
     [SerializeField] private Button shareBtn;
     [SerializeField] private Button buyCourseBtn;
     [SerializeField] private Button goToDetailBtn;
-
+    public Action GoToDetailClickEvent;
+    public Action SharedClickEvent;
+    public Action BuyCourseClickEvent;
+    
     private void Awake()
     {
         goToDetailBtn.onClick.AddListener(GoDetail);
@@ -27,7 +30,7 @@ public class PTS_ButtonGroupHandle : MonoBehaviour
 
     private void GoDetail()
     {
-        PTS_CourseDetailView.Instance.ShowDetailView();
+        GoToDetailClickEvent?.Invoke();
     }
 
     public void TryShow(State state)

@@ -6,8 +6,6 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
 {
     [SerializeField] private Toggle[] toggles;
     [SerializeField] private PanelBaseUI[] panelBaseUIList;
-    [SerializeField] private GameObject itemNeedUI;
-    [SerializeField] private GameObject leftSide;
     private void Start()
     {
         Binding();
@@ -46,6 +44,8 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
             HideAll();
             return;
         }
+
+        if (index > panelBaseUIList.Length - 1) return;
         // show select panel
         var newPanel = panelBaseUIList[index];
         newPanel.Show();
@@ -67,18 +67,15 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
 
     public override void Show()
     {
-        itemNeedUI.gameObject.SetActive(true);
-        leftSide.gameObject.SetActive(true);
         // ShowPanel(0);
         toggles[0].isOn = true;
- 
+        ActiveList(true);
         // call to show button group
     }
 
     public override void Hide()
     {
-        itemNeedUI.gameObject.SetActive(false);
-        leftSide.gameObject.SetActive(false);
         ShowPanel(-1);
+        ActiveList(false);
     }
 }

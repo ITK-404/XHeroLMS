@@ -14,7 +14,16 @@ public enum CourseDetailSection
 public class PTS_CourseSectionBase : MonoBehaviour
 {
     public CourseDetailSection Current;
-
+    [SerializeField] protected List<GameObject> openingList = new();
+    
+    protected void ActiveList(bool state)
+    {
+        foreach (var item in openingList)
+        {
+            item.gameObject.SetActive(state);
+        }
+    }
+    
     public virtual void Show()
     {
     }
@@ -50,10 +59,8 @@ public class PTS_BaseView : UIView
 }
 public class PTS_CourseDetailView : PTS_BaseView
 {
-    public static PTS_CourseDetailView Instance;
 
     [Header("Views")]
-    [SerializeField] private GameObject container;
     [SerializeField] private PTS_BackgroundWrapper background;
     [SerializeField] private PTS_CourseDetailManager detail;
     [SerializeField] private PTS_CourseInforManager infor;
@@ -68,8 +75,9 @@ public class PTS_CourseDetailView : PTS_BaseView
     protected override void Awake()
     {
         base.Awake();
-        Instance = this;
 
+        btnGroupHandle.GoToDetailClickEvent = ShowDetailView;
+        
         sectionBases.Add(detail);
         sectionBases.Add(infor);
         sectionBases.Add(intro);
@@ -150,14 +158,16 @@ public class PTS_CourseDetailView : PTS_BaseView
         }
     }
 
-    public void ShowBriefView(string courseID)
+    public void ShowBriefView()
     {
+        Debug.Log("Show brief view");
         Show();
         NavigateTo(CourseDetailSection.Brief);
     }
 
     public void ShowDetailView()
     {
+        Debug.Log("Show detail view");
         Show();
         NavigateTo(CourseDetailSection.Detail);
     }

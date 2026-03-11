@@ -14,6 +14,7 @@ public class FrameEduCourseUI : PanelBaseUI
     private void OnEnable()
     {
         PTS_FrameArrowNavigation.AssignCallback(PreviousIndex,NextIndex);
+        FirstIndex();
     }
 
     [ContextMenu("First Index")]
