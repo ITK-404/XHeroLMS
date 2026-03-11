@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8823817637251523}
   - component: {fileID: 5241915159757074769}
   - component: {fileID: 4652152576786437940}
+  - component: {fileID: 7734410829254794423}
   m_Layer: 5
   m_Name: Simple Course Element
   m_TagString: Untagged
@@ -94,6 +95,21 @@ MonoBehaviour:
   txt_priceOrigin: {fileID: 849151144260183112}
   courseDetailLoader: {fileID: 7924522241096191256}
   courseReviewLoader: {fileID: 1898604581004078193}
+  ChangeViewClicked:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 7734410829254794423}
+        m_TargetAssemblyTypeName: PTS_HelperNavigationButton, Assembly-CSharp
+        m_MethodName: NavigationCourseID
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   statusConfigs:
   - key: 3
     text: 
@@ -110,6 +126,19 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: 10e11d698532d428f9a194751a287c83, type: 3}
     hideText: 0
     hideIcon: 0
+--- !u!114 &7734410829254794423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1251820248980848545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c846f1fa8d6d4903afd9fce50e94fe2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_HelperNavigationButton
+  section: 1
 --- !u!1 &1529336725379057267
 GameObject:
   m_ObjectHideFlags: 0

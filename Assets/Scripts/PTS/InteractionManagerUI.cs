@@ -44,7 +44,7 @@ public class InteractionManagerUI : MonoBehaviour
         foreach (var ps in particleSystems)
         {
             float distance = Vector3.Distance(player.transform.position, ps.transform.position);
-            Debug.Log("Distance: " + distance);
+            // Debug.Log("Distance: " + distance);
             if (distance < stopEmitDistance)
             {
                 ps.DeActive();

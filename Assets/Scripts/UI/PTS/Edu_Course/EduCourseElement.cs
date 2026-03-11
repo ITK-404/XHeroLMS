@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class EduCourseElement : MonoBehaviour
@@ -11,10 +12,10 @@ public class EduCourseElement : MonoBehaviour
     [SerializeField] private TextMeshProUGUI coursSeatTmp;
     [SerializeField] private Button goToDetailBtn;
     [SerializeField] private CourseTagHandle courseTag;
-
+    [SerializeField] private UnityEvent OnChangeViewClicked;
     private void GoToDetail()
     {
-        PTS_CourseOpeningView.Instance.ShowCourseInformation();
+        OnChangeViewClicked?.Invoke();
     }
 
     private void Awake()
