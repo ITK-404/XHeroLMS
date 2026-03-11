@@ -2,10 +2,13 @@ using UnityEngine;
 
 public class PTS_ViewManager : MonoBehaviour
 {
+    public static PTS_ViewManager Instance;
     private PTS_BaseView[] views;
     private InteractionManagerUI interactionManager;
     private void Awake()
     {
+        Instance = this;        
+        
         views = GetComponentsInChildren<PTS_BaseView>();
         interactionManager = GetComponent<InteractionManagerUI>();
         if (views == null)
@@ -34,6 +37,7 @@ public class PTS_ViewManager : MonoBehaviour
         }
     }
 
+    public UIView Current;
     public void TryShow(string target)
     {
         Debug.Log("PTS_View try find: "+target);
@@ -42,6 +46,7 @@ public class PTS_ViewManager : MonoBehaviour
         {
             if (view.TargetID == target)
             {
+                Current = view;
                 view.Show();
             }
         }

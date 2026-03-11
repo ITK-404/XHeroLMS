@@ -2439,7 +2439,11 @@ GameObject:
   - component: {fileID: 7952782408080793666}
   - component: {fileID: 7452113000666409684}
   - component: {fileID: 557612094581250619}
+  - component: {fileID: 4973904535066047545}
+  - component: {fileID: 5369518791094483585}
   - component: {fileID: 7360742900515566317}
+  - component: {fileID: 3410854645569664892}
+  - component: {fileID: 10798632364504786}
   m_Layer: 5
   m_Name: PTS_Base Canvas
   m_TagString: Untagged
@@ -2531,6 +2535,62 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &4973904535066047545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571450075985855452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 781950caee6b4df0a2642bfff84e1a8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseDetailView
+  root: {fileID: 0}
+  canvasGroup: {fileID: 0}
+  fadeDuration: 0.2
+  useFade: 1
+  targetID: 
+  btnGroupHandle: {fileID: 7360742900515566317}
+  btnReturn: {fileID: 8952895421306016359}
+  background: {fileID: 8636405486983501560}
+  detail: {fileID: 5369518791094483585}
+  infor: {fileID: 10798632364504786}
+  intro: {fileID: 3410854645569664892}
+  title: {fileID: 385991460900206781}
+--- !u!114 &5369518791094483585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571450075985855452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c9ab7819686e4f6091f1e929e8178f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseInforManager
+  Current: 2
+  openingList:
+  - {fileID: 8319432179742142051}
+  - {fileID: 6735051436735953190}
+  toggles:
+  - {fileID: 4100962804271984837}
+  - {fileID: 5558788041880835327}
+  - {fileID: 2733977906496693805}
+  - {fileID: 3981545190543537695}
+  - {fileID: 3909252086555804481}
+  - {fileID: 5872692300240242643}
+  panelBaseUIList:
+  - {fileID: 3740876452760383525}
+  - {fileID: 8203193170719144560}
+  - {fileID: 138929087536507430}
+  - {fileID: 7891100824235646463}
+  - {fileID: 2530672762279691215}
+  - {fileID: 5326463158580012607}
+  itemNeedUI: {fileID: 6735051436735953190}
+  leftSide: {fileID: 8319432179742142051}
 --- !u!114 &7360742900515566317
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2546,6 +2606,34 @@ MonoBehaviour:
   shareBtn: {fileID: 6064350943143892430}
   buyCourseBtn: {fileID: 3110588022986539373}
   goToDetailBtn: {fileID: 8774298060336669447}
+--- !u!114 &3410854645569664892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571450075985855452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d602209298fa4e778e430d35c9870657, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseListManager
+  Current: 0
+  openingList: []
+--- !u!114 &10798632364504786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571450075985855452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26480c2ef7eb4c7a86828b3ed1282b65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseInforManager
+  Current: 1
+  openingList: []
 --- !u!1 &1601685379724851442
 GameObject:
   m_ObjectHideFlags: 0
@@ -10979,6 +11067,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a7a2fd32c7fa84b03afd7670a574a483, type: 3}
+--- !u!114 &8203193170719144560 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7360979770070664038, guid: a7a2fd32c7fa84b03afd7670a574a483, type: 3}
+  m_PrefabInstance: {fileID: 1725138830253226262}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
 --- !u!224 &8659307077927890216 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8060569533465957438, guid: a7a2fd32c7fa84b03afd7670a574a483, type: 3}
@@ -11081,6 +11180,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 31b7abfe29f7f4ef3b7ac57da79da541, type: 3}
+--- !u!114 &138929087536507430 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1962746557318822265, guid: 31b7abfe29f7f4ef3b7ac57da79da541, type: 3}
+  m_PrefabInstance: {fileID: 1932185925116154719}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
 --- !u!224 &527428094048866256 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2126066063515245711, guid: 31b7abfe29f7f4ef3b7ac57da79da541, type: 3}
@@ -11188,6 +11298,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3861683379443599689, guid: fabfead75855840cb8acbd304539a8a8, type: 3}
   m_PrefabInstance: {fileID: 2319320706379260560}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8952895421306016359 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6634069532935401719, guid: fabfead75855840cb8acbd304539a8a8, type: 3}
+  m_PrefabInstance: {fileID: 2319320706379260560}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1001 &2514982348256191683
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11305,6 +11426,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+--- !u!114 &2733977906496693805 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 2514982348256191683}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!224 &4773825091612950616 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
@@ -11427,6 +11559,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+--- !u!114 &3981545190543537695 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 3483326728136520945}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!224 &5832241275028148330 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
@@ -11549,6 +11692,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+--- !u!114 &3909252086555804481 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 3555166922489020847}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!224 &5904631174763029812 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
@@ -11725,10 +11879,6 @@ PrefabInstance:
     - target: {fileID: 2432834363056412474, guid: acd03770d0d0a492698a504f4984ad1e, type: 3}
       propertyPath: m_SizeDelta.x
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2432834363056412474, guid: acd03770d0d0a492698a504f4984ad1e, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 2432834363056412474, guid: acd03770d0d0a492698a504f4984ad1e, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -12302,6 +12452,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1448164848177186262, guid: 094f2688e246b462c820218ed4c11982, type: 3}
   m_PrefabInstance: {fileID: 4498885456145207037}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &3740876452760383525 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 974188382610734808, guid: 094f2688e246b462c820218ed4c11982, type: 3}
+  m_PrefabInstance: {fileID: 4498885456145207037}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
 --- !u!1001 &4611548047049552427
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12419,6 +12580,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+--- !u!114 &4100962804271984837 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 4611548047049552427}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!224 &6870392114297378480 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
@@ -12526,6 +12698,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3339038312996069006, guid: f81f7d5ca84c248e39939a29519addb1, type: 3}
   m_PrefabInstance: {fileID: 4840522114507855562}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7891100824235646463 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3363678007401270069, guid: f81f7d5ca84c248e39939a29519addb1, type: 3}
+  m_PrefabInstance: {fileID: 4840522114507855562}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
 --- !u!1001 &5346548123324864017
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12648,6 +12831,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
   m_PrefabInstance: {fileID: 5346548123324864017}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5558788041880835327 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 5346548123324864017}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!1001 &5524959205874951534
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12872,6 +13066,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6964548260117603483, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
   m_PrefabInstance: {fileID: 6226780627531564349}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5872692300240242643 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 510606007356900078, guid: dfae1fcad9bc44ca8b712f82fb9d6a72, type: 3}
+  m_PrefabInstance: {fileID: 6226780627531564349}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!1001 &6391011181719012345
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13452,6 +13657,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c1208dc673cc84ec7a0cb38b1c1dbf1d, type: 3}
+--- !u!114 &2530672762279691215 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5179903109663840051, guid: c1208dc673cc84ec7a0cb38b1c1dbf1d, type: 3}
+  m_PrefabInstance: {fileID: 7276822038726333692}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
 --- !u!224 &7118079103810244049 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 446991249593456941, guid: c1208dc673cc84ec7a0cb38b1c1dbf1d, type: 3}
@@ -13661,6 +13877,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 9059704889805602248, guid: c73e966d03a204a1b958d4670f91a76b, type: 3}
   m_PrefabInstance: {fileID: 7875095320654501879}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5326463158580012607 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2639834500089917896, guid: c73e966d03a204a1b958d4670f91a76b, type: 3}
+  m_PrefabInstance: {fileID: 7875095320654501879}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac06274341e640178bc240f28274511d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FrameDocumentUI
 --- !u!1001 &8207322076287279295
 PrefabInstance:
   m_ObjectHideFlags: 0

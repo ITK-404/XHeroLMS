@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
@@ -31,6 +32,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private CourseDetailLoader courseDetailLoader;
     [SerializeField] private CourseReviewLoader courseReviewLoader;
 
+    public UnityEvent ChangeViewClicked;
+    
     public enum StatusKey
     {
         None = 0,
@@ -264,7 +267,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 if (detailDone)
                 {
                     CourseLoading = false;
-                    PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+                    ChangeViewClicked?.Invoke();
                     yield break;
                 }
             }
@@ -273,7 +276,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             {
                 Debug.Log("[PTS] Detail + Review loaded successfully");
                 CourseLoading = false;
-                PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+                
+                ChangeViewClicked?.Invoke();
                 yield break;
             }
 
@@ -287,7 +291,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (IsCourseDetailLoaded(courseId))
         {
             CourseLoading = false;
-            PTS_CourseDetailView.Instance.ShowBriefView(courseId);
+            ChangeViewClicked?.Invoke();
             yield break;
         }
 
