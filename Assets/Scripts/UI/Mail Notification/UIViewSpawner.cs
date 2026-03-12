@@ -37,10 +37,8 @@ public class UIViewSpawner : MonoBehaviour
         await Task.Delay(1000);
         var obj = await prefab.InstantiateAsync().Task;
         canvas = obj.GetComponent<UIView>();
-        if (!canvas.IsShowing)
-        {
-            canvas.Show();
-        }
+        canvas.Show();
+
         LoadingUI.Hide();
         isSpawning = false;
     }
