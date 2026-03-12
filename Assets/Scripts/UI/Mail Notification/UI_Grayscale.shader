@@ -14,7 +14,12 @@ Shader "Custom/UI_Grayscale"
             "RenderType"="Transparent"
             "RenderPipeline"="UniversalPipeline"
         }
-
+        Stencil
+        {
+            Ref 1
+            Comp Equal
+            Pass Replace
+        }
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
