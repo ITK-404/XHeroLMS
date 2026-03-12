@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4241708764059609255}
   - component: {fileID: 146636553105679648}
   - component: {fileID: 6657832490587946587}
+  - component: {fileID: 6208456716871359032}
   m_Layer: 5
   m_Name: All-View Manager
   m_TagString: Untagged
@@ -137,6 +138,24 @@ MonoBehaviour:
   contentParent: {fileID: 3125675257965169308}
   reviewPrefab: {fileID: 3300304724143309892, guid: 0cd7ba4d15d04461ca9633f72391f9a0, type: 3}
   fallbackAvatar: {fileID: 21300000, guid: 6b85cd7bf87700c45b67cc8717b6a242, type: 3}
+--- !u!114 &6208456716871359032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794090952893007926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f25503bf9a2dce24694e833c1db59ef6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseListBuilder
+  itemPrefab: {fileID: 4652152576786437940, guid: 8eab89f243743af42b00479550c6e0ce, type: 3}
+  contentParent: {fileID: 6733029512885493823}
+  usePooling: 1
+  prewarmCount: 20
+  buildFromStoreOnStartIfNoSearch: 1
+  applyDefaultPrioritySortOnFallback: 1
 --- !u!1001 &7837383715287359251
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1096,6 +1115,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 648feecc50414ddf854539ecd4d111fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FrameReviewCourseUI
+--- !u!224 &6733029512885493823 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3581342870916874028, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
 --- !u!225 &6756139859096761741 stripped
 CanvasGroup:
   m_CorrespondingSourceObject: {fileID: 3531204321233578654, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}

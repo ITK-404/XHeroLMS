@@ -501,9 +501,11 @@ public class LoginController : MonoBehaviour
                 Debug.Log($"Đăng nhập thành công (raw): {resp}");
 
                 var auth = JsonUtility.FromJson<AuthResponseRoot>(resp);
-                if (auth != null && auth.data != null)
+                if (auth != null && auth.data != null && !string.IsNullOrEmpty(auth.data.token))
                 {
-                    HandleLoginSuccess(auth, "Đăng nhập thành công");
+                    Debug.Log("========= AUTH HEADER =========");
+                    Debug.Log($"Authorization: Bearer {auth.data.token}");
+                    Debug.Log("================================");
                 }
                 else
                 {
