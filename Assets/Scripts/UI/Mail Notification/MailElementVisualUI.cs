@@ -45,4 +45,19 @@ public class MailElementVisualUI : MonoBehaviour
 
         iconImg.material = currentConfig.iconMaterial;
     }
+
+    public void BindData(string title, string description, string timeText, string readStateText)
+    {
+        if (titleTmp != null)
+            titleTmp.text = title ?? "";
+
+        if (descriptionTmp != null)
+            descriptionTmp.text = description ?? "";
+
+        if (timeSinceTmp != null)
+            timeSinceTmp.text = timeText ?? "";
+
+        if (mailReadStateTmp != null)
+            mailReadStateTmp.text = readStateText ?? "";
+    }
 }
