@@ -912,7 +912,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5640812509246723297, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5719756471363511586, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_IsActive
@@ -1463,6 +1463,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6533111164694481892, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 834269974253249486}
+    - targetCorrespondingSourceObject: {fileID: 6533111164694481892, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3901668317362794743}
     - targetCorrespondingSourceObject: {fileID: 4560201109277234066, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7294387616278730989}
@@ -1637,6 +1640,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerControllerUI
   loginBtn: {fileID: 8898424973418969695}
+--- !u!114 &3901668317362794743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5549616609897594514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2ca2c8d56d14152af53f6ea6c6b6254, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MailSpawner
+  mailCanvasPrefab:
+    m_AssetGUID: 78ff5b782484a489598f95b0c4b95b72
+    m_SubObjectName: 
+    m_SubObjectType: 
+    m_SubObjectGUID: 
+    m_EditorAssetChanged: 0
+  mailBtn: {fileID: 6700581344490618318}
 --- !u!1 &6477942138275783063 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5640812509246723297, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
@@ -1673,6 +1695,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InDevelopmentButton
   btn: {fileID: 0}
+--- !u!114 &6700581344490618318 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5427761284960848056, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+  m_PrefabInstance: {fileID: 1706432266018583926}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6477942138275783063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &7321785387280814258 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8228712168792106436, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
