@@ -138,6 +138,8 @@ public class UIView : MonoBehaviour
         canvasGroup.alpha = to;
     }
 
+    public void SetFade(float fadeDuration) => this.fadeDuration = fadeDuration;
+
     protected virtual void OnBeforeShow() { }
     protected virtual void OnAfterShow() { }
     protected virtual void OnBeforeHide() { }
