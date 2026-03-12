@@ -1158,6 +1158,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7028089420187508157, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7239118211112435225, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: -50.199707
@@ -1497,6 +1501,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4560201109277234066, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7294387616278730989}
+    - targetCorrespondingSourceObject: {fileID: 5640812509246723297, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7008269659270063804}
+    - targetCorrespondingSourceObject: {fileID: 7028089420187508157, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9104669054461796420}
     - targetCorrespondingSourceObject: {fileID: 8101435519563770920, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6164684956383875936}
@@ -1688,6 +1698,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5640812509246723297, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
   m_PrefabInstance: {fileID: 1706432266018583926}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7008269659270063804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6477942138275783063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2928d64129334d57bdd708a8b43dcd0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LetterButtonUI
+  isHaveNotify: 1
+  _shakeNotification: {fileID: 9104669054461796420}
 --- !u!1 &6632816785627994777 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5449927998312001519, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
@@ -1766,6 +1790,29 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 8869076663282935804, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
   m_PrefabInstance: {fileID: 1706432266018583926}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8513700011315849419 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7028089420187508157, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+  m_PrefabInstance: {fileID: 1706432266018583926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9104669054461796420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8513700011315849419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf8db6de909f4c5ebc3ff7d2fa17bc1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShakeNotification
+  duration: 0.5
+  strength: 15
+  vibrato: 20
+  randomness: 90
+  loop: 1
+  loopInterval: 1.5
 --- !u!114 &8898424973418969695 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7841885449996422953, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
