@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,45 +5,73 @@ public class MainElementUI : MonoBehaviour
 {
     [SerializeField] private MailTextConfig readConfig;
     [SerializeField] private MailTextConfig unreadConfig;
-    [SerializeField] private bool isUnread = false;
+    [SerializeField] private bool isUnread = true;
     [SerializeField] private MailElementVisualUI visual;
     [SerializeField] private Button btn;
 
+    private string notificationId;
+    private NotificationMailItem currentData;
+
     private void Awake()
     {
-        btn = GetComponent<Button>();
-        if(btn)
-            btn.onClick.AddListener(TestState);
+        if (btn == null)
+            btn = GetComponent<Button>();
+
+        if (btn != null)
+            btn.onClick.AddListener(OnClickItem);
     }
 
     private void OnDestroy()
     {
-        if(btn)
-            btn.onClick.RemoveListener(TestState);
+        if (btn != null)
+            btn.onClick.RemoveListener(OnClickItem);
     }
 
-    private void TestState()
+    public void Bind(NotificationMailItem data)
     {
-        if (isUnread == false)
+        currentData = data;
+        notificationId = data != null ? data._id : "";
+        isUnread = data != null ? !data.isRead : true;
+
+        ApplyState();
+    }
+
+    private void OnClickItem()
+    {
+        Debug.Log($"[Notification] Click ID = {notificationId}");
+
+        // click xong chuyển sang đã đọc
+        if (isUnread)
         {
-            isUnread = true;
+            isUnread = false;
+            ApplyState();
         }
-        visual.SetConfig(isUnread ? readConfig : unreadConfig);
+    }
+
+    private void ApplyState()
+    {
+        if (visual == null)
+            return;
+
+        visual.SetConfig(isUnread ? unreadConfig : readConfig);
+        visual.SetReadStateText(isUnread ? "Chưa đọc" : "Đã đọc");
     }
 
     private void OnValidate()
     {
         if (visual == null)
-        {
             visual = GetComponent<MailElementVisualUI>();
-        }
+
+        if (btn == null)
+            btn = GetComponent<Button>();
     }
 
     private void OnDrawGizmosSelected()
     {
-        if (visual)
+        if (visual != null)
         {
             visual.SetConfig(isUnread ? unreadConfig : readConfig);
+            visual.SetReadStateText(isUnread ? "Chưa đọc" : "Đã đọc");
         }
     }
 }
