@@ -1,4 +1,3 @@
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,9 +5,9 @@ using UnityEngine.UI;
 public class MailElementVisualUI : MonoBehaviour
 {
     [Header("Settings")]
-    // trạng thái đọc hay chưa đọc của thư (sprite trắng đen)
     [SerializeField] private MailTextConfig currentConfig;
     [SerializeField] private bool isPreview = false;
+
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI titleTmp;
     [SerializeField] private TextMeshProUGUI descriptionTmp;
@@ -20,7 +19,7 @@ public class MailElementVisualUI : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (isPreview && currentConfig)
+        if (isPreview && currentConfig != null)
         {
             ReloadConfig();
         }
@@ -28,22 +27,22 @@ public class MailElementVisualUI : MonoBehaviour
 
     public void SetConfig(MailTextConfig config)
     {
-        this.currentConfig = config;
+        currentConfig = config;
         ReloadConfig();
     }
 
     private void ReloadConfig()
     {
-        // color
-        titleTmp.color = currentConfig.titleColor;
-        descriptionTmp.color = currentConfig.descriptionColor;
-        timeSinceTmp.color = currentConfig.timeSinceColor;
-        mailReadStateTmp.color = currentConfig.readStateColor;
-        // image
-        bgImg.sprite = currentConfig.bgSprite;
-        stateImg.sprite = currentConfig.readStateSprite;
+        if (currentConfig == null) return;
 
-        iconImg.material = currentConfig.iconMaterial;
+        if (titleTmp != null) titleTmp.color = currentConfig.titleColor;
+        if (descriptionTmp != null) descriptionTmp.color = currentConfig.descriptionColor;
+        if (timeSinceTmp != null) timeSinceTmp.color = currentConfig.timeSinceColor;
+        if (mailReadStateTmp != null) mailReadStateTmp.color = currentConfig.readStateColor;
+
+        if (bgImg != null) bgImg.sprite = currentConfig.bgSprite;
+        if (stateImg != null) stateImg.sprite = currentConfig.readStateSprite;
+        if (iconImg != null) iconImg.material = currentConfig.iconMaterial;
     }
 
     public void BindData(string title, string description, string timeText, string readStateText)
@@ -57,6 +56,12 @@ public class MailElementVisualUI : MonoBehaviour
         if (timeSinceTmp != null)
             timeSinceTmp.text = timeText ?? "";
 
+        if (mailReadStateTmp != null)
+            mailReadStateTmp.text = readStateText ?? "";
+    }
+
+    public void SetReadStateText(string readStateText)
+    {
         if (mailReadStateTmp != null)
             mailReadStateTmp.text = readStateText ?? "";
     }
