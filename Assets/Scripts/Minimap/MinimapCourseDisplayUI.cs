@@ -54,7 +54,8 @@ public class MinimapCourseDisplayUI : MonoBehaviour
                 "?course=" + UnityWebRequest.EscapeURL(course_id) +
                 "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
-            Application.OpenURL(url);
+            // Application.OpenURL(url);
+            WebViewTest.LoadWebView(url);
             BookHandler.CanSelectBook = true;
             return;
         }

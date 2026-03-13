@@ -1,7 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.SceneManagement;
 
 public class WebViewTest : MonoBehaviour
@@ -11,12 +9,22 @@ public class WebViewTest : MonoBehaviour
     private WebViewNavigation _navigation;
 
     private ScreenOrientation previousOrientation;
+
+    [Header("Default URL")]
+    [SerializeField] private string defaultUrl = "https://daotao.phongthuydainam.vn/en";
+
+    private static string pendingUrl = "";
+
     private void Awake()
     {
         _navigation = GetComponentInChildren<WebViewNavigation>();
         previousOrientation = Screen.orientation;
         Screen.orientation = ScreenOrientation.Portrait;
-        StartCoroutine(CreateWebView());
+
+        string targetUrl = string.IsNullOrWhiteSpace(pendingUrl) ? defaultUrl : pendingUrl;
+        StartCoroutine(CreateWebView(targetUrl));
+
+        pendingUrl = "";
 
         if (_navigation)
         {
@@ -25,7 +33,6 @@ public class WebViewTest : MonoBehaviour
             _navigation.OnLeftNaviClicked += GoBackward;
             _navigation.OnRightNaviClicked += GoForward;
         }
-        
     }
 
     private void OnDestroy()
@@ -37,7 +44,7 @@ public class WebViewTest : MonoBehaviour
             _navigation.OnLeftNaviClicked -= GoBackward;
             _navigation.OnRightNaviClicked -= GoForward;
         }
-        
+
         if (webViewInstance != null)
         {
             webViewInstance.Hide();
@@ -48,7 +55,7 @@ public class WebViewTest : MonoBehaviour
 
     private void GoBackward()
     {
-        if (webViewInstance && webViewInstance.CanGoBack)
+        if (webViewInstance != null && webViewInstance.CanGoBack)
         {
             webViewInstance.GoBack();
         }
@@ -56,7 +63,7 @@ public class WebViewTest : MonoBehaviour
 
     private void GoForward()
     {
-        if (webViewInstance && webViewInstance.CanGoForward)
+        if (webViewInstance != null && webViewInstance.CanGoForward)
         {
             webViewInstance.GoForward();
         }
@@ -64,7 +71,7 @@ public class WebViewTest : MonoBehaviour
 
     private void ReloadView()
     {
-        if (webViewInstance)
+        if (webViewInstance != null)
         {
             webViewInstance.Reload();
         }
@@ -76,20 +83,35 @@ public class WebViewTest : MonoBehaviour
         SceneManager.UnloadSceneAsync("WebView_Mobile");
     }
 
-    private IEnumerator CreateWebView()
+    private IEnumerator CreateWebView(string url)
     {
         webViewInstance = Instantiate(webViewPrefab, transform);
         webViewInstance.gameObject.SetActive(true);
+
         LoadingUI.Show();
         yield return new WaitForSeconds(1f);
         LoadingUI.Hide();
 
-        webViewInstance.Load("https://daotao.phongthuydainam.vn/en");
+        webViewInstance.Load(url);
         webViewInstance.Show();
+
+        Debug.Log("[WebViewTest] Loaded URL: " + url);
     }
 
     public static void LoadWebView()
     {
+        pendingUrl = "";
+
+        if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
+        {
+            SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);
+        }
+    }
+
+    public static void LoadWebView(string url)
+    {
+        pendingUrl = url;
+
         if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
         {
             SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);
