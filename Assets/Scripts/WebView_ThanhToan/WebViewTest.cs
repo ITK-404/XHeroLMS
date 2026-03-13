@@ -13,6 +13,7 @@ public class WebViewTest : MonoBehaviour
     private ScreenOrientation previousOrientation;
     private void Awake()
     {
+        _navigation = GetComponentInChildren<WebViewNavigation>();
         previousOrientation = Screen.orientation;
         Screen.orientation = ScreenOrientation.Portrait;
         StartCoroutine(CreateWebView());
@@ -94,8 +95,4 @@ public class WebViewTest : MonoBehaviour
             SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);
         }
     }
-}
-
-public class LoadToWebViewTest : MonoBehaviour
-{
 }
