@@ -4,15 +4,30 @@ using UnityEngine;
 
 public class MailList : MonoBehaviour
 {
+    public enum MailFilter
+    {
+        Personal,
+        System
+    }
+
     [Header("UI Spawn")]
-    [SerializeField] private Transform contentParent;
     [SerializeField] private MailElementVisualUI mailPrefab;
     [SerializeField] private bool clearOldItems = true;
 
     [Header("Optional")]
     [SerializeField] private TextMeshProUGUI emptyText;
+    [SerializeField] private NotificationsDetailLoader detailLoader;
 
     private readonly List<MailElementVisualUI> spawnedItems = new();
+
+    private Transform currentContentParent;
+    private MailFilter currentFilter = MailFilter.Personal;
+
+    private void Awake()
+    {
+        if (detailLoader == null)
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+    }
 
     private void OnEnable()
     {
@@ -25,44 +40,93 @@ public class MailList : MonoBehaviour
         NotificationsStaticStore.OnChanged -= Refresh;
     }
 
-    private void Refresh()
+    public void SetRenderTarget(Transform contentParent)
+    {
+        currentContentParent = contentParent;
+        Refresh();
+    }
+
+    public void SetFilter(MailFilter filter)
+    {
+        currentFilter = filter;
+        Refresh();
+    }
+
+    public void Refresh()
     {
         if (clearOldItems)
             ClearItems();
 
         if (NotificationsStaticStore.IsLoading)
         {
-            SetEmpty(true, "Đang tải...");
             return;
         }
 
         if (!string.IsNullOrEmpty(NotificationsStaticStore.LastError))
         {
-            SetEmpty(true, NotificationsStaticStore.LastError);
             return;
         }
 
-        if (!NotificationsStaticStore.HasData)
+        if (!NotificationsStaticStore.HasData || NotificationsStaticStore.Items == null || NotificationsStaticStore.Items.Count == 0)
         {
-            SetEmpty(true, "Không có thông báo.");
             return;
         }
 
-        SetEmpty(false, "");
-
+        int spawnedCount = 0;
         var items = NotificationsStaticStore.Items;
+
         for (int i = 0; i < items.Count; i++)
         {
-            SpawnItem(items[i]);
+            var item = items[i];
+            if (item == null)
+                continue;
+
+            if (!MatchFilter(item))
+                continue;
+
+            SpawnItem(item);
+            spawnedCount++;
+        }
+    }
+
+    private bool MatchFilter(NotificationMailItem item)
+    {
+        if (item == null)
+            return false;
+
+        string label = (item.label ?? "").Trim().ToLower();
+
+        switch (currentFilter)
+        {
+            case MailFilter.Personal:
+                return label == "personal";
+
+            case MailFilter.System:
+                return label == "system";
+
+            default:
+                return false;
         }
     }
 
     private void SpawnItem(NotificationMailItem data)
     {
-        if (mailPrefab == null || contentParent == null || data == null)
+        if (mailPrefab == null)
+        {
+            Debug.LogWarning("[MailList] mailPrefab đang null.");
+            return;
+        }
+
+        if (currentContentParent == null)
+        {
+            Debug.LogWarning("[MailList] currentContentParent đang null khi SpawnItem.");
+            return;
+        }
+
+        if (data == null)
             return;
 
-        MailElementVisualUI ui = Instantiate(mailPrefab, contentParent);
+        MailElementVisualUI ui = Instantiate(mailPrefab, currentContentParent);
 
         string timeText = BuildTimeText(data.time);
         string readState = data.isRead ? "Đã đọc" : "Chưa đọc";
@@ -77,11 +141,15 @@ public class MailList : MonoBehaviour
         MainElementUI mainUI = ui.GetComponent<MainElementUI>();
         if (mainUI != null)
         {
+            if (detailLoader == null)
+                detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+
+            mainUI.SetDetailLoader(detailLoader);
             mainUI.Bind(data);
         }
         else
         {
-            Debug.LogWarning("[MailList] Prefab chưa có MainElementUI.");
+            Debug.LogWarning("[MailList] Không tìm thấy MainElementUI trên prefab item.");
         }
 
         spawnedItems.Add(ui);
@@ -108,21 +176,5 @@ public class MailList : MonoBehaviour
                 Destroy(spawnedItems[i].gameObject);
         }
         spawnedItems.Clear();
-
-        if (contentParent == null) return;
-
-        for (int i = contentParent.childCount - 1; i >= 0; i--)
-        {
-            Destroy(contentParent.GetChild(i).gameObject);
-        }
-    }
-
-    private void SetEmpty(bool show, string msg)
-    {
-        if (emptyText != null)
-        {
-            emptyText.gameObject.SetActive(show);
-            emptyText.text = msg;
-        }
     }
 }
