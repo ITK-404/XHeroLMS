@@ -629,6 +629,7 @@ RectTransform:
   m_Children:
   - {fileID: 3114729537265304827}
   - {fileID: 730146549249969499}
+  - {fileID: 8943905128453589530}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -735,9 +736,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MainElementUI
   readConfig: {fileID: 11400000, guid: 8bb008be90cf4411197f9499cb63640f, type: 2}
   unreadConfig: {fileID: 11400000, guid: 220625a7ffbaa4266b773fb37b05d08f, type: 2}
-  isUnread: 1
   visual: {fileID: 8517384750496282478}
-  btn: {fileID: 0}
+  btn: {fileID: 3547142562187369811}
+  detailLoader: {fileID: 3546426814554336796}
 --- !u!114 &3547142562187369811
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -918,6 +919,61 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &5584328226080352051
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8943905128453589530}
+  - component: {fileID: 3546426814554336796}
+  m_Layer: 5
+  m_Name: API Detail
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &8943905128453589530
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5584328226080352051}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8425095325807699288}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &3546426814554336796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5584328226080352051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa7c65cc5af028489cd51273c3385f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NotificationsDetailLoader
+  baseUrl: 
+  timeoutSeconds: 20
+  authorizationToken: 
+  autoLoadOnEnable: 0
+  notificationIdOnEnable: 
+  forceReloadSameId: 0
+  debugLog: 1
 --- !u!1 &7129366604130135927
 GameObject:
   m_ObjectHideFlags: 0

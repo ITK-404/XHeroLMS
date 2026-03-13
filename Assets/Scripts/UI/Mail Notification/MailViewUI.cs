@@ -1,10 +1,21 @@
-public class MailViewUI : UIView
+using UnityEngine;
+
+public class MailViewUI : MonoBehaviour
 {
-    public enum MailType
+    [SerializeField] private GameObject root;
+    [SerializeField] private Transform contentParent;
+
+    public Transform ContentParent => contentParent;
+
+    public void Show()
     {
-        User,
-        System,
+        if (root != null) root.SetActive(true);
+        else gameObject.SetActive(true);
     }
 
-    public MailType Current;
+    public void Hide()
+    {
+        if (root != null) root.SetActive(false);
+        else gameObject.SetActive(false);
+    }
 }
