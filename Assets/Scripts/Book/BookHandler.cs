@@ -88,13 +88,14 @@ public class BookHandler : MonoBehaviour
             "&accessToken=" + UnityWebRequest.EscapeURL(token) ;
 
         var uniWebView = BuyReviewCourseManager.Instance.UniWebView;
-        IWebOpener opener = new OpenWebviewService(uniWebView);
+        // IWebOpener opener = new OpenWebviewService(uniWebView);
 
-        var result = opener.Open(url);
-        if (result.IsCompleted)
-        {
-            BookHandler.CanSelectBook = true;
-        }
+        // var result = opener.Open(url);
+        // if (result.IsCompleted)
+        // {
+        //     BookHandler.CanSelectBook = true;
+        // }
+        WebViewTest.LoadWebView(url);
     }
 
     private void OnPlayerClickBook()

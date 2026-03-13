@@ -194,9 +194,10 @@ if (p == null)
         "?course=" + UnityWebRequest.EscapeURL(courseId) +
         "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
-    Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
+    // Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
 
-    Application.OpenURL(url);
+    // Application.OpenURL(url);
+    WebViewTest.LoadWebView(url);
     yield break;
 }
 
