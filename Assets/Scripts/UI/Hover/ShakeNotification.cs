@@ -11,7 +11,7 @@ public class ShakeNotification : MonoBehaviour
     [SerializeField] private float randomness = 90f;
     [SerializeField] private bool loop = true;
     [SerializeField] private float loopInterval = 1.5f; // pause between each shake loop
-
+    [SerializeField] private bool autoStart = false;
     private Tween _shakeTween;
     private Sequence _loopSequence;
     private Quaternion _originalRotation;
@@ -19,6 +19,11 @@ public class ShakeNotification : MonoBehaviour
     private void Awake()
     {
         _originalRotation = transform.localRotation;
+
+        if (autoStart)
+        {
+            StartShake();
+        }
     }
 
     public void StartShake()
