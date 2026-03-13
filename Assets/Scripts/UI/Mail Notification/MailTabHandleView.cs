@@ -1,4 +1,3 @@
-using System;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,8 +5,8 @@ using UnityEngine.UI;
 public class MailTabHandleView : MonoBehaviour
 {
     [SerializeField] private MailViewUI[] views;
-
-    [SerializeField] private Button[] _buttons;
+    [SerializeField] private Button[] buttons;
+    [SerializeField] private MailList mailList;
 
     private void Awake()
     {
@@ -22,36 +21,30 @@ public class MailTabHandleView : MonoBehaviour
 
     private void HandleButtonVisual(int index)
     {
-        for (int i = 0; i < _buttons.Length; i++)
+        for (int i = 0; i < buttons.Length; i++)
         {
-            var btn = _buttons[i];
-            btn.image.DOFade(index == i ? 1 : 0, 0);
+            var btn = buttons[i];
+            if (btn != null && btn.image != null)
+                btn.image.DOFade(index == i ? 1f : 0f, 0f);
         }
     }
-    
+
     private void Binding()
     {
-        for (int i = 0; i < _buttons.Length; i++)
+        for (int i = 0; i < buttons.Length; i++)
         {
-            var btn = _buttons[i];
-            var index = i;
-            btn.onClick.AddListener(() =>
-            {
-                ShowTab(index);
-            });
+            int index = i;
+            if (buttons[i] != null)
+                buttons[i].onClick.AddListener(() => ShowTab(index));
         }
     }
 
     private void UnBinding()
     {
-        for (int i = 0; i < _buttons.Length; i++)
+        for (int i = 0; i < buttons.Length; i++)
         {
-            var btn = _buttons[i];
-            var index = i;
-            btn.onClick.RemoveListener(() =>
-            {
-                ShowTab(index);
-            });
+            if (buttons[i] != null)
+                buttons[i].onClick.RemoveAllListeners();
         }
     }
 
@@ -60,11 +53,26 @@ public class MailTabHandleView : MonoBehaviour
         for (int i = 0; i < views.Length; i++)
         {
             var view = views[i];
+            if (view == null) continue;
+
             bool isShow = index == i;
-            if (isShow)
-                view.Show();
-            else
-                view.Hide();
+            if (isShow) view.Show();
+            else view.Hide();
+        }
+
+        if (mailList != null && index >= 0 && index < views.Length && views[index] != null)
+        {
+            mailList.SetRenderTarget(views[index].ContentParent);
+
+            // btn 0 = system
+            if (index == 0)
+                mailList.SetFilter(MailList.MailFilter.System);
+
+            // btn 1 = cá nhân
+            else if (index == 1)
+                mailList.SetFilter(MailList.MailFilter.Personal);
+
+            mailList.Refresh();
         }
 
         HandleButtonVisual(index);

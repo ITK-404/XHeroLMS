@@ -3,11 +3,14 @@ using UnityEngine.UI;
 
 public class MainElementUI : MonoBehaviour
 {
+    [Header("Configs")]
     [SerializeField] private MailTextConfig readConfig;
     [SerializeField] private MailTextConfig unreadConfig;
-    [SerializeField] private bool isUnread = true;
+
+    [Header("Refs")]
     [SerializeField] private MailElementVisualUI visual;
     [SerializeField] private Button btn;
+    [SerializeField] private NotificationsDetailLoader detailLoader;
 
     private string notificationId;
     private NotificationMailItem currentData;
@@ -16,6 +19,12 @@ public class MainElementUI : MonoBehaviour
     {
         if (btn == null)
             btn = GetComponent<Button>();
+
+        if (visual == null)
+            visual = GetComponent<MailElementVisualUI>();
+
+        if (detailLoader == null)
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
 
         if (btn != null)
             btn.onClick.AddListener(OnClickItem);
@@ -31,27 +40,67 @@ public class MainElementUI : MonoBehaviour
     {
         currentData = data;
         notificationId = data != null ? data._id : "";
-        isUnread = data != null ? !data.isRead : true;
-
         ApplyState();
+
+        Debug.Log($"[MainElementUI] Bind item: title={data?.title}, id={notificationId}");
+    }
+
+    public void SetDetailLoader(NotificationsDetailLoader loader)
+    {
+        detailLoader = loader;
     }
 
     private void OnClickItem()
     {
         Debug.Log($"[Notification] Click ID = {notificationId}");
 
-        // click xong chuyển sang đã đọc
-        if (isUnread)
+        if (currentData == null)
         {
-            isUnread = false;
+            Debug.LogWarning("[MainElementUI] currentData đang null.");
+            return;
+        }
+
+        if (!currentData.isRead)
+        {
+            currentData.isRead = true;
             ApplyState();
         }
+
+        if (detailLoader == null)
+        {
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+        }
+
+        if (detailLoader == null)
+        {
+            Debug.LogWarning("[MainElementUI] detailLoader đang null.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(notificationId))
+        {
+            Debug.LogWarning("[MainElementUI] notificationId đang rỗng.");
+            return;
+        }
+
+        string token = TokenStore.AccessToken;
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Debug.LogWarning("[MainElementUI] TokenStore.AccessToken đang rỗng.");
+            return;
+        }
+
+        Debug.Log($"[MainElementUI] Load detail with ID={notificationId}");
+        detailLoader.LoadById(notificationId, token);
     }
 
     private void ApplyState()
     {
-        if (visual == null)
+        if (visual == null || currentData == null)
             return;
+
+        bool isUnread = !currentData.isRead;
 
         visual.SetConfig(isUnread ? unreadConfig : readConfig);
         visual.SetReadStateText(isUnread ? "Chưa đọc" : "Đã đọc");
@@ -68,10 +117,11 @@ public class MainElementUI : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (visual != null)
-        {
-            visual.SetConfig(isUnread ? unreadConfig : readConfig);
-            visual.SetReadStateText(isUnread ? "Chưa đọc" : "Đã đọc");
-        }
+        if (visual == null)
+            return;
+
+        bool isUnreadPreview = true;
+        visual.SetConfig(isUnreadPreview ? unreadConfig : readConfig);
+        visual.SetReadStateText(isUnreadPreview ? "Chưa đọc" : "Đã đọc");
     }
 }

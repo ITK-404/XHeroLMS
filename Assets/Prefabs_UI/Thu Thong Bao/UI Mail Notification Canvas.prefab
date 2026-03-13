@@ -494,7 +494,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88a5bc78fbff339438d6387a9511d4cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MailList
-  contentParent: {fileID: 1781436799521468515}
   mailPrefab: {fileID: 8517384750496282478, guid: f0a30293117a748a8a36a0b0a63f931a, type: 3}
   clearOldItems: 1
   emptyText: {fileID: 0}
@@ -569,7 +568,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -2.4000244, y: -13}
+  m_AnchoredPosition: {x: -2.3999023, y: -13}
   m_SizeDelta: {x: 95.1594, y: 89.916}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3232775465761255860
@@ -1097,7 +1096,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4536997384118677104}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3034bf6f75c94ef192f3e4e29d076677, type: 3}
   m_Name: 
@@ -1105,9 +1104,10 @@ MonoBehaviour:
   views:
   - {fileID: 1156645719736784097}
   - {fileID: 1324169764271006510}
-  _buttons:
+  buttons:
   - {fileID: 6566300058125878625}
   - {fileID: 235736212516250097}
+  mailList: {fileID: 4334742389823407655}
 --- !u!1 &5797278123710286936
 GameObject:
   m_ObjectHideFlags: 0
@@ -2119,7 +2119,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 4.9267, y: 0}
+  m_AnchoredPosition: {x: 4.926758, y: 0}
   m_SizeDelta: {x: -8.2112, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9138184240734371697
@@ -2994,7 +2994,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3997299185632788584, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4250401931919748467, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3459,7 +3459,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4452358266091616746, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 187475380654010401, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3989,6 +3989,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5369381252023444116, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -0.00065360684
+      objectReference: {fileID: 0}
     - target: {fileID: 5459469008492644270, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -4115,7 +4119,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6365875448634242095, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_Value
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6522573892468243507, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4288,16 +4292,11 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 5925383165323956983}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d8115bb5856346f1a1a689fd40b6bf70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MailViewUI
---- !u!224 &1781436799521468515 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 5369381252023444116, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
-  m_PrefabInstance: {fileID: 5925383165323956983}
-  m_PrefabAsset: {fileID: 0}
 --- !u!224 &7485156254916204227 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3880886187197727796, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
