@@ -3,35 +3,19 @@
           xmlns:tools="http://schemas.android.com/tools">
 
   <queries>
-
-    <!-- Cho phép query app nào có thể mở deeplink scheme: xhero://
-         Dùng cho resolveActivity(Intent.ACTION_VIEW, xhero://...)
-    -->
     <intent>
       <action android:name="android.intent.action.VIEW" />
-
-      <!-- Thêm DEFAULT + BROWSABLE để match đúng kiểu deeplink -->
       <category android:name="android.intent.category.DEFAULT" />
       <category android:name="android.intent.category.BROWSABLE" />
-
-      <!-- Scheme deeplink của XHero: xhero://... -->
       <data android:scheme="xhero" />
     </intent>
 
     <package android:name="com.xhero_app" />
-
   </queries>
 
-
-  <!-- ========================================================= -->
-  <!-- Các cấu hình chung của ứng dụng LMS.-->
-  <!-- ========================================================= -->
   <application
       android:usesCleartextTraffic="true">
 
-    <!-- ========================================================= -->
-    <!-- Dùng cho việc share file / open file nội bộ (PDF, image, v.v.)-->
-    <!-- ========================================================= -->
     <provider
         android:name="androidx.core.content.FileProvider"
         android:authorities="com.xherozone.xherolms.fileprovider"
@@ -42,13 +26,10 @@
           android:resource="@xml/file_paths" />
     </provider>
 
-
-    <!-- UnityPlayerActivity -->
     <activity
         android:name="com.unity3d.player.UnityPlayerActivity"
         android:theme="@style/UnityThemeSelector">
 
-      <!-- Launcher intent-filter: mở app từ icon -->
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
@@ -63,7 +44,6 @@
         android:name="com.unity3d.player.UnityPlayerGameActivity"
         android:theme="@style/BaseUnityGameActivityTheme">
 
-      <!-- Launcher intent-filter: mở app từ icon -->
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
