@@ -1,4 +1,4 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "C:\_khoa\XHeroLMS\ServerData\Android" "gs://dlc-lms/addressables/releases/android/builds/1.0.4/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "/Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS" "gs://dlc-lms/addressables/releases/ios/builds/1.0.4/"
 ExitCode=0
 
 --- STDOUT ---
@@ -6,75 +6,23 @@ ExitCode=0
 
 --- STDERR ---
 Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
 Starting synchronization...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.4.hash [Content-Type=application/octet-stream]...
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.4.json [Content-Type=application/json]...
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.json [Content-Type=application/json]...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\483192958c2089719c8dc303377b0b39_monoscripts_b27a5e2f664e14546b4903092b9464c4.bundle [Content-Type=application/octet-stream]...
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.hash [Content-Type=application/octet-stream]...
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\cloud_phong_tuyen_sinh_scenes_all_2488d2abeab66c7e25f60841c6eb61fc.bundle [Content-Type=application/octet-stream]...
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
-==> NOTE: You are uploading one or more large file(s), which would run
-significantly faster if you enable parallel composite uploads. This
-feature can be enabled by editing the
-"parallel_composite_upload_threshold" value in your .boto
-configuration file. However, note that if you do this large files will
-be uploaded as `composite objects
-<https://cloud.google.com/storage/docs/composite-objects>`_,which
-means that any user who downloads such objects will need to have a
-compiled crcmod installed (see "gsutil help crcmod"). This is because
-without a compiled crcmod, computing checksums on composite objects is
-so slow that gsutil disables downloads of composite objects.
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
 
-/ [0/6 files][    0.0 B/157.0 MiB]   0% Done                                    
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.hash [Content-Type=application/octet-stream]...
+/ [0/4 files][    0.0 B/125.9 KiB]   0% Done                                    
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.json [Content-Type=application/json]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.4.hash [Content-Type=application/octet-stream]...
+/ [0/4 files][    0.0 B/125.9 KiB]   0% Done                                    
+/ [0/4 files][    0.0 B/125.9 KiB]   0% Done                                    
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.4.json [Content-Type=application/json]...
+/ [0/4 files][    0.0 B/125.9 KiB]   0% Done                                    
+/ [1/4 files][125.9 KiB/125.9 KiB]  99% Done                                    
 -
-- [1/6 files][375.8 KiB/157.0 MiB]   0% Done                                    
-- [2/6 files][375.8 KiB/157.0 MiB]   0% Done                                    
-- [3/6 files][375.8 KiB/157.0 MiB]   0% Done                                    
-- [4/6 files][375.8 KiB/157.0 MiB]   0% Done                                    
-\
-\ [5/6 files][695.8 KiB/157.0 MiB]   0% Done                                    
-|
-| [5/6 files][ 11.3 MiB/157.0 MiB]   7% Done                                    
-/
--
-- [5/6 files][ 22.6 MiB/157.0 MiB]  14% Done                                    
-\
-\ [5/6 files][ 33.8 MiB/157.0 MiB]  21% Done                                    
-|
-/
-/ [5/6 files][ 45.0 MiB/157.0 MiB]  28% Done                                    
--
-\
-\ [5/6 files][ 56.3 MiB/157.0 MiB]  35% Done                                    
-|
-| [5/6 files][ 67.6 MiB/157.0 MiB]  43% Done                                    
-/
--
-- [5/6 files][ 78.8 MiB/157.0 MiB]  50% Done                                    
-\
-|
-| [5/6 files][ 90.0 MiB/157.0 MiB]  57% Done                                    
-/
-/ [5/6 files][101.3 MiB/157.0 MiB]  64% Done                                    
--
-\
-\ [5/6 files][112.6 MiB/157.0 MiB]  71% Done  11.2 MiB/s ETA 00:00:04           
-|
-/
-/ [5/6 files][123.8 MiB/157.0 MiB]  78% Done  11.2 MiB/s ETA 00:00:03           
--
-- [5/6 files][135.0 MiB/157.0 MiB]  86% Done  11.2 MiB/s ETA 00:00:02           
-\
-|
-| [5/6 files][146.3 MiB/157.0 MiB]  93% Done  11.2 MiB/s ETA 00:00:01           
-/
-/ [6/6 files][157.0 MiB/157.0 MiB] 100% Done  10.5 MiB/s ETA 00:00:00           
--
-
-Operation completed over 6 objects/157.0 MiB.                                    
+- [2/4 files][125.9 KiB/125.9 KiB]  99% Done                                    
+- [3/4 files][125.9 KiB/125.9 KiB]  99% Done                                    
+- [4/4 files][125.9 KiB/125.9 KiB] 100% Done                                    
+Operation completed over 4 objects/125.9 KiB.                                    
 

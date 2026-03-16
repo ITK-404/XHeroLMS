@@ -497,6 +497,7 @@ MonoBehaviour:
   mailPrefab: {fileID: 8517384750496282478, guid: f0a30293117a748a8a36a0b0a63f931a, type: 3}
   clearOldItems: 1
   emptyText: {fileID: 0}
+  detailLoader: {fileID: 0}
 --- !u!1 &1051088003074358052
 GameObject:
   m_ObjectHideFlags: 0
@@ -754,6 +755,7 @@ GameObject:
   - component: {fileID: 2849927833203508065}
   - component: {fileID: 4735539317300520481}
   - component: {fileID: 7565312286959268905}
+  - component: {fileID: -7603808945287147959}
   m_Layer: 5
   m_Name: UI Mail Notification Canvas
   m_TagString: Untagged
@@ -881,6 +883,18 @@ MonoBehaviour:
   autoRefresh: 1
   refreshInterval: 10
   debugLog: 1
+--- !u!114 &-7603808945287147959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3993856420984984762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3829876aedfc4c1ebf163f2021968021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InputBlockerActive
 --- !u!1 &4107456184811538730
 GameObject:
   m_ObjectHideFlags: 0
