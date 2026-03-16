@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -31,7 +32,7 @@ public class UIViewSpawner : MonoBehaviour
     {
         // Tạm thời để tránh player ấn nút linh tinh
         if (isSpawning) return;
-
+        
         isSpawning = true;
         LoadingUI.Show();
         await Task.Delay(1000);

@@ -13,6 +13,10 @@ public class UIView : MonoBehaviour
     [SerializeField] protected bool useFade = true;
     [SerializeField] protected string targetID;
     protected Coroutine transitionCoroutine;
+    
+    public Action OnViewOpened;
+    public Action OnViewClosed;
+    
     public string TargetID
     {
         get => targetID;
@@ -140,8 +144,11 @@ public class UIView : MonoBehaviour
 
     public void SetFade(float fadeDuration) => this.fadeDuration = fadeDuration;
 
-    protected virtual void OnBeforeShow() { }
+    protected virtual void OnBeforeShow()
+    {
+        OnViewOpened?.Invoke();
+    }
     protected virtual void OnAfterShow() { }
     protected virtual void OnBeforeHide() { }
-    protected virtual void OnAfterHide() { }
+    protected virtual void OnAfterHide() {OnViewClosed?.Invoke(); }
 }
