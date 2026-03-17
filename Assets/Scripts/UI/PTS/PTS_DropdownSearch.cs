@@ -16,15 +16,17 @@ public class PTS_DropdownSearch : TMP_Dropdown
 
     protected override GameObject CreateDropdownList(GameObject template)
     {
+        Debug.Log("Create dropdown");
         arrow.DOKill();
-        arrow.DORotate(new Vector3(0, 0, 180), 0.2f);
+        arrow.DORotate(new Vector3(0, 0, 0), 0.2f);
         return base.CreateDropdownList(template);
     }
 
     protected override void DestroyDropdownList(GameObject dropdownList)
     {
         base.DestroyDropdownList(dropdownList);
+        Debug.Log("Destroy dropdown");
         arrow.DOKill();
-        arrow.DORotate(new Vector3(0, 0, 0), 0.2f);
+        arrow.DORotate(new Vector3(0, 0, 180), 0.2f);
     }
 }
