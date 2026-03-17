@@ -68,8 +68,9 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
     public override void Show()
     {
         // ShowPanel(0);
-        toggles[0].isOn = true;
         ActiveList(true);
+        toggles[0].isOn = true;
+        
         // call to show button group
     }
 
