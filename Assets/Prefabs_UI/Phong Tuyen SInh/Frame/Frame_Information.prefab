@@ -164,8 +164,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 596.8482, y: 0}
-  m_SizeDelta: {x: 1193.6964, y: 263.8215}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 263.8215}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9192263960057213512
 CanvasRenderer:
@@ -355,8 +355,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2283512818710804449}
   m_HandleRect: {fileID: 2848486507208386719}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.09035176
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -526,7 +526,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0.00015124542, y: 0.00043172343}
-  m_SizeDelta: {x: -1153.6964, y: 246.82}
+  m_SizeDelta: {x: 0, y: 246.82}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &3869709923929813052
 MonoBehaviour:
@@ -712,7 +712,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1448164848177186262
 RectTransform:
   m_ObjectHideFlags: 0
@@ -941,7 +941,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0.0001}
-  m_SizeDelta: {x: 0, y: 313.8215}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &165594763298582751
 MonoBehaviour:
@@ -1930,7 +1930,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_AnchorMin.x
@@ -1938,15 +1938,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 200
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 200
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1978,11 +1978,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 150
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -123.41
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 133747872330115290, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1996,13 +1996,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5846505323927629789, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5846505323927629789, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 2100000, guid: f3d1e35afb3074d249aae4111236268d, type: 2}
     - target: {fileID: 7976572041485861646, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_Name
       value: Image
       objectReference: {fileID: 0}
     - target: {fileID: 7976572041485861646, guid: 2b81e414fba014b49abe70c25d35fdf9, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
