@@ -21,7 +21,7 @@ public class FrameEduCourseUI : PanelBaseUI
     public void FirstIndex()
     {
         if (ChildCount == 0) return;
-        currentIndex = 0;
+        currentIndex = 1;
         CenterOnIndex(currentIndex,false);
     }
 

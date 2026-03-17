@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 
@@ -177,8 +178,9 @@ public class PTS_ReviewCourse : MonoBehaviour
     {
         if (frameReviewCourseUI == null) return;
 
-        frameReviewCourseUI.SetAverageRating(average.ToString("0.0"));
-        frameReviewCourseUI.SetRatingCount(totalReview);
+        frameReviewCourseUI.SetAverageRating(
+            average.ToString("0.0", CultureInfo.InvariantCulture)
+        );        frameReviewCourseUI.SetRatingCount(totalReview);
         frameReviewCourseUI.SetAverageStars(average);
     }
 

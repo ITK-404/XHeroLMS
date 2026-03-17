@@ -9,15 +9,16 @@ public class UIViewSpawner : MonoBehaviour
 
     UIView canvas;
 
-    private void OnShowMail()
+    public void OnShowMail()
     {
+        Debug.Log("On Clicked");
         if (canvas == null)
         {
             Spawn();
         }
         else
         {
-            canvas.Hide();
+            canvas.Show();
         }
     }
 
@@ -30,6 +31,8 @@ public class UIViewSpawner : MonoBehaviour
 
     public async void Spawn()
     {
+        Debug.Log("On Clicked");
+        
         // Tạm thời để tránh player ấn nút linh tinh
         if (isSpawning) return;
         

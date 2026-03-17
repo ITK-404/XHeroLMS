@@ -7,16 +7,31 @@ using UnityEngine.Windows;
 public static class InputBlocker
 {
     private static bool _blocked = false;
-
+    private static int blockCount = 0;
+    
     /// <summary>
     /// Bật hoặc tắt khóa bàn phím/chuột.
     /// </summary>
     public static void SetBlocked(bool value)
     {
-        _blocked = value;
+        if (value)
+        {
+            blockCount++;
+        }
+        else
+        {
+            blockCount = Mathf.Max(0, blockCount - 1);
+        }
+
+        UpdateInputState();
         Debug.Log($"[InputBlocker] {(value ? "Input locked" : "Input unlocked")}");
     }
 
+    private static void UpdateInputState()
+    {
+        bool shouldBlock = blockCount > 0;
+        _blocked = shouldBlock;
+    }
     /// <summary>
     /// Trả về trạng thái đang khóa input không.
     /// </summary>
