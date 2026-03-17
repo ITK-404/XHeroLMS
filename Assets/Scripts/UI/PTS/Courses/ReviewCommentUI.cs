@@ -1,7 +1,7 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
@@ -18,11 +18,18 @@ public class ReviewCommentUI : MonoBehaviour
     [SerializeField] private Image avatarImg;
 
     [Header("Review Images")]
+    [SerializeField] private GameObject imageViewer;
     [SerializeField] private Transform imageParent;
     [SerializeField] private Image imagePrefab;
 
     private readonly List<Image> spawnedImages = new();
+    private readonly List<string> pendingImageUrls = new();
+
     private Coroutine avatarCoroutine;
+
+    private string pendingAvatarUrl;
+    private Sprite pendingFallbackAvatar;
+    private bool hasPendingVisualLoad;
 
     public void SetComment(
         string name,
@@ -38,16 +45,29 @@ public class ReviewCommentUI : MonoBehaviour
         if (ratingTmp != null) ratingTmp.text = rating;
         if (commentTmp != null) commentTmp.text = comment;
 
+        pendingAvatarUrl = avatarUrl;
+        pendingFallbackAvatar = fallbackAvatar;
+        hasPendingVisualLoad = true;
+
+        pendingImageUrls.Clear();
+        if (imageUrls != null)
+            pendingImageUrls.AddRange(imageUrls);
+
         if (avatarImg != null)
+        {
+            avatarImg.enabled = true;
+            avatarImg.color = Color.white;
             avatarImg.sprite = fallbackAvatar;
+            avatarImg.preserveAspect = true;
+        }
 
-        if (avatarCoroutine != null)
-            StopCoroutine(avatarCoroutine);
+        ClearImages();
+        TryLoadVisuals();
+    }
 
-        if (!string.IsNullOrEmpty(avatarUrl) && avatarImg != null && avatarImg.gameObject.activeSelf)
-            avatarCoroutine = StartCoroutine(LoadAvatar(avatarImg, avatarUrl, fallbackAvatar));
-
-        BuildImages(imageUrls);
+    private void OnEnable()
+    {
+        TryLoadVisuals();
     }
 
     private void OnDisable()
@@ -55,7 +75,49 @@ public class ReviewCommentUI : MonoBehaviour
         if (avatarCoroutine != null)
         {
             StopCoroutine(avatarCoroutine);
+            avatarCoroutine = null;
         }
+
+        StopAllCoroutines();
+    }
+
+    private void TryLoadVisuals()
+    {
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            return;
+
+        if (!hasPendingVisualLoad)
+            return;
+
+        hasPendingVisualLoad = false;
+
+        StartAvatarLoadIfNeeded();
+        BuildImages(pendingImageUrls);
+    }
+
+    private void StartAvatarLoadIfNeeded()
+    {
+        if (avatarCoroutine != null)
+        {
+            StopCoroutine(avatarCoroutine);
+            avatarCoroutine = null;
+        }
+
+        if (avatarImg == null)
+            return;
+
+        avatarImg.enabled = true;
+        avatarImg.color = Color.white;
+        avatarImg.sprite = pendingFallbackAvatar;
+        avatarImg.preserveAspect = true;
+
+        if (string.IsNullOrEmpty(pendingAvatarUrl))
+            return;
+
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            return;
+
+        avatarCoroutine = StartCoroutine(LoadAvatar(avatarImg, pendingAvatarUrl, pendingFallbackAvatar));
     }
 
     private void BuildImages(List<string> imageUrls)
@@ -68,6 +130,7 @@ public class ReviewCommentUI : MonoBehaviour
         if (imageUrls == null || imageUrls.Count == 0)
         {
             imageParent.gameObject.SetActive(false);
+            imageViewer.SetActive(false);
             return;
         }
 
@@ -82,9 +145,13 @@ public class ReviewCommentUI : MonoBehaviour
 
             var img = Instantiate(imagePrefab, imageParent);
             img.gameObject.SetActive(true);
+            img.enabled = true;
+            img.color = Color.white;
+
             spawnedImages.Add(img);
 
-            StartCoroutine(LoadImage(img, imageUrls[i]));
+            if (isActiveAndEnabled && gameObject.activeInHierarchy)
+                StartCoroutine(LoadImage(img, imageUrls[i]));
         }
 
         imageParent.gameObject.SetActive(hasValidImage);
@@ -102,7 +169,7 @@ public class ReviewCommentUI : MonoBehaviour
 #if UNITY_2020_3_OR_NEWER
             if (req.result != UnityWebRequest.Result.Success)
 #else
-        if (req.isNetworkError || req.isHttpError)
+            if (req.isNetworkError || req.isHttpError)
 #endif
             {
                 Debug.LogError(
@@ -114,8 +181,12 @@ public class ReviewCommentUI : MonoBehaviour
                     $"finalUrl={req.url}"
                 );
 
-                if (target != null && fallbackAvatar != null)
+                if (target != null)
+                {
+                    target.enabled = true;
+                    target.color = Color.white;
                     target.sprite = fallbackAvatar;
+                }
 
                 yield break;
             }
@@ -130,7 +201,7 @@ public class ReviewCommentUI : MonoBehaviour
 
             if (tex == null || target == null)
             {
-                if (target != null && fallbackAvatar != null)
+                if (target != null)
                     target.sprite = fallbackAvatar;
                 yield break;
             }
@@ -138,21 +209,28 @@ public class ReviewCommentUI : MonoBehaviour
             Sprite sprite = Sprite.Create(
                 tex,
                 new Rect(0, 0, tex.width, tex.height),
-                new Vector2(0.5f, 0.5f)
+                new Vector2(0.5f, 0.5f),
+                100f
             );
 
+            target.enabled = true;
+            target.color = Color.white;
             target.sprite = sprite;
             target.preserveAspect = true;
-            target.SetNativeSize();
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
 
             Debug.Log("[ReviewCommentUI] Avatar sprite assigned");
         }
+
+        avatarCoroutine = null;
     }
 
     private IEnumerator LoadImage(Image target, string url)
     {
         using (UnityWebRequest req = UnityWebRequestTexture.GetTexture(url))
         {
+            req.timeout = 20;
             yield return req.SendWebRequest();
 
 #if UNITY_2020_3_OR_NEWER
@@ -173,10 +251,14 @@ public class ReviewCommentUI : MonoBehaviour
             var sprite = Sprite.Create(
                 tex,
                 new Rect(0, 0, tex.width, tex.height),
-                new Vector2(0.5f, 0.5f)
+                new Vector2(0.5f, 0.5f),
+                100f
             );
 
+            target.enabled = true;
+            target.color = Color.white;
             target.sprite = sprite;
+            target.preserveAspect = true;
         }
     }
 
@@ -189,6 +271,12 @@ public class ReviewCommentUI : MonoBehaviour
         }
 
         spawnedImages.Clear();
+
+        if (imageParent != null)
+            imageParent.gameObject.SetActive(false);
+
+        if (imageViewer != null)
+            imageViewer.SetActive(false);
     }
 
     public Image GetAvatarImage()
