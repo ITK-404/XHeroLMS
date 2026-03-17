@@ -11,29 +11,83 @@ public class LetterButtonUI : MonoBehaviour
 
     private void Awake()
     {
-        UpdateNotify();
+        ApplyNotifyState(force: true);
     }
 
-    private void Update()
+    private void OnEnable()
     {
-        if (previousNotify != isHaveNotify)
-        {
-            UpdateNotify();
-        }
+        NotificationsStaticStore.OnChanged += HandleNotificationsChanged;
+        RefreshNotifyState(forceApply: true);
     }
 
-    private void UpdateNotify()
+    private void OnDisable()
     {
-        if (isHaveNotify)
+        NotificationsStaticStore.OnChanged -= HandleNotificationsChanged;
+    }
+
+    private void HandleNotificationsChanged()
+    {
+        RefreshNotifyState(forceApply: false);
+    }
+
+    private void RefreshNotifyState(bool forceApply)
+    {
+        bool newHaveNotify = HasUnreadNotifications();
+
+        if (!forceApply && newHaveNotify == previousNotify)
+            return;
+
+        isHaveNotify = newHaveNotify;
+        ApplyNotifyState(forceApply);
+    }
+
+    private bool HasUnreadNotifications()
+    {
+        if (TryParseUnreadCount(NotificationsStaticStore.UnreadAll, out int unreadAll))
+            return unreadAll > 0;
+
+        var items = NotificationsStaticStore.Items;
+        if (items == null || items.Count == 0)
+            return false;
+
+        for (int i = 0; i < items.Count; i++)
         {
-            _shakeNotification.StartShake();
-            dotNotify.gameObject.SetActive(true);
+            var item = items[i];
+            if (item == null)
+                continue;
+
+            if (!item.isRead)
+                return true;
         }
-        else
+
+        return false;
+    }
+
+    private bool TryParseUnreadCount(string value, out int result)
+    {
+        result = 0;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return int.TryParse(value.Trim(), out result);
+    }
+
+    private void ApplyNotifyState(bool force = false)
+    {
+        if (!force && previousNotify == isHaveNotify)
+            return;
+
+        if (_shakeNotification != null)
         {
-            _shakeNotification.StopShake();
-            dotNotify.gameObject.SetActive(false);
+            if (isHaveNotify)
+                _shakeNotification.StartShake();
+            else
+                _shakeNotification.StopShake();
         }
+
+        if (dotNotify != null)
+            dotNotify.SetActive(isHaveNotify);
 
         previousNotify = isHaveNotify;
     }

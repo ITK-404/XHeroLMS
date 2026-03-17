@@ -27,6 +27,7 @@ public class NotificationsLoader : MonoBehaviour
     private UnityWebRequest activeRequest;
     private int loadVersion = 0;
     private string currentTab = "system";
+    private bool isRefreshingSilently = false;
 
     private void Awake()
     {
@@ -41,15 +42,13 @@ public class NotificationsLoader : MonoBehaviour
         if (string.IsNullOrWhiteSpace(defaultTab))
             defaultTab = "system";
 
-        currentTab = defaultTab;
+        currentTab = NormalizeTab(defaultTab);
     }
 
     private void OnEnable()
     {
         if (autoLoadOnEnable)
-        {
             Load(currentTab);
-        }
 
         if (autoRefresh)
         {
@@ -74,6 +73,7 @@ public class NotificationsLoader : MonoBehaviour
             loadRoutine = null;
         }
 
+        isRefreshingSilently = false;
         CancelActiveRequest();
     }
 
@@ -94,9 +94,7 @@ public class NotificationsLoader : MonoBehaviour
 
     public void Load(string tab)
     {
-        if (string.IsNullOrWhiteSpace(tab))
-            tab = "system";
-
+        tab = NormalizeTab(tab);
         currentTab = tab;
 
         if (loadRoutine != null)
@@ -115,8 +113,89 @@ public class NotificationsLoader : MonoBehaviour
             if (!isActiveAndEnabled)
                 continue;
 
-            Load(currentTab);
+            if (isRefreshingSilently)
+                continue;
+
+            yield return CoSilentRefresh(currentTab);
         }
+    }
+
+    private IEnumerator CoSilentRefresh(string tab)
+    {
+        isRefreshingSilently = true;
+
+        if (string.IsNullOrEmpty(TokenStore.AccessToken))
+            TokenStore.TryRestoreFromDisk();
+
+        string token = TokenStore.AccessToken;
+        if (string.IsNullOrEmpty(token))
+        {
+            isRefreshingSilently = false;
+            yield break;
+        }
+
+        string url = $"{baseUrl}/notifications?tab={UnityWebRequest.EscapeURL(tab)}&skip={skip}&limit={limit}";
+        if (debugLog)
+            Debug.Log("[NotificationsLoader] Silent Refresh Request: " + url);
+
+        using (var request = UnityWebRequest.Get(url))
+        {
+            request.timeout = timeoutSeconds;
+            request.SetRequestHeader("authorization", "Bearer " + token);
+
+            yield return request.SendWebRequest();
+
+#if UNITY_2020_1_OR_NEWER
+            bool failed = request.result != UnityWebRequest.Result.Success;
+#else
+            bool failed = request.isNetworkError || request.isHttpError;
+#endif
+
+            if (failed)
+            {
+                if (debugLog)
+                {
+                    string err = request.error;
+                    string body = request.downloadHandler != null ? request.downloadHandler.text : "";
+                    Debug.LogWarning("[NotificationsLoader] Silent Refresh lỗi: " + err + "\n" + body);
+                }
+
+                isRefreshingSilently = false;
+                yield break;
+            }
+
+            string json = request.downloadHandler.text;
+            if (debugLog)
+                Debug.Log("[NotificationsLoader] Silent Refresh Response: " + json);
+
+            NotificationMailResponse root = null;
+            try
+            {
+                root = JsonUtility.FromJson<NotificationMailResponse>(json);
+            }
+            catch (Exception e)
+            {
+                if (debugLog)
+                    Debug.LogWarning("[NotificationsLoader] Silent Refresh parse lỗi: " + e.Message);
+
+                isRefreshingSilently = false;
+                yield break;
+            }
+
+            if (root != null && root.status && root.data != null)
+            {
+                if (!NotificationsStaticStore.IsSameData(tab, root.data))
+                {
+                    NotificationsStaticStore.SetData(tab, root.data);
+                }
+                else
+                {
+                    NotificationsStaticStore.SetLoadedWithoutNotify(tab);
+                }
+            }
+        }
+
+        isRefreshingSilently = false;
     }
 
     private IEnumerator CoLoad(string tab)
@@ -137,7 +216,8 @@ public class NotificationsLoader : MonoBehaviour
         }
 
         string url = $"{baseUrl}/notifications?tab={UnityWebRequest.EscapeURL(tab)}&skip={skip}&limit={limit}";
-        if (debugLog) Debug.Log("[NotificationsLoader] Request: " + url);
+        if (debugLog)
+            Debug.Log("[NotificationsLoader] Request: " + url);
 
         using (activeRequest = UnityWebRequest.Get(url))
         {
@@ -163,7 +243,8 @@ public class NotificationsLoader : MonoBehaviour
             {
                 string err = activeRequest.error;
                 string body = activeRequest.downloadHandler != null ? activeRequest.downloadHandler.text : "";
-                if (debugLog) Debug.LogError("[NotificationsLoader] API lỗi: " + err + "\n" + body);
+                if (debugLog)
+                    Debug.LogError("[NotificationsLoader] API lỗi: " + err + "\n" + body);
 
                 NotificationsStaticStore.SetError(tab, "Không tải được danh sách thông báo.");
                 activeRequest = null;
@@ -172,7 +253,8 @@ public class NotificationsLoader : MonoBehaviour
             }
 
             string json = activeRequest.downloadHandler.text;
-            if (debugLog) Debug.Log("[NotificationsLoader] Response: " + json);
+            if (debugLog)
+                Debug.Log("[NotificationsLoader] Response: " + json);
 
             NotificationMailResponse root = null;
             try
@@ -181,7 +263,9 @@ public class NotificationsLoader : MonoBehaviour
             }
             catch (Exception e)
             {
-                if (debugLog) Debug.LogError("[NotificationsLoader] Parse JSON lỗi: " + e.Message);
+                if (debugLog)
+                    Debug.LogError("[NotificationsLoader] Parse JSON lỗi: " + e.Message);
+
                 NotificationsStaticStore.SetError(tab, "Dữ liệu trả về không hợp lệ.");
                 activeRequest = null;
                 loadRoutine = null;
@@ -196,7 +280,14 @@ public class NotificationsLoader : MonoBehaviour
                 yield break;
             }
 
-            NotificationsStaticStore.SetData(tab, root.data);
+            if (!NotificationsStaticStore.IsSameData(tab, root.data))
+            {
+                NotificationsStaticStore.SetData(tab, root.data);
+            }
+            else
+            {
+                NotificationsStaticStore.SetLoadedWithoutNotify(tab);
+            }
         }
 
         activeRequest = null;
@@ -213,5 +304,10 @@ public class NotificationsLoader : MonoBehaviour
             activeRequest.Dispose();
             activeRequest = null;
         }
+    }
+
+    private string NormalizeTab(string tab)
+    {
+        return string.IsNullOrWhiteSpace(tab) ? "system" : tab.Trim().ToLower();
     }
 }

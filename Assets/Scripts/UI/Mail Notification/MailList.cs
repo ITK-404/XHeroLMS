@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class MailList : MonoBehaviour
@@ -12,13 +11,12 @@ public class MailList : MonoBehaviour
 
     [Header("UI Spawn")]
     [SerializeField] private MailElementVisualUI mailPrefab;
-    [SerializeField] private bool clearOldItems = true;
 
     [Header("Optional")]
-    [SerializeField] private TextMeshProUGUI emptyText;
     [SerializeField] private NotificationsDetailLoader detailLoader;
 
-    private readonly List<MailElementVisualUI> spawnedItems = new();
+    private readonly Dictionary<string, MailElementVisualUI> spawnedItemMap = new();
+    private readonly List<string> removeBuffer = new();
 
     private Transform currentContentParent;
     private MailFilter currentFilter = MailFilter.Personal;
@@ -42,20 +40,36 @@ public class MailList : MonoBehaviour
 
     public void SetRenderTarget(Transform contentParent)
     {
+        if (currentContentParent == contentParent)
+            return;
+
         currentContentParent = contentParent;
+        ClearAllItems();
         Refresh();
     }
 
     public void SetFilter(MailFilter filter)
     {
+        if (currentFilter == filter)
+            return;
+
         currentFilter = filter;
         Refresh();
     }
 
     public void Refresh()
     {
-        if (clearOldItems)
-            ClearItems();
+        if (mailPrefab == null)
+        {
+            Debug.LogWarning("[MailList] mailPrefab đang null.");
+            return;
+        }
+
+        if (currentContentParent == null)
+        {
+            Debug.LogWarning("[MailList] currentContentParent đang null khi Refresh.");
+            return;
+        }
 
         if (NotificationsStaticStore.IsLoading)
         {
@@ -67,13 +81,15 @@ public class MailList : MonoBehaviour
             return;
         }
 
-        if (!NotificationsStaticStore.HasData || NotificationsStaticStore.Items == null || NotificationsStaticStore.Items.Count == 0)
+        var items = NotificationsStaticStore.Items;
+        if (items == null || items.Count == 0)
         {
+            RemoveAllSpawnedItems();
             return;
         }
 
-        int spawnedCount = 0;
-        var items = NotificationsStaticStore.Items;
+        HashSet<string> aliveIds = new();
+        int visibleIndex = 0;
 
         for (int i = 0; i < items.Count; i++)
         {
@@ -84,8 +100,48 @@ public class MailList : MonoBehaviour
             if (!MatchFilter(item))
                 continue;
 
-            SpawnItem(item);
-            spawnedCount++;
+            string id = GetItemId(item);
+            if (string.IsNullOrEmpty(id))
+            {
+                Debug.LogWarning("[MailList] Notification item không có id hợp lệ, bỏ qua.");
+                continue;
+            }
+
+            aliveIds.Add(id);
+
+            if (spawnedItemMap.TryGetValue(id, out var existingUI) && existingUI != null)
+            {
+                UpdateItemUI(existingUI, item);
+
+                if (existingUI.transform.parent != currentContentParent)
+                    existingUI.transform.SetParent(currentContentParent, false);
+
+                existingUI.transform.SetSiblingIndex(visibleIndex);
+            }
+            else
+            {
+                var newUI = CreateItemUI(item);
+                if (newUI != null)
+                {
+                    spawnedItemMap[id] = newUI;
+                    newUI.transform.SetSiblingIndex(visibleIndex);
+                }
+            }
+
+            visibleIndex++;
+        }
+
+        removeBuffer.Clear();
+
+        foreach (var kvp in spawnedItemMap)
+        {
+            if (!aliveIds.Contains(kvp.Key))
+                removeBuffer.Add(kvp.Key);
+        }
+
+        for (int i = 0; i < removeBuffer.Count; i++)
+        {
+            RemoveItem(removeBuffer[i]);
         }
     }
 
@@ -109,24 +165,36 @@ public class MailList : MonoBehaviour
         }
     }
 
-    private void SpawnItem(NotificationMailItem data)
+    private string GetItemId(NotificationMailItem data)
     {
-        if (mailPrefab == null)
-        {
-            Debug.LogWarning("[MailList] mailPrefab đang null.");
-            return;
-        }
-
-        if (currentContentParent == null)
-        {
-            Debug.LogWarning("[MailList] currentContentParent đang null khi SpawnItem.");
-            return;
-        }
-
         if (data == null)
-            return;
+            return string.Empty;
+
+        return (data._id ?? "").Trim();
+    }
+
+    private MailElementVisualUI CreateItemUI(NotificationMailItem data)
+    {
+        if (data == null)
+            return null;
 
         MailElementVisualUI ui = Instantiate(mailPrefab, currentContentParent);
+        ApplyDataToUI(ui, data);
+        return ui;
+    }
+
+    private void UpdateItemUI(MailElementVisualUI ui, NotificationMailItem data)
+    {
+        if (ui == null || data == null)
+            return;
+
+        ApplyDataToUI(ui, data);
+    }
+
+    private void ApplyDataToUI(MailElementVisualUI ui, NotificationMailItem data)
+    {
+        if (ui == null || data == null)
+            return;
 
         string timeText = BuildTimeText(data.time);
         string readState = data.isRead ? "Đã đọc" : "Chưa đọc";
@@ -151,8 +219,6 @@ public class MailList : MonoBehaviour
         {
             Debug.LogWarning("[MailList] Không tìm thấy MainElementUI trên prefab item.");
         }
-
-        spawnedItems.Add(ui);
     }
 
     private string BuildTimeText(NotificationMailTime t)
@@ -168,13 +234,33 @@ public class MailList : MonoBehaviour
         return "";
     }
 
-    private void ClearItems()
+    private void RemoveItem(string id)
     {
-        for (int i = spawnedItems.Count - 1; i >= 0; i--)
-        {
-            if (spawnedItems[i] != null)
-                Destroy(spawnedItems[i].gameObject);
-        }
-        spawnedItems.Clear();
+        if (string.IsNullOrEmpty(id))
+            return;
+
+        if (!spawnedItemMap.TryGetValue(id, out var ui))
+            return;
+
+        if (ui != null)
+            Destroy(ui.gameObject);
+
+        spawnedItemMap.Remove(id);
+    }
+
+    private void RemoveAllSpawnedItems()
+    {
+        removeBuffer.Clear();
+
+        foreach (var kvp in spawnedItemMap)
+            removeBuffer.Add(kvp.Key);
+
+        for (int i = 0; i < removeBuffer.Count; i++)
+            RemoveItem(removeBuffer[i]);
+    }
+
+    private void ClearAllItems()
+    {
+        RemoveAllSpawnedItems();
     }
 }
