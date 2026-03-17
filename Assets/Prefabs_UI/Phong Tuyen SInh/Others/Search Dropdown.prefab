@@ -1066,7 +1066,7 @@ GameObject:
   - component: {fileID: 120552765573687683}
   - component: {fileID: 8822684857166227732}
   - component: {fileID: 7999252789594491797}
-  - component: {fileID: 4113409153566693675}
+  - component: {fileID: 388224155501446829}
   m_Layer: 5
   m_Name: Search Dropdown
   m_TagString: Untagged
@@ -1134,7 +1134,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4113409153566693675
+--- !u!114 &388224155501446829
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1143,9 +1143,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 7332968058127216125}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b743370ac3e4ec2a1668f5455a8ef8a, type: 3}
+  m_Script: {fileID: 11500000, guid: bd472679174d64a3e998ec0b0411baaa, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_Dropdown
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_DropdownSearch
   m_Navigation:
     m_Mode: 3
     m_WrapAround: 0
@@ -1184,23 +1184,11 @@ MonoBehaviour:
   m_Value: 0
   m_MultiSelect: 0
   m_Options:
-    m_Options:
-    - m_Text: Option A
-      m_Image: {fileID: 0}
-      m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Option B
-      m_Image: {fileID: 0}
-      m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Option C
-      m_Image: {fileID: 0}
-      m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Option C
-      m_Image: {fileID: 0}
-      m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Option C
-      m_Image: {fileID: 0}
-      m_Color: {r: 1, g: 1, b: 1, a: 1}
+    m_Options: []
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
   m_AlphaFadeSpeed: 0.15
+  arrow: {fileID: 0}
+  openRotate: 0
+  closeRotate: 0

@@ -1,17 +1,23 @@
 using System;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class PTS_DropdownSearch : Dropdown
+public class PTS_DropdownSearch : TMP_Dropdown
 {
     [SerializeField] private Transform arrow;
-    [SerializeField] private float openRotate = 0;
-    [SerializeField] private float closeRotate = 0;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        arrow = transform.Find("Arrow");
+    }
+
     protected override GameObject CreateDropdownList(GameObject template)
     {
         arrow.DOKill();
-        arrow.DORotate(new Vector3(0, 0, openRotate), 0.2f);
+        arrow.DORotate(new Vector3(0, 0, 180), 0.2f);
         return base.CreateDropdownList(template);
     }
 
@@ -19,6 +25,6 @@ public class PTS_DropdownSearch : Dropdown
     {
         base.DestroyDropdownList(dropdownList);
         arrow.DOKill();
-        arrow.DORotate(new Vector3(0, 0, closeRotate), 0.2f);
+        arrow.DORotate(new Vector3(0, 0, 0), 0.2f);
     }
 }
