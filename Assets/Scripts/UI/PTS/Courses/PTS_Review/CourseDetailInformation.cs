@@ -6,6 +6,8 @@ public class CourseDetailInformation : MonoBehaviour
    public ContainClassGroupUI classGroupUI;
    public InformationType classType;
    public Transform reviewTmp;
+   public Transform openingClass;
+   public Transform openinggroup;
    [ContextMenu("Test")]
    private void Awake()
    {
@@ -38,6 +40,8 @@ public class CourseDetailInformation : MonoBehaviour
       }
       
       reviewTmp.gameObject.SetActive(type == InformationType.JustInformation);
+      openingClass.gameObject.SetActive(type != InformationType.JustInformation);
+      openinggroup.gameObject.SetActive(type != InformationType.JustInformation);
    }
 
    public void Hide()
