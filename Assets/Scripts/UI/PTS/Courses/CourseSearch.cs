@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CourseSearch : MonoBehaviour
 {
@@ -14,9 +15,12 @@ public class CourseSearch : MonoBehaviour
     [SerializeField] private TMP_Dropdown dropdownSort;
     [SerializeField] private Sprite ratingStarSprite;
 
-    [Header("Clear (X) UI")]
+    [Header("Right Icon UI")]
     [SerializeField] private GameObject clearButtonRoot;
-    [SerializeField] private UnityEngine.UI.Button clearButton;
+    [SerializeField] private Button clearButton;
+    [SerializeField] private Image clearButtonImage;
+    [SerializeField] private Sprite spriteSearch;
+    [SerializeField] private Sprite spriteClear;
     [SerializeField] private bool keepFocusAfterClear = true;
 
     [Header("Defaults")]
@@ -39,7 +43,6 @@ public class CourseSearch : MonoBehaviour
 
     private Coroutine _debounceCo;
 
-    // cache last query to skip duplicate searches
     private string _lastKw;
     private int _lastMode;
     private int _lastRating;
@@ -52,12 +55,13 @@ public class CourseSearch : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
-        
+
         AutoBindDropdownRatingImages();
         EnsureDropdownOptions();
         WireUI();
-        RefreshClearButtonUI();
+        RefreshRightIconUI();
     }
 
     private void OnDestroy()
@@ -75,7 +79,6 @@ public class CourseSearch : MonoBehaviour
             ResetQueryCache();
         }
 
-        // Lần đầu vào: chạy ngay để UI có data
         SearchNow();
     }
 
@@ -87,7 +90,6 @@ public class CourseSearch : MonoBehaviour
 
     private void HandleStoreChanged() => RequestSearch();
 
-    // ---------- Public ----------
     public void SearchNow()
     {
         var keyword = inputKeyword != null ? inputKeyword.text : null;
@@ -115,7 +117,7 @@ public class CourseSearch : MonoBehaviour
 
     private void RequestSearch()
     {
-        RefreshClearButtonUI();
+        RefreshRightIconUI();
         StopDebounce();
 
         if (debounceSeconds <= 0f)
@@ -188,16 +190,20 @@ public class CourseSearch : MonoBehaviour
             dropdownSort.RefreshShownValue();
         }
 
-        RefreshClearButtonUI();
+        RefreshRightIconUI();
     }
 
-    // ---------- Wiring ----------
     private void WireUI()
     {
         if (inputKeyword != null)
         {
-            inputKeyword.onValueChanged.AddListener(_ => RequestSearch());
-            inputKeyword.onEndEdit.AddListener(_ => RefreshClearButtonUI());
+            inputKeyword.onValueChanged.AddListener(_ =>
+            {
+                RefreshRightIconUI();
+                RequestSearch();
+            });
+
+            inputKeyword.onEndEdit.AddListener(_ => RefreshRightIconUI());
         }
 
         if (dropdownMode != null) dropdownMode.onValueChanged.AddListener(_ => RequestSearch());
@@ -205,12 +211,32 @@ public class CourseSearch : MonoBehaviour
         if (dropdownSort != null) dropdownSort.onValueChanged.AddListener(_ => RequestSearch());
 
         if (clearButton == null && clearButtonRoot != null)
-            clearButton = clearButtonRoot.GetComponent<UnityEngine.UI.Button>();
+            clearButton = clearButtonRoot.GetComponent<Button>();
+
+        if (clearButtonImage == null && clearButtonRoot != null)
+            clearButtonImage = clearButtonRoot.GetComponent<Image>();
 
         if (clearButton != null)
         {
-            clearButton.onClick.RemoveListener(ClearKeyword);
-            clearButton.onClick.AddListener(ClearKeyword);
+            clearButton.onClick.RemoveListener(OnRightIconClicked);
+            clearButton.onClick.AddListener(OnRightIconClicked);
+        }
+    }
+
+    private void OnRightIconClicked()
+    {
+        bool hasText = inputKeyword != null && !string.IsNullOrEmpty(inputKeyword.text);
+
+        if (hasText)
+        {
+            ClearKeyword();
+            return;
+        }
+
+        if (inputKeyword != null)
+        {
+            inputKeyword.ActivateInputField();
+            inputKeyword.MoveTextEnd(false);
         }
     }
 
@@ -218,8 +244,9 @@ public class CourseSearch : MonoBehaviour
     {
         if (inputKeyword == null) return;
 
-        inputKeyword.text = string.Empty;
-        RefreshClearButtonUI();
+        inputKeyword.SetTextWithoutNotify(string.Empty);
+        RefreshRightIconUI();
+        RequestSearch();
 
         if (keepFocusAfterClear)
         {
@@ -228,14 +255,18 @@ public class CourseSearch : MonoBehaviour
         }
     }
 
-    private void RefreshClearButtonUI()
+    private void RefreshRightIconUI()
     {
         bool hasText = inputKeyword != null && !string.IsNullOrEmpty(inputKeyword.text);
 
-        if (clearButtonRoot != null)
-            clearButtonRoot.SetActive(hasText);
-        else if (clearButton != null)
-            clearButton.gameObject.SetActive(hasText);
+        if (clearButtonRoot != null && !clearButtonRoot.activeSelf)
+            clearButtonRoot.SetActive(true);
+
+        if (clearButtonImage != null)
+        {
+            clearButtonImage.sprite = hasText ? spriteClear : spriteSearch;
+            clearButtonImage.enabled = clearButtonImage.sprite != null;
+        }
     }
 
     private void EnsureDropdownOptions()
@@ -283,18 +314,16 @@ public class CourseSearch : MonoBehaviour
     {
         if (dropdownRating == null) return;
 
-        // caption icon: child name "Icon"
         if (dropdownRating.captionImage == null)
         {
             var cap = dropdownRating.transform.Find("Icon");
-            if (cap != null) dropdownRating.captionImage = cap.GetComponent<UnityEngine.UI.Image>();
+            if (cap != null) dropdownRating.captionImage = cap.GetComponent<Image>();
         }
 
-        // item icon: Template/Viewport/Content/Item/Icon
         if (dropdownRating.itemImage == null && dropdownRating.template != null)
         {
             var itemIcon = dropdownRating.template.Find("Viewport/Content/Item/Icon");
-            if (itemIcon != null) dropdownRating.itemImage = itemIcon.GetComponent<UnityEngine.UI.Image>();
+            if (itemIcon != null) dropdownRating.itemImage = itemIcon.GetComponent<Image>();
         }
     }
 
@@ -304,13 +333,11 @@ public class CourseSearch : MonoBehaviour
         return Mathf.Clamp(dd.value, 0, dd.options.Count - 1);
     }
 
-    // ---------- Search Core ----------
     private List<CourseModels.CourseLite> RunSearch(string keyword, ModeFilter mode, float minStars, SortMode sort)
     {
         var all = CourseStaticStore.GetAll();
         var result = new List<CourseModels.CourseLite>(all.Count);
 
-        // normalize keyword for smart matching
         string kwNorm = NormalizeForSearch(keyword);
         string modeStr = ModeToString(mode);
 
@@ -330,7 +357,6 @@ public class CourseSearch : MonoBehaviour
         return result;
     }
 
-    // keyword matching (roman<->arabic)
     private bool PassKeywordSmart(CourseModels.CourseLite c, string kwNorm)
     {
         if (string.IsNullOrEmpty(kwNorm)) return true;
@@ -368,17 +394,13 @@ public class CourseSearch : MonoBehaviour
         s = RemoveDiacritics(s);
         s = NormalizePunctuationToSpaces(s);
         s = CollapseSpaces(s);
-
-        // roman <-> arabic
         s = RomanTokensToArabic(s);
-
         s = CollapseSpaces(s);
         return s;
     }
 
     private static string RemoveDiacritics(string text)
     {
-        // fast path
         if (string.IsNullOrEmpty(text)) return text;
 
         var normalized = text.Normalize(NormalizationForm.FormD);
@@ -392,7 +414,6 @@ public class CourseSearch : MonoBehaviour
                 sb.Append(c);
         }
 
-        // special Vietnamese đ/Đ
         return sb.ToString()
                  .Normalize(NormalizationForm.FormC)
                  .Replace('đ', 'd')
@@ -407,14 +428,9 @@ public class CourseSearch : MonoBehaviour
             char ch = s[i];
 
             if (char.IsLetterOrDigit(ch))
-            {
                 sb.Append(ch);
-            }
             else
-            {
-                // treat everything else as space
                 sb.Append(' ');
-            }
         }
         return sb.ToString();
     }
@@ -447,7 +463,6 @@ public class CourseSearch : MonoBehaviour
         return sb.ToString().Trim();
     }
 
-    // Converts standalone roman numeral tokens to arabic number tokens (I..XX)
     private static string RomanTokensToArabic(string s)
     {
         if (string.IsNullOrEmpty(s)) return s;
@@ -458,22 +473,17 @@ public class CourseSearch : MonoBehaviour
             string t = parts[i];
             if (string.IsNullOrEmpty(t)) continue;
 
-            // roman tokens often appear as i, ii, iii, iv, v...
             int val = RomanToInt(t);
             if (val > 0)
-            {
                 parts[i] = val.ToString();
-            }
         }
         return string.Join(" ", parts);
     }
 
-    // Supports up to 3999, but we only need small (I..XX etc.)
     private static int RomanToInt(string roman)
     {
         if (string.IsNullOrEmpty(roman)) return 0;
 
-        // quick filter: roman contains only i,v,x,l,c,d,m
         for (int i = 0; i < roman.Length; i++)
         {
             char ch = roman[i];
@@ -493,7 +503,6 @@ public class CourseSearch : MonoBehaviour
             else { total += v; prev = v; }
         }
 
-        // avoid converting random short token "i" inside word? (we already tokenized by spaces)
         return total;
     }
 
