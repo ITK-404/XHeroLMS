@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -43,10 +44,18 @@ public class ReviewCommentUI : MonoBehaviour
         if (avatarCoroutine != null)
             StopCoroutine(avatarCoroutine);
 
-        if (!string.IsNullOrEmpty(avatarUrl) && avatarImg != null)
+        if (!string.IsNullOrEmpty(avatarUrl) && avatarImg != null && avatarImg.gameObject.activeSelf)
             avatarCoroutine = StartCoroutine(LoadAvatar(avatarImg, avatarUrl, fallbackAvatar));
 
         BuildImages(imageUrls);
+    }
+
+    private void OnDisable()
+    {
+        if (avatarCoroutine != null)
+        {
+            StopCoroutine(avatarCoroutine);
+        }
     }
 
     private void BuildImages(List<string> imageUrls)
