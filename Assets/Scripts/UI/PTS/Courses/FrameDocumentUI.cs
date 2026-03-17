@@ -16,7 +16,7 @@ public class FrameDocumentUI : PanelBaseUI
     public override void Show()
     {
         base.Show();
-        ShowDocument("https://drive.google.com/file/d/19yJFo1MIqQjJiE-BlU1kn6JHXkC189NN/view?usp=sharing");
+        ShowDocument("");
     }
 
     public override void Hide()

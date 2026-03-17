@@ -21,7 +21,8 @@ public class InteractionManagerUI : MonoBehaviour
         
         UIManager.CourseMenuButtons.Show();
         UIManager.InputCanvas.Show();
-        UIManager.PlayerPanelUI.ShowAll();
+        // UIManager.PlayerPanelUI.ShowAll();
+        UIManager.PlayerPanelUI.playerInformation.gameObject.SetActive(true);
     }
 
     public void OnEnterCourseView()
@@ -30,7 +31,9 @@ public class InteractionManagerUI : MonoBehaviour
         
         UIManager.CourseMenuButtons.Hide();
         UIManager.InputCanvas.Hide();
-        UIManager.PlayerPanelUI.HideAll();
+        UIManager.PlayerPanelUI.playerInformation.gameObject.SetActive(false);
+        
+        // UIManager.PlayerPanelUI.HideAll();
     }
     
     private void Update()
