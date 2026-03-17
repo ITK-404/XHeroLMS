@@ -390,7 +390,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1663457080303424007, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_text
-      value: 
+      value: "T\u1EA5t c\u1EA3"
       objectReference: {fileID: 0}
     - target: {fileID: 1676219753229565868, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Pivot.x
@@ -996,6 +996,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3963923877445654880, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: dropdownMode
+      value: 
+      objectReference: {fileID: 119580742749182721}
+    - target: {fileID: 3963923877445654880, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: dropdownSort
+      value: 
+      objectReference: {fileID: 5380735821186191913}
+    - target: {fileID: 3963923877445654880, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: dropdownRating
+      value: 
+      objectReference: {fileID: 9131583504253871718}
     - target: {fileID: 4092467064533420999, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -1054,7 +1066,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4207625627070803087, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Size
-      value: 0.75
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4207625627070803087, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Value
@@ -1262,7 +1274,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5004992230779654632, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Size
-      value: 0.75
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5004992230779654632, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Value
@@ -1878,7 +1890,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8169702909360842151, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Size
-      value: 0.75
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8169702909360842151, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Value
@@ -2043,6 +2055,17 @@ PrefabInstance:
       addedObject: {fileID: 267540752907485132}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+--- !u!114 &119580742749182721 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7884445032204764178, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd472679174d64a3e998ec0b0411baaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_DropdownSearch
 --- !u!224 &1482622558841403222 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8669622428803704901, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2100,6 +2123,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 2786421394218383335, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
   m_PrefabInstance: {fileID: 7837383715287359251}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5380735821186191913 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2769656933016636730, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd472679174d64a3e998ec0b0411baaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_DropdownSearch
 --- !u!1 &5649583364283228809 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2496296934104153498, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2214,3 +2248,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &9131583504253871718 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1331407589945915765, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd472679174d64a3e998ec0b0411baaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_DropdownSearch
