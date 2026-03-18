@@ -24,8 +24,8 @@ public class CourseSearch : MonoBehaviour
     [SerializeField] private bool keepFocusAfterClear = true;
 
     [Header("Defaults")]
-    [Tooltip("Nếu true: mỗi lần mở màn (OnEnable) sẽ reset keyword + dropdown về 'Tất cả'.")]
-    [SerializeField] private bool resetToDefaultOnEnable = true;
+    [Tooltip("Nếu true: chỉ reset mặc định ở lần enable đầu tiên của object, không reset lại mỗi lần đóng/mở panel.")]
+    [SerializeField] private bool resetToDefaultOnFirstEnableOnly = true;
 
     [Header("Behavior")]
     [Tooltip("Delay in seconds to reduce searching every keystroke (mobile-friendly). 0 = no debounce.")]
@@ -36,10 +36,40 @@ public class CourseSearch : MonoBehaviour
     public IReadOnlyList<CourseModels.CourseLite> LastResults => _lastResults;
     private readonly List<CourseModels.CourseLite> _lastResults = new();
 
-    private enum ModeFilter { Any = 0, Zoom = 1, Online = 2, Offline = 3 }
-    private enum SortMode { Any = 0, NewestFirst = 1, OldestFirst = 2, PriceHighToLow = 3, PriceLowToHigh = 4 }
-
     public static CourseSearch Instance { get; private set; }
+
+    public bool IsSearchActive
+    {
+        get
+        {
+            string keyword = inputKeyword != null ? inputKeyword.text : string.Empty;
+            int modeV = GetDropdownValueSafe(dropdownMode);
+            int ratingV = GetDropdownValueSafe(dropdownRating);
+            int sortV = GetDropdownValueSafe(dropdownSort);
+
+            return !string.IsNullOrWhiteSpace(keyword)
+                   || modeV != 0
+                   || ratingV != 0
+                   || sortV != 0;
+        }
+    }
+
+    private enum ModeFilter
+    {
+        Any = 0,
+        Zoom = 1,
+        Online = 2,
+        Offline = 3
+    }
+
+    private enum SortMode
+    {
+        Any = 0,
+        NewestFirst = 1,
+        OldestFirst = 2,
+        PriceHighToLow = 3,
+        PriceLowToHigh = 4
+    }
 
     private Coroutine _debounceCo;
 
@@ -47,6 +77,9 @@ public class CourseSearch : MonoBehaviour
     private int _lastMode;
     private int _lastRating;
     private int _lastSort;
+
+    private bool _uiWired;
+    private bool _didFirstEnableReset;
 
     private void Awake()
     {
@@ -64,22 +97,19 @@ public class CourseSearch : MonoBehaviour
         RefreshRightIconUI();
     }
 
-    private void OnDestroy()
-    {
-        if (Instance == this) Instance = null;
-    }
-
     private void OnEnable()
     {
         CourseStaticStore.OnChanged += HandleStoreChanged;
 
-        if (resetToDefaultOnEnable)
+        if (resetToDefaultOnFirstEnableOnly && !_didFirstEnableReset)
         {
             ResetToDefaults();
             ResetQueryCache();
+            _lastResults.Clear();
+            _didFirstEnableReset = true;
         }
 
-        SearchNow();
+        RefreshRightIconUI();
     }
 
     private void OnDisable()
@@ -88,7 +118,19 @@ public class CourseSearch : MonoBehaviour
         StopDebounce();
     }
 
-    private void HandleStoreChanged() => RequestSearch();
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+
+        UnwireUI();
+    }
+
+    private void HandleStoreChanged()
+    {
+        if (IsSearchActive)
+            RequestSearch();
+    }
 
     public void SearchNow()
     {
@@ -98,8 +140,21 @@ public class CourseSearch : MonoBehaviour
         int ratingV = GetDropdownValueSafe(dropdownRating);
         int sortV = GetDropdownValueSafe(dropdownSort);
 
+        bool isActive = !string.IsNullOrWhiteSpace(keyword)
+                        || modeV != 0
+                        || ratingV != 0
+                        || sortV != 0;
+
+        if (!isActive)
+        {
+            ResetQueryCache();
+            _lastResults.Clear();
+            OnResultsChanged?.Invoke(_lastResults);
+            return;
+        }
+
         if (SameQuery(keyword, modeV, ratingV, sortV))
-            if (_lastResults.Count > 0) return;
+            return;
 
         CacheQuery(keyword, modeV, ratingV, sortV);
 
@@ -167,6 +222,15 @@ public class CourseSearch : MonoBehaviour
         _lastSort = -999;
     }
 
+    public void ResetSearchAndNotify()
+    {
+        StopDebounce();
+        ResetToDefaults();
+        ResetQueryCache();
+        _lastResults.Clear();
+        OnResultsChanged?.Invoke(_lastResults);
+    }
+
     private void ResetToDefaults()
     {
         if (inputKeyword != null)
@@ -195,20 +259,23 @@ public class CourseSearch : MonoBehaviour
 
     private void WireUI()
     {
+        if (_uiWired)
+            return;
+
         if (inputKeyword != null)
         {
-            inputKeyword.onValueChanged.AddListener(_ =>
-            {
-                RefreshRightIconUI();
-                RequestSearch();
-            });
-
-            inputKeyword.onEndEdit.AddListener(_ => RefreshRightIconUI());
+            inputKeyword.onValueChanged.AddListener(HandleKeywordValueChanged);
+            inputKeyword.onEndEdit.AddListener(HandleKeywordEndEdit);
         }
 
-        if (dropdownMode != null) dropdownMode.onValueChanged.AddListener(_ => RequestSearch());
-        if (dropdownRating != null) dropdownRating.onValueChanged.AddListener(_ => RequestSearch());
-        if (dropdownSort != null) dropdownSort.onValueChanged.AddListener(_ => RequestSearch());
+        if (dropdownMode != null)
+            dropdownMode.onValueChanged.AddListener(HandleDropdownModeChanged);
+
+        if (dropdownRating != null)
+            dropdownRating.onValueChanged.AddListener(HandleDropdownRatingChanged);
+
+        if (dropdownSort != null)
+            dropdownSort.onValueChanged.AddListener(HandleDropdownSortChanged);
 
         if (clearButton == null && clearButtonRoot != null)
             clearButton = clearButtonRoot.GetComponent<Button>();
@@ -221,6 +288,60 @@ public class CourseSearch : MonoBehaviour
             clearButton.onClick.RemoveListener(OnRightIconClicked);
             clearButton.onClick.AddListener(OnRightIconClicked);
         }
+
+        _uiWired = true;
+    }
+
+    private void UnwireUI()
+    {
+        if (!_uiWired)
+            return;
+
+        if (inputKeyword != null)
+        {
+            inputKeyword.onValueChanged.RemoveListener(HandleKeywordValueChanged);
+            inputKeyword.onEndEdit.RemoveListener(HandleKeywordEndEdit);
+        }
+
+        if (dropdownMode != null)
+            dropdownMode.onValueChanged.RemoveListener(HandleDropdownModeChanged);
+
+        if (dropdownRating != null)
+            dropdownRating.onValueChanged.RemoveListener(HandleDropdownRatingChanged);
+
+        if (dropdownSort != null)
+            dropdownSort.onValueChanged.RemoveListener(HandleDropdownSortChanged);
+
+        if (clearButton != null)
+            clearButton.onClick.RemoveListener(OnRightIconClicked);
+
+        _uiWired = false;
+    }
+
+    private void HandleKeywordValueChanged(string _)
+    {
+        RefreshRightIconUI();
+        RequestSearch();
+    }
+
+    private void HandleKeywordEndEdit(string _)
+    {
+        RefreshRightIconUI();
+    }
+
+    private void HandleDropdownModeChanged(int _)
+    {
+        RequestSearch();
+    }
+
+    private void HandleDropdownRatingChanged(int _)
+    {
+        RequestSearch();
+    }
+
+    private void HandleDropdownSortChanged(int _)
+    {
+        RequestSearch();
     }
 
     private void OnRightIconClicked()
@@ -317,25 +438,31 @@ public class CourseSearch : MonoBehaviour
         if (dropdownRating.captionImage == null)
         {
             var cap = dropdownRating.transform.Find("Icon");
-            if (cap != null) dropdownRating.captionImage = cap.GetComponent<Image>();
+            if (cap != null)
+                dropdownRating.captionImage = cap.GetComponent<Image>();
         }
 
         if (dropdownRating.itemImage == null && dropdownRating.template != null)
         {
             var itemIcon = dropdownRating.template.Find("Viewport/Content/Item/Icon");
-            if (itemIcon != null) dropdownRating.itemImage = itemIcon.GetComponent<Image>();
+            if (itemIcon != null)
+                dropdownRating.itemImage = itemIcon.GetComponent<Image>();
         }
     }
 
     private int GetDropdownValueSafe(TMP_Dropdown dd)
     {
         if (dd == null) return 0;
+        if (dd.options == null || dd.options.Count == 0) return 0;
         return Mathf.Clamp(dd.value, 0, dd.options.Count - 1);
     }
 
     private List<CourseModels.CourseLite> RunSearch(string keyword, ModeFilter mode, float minStars, SortMode sort)
     {
         var all = CourseStaticStore.GetAll();
+        if (all == null || all.Count == 0)
+            return new List<CourseModels.CourseLite>();
+
         var result = new List<CourseModels.CourseLite>(all.Count);
 
         string kwNorm = NormalizeForSearch(keyword);
@@ -373,11 +500,13 @@ public class CourseSearch : MonoBehaviour
 
     private bool ContainsSmart(string hayRaw, string kwNorm)
     {
-        if (string.IsNullOrEmpty(hayRaw) || string.IsNullOrEmpty(kwNorm)) return false;
+        if (string.IsNullOrEmpty(hayRaw) || string.IsNullOrEmpty(kwNorm))
+            return false;
 
         string hayNorm = NormalizeForSearch(hayRaw);
 
-        if (hayNorm.Contains(kwNorm)) return true;
+        if (hayNorm.Contains(kwNorm))
+            return true;
 
         var kwNoSpace = kwNorm.Replace(" ", "");
         if (!string.IsNullOrEmpty(kwNoSpace) && hayNorm.Replace(" ", "").Contains(kwNoSpace))
@@ -388,7 +517,8 @@ public class CourseSearch : MonoBehaviour
 
     private string NormalizeForSearch(string s)
     {
-        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(s))
+            return string.Empty;
 
         s = s.Trim().ToLowerInvariant();
         s = RemoveDiacritics(s);
@@ -423,6 +553,7 @@ public class CourseSearch : MonoBehaviour
     private static string NormalizePunctuationToSpaces(string s)
     {
         var sb = new StringBuilder(s.Length);
+
         for (int i = 0; i < s.Length; i++)
         {
             char ch = s[i];
@@ -432,6 +563,7 @@ public class CourseSearch : MonoBehaviour
             else
                 sb.Append(' ');
         }
+
         return sb.ToString();
     }
 
@@ -445,6 +577,7 @@ public class CourseSearch : MonoBehaviour
         for (int i = 0; i < s.Length; i++)
         {
             char ch = s[i];
+
             if (ch == ' ')
             {
                 if (!prevSpace)
@@ -477,6 +610,7 @@ public class CourseSearch : MonoBehaviour
             if (val > 0)
                 parts[i] = val.ToString();
         }
+
         return string.Join(" ", parts);
     }
 
@@ -500,7 +634,11 @@ public class CourseSearch : MonoBehaviour
             if (v == 0) return 0;
 
             if (v < prev) total -= v;
-            else { total += v; prev = v; }
+            else
+            {
+                total += v;
+                prev = v;
+            }
         }
 
         return total;
@@ -524,6 +662,7 @@ public class CourseSearch : MonoBehaviour
     private bool PassMode(CourseModels.CourseLite c, string modeLowerOrNull)
     {
         if (string.IsNullOrEmpty(modeLowerOrNull)) return true;
+
         var m = Normalize(c.learningMode);
         return string.Equals(m, modeLowerOrNull, StringComparison.OrdinalIgnoreCase);
     }
@@ -536,7 +675,8 @@ public class CourseSearch : MonoBehaviour
 
     private void ApplySort(List<CourseModels.CourseLite> list, SortMode sort)
     {
-        if (list == null || list.Count <= 1) return;
+        if (list == null || list.Count <= 1)
+            return;
 
         switch (sort)
         {
@@ -655,5 +795,8 @@ public class CourseSearch : MonoBehaviour
         }
     }
 
-    private string Normalize(string s) => string.IsNullOrEmpty(s) ? null : s.Trim().ToLowerInvariant();
+    private string Normalize(string s)
+    {
+        return string.IsNullOrEmpty(s) ? null : s.Trim().ToLowerInvariant();
+    }
 }
