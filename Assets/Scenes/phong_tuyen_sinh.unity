@@ -6571,6 +6571,12 @@ MonoBehaviour:
   prewarmCount: 20
   buildFromStoreOnStartIfNoSearch: 1
   applyDefaultPrioritySortOnFallback: 1
+  freezeInitialFallbackSnapshot: 1
+  coalesceBuildRequests: 1
+  immediateRenderCount: 10
+  batchSize: 8
+  delayBetweenBatches: 0
+  enableBuildProfilerLog: 0
 --- !u!1001 &421441721
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18843,6 +18849,10 @@ PrefabInstance:
     - target: {fileID: 2419355428890684258, guid: c173ad180bac74b3184ee63d4fc051cd, type: 3}
       propertyPath: m_Name
       value: PTS_ObjectManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 2419355428890684258, guid: c173ad180bac74b3184ee63d4fc051cd, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3151455768899955837, guid: c173ad180bac74b3184ee63d4fc051cd, type: 3}
       propertyPath: m_Enabled
