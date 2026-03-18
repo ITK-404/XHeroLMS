@@ -22,6 +22,7 @@ public class EduCourseElement : MonoBehaviour
     [SerializeField] private Sprite fallbackSprite;
 
     [SerializeField] private UnityEvent OnChangeViewClicked;
+    
 
     private string _courseId;
     private Coroutine _loadImageRoutine;
