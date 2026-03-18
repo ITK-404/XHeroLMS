@@ -5,16 +5,42 @@ using UnityEngine;
 
 public class FrameEduCourseUI : PanelBaseUI
 {
+    private SnapElementCenterScrollView snapElementCenterScrollView;
+    
     private int currentIndex = -1;
     private Tween moveTween;
 
     private int ChildCount => (scrollView != null && scrollView.content != null) ? scrollView.content.childCount : 0;
     private bool firstInit = false;
 
+    private void Awake()
+    {
+        snapElementCenterScrollView = GetComponent<SnapElementCenterScrollView>();
+    }
+    
+    private void OnUpdateCenterIndexEvent(int newIndex)
+    {
+        currentIndex = newIndex;
+    }
+
     private void OnEnable()
     {
         PTS_FrameArrowNavigation.AssignCallback(PreviousIndex,NextIndex);
         FirstIndex();
+        
+        if (snapElementCenterScrollView)
+        {
+            snapElementCenterScrollView.OnUpdateCenterIndexEvent += OnUpdateCenterIndexEvent;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (snapElementCenterScrollView)
+        {
+            snapElementCenterScrollView.OnUpdateCenterIndexEvent -= OnUpdateCenterIndexEvent;
+        }
+        
     }
 
     [ContextMenu("First Index")]
