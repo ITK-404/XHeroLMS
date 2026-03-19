@@ -49,7 +49,8 @@ public class PTS_WorldSpaceUI : WorldSpaceUI
         if (isWorldSpaceUI)
         {
             // Create a billboard that faces the camera but stays upright to prevent distortion/tilt.
-            Vector3 dir = wrapperCamera.transform.position - transform.position;
+            // Vector3 dir = wrapperCamera.transform.position - transform.position;
+            Vector3 dir = -target.transform.forward;
             dir.y = 0f; // keep the UI upright (no pitch)
             if (dir.sqrMagnitude > 0.0001f)
             {
