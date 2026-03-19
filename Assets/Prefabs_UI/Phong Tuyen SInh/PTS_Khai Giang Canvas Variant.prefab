@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 8576268426908399483}
   - component: {fileID: 7047068645128229002}
   - component: {fileID: 6577223721502319644}
+  - component: {fileID: 3094070949514951189}
   m_Layer: 5
   m_Name: All-View Manager
   m_TagString: Untagged
@@ -156,6 +157,24 @@ MonoBehaviour:
   contentParent: {fileID: 9013742003287498928}
   reviewPrefab: {fileID: 3300304724143309892, guid: 0cd7ba4d15d04461ca9633f72391f9a0, type: 3}
   fallbackAvatar: {fileID: 21300000, guid: 6b85cd7bf87700c45b67cc8717b6a242, type: 3}
+--- !u!114 &3094070949514951189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 596990001843663279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d1bd2545518d214e82c0b3dcbeb58eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_WebView
+  buyNowButton: {fileID: 1269841556871132242}
+  priceText: {fileID: 5031330974805055190}
+  buyTextPrefix: "MUA NGAY GI\xC1 "
+  ownedText: "\u0110\xC3 S\u1EDE H\u1EEEU"
+  loadingText: "\u0110ang t\u1EA3i..."
+  emptyText: "Ch\u01B0a c\xF3 d\u1EEF li\u1EC7u"
 --- !u!1001 &4230117518475769151
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1527,6 +1546,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3748873337681971863, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
   m_PrefabInstance: {fileID: 4230117518475769151}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1269841556871132242 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3110588022986539373, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 4230117518475769151}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &1734103205065459877 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2496296934104153498, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -1622,6 +1652,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8632b9bebf94a8a9bc9e4b4da257995, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PanelBaseUI
+--- !u!114 &5031330974805055190 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9180171837417153513, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 4230117518475769151}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!114 &5432464582964170575 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8203193170719144560, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
