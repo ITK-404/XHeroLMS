@@ -31,7 +31,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txt_rating;
     [SerializeField] private TextMeshProUGUI txt_priceDiscount;
     [SerializeField] private TextMeshProUGUI txt_priceOrigin;
-
+    
     [SerializeField] private CourseDetailLoader courseDetailLoader;
     [SerializeField] private CourseReviewLoader courseReviewLoader;
 
@@ -177,7 +177,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (txt_priceOrigin != null)
         {
             string orgText = (price != null && price.isFree) ? "" : FormatVndCompact(org);
-            if (string.IsNullOrEmpty(orgText)) orgText = "—";
+            if (string.IsNullOrEmpty(orgText)) orgText = "";
 
             txt_priceOrigin.text = $"<size=80%><s>{orgText}</s></size>";
             txt_priceOrigin.gameObject.SetActive(true);
