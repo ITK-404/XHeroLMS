@@ -48,6 +48,7 @@ public class PTS_ViewManager : MonoBehaviour
             {
                 Current = view;
                 view.Show();
+                view.ShowDefault();
             }
         }
     }

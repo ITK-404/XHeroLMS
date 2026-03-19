@@ -41,6 +41,11 @@ public class PTS_BaseView : UIView
     [Header("Settings")]
     [SerializeField] protected PTS_ButtonGroupHandle btnGroupHandle;
     [SerializeField] protected Button btnReturn;
+
+    public virtual void ShowDefault()
+    {
+        
+    }
 }
 public class PTS_CourseDetailView : PTS_BaseView
 {
@@ -84,6 +89,8 @@ public class PTS_CourseDetailView : PTS_BaseView
         {
             var previous = simpleHistory.Pop();
             NavigateTo(previous, false);
+            Debug.Log($"[Course View] Pop {previous}");
+            
             return;
         }
 
@@ -100,6 +107,7 @@ public class PTS_CourseDetailView : PTS_BaseView
 
         if (saveHistory && current != CourseDetailSection.None)
         {
+            Debug.Log($"[Course View] Push {target}");
             simpleHistory.Push(current);
         }
 
@@ -155,5 +163,12 @@ public class PTS_CourseDetailView : PTS_BaseView
         Debug.Log("Show detail view");
         Show();
         NavigateTo(CourseDetailSection.Detail);
+    }
+
+    public override void ShowDefault()
+    {
+        base.ShowDefault();
+        simpleHistory.Clear();
+        NavigateTo(CourseDetailSection.Intro);
     }
 }
