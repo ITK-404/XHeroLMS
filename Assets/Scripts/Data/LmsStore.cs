@@ -588,6 +588,7 @@ public class LmsCourse
     public string thumbnail;
     public float price;
     public bool isFree;
+    public bool isJoined;
 
     public SeoInfo seo;
     public string image;
@@ -636,6 +637,7 @@ public class LmsCoursePrivate
     public long startSellTime;    // JSON: startSellTime (unix seconds). Nếu BE đôi lúc null -> đổi sang string/object.
 
     public List<LmsRelatedCourse> upsell;
+    public LmsCoursePrice coursePrice;
 }
 // Chương trong private
 [Serializable]

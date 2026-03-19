@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 6657832490587946587}
   - component: {fileID: 6208456716871359032}
   - component: {fileID: 7771490807116223028}
+  - component: {fileID: 3109785628144454363}
   m_Layer: 5
   m_Name: All-View Manager
   m_TagString: Untagged
@@ -169,6 +170,24 @@ MonoBehaviour:
   itemPrefab: {fileID: 4652152576786437940, guid: 8eab89f243743af42b00479550c6e0ce, type: 3}
   contentParent: {fileID: 6733029512885493823}
   debugLogEndOfFrameAfterFirstVisible: 1
+--- !u!114 &3109785628144454363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794090952893007926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d1bd2545518d214e82c0b3dcbeb58eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PTS_WebView
+  buyNowButton: {fileID: 5181670258390392446}
+  priceText: {fileID: 1415677653350431994}
+  buyTextPrefix: "MUA NGAY GI\xC1 "
+  ownedText: "\u0110\xC3 S\u1EDE H\u1EEEU"
+  loadingText: "\u0110ang t\u1EA3i..."
+  emptyText: "Ch\u01B0a c\xF3 d\u1EEF li\u1EC7u"
 --- !u!1001 &7837383715287359251
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2131,6 +2150,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd472679174d64a3e998ec0b0411baaa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PTS_DropdownSearch
+--- !u!114 &1415677653350431994 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9180171837417153513, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!224 &1482622558841403222 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8669622428803704901, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2178,6 +2208,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3302437704400666231, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
   m_PrefabInstance: {fileID: 7837383715287359251}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5181670258390392446 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3110588022986539373, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &5294626525964664987 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2718397583392137096, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
