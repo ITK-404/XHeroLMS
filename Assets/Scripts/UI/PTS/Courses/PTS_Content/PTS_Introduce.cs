@@ -272,7 +272,7 @@ public class PTS_Introduce : MonoBehaviour
             if (target != null)
             {
                 target.sprite = sprite;
-                target.preserveAspect = true;
+                target.preserveAspect = false;
             }
         }
     }
