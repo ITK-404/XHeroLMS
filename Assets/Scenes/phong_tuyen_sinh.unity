@@ -6567,16 +6567,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PTS_CourseListBuilder
   itemPrefab: {fileID: 4652152576786437940, guid: 8eab89f243743af42b00479550c6e0ce, type: 3}
   contentParent: {fileID: 798416835}
-  usePooling: 1
-  prewarmCount: 20
-  buildFromStoreOnStartIfNoSearch: 1
-  applyDefaultPrioritySortOnFallback: 1
-  freezeInitialFallbackSnapshot: 1
-  coalesceBuildRequests: 1
-  immediateRenderCount: 10
-  batchSize: 8
-  delayBetweenBatches: 0
-  enableBuildProfilerLog: 0
+  debugLogEndOfFrameAfterFirstVisible: 1
 --- !u!1001 &421441721
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -19032,7 +19023,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2419355428890684258, guid: c173ad180bac74b3184ee63d4fc051cd, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3151455768899955837, guid: c173ad180bac74b3184ee63d4fc051cd, type: 3}
       propertyPath: m_Enabled
