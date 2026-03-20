@@ -54,7 +54,7 @@ public class PTS_WebView : MonoBehaviour
             return;
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         var courseId = CourseDetailStaticStore.CurrentCourseId;
 
         if (!CourseDetailStaticStore.HasData || course == null || string.IsNullOrWhiteSpace(courseId))
@@ -80,7 +80,7 @@ public class PTS_WebView : MonoBehaviour
 
     private void OnClickBuyNow()
     {
-        var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         string courseId = CourseDetailStaticStore.CurrentCourseId;
 
         if (course == null || string.IsNullOrWhiteSpace(courseId))
@@ -143,7 +143,8 @@ public class PTS_WebView : MonoBehaviour
             buyNowButton.interactable = state;
     }
 
-    private string GetCurrentPriceText(LmsCoursePrivate course)
+    // private string GetCurrentPriceText(LmsCoursePrivate course)
+    private string GetCurrentPriceText(CourseModels.CourseDetail course)
     {
         if (course == null || course.coursePrice == null)
             return "0đ";

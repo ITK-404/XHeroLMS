@@ -22,7 +22,6 @@ public class EduCourseElement : MonoBehaviour
     [SerializeField] private Sprite fallbackSprite;
 
     [SerializeField] private UnityEvent OnChangeViewClicked;
-    
 
     private string _courseId;
     private Coroutine _loadImageRoutine;
@@ -48,11 +47,11 @@ public class EduCourseElement : MonoBehaviour
             StopCoroutine(_waitDataRoutine);
     }
 
-    public void Setup(CourseModels.CourseLite data)
+    public void Setup(CourseListItemData data)
     {
         if (data == null) return;
 
-        _courseId = data._id;
+        _courseId = data.id;
 
         if (courseTitle != null)
             courseTitle.text = string.IsNullOrWhiteSpace(data.title) ? "Khóa học" : data.title;
@@ -96,6 +95,12 @@ public class EduCourseElement : MonoBehaviour
         if (string.IsNullOrEmpty(_courseId))
         {
             Debug.LogWarning("[EduCourseElement] courseId is null/empty");
+            return;
+        }
+
+        if (courseDetailLoader == null || courseReviewLoader == null)
+        {
+            Debug.LogWarning("[EduCourseElement] Missing courseDetailLoader or courseReviewLoader");
             return;
         }
 
@@ -178,7 +183,7 @@ public class EduCourseElement : MonoBehaviour
         return CourseDetailStaticStore.HasData
                && !CourseDetailStaticStore.IsLoading
                && CourseDetailStaticStore.CurrentCourseId == courseId
-               && CourseDetailStaticStore.CurrentCourse != null;
+               && CourseDetailStaticStore.CurrentDetail != null;
     }
 
     private bool IsCourseReviewLoaded(string courseId)

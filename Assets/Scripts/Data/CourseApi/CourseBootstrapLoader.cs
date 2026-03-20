@@ -3,21 +3,28 @@ using System.Collections;
 
 public class CourseBootstrapLoader : MonoBehaviour
 {
-    public CourseApiClient api;
+    [SerializeField] private CourseApiClient api;
 
     private IEnumerator Start()
     {
-        if (CourseStaticStore.HasData) yield break; // đã có thì thôi
+        if (CourseStaticStore.HasData)
+            yield break;
 
-        yield return api.FetchAllCoursesLite(
-            onDone: resp =>
+        if (api == null)
+        {
+            Debug.LogError("[CourseBootstrapLoader] CourseApiClient is not assigned.");
+            yield break;
+        }
+
+        yield return api.FetchAllCourseListItems(
+            onDone: items =>
             {
-                CourseStaticStore.SetCoursesLite(resp);
-                Debug.Log("Loaded courses: " + CourseStaticStore.Count);
+                CourseStaticStore.SetItems(items);
+                Debug.Log("[CourseBootstrapLoader] Loaded courses: " + CourseStaticStore.Count);
             },
             onError: err =>
             {
-                Debug.LogError("FetchAllCourses error:\n" + err);
+                Debug.LogError("[CourseBootstrapLoader] FetchAllCourseListItems error:\n" + err);
             }
         );
     }

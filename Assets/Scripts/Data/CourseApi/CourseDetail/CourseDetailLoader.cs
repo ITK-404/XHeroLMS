@@ -6,23 +6,25 @@ using UnityEngine.Networking;
 public class CourseDetailLoader : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrl = "";
+    [SerializeField] private string baseUrl = "";
 
+    [Header("Config")]
     [SerializeField] private int timeoutSeconds = 20;
+    [SerializeField] private bool clearStoreBeforeLoad = true;
+
+    [Header("Auth")]
+    [SerializeField] private string overrideAccessToken = "";
+    [SerializeField] private bool useTokenFromStore = true;
 
     [Header("Debug")]
     [SerializeField] private bool debugLog = true;
 
-    // runtime
     private Coroutine _loadRoutine;
     private UnityWebRequest _activeRequest;
-
-    // Dùng để chặn request cũ ghi đè request mới
     private int _loadVersion = 0;
 
     private void Awake()
     {
-        // Ưu tiên lấy từ LmsStore nếu user chưa set trong inspector
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
             if (LmsStore.Instance != null && !string.IsNullOrWhiteSpace(LmsStore.Instance.baseUrl))
@@ -35,15 +37,8 @@ public class CourseDetailLoader : MonoBehaviour
             Debug.Log($"[CourseDetailLoader] Awake baseUrl='{baseUrl}'");
     }
 
-    /// <summary>
-    /// Load course detail và lưu vào CourseDetailStaticStore.
-    /// Nếu đang load course khác, sẽ huỷ và reset trước.
-    /// </summary>
-    public void Load(string courseId) => Load(courseId, forceReload: false);
+    public void Load(string courseId) => Load(courseId, false);
 
-    /// <summary>
-    /// forceReload=true: bỏ qua check HasData + CurrentCourseId (luôn gọi lại API)
-    /// </summary>
     public void Load(string courseId, bool forceReload)
     {
         if (string.IsNullOrWhiteSpace(courseId))
@@ -56,33 +51,30 @@ public class CourseDetailLoader : MonoBehaviour
 
         if (debugLog)
         {
-            Debug.Log($"[CourseDetailLoader] Load({courseId}) forceReload={forceReload} | StoreId={CourseDetailStaticStore.CurrentCourseId} | HasData={CourseDetailStaticStore.HasData}");
+            Debug.Log(
+                $"[CourseDetailLoader] Load({courseId}) forceReload={forceReload} | " +
+                $"StoreId={CourseDetailStaticStore.CurrentCourseId} | HasData={CourseDetailStaticStore.HasData}"
+            );
         }
 
-        // Nếu đang có data đúng courseId rồi thì khỏi gọi lại (trừ khi forceReload)
         if (!forceReload &&
             CourseDetailStaticStore.HasData &&
-            CourseDetailStaticStore.CurrentCourseId == courseId)
+            CourseDetailStaticStore.IsCurrent(courseId))
         {
             if (debugLog)
-                Debug.Log("[CourseDetailLoader] Skip reload because store already has this courseId.");
+                Debug.Log("[CourseDetailLoader] Skip reload because detail store already has this course.");
             return;
         }
 
-        // Huỷ request cũ + reset store
         Dispose();
-
-        // Tăng version để invalidate mọi request/Coroutine cũ
         _loadVersion++;
 
-        CourseDetailStaticStore.Reset();
+        if (clearStoreBeforeLoad)
+            CourseDetailStaticStore.Reset();
 
         _loadRoutine = StartCoroutine(LoadRoutine(courseId, _loadVersion));
     }
 
-    /// <summary>
-    /// Huỷ request đang chạy (khi vào khóa khác / đổi scene).
-    /// </summary>
     public void Dispose()
     {
         if (_loadRoutine != null)
@@ -93,8 +85,8 @@ public class CourseDetailLoader : MonoBehaviour
 
         if (_activeRequest != null)
         {
-            try { _activeRequest.Abort(); } catch { /* ignore */ }
-            _activeRequest.Dispose();
+            try { _activeRequest.Abort(); } catch { }
+            try { _activeRequest.Dispose(); } catch { }
             _activeRequest = null;
         }
     }
@@ -109,8 +101,8 @@ public class CourseDetailLoader : MonoBehaviour
             yield break;
         }
 
-        // Thêm cache-buster để tránh proxy/server cache trả data cũ
-        var url = $"{baseUrl}/lms/courses/{courseId}?t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        string token = GetToken();
+        string url = $"{baseUrl}/lms/courses/{courseId}?t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
 
         if (debugLog)
             Debug.Log($"[CourseDetailLoader] v{version} GET: {url}");
@@ -118,18 +110,22 @@ public class CourseDetailLoader : MonoBehaviour
         _activeRequest = UnityWebRequest.Get(url);
         _activeRequest.timeout = timeoutSeconds;
 
-        // Chặn cache ở client/proxy phổ biến
+        _activeRequest.SetRequestHeader("Accept", "application/json");
         _activeRequest.SetRequestHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         _activeRequest.SetRequestHeader("Pragma", "no-cache");
         _activeRequest.SetRequestHeader("Expires", "0");
+        _activeRequest.SetRequestHeader("x-data", LmsSecurityHeader.BuildXDataHeader());
+
+        if (!string.IsNullOrWhiteSpace(token))
+            _activeRequest.SetRequestHeader("Authorization", "Bearer " + token);
 
         yield return _activeRequest.SendWebRequest();
 
-        // Nếu trong lúc chờ, user bấm load course khác -> version đổi -> bỏ kết quả cũ
         if (version != _loadVersion)
         {
             if (debugLog)
-                Debug.LogWarning($"[CourseDetailLoader] v{version} ignored (newer loadVersion={_loadVersion}).");
+                Debug.LogWarning($"[CourseDetailLoader] v{version} ignored because newer load exists ({_loadVersion}).");
+
             SafeDisposeRequest();
             yield break;
         }
@@ -137,13 +133,20 @@ public class CourseDetailLoader : MonoBehaviour
         if (_activeRequest == null)
         {
             if (debugLog)
-                Debug.LogWarning($"[CourseDetailLoader] v{version} request was disposed during wait.");
+                Debug.LogWarning($"[CourseDetailLoader] v{version} request already disposed.");
             yield break;
         }
 
-        if (_activeRequest.result != UnityWebRequest.Result.Success)
+#if UNITY_2020_2_OR_NEWER
+        bool hasError = _activeRequest.result == UnityWebRequest.Result.ConnectionError ||
+                        _activeRequest.result == UnityWebRequest.Result.ProtocolError;
+#else
+        bool hasError = _activeRequest.isNetworkError || _activeRequest.isHttpError;
+#endif
+
+        if (hasError)
         {
-            var err = $"HTTP Error: {_activeRequest.responseCode} | {_activeRequest.error}";
+            string err = $"HTTP Error: {_activeRequest.responseCode} | {_activeRequest.error}";
             if (debugLog) Debug.LogError($"[CourseDetailLoader] v{version} {err}");
             CourseDetailStaticStore.SetError(courseId, err);
             SafeDisposeRequest();
@@ -151,7 +154,9 @@ public class CourseDetailLoader : MonoBehaviour
             yield break;
         }
 
-        var json = _activeRequest.downloadHandler != null ? _activeRequest.downloadHandler.text : null;
+        string json = _activeRequest.downloadHandler != null
+            ? _activeRequest.downloadHandler.text
+            : null;
 
         if (debugLog)
         {
@@ -160,14 +165,14 @@ public class CourseDetailLoader : MonoBehaviour
             Debug.Log($"[CourseDetailLoader] v{version} OK code={_activeRequest.responseCode} jsonHead={head}");
         }
 
-        CourseDetailResponse resp = null;
+        CourseModels.CourseDetailResponse resp = null;
         try
         {
-            resp = JsonUtility.FromJson<CourseDetailResponse>(json);
+            resp = JsonUtility.FromJson<CourseModels.CourseDetailResponse>(json);
         }
         catch (Exception e)
         {
-            var err = "JSON parse failed: " + e.Message;
+            string err = "JSON parse failed: " + e.Message;
             if (debugLog) Debug.LogError($"[CourseDetailLoader] v{version} {err}");
             CourseDetailStaticStore.SetError(courseId, err);
             SafeDisposeRequest();
@@ -175,9 +180,9 @@ public class CourseDetailLoader : MonoBehaviour
             yield break;
         }
 
-        if (resp == null || resp.status == false || resp.course == null)
+        if (resp == null || !resp.status || resp.course == null)
         {
-            var err = "Invalid response or status=false or course=null";
+            string err = "Invalid response or status=false or course=null";
             if (debugLog) Debug.LogError($"[CourseDetailLoader] v{version} {err}");
             CourseDetailStaticStore.SetError(courseId, err);
             SafeDisposeRequest();
@@ -185,13 +190,19 @@ public class CourseDetailLoader : MonoBehaviour
             yield break;
         }
 
-        // OK
         CourseDetailStaticStore.SetCourse(courseId, resp.course);
 
         if (debugLog)
         {
-            int count = (resp.course.products == null) ? 0 : resp.course.products.Count;
-            Debug.Log($"[CourseDetailLoader] v{version} SetCourse OK | id={courseId} | title={resp.course.title} | products={count}");
+            int bannerCount = resp.course.banner != null ? resp.course.banner.Length : 0;
+            int paymentCount = (resp.course.coursePrice != null && resp.course.coursePrice.paymentOptions != null)
+                ? resp.course.coursePrice.paymentOptions.Length
+                : 0;
+
+            Debug.Log(
+                $"[CourseDetailLoader] v{version} SetCourse OK | " +
+                $"id={courseId} | title={resp.course.title} | banners={bannerCount} | paymentOptions={paymentCount}"
+            );
         }
 
         SafeDisposeRequest();
@@ -202,9 +213,28 @@ public class CourseDetailLoader : MonoBehaviour
     {
         if (_activeRequest != null)
         {
-            try { _activeRequest.Dispose(); } catch { /* ignore */ }
+            try { _activeRequest.Dispose(); } catch { }
             _activeRequest = null;
         }
+    }
+
+    private string GetToken()
+    {
+        if (!string.IsNullOrWhiteSpace(overrideAccessToken))
+            return NormalizeBearer(overrideAccessToken);
+
+        if (useTokenFromStore && !string.IsNullOrWhiteSpace(TokenStore.AccessToken))
+            return NormalizeBearer(TokenStore.AccessToken);
+
+        return null;
+    }
+
+    private string NormalizeBearer(string raw)
+    {
+        string t = raw != null ? raw.Trim() : "";
+        if (t.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            t = t.Substring("Bearer ".Length).Trim();
+        return t;
     }
 
     private void OnDestroy()

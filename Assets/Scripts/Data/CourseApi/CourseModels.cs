@@ -4,8 +4,7 @@ using UnityEngine;
 
 public static class CourseModels
 {
-    // ================= LIST (Lite) =================
-    // API LIST: { status: true, data: { data: [ ... ] } }
+    // ================= LIST RESPONSE =================
     [Serializable]
     public class CourseListResponse
     {
@@ -49,21 +48,37 @@ public static class CourseModels
         public object endTime;
         public string promotionText;
 
-        public List<CourseStartDateItem> courseStartDate; // thêm dòng này
+        public List<CourseStartDateItem> courseStartDate;
     }
-[Serializable]
-public class CourseStartDateItem
-{
-    public CourseDatePart start;
-}
+    [Serializable]
+    public class CourseChapter
+    {
+        public string _id;
+        public string title;
+        public List<CourseLesson> lessons;
+    }
 
-[Serializable]
-public class CourseDatePart
-{
-    public int day;
-    public int month;
-    public int year;
-}
+    [Serializable]
+    public class CourseLesson
+    {
+        public string _id;
+        public string title;
+    }
+
+    [Serializable]
+    public class CourseStartDateItem
+    {
+        public CourseDatePart start;
+    }
+
+    [Serializable]
+    public class CourseDatePart
+    {
+        public int day;
+        public int month;
+        public int year;
+    }
+
     [Serializable]
     public class CoursePriceLite
     {
@@ -79,7 +94,6 @@ public class CourseDatePart
     public class SeoLite
     {
         public string url;
-        // keywords không cần list => bỏ
     }
 
     [Serializable]
@@ -88,11 +102,12 @@ public class CourseDatePart
         public bool needLogin;
     }
 
+    // ================= DETAIL RESPONSE =================
     [Serializable]
     public class CourseDetailResponse
     {
         public bool status;
-        public CourseDetail data;
+        public CourseDetail course;
     }
 
     [Serializable]
@@ -107,6 +122,7 @@ public class CourseDatePart
         public string _id;
 
         public string description;
+        public string introduction;
         public string[] banner;
 
         public CoursePriceDetail coursePrice;
@@ -116,6 +132,20 @@ public class CourseDatePart
         public string title;
         public string group;
         public string learningMode;
+
+        public string image;
+        public int learners;
+        public int totalDuration;
+
+        public float stars;
+        public int evaluate;
+
+        public Instructor instructor;
+        public List<CourseProduct> products;
+        public List<CourseChapter> chapters;
+        public List<CourseStartDateItem> courseStartDate;
+
+        public List<CourseRelated> upsell;
     }
 
     [Serializable]
@@ -143,4 +173,93 @@ public class CourseDatePart
         public string url;
         public string[] keywords;
     }
+
+    // ================= MAPPER =================
+    public static CourseListItemData ToListItem(CourseLite c)
+    {
+        if (c == null) return null;
+
+        return new CourseListItemData
+        {
+            id = c._id,
+            title = c.title,
+            image = c.image,
+            learningMode = c.learningMode,
+            stars = c.stars,
+            isJoined = c.isJoined,
+            group = c.group,
+            category = c.category,
+            level = c.level,
+            learners = c.learners,
+            evaluate = c.evaluate,
+            totalStudent = c.totalStudent,
+            isSelling = c.isSelling,
+            promotionText = c.promotionText,
+
+            courseStartDate = c.courseStartDate,
+
+            originalPrice = c.coursePrice != null ? c.coursePrice.originalPrice : 0,
+            currentPrice = c.coursePrice != null ? c.coursePrice.currentPrice : 0,
+            isFree = c.coursePrice != null && c.coursePrice.isFree,
+            isQuotation = c.coursePrice != null && c.coursePrice.isQuotation,
+            isContract = c.coursePrice != null && c.coursePrice.isContract,
+
+            seoUrl = c.seo != null ? c.seo.url : null
+        };
+    }
+
+    [Serializable]
+    public class Instructor
+    {
+        public string _id;
+        public string fullName;
+        public int learners;
+        public int courses;
+        public string description;
+    }
+
+    [Serializable]
+    public class CourseProduct
+    {
+        public string productName;
+        public string image;
+        public string externalUrl;
+    }
+    [Serializable]
+    public class CourseRelated
+    {
+        public string _id;
+        public string title;
+        public string image;
+        public int learners;
+        public float stars;
+    }
+}
+[Serializable]
+public class CourseListItemData
+{
+    public string id;
+    public string title;
+    public string image;
+    public string learningMode;
+    public float stars;
+    public bool isJoined;
+    public string group;
+    public string category;
+    public string level;
+    public int learners;
+    public int evaluate;
+    public int totalStudent;
+    public bool isSelling;
+    public string promotionText;
+
+    public long originalPrice;
+    public long currentPrice;
+    public bool isFree;
+    public bool isQuotation;
+    public bool isContract;
+
+    public string seoUrl;
+
+    public List<CourseModels.CourseStartDateItem> courseStartDate;
 }

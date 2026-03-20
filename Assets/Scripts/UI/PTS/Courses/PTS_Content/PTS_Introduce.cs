@@ -119,7 +119,7 @@ public class PTS_Introduce : MonoBehaviour
             return;
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         if (course == null)
         {
             if (enableDebugLogs)

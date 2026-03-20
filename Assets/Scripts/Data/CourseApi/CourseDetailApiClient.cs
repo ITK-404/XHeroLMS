@@ -74,7 +74,7 @@ public class CourseDetailApiClient : MonoBehaviour
                 yield break;
             }
 
-            onDone(resp != null ? resp.data : null);
+            onDone(resp != null ? resp.course : null);
         }
     }
 

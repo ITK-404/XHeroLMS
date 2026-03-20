@@ -45,7 +45,143 @@ public class CourseDetailBatchLoader : MonoBehaviour
     public void LoadAllCourseDetails()
     {
         var courses = CourseStaticStore.GetAll();
-        LoadAllCourseDetails(courses);
+        LoadAllCourseDetailsFromListItem(courses);
+    }
+    public void LoadAllCourseDetailsFromListItem(IReadOnlyList<CourseListItemData> courses)
+    {
+        if (debugLog)
+            Debug.Log($"[CourseDetailBatchLoader] Input course count = {(courses == null ? 0 : courses.Count)}");
+
+        if (courses == null || courses.Count == 0)
+        {
+            if (debugLog) Debug.LogWarning("[CourseDetailBatchLoader] No courses to load.");
+            if (clearStoreBeforeLoad) CourseDetailSummaryStore.Clear();
+            return;
+        }
+
+        Dispose();
+        _loadVersion++;
+
+        if (debugLog)
+        {
+            for (int i = 0; i < courses.Count; i++)
+            {
+                var c = courses[i];
+                Debug.Log($"[CourseDetailBatchLoader] Course[{i}] id = {c?.id}");
+            }
+        }
+
+        _loadRoutine = StartCoroutine(LoadAllRoutineFromListItem(courses, _loadVersion));
+    }
+    private IEnumerator LoadAllRoutineFromListItem(IReadOnlyList<CourseListItemData> courses, int version)
+    {
+        IsLoading = true;
+
+        if (clearStoreBeforeLoad)
+            CourseDetailSummaryStore.Clear();
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[CourseDetailBatchLoader] baseUrl is empty.");
+            IsLoading = false;
+            yield break;
+        }
+
+        var result = new List<CourseDetailSummary>();
+
+        for (int i = 0; i < courses.Count; i++)
+        {
+            if (version != _loadVersion)
+            {
+                if (debugLog) Debug.LogWarning("[CourseDetailBatchLoader] Load cancelled.");
+                break;
+            }
+
+            var item = courses[i];
+            if (item == null || string.IsNullOrWhiteSpace(item.id))
+                continue;
+
+            yield return StartCoroutine(FetchSingleCourseDetailFromListItem(item, result, version));
+
+            if (delayBetweenRequests > 0f)
+                yield return new WaitForSeconds(delayBetweenRequests);
+        }
+
+        if (version == _loadVersion)
+        {
+            if (debugLog)
+                Debug.Log($"[CourseDetailBatchLoader] Finished loading. Detail count = {result.Count}");
+
+            CourseDetailSummaryStore.SetAll(result);
+        }
+
+        IsLoading = false;
+        _loadRoutine = null;
+    }
+    private IEnumerator FetchSingleCourseDetailFromListItem(
+        CourseListItemData item,
+        List<CourseDetailSummary> result,
+        int version)
+    {
+        string url = $"{baseUrl}/lms/courses/{item.id}?t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+
+        if (debugLog)
+            Debug.Log($"[CourseDetailBatchLoader] GET: {url}");
+
+        _activeRequest = UnityWebRequest.Get(url);
+        _activeRequest.timeout = timeoutSeconds;
+
+        yield return _activeRequest.SendWebRequest();
+
+        if (version != _loadVersion)
+        {
+            SafeDisposeRequest();
+            yield break;
+        }
+
+        if (_activeRequest.result != UnityWebRequest.Result.Success)
+        {
+            SafeDisposeRequest();
+            yield break;
+        }
+
+        string json = _activeRequest.downloadHandler.text;
+
+        CourseDetailApiResponse resp = null;
+
+        try
+        {
+            resp = JsonUtility.FromJson<CourseDetailApiResponse>(json);
+        }
+        catch
+        {
+            SafeDisposeRequest();
+            yield break;
+        }
+
+        if (resp == null || resp.course == null)
+        {
+            SafeDisposeRequest();
+            yield break;
+        }
+
+        var c = resp.course;
+
+        var summary = new CourseDetailSummary
+        {
+            courseId = c._id,
+            title = !string.IsNullOrWhiteSpace(c.title) ? c.title : item.title,
+            learners = c.learners,
+            image = !string.IsNullOrWhiteSpace(c.image) ? c.image : item.image,
+            instructorName = c.instructor != null ? c.instructor.fullName : "",
+            startDateText = GetFirstStartDateText(c.courseStartDate),
+            totalDuration = c.totalDuration,
+            lessonCount = CountLessons(c.chapters)
+        };
+
+        result.Add(summary);
+
+        SafeDisposeRequest();
     }
 
     public void LoadAllCourseDetails(IReadOnlyList<CourseModels.CourseLite> courses)

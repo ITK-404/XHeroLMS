@@ -31,9 +31,13 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txt_rating;
     [SerializeField] private TextMeshProUGUI txt_priceDiscount;
     [SerializeField] private TextMeshProUGUI txt_priceOrigin;
-    
+
+    [Header("Loaders")]
     [SerializeField] private CourseDetailLoader courseDetailLoader;
     [SerializeField] private CourseReviewLoader courseReviewLoader;
+
+    [Header("Debug")]
+    [SerializeField] private bool debugBindPrice = false;
 
     public UnityEvent ChangeViewClicked;
 
@@ -77,7 +81,6 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     // =========================
     private static readonly Dictionary<string, Sprite> s_spriteCache = new();
     private static readonly Dictionary<string, Texture2D> s_textureCache = new();
-    private static readonly Dictionary<string, CoroutineHost> s_hosts = new();
 
     // =========================
     // DEBUG IMAGE TIMING
@@ -90,7 +93,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     private static int s_reportedVersion = -1;
     private static int s_reportedCount = 0;
 
-    // token để chống ảnh cũ ghi đè ảnh mới khi item reuse
+    // token chống ảnh cũ ghi đè ảnh mới khi item bị reuse
     private int _bindImageToken = 0;
     private bool _reportedImageReadyForThisBind = false;
 
@@ -98,8 +101,11 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     {
         BuildStatusMap();
 
-        if (panelBtn != null) panelBtn.onClick.AddListener(OnLoadImgFx);
-        if (directBtn != null) directBtn.onClick.AddListener(OnLoadImgFx);
+        if (panelBtn != null)
+            panelBtn.onClick.AddListener(OnLoadImgFx);
+
+        if (directBtn != null)
+            directBtn.onClick.AddListener(OnLoadImgFx);
     }
 
     private void OnDisable()
@@ -119,36 +125,56 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (panelBtn != null) panelBtn.onClick.RemoveListener(OnLoadImgFx);
-        if (directBtn != null) directBtn.onClick.RemoveListener(OnLoadImgFx);
+        if (panelBtn != null)
+            panelBtn.onClick.RemoveListener(OnLoadImgFx);
 
-        if (_loadImgCo != null) StopCoroutine(_loadImgCo);
-        if (_waitDataCo != null) StopCoroutine(_waitDataCo);
+        if (directBtn != null)
+            directBtn.onClick.RemoveListener(OnLoadImgFx);
+
+        if (_loadImgCo != null)
+            StopCoroutine(_loadImgCo);
+
+        if (_waitDataCo != null)
+            StopCoroutine(_waitDataCo);
     }
 
     private void BuildStatusMap()
     {
         _statusMap.Clear();
-        if (statusConfigs == null) return;
+
+        if (statusConfigs == null)
+            return;
 
         for (int i = 0; i < statusConfigs.Count; i++)
         {
             var s = statusConfigs[i];
             if (s == null) continue;
+
             _statusMap[s.key] = s;
         }
     }
 
-    public void Bind(CourseModels.CourseLite course)
+    public void Bind(CourseListItemData course)
     {
-        if (course == null) return;
+        if (course == null)
+            return;
 
-        _courseId = course._id;
+        _courseId = course.id;
         _imageUrl = course.image;
         _bindImageToken++;
         _reportedImageReadyForThisBind = false;
 
-        if (txt_name != null) txt_name.text = course.title ?? "";
+        if (debugBindPrice)
+        {
+            Debug.Log(
+                $"[PTS][Bind] title={course.title} | id={course.id} | " +
+                $"cur={course.currentPrice} | org={course.originalPrice} | " +
+                $"free={course.isFree} | quotation={course.isQuotation} | contract={course.isContract}"
+            );
+        }
+
+        if (txt_name != null)
+            txt_name.text = course.title ?? "";
 
         if (txt_rating != null)
         {
@@ -161,30 +187,56 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 : $"{starsText} ({FormatCountCompact(count)})";
         }
 
-        var status = ResolveStatus(course);
-        ApplyStatus(status);
+        ApplyStatus(ResolveStatus(course));
+        ApplyPrice(course);
 
-        var price = course.coursePrice;
-        long cur = price != null ? price.currentPrice : 0;
-        long org = price != null ? price.originalPrice : 0;
+        BindThumbnail(_imageUrl, _bindImageToken);
+    }
+
+    private void ApplyPrice(CourseListItemData course)
+    {
+        if (course == null)
+            return;
+
+        long cur = course.currentPrice;
+        long org = course.originalPrice;
 
         if (txt_priceDiscount != null)
         {
-            string curText = (price != null && price.isFree) ? "Miễn phí" : FormatVndCompact(cur);
+            string curText;
+
+            if (course.isFree)
+                curText = "Miễn phí";
+            else if (cur > 0)
+                curText = FormatVndCompact(cur);
+            else if (course.isQuotation)
+                curText = "Liên hệ báo giá";
+            else if (course.isContract)
+                curText = "Theo hợp đồng";
+            else
+                curText = "—";
+
             txt_priceDiscount.text = $"<size=100%><color=#E95F18>{curText}</color></size>";
         }
 
         if (txt_priceOrigin != null)
         {
-            string orgText = (price != null && price.isFree) ? "" : FormatVndCompact(org);
-            if (string.IsNullOrEmpty(orgText)) orgText = "";
+            bool canShowOriginalPrice =
+                !course.isFree &&
+                cur > 0 &&
+                org > 0 &&
+                org > cur;
 
-            txt_priceOrigin.text = $"<size=80%><s>{orgText}</s></size>";
-            txt_priceOrigin.gameObject.SetActive(true);
+            string orgText = canShowOriginalPrice ? FormatVndCompact(org) : "";
+
+            txt_priceOrigin.text = string.IsNullOrEmpty(orgText)
+                ? ""
+                : $"<size=80%><s>{orgText}</s></size>";
+
+            txt_priceOrigin.gameObject.SetActive(!string.IsNullOrEmpty(orgText));
         }
-
-        BindThumbnail(_imageUrl, _bindImageToken);
     }
+
 
     private void BindThumbnail(string url, int token)
     {
@@ -202,12 +254,14 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         else
             img_course.sprite = null;
 
+        img_course.preserveAspect = preserveAspectAfterLoad;
+
         if (string.IsNullOrWhiteSpace(url))
             return;
 
         if (s_spriteCache.TryGetValue(url, out var cachedSprite) && cachedSprite != null)
         {
-            ApplyLoadedSprite(cachedSprite, token, url, fromCache: true);
+            ApplyLoadedSprite(cachedSprite, token, url, true);
             return;
         }
 
@@ -267,16 +321,31 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         }
     }
 
-    private StatusData ResolveStatus(CourseModels.CourseLite course)
+    private StatusData ResolveStatus(CourseListItemData course)
     {
+        if (course == null)
+            return null;
+
         var modeKey = ModeToStatusKey(course.learningMode);
-        if (modeKey != StatusKey.None) return GetStatus(modeKey, fallbackText: course.learningMode);
+        if (modeKey != StatusKey.None)
+            return GetStatus(modeKey, course.learningMode);
+
+        if (course.isFree)
+            return GetStatus(StatusKey.Free, "Miễn phí");
+
+        if (course.isQuotation)
+            return GetStatus(StatusKey.Quotation, "Báo giá");
+
+        if (course.isContract)
+            return GetStatus(StatusKey.Contract, "Hợp đồng");
+
         return null;
     }
 
     private StatusKey ModeToStatusKey(string mode)
     {
-        if (string.IsNullOrEmpty(mode)) return StatusKey.None;
+        if (string.IsNullOrEmpty(mode))
+            return StatusKey.None;
 
         mode = mode.Trim().ToLowerInvariant();
 
@@ -291,16 +360,24 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     {
         if (_statusMap.TryGetValue(key, out var s) && s != null)
         {
-            if (string.IsNullOrEmpty(s.text)) s.text = fallbackText;
+            if (string.IsNullOrEmpty(s.text))
+                s.text = fallbackText;
+
             return s;
         }
 
-        return new StatusData { key = key, text = fallbackText, icon = null };
+        return new StatusData
+        {
+            key = key,
+            text = fallbackText,
+            icon = null
+        };
     }
 
     private void ApplyStatus(StatusData s)
     {
-        if (img_status == null) return;
+        if (img_status == null)
+            return;
 
         if (s == null || s.icon == null)
         {
@@ -408,7 +485,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         return CourseDetailStaticStore.HasData
                && !CourseDetailStaticStore.IsLoading
                && CourseDetailStaticStore.CurrentCourseId == courseId
-               && CourseDetailStaticStore.CurrentCourse != null;
+               && CourseDetailStaticStore.CurrentDetail != null;
     }
 
     private bool IsCourseReviewLoaded(string courseId)
@@ -426,7 +503,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             return;
         }
 
-        if (CourseLoading) return;
+        if (CourseLoading)
+            return;
 
         CourseLoading = true;
         bgImg.DOKill();
@@ -451,15 +529,22 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 #endif
             {
                 Debug.LogWarning($"[PTS] Load image failed: {url} | {req.error}");
+                _loadImgCo = null;
                 yield break;
             }
 
             if (token != _bindImageToken)
+            {
+                _loadImgCo = null;
                 yield break;
+            }
 
             var tex = DownloadHandlerTexture.GetContent(req);
             if (tex == null || target == null)
+            {
+                _loadImgCo = null;
                 yield break;
+            }
 
             tex.wrapMode = TextureWrapMode.Clamp;
             tex.filterMode = FilterMode.Bilinear;
@@ -480,7 +565,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 s_spriteCache[url] = sprite;
             }
 
-            ApplyLoadedSprite(sprite, token, url, fromCache: false);
+            ApplyLoadedSprite(sprite, token, url, false);
             _loadImgCo = null;
         }
     }
@@ -498,6 +583,4 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (n < 1_000_000) return (n / 1000f).ToString("0.#") + "k";
         return (n / 1_000_000f).ToString("0.#") + "M";
     }
-
-    private sealed class CoroutineHost : MonoBehaviour { }
 }

@@ -12,6 +12,7 @@ public class CourseDetailViewBinder : MonoBehaviour
     [SerializeField] private TextMeshProUGUI txtDuration;
     [SerializeField] private TextMeshProUGUI txtTotalLessons;
     [SerializeField] private TextMeshProUGUI txtStar;
+
     private void OnEnable()
     {
         CourseDetailStaticStore.OnChanged += HandleStoreChanged;
@@ -33,7 +34,7 @@ public class CourseDetailViewBinder : MonoBehaviour
             return;
         }
 
-        ApplyCourse(CourseDetailStaticStore.CurrentCourse);
+        ApplyCourse(CourseDetailStaticStore.CurrentDetail);
     }
 
     private void ApplyPlaceholders()
@@ -44,7 +45,7 @@ public class CourseDetailViewBinder : MonoBehaviour
         SetText(txtStar, "0.0");
     }
 
-    private void ApplyCourse(LmsCoursePrivate course)
+    private void ApplyCourse(CourseModels.CourseDetail course)
     {
         if (course == null)
         {
@@ -52,22 +53,18 @@ public class CourseDetailViewBinder : MonoBehaviour
             return;
         }
 
-        // Instructor
         string instructorName =
             (course.instructor != null && !string.IsNullOrEmpty(course.instructor.fullName))
                 ? course.instructor.fullName
                 : "—";
         SetText(txtInstructor, instructorName);
 
-        // Duration (0 => chưa có)
         SetText(txtDuration, FormatDurationSecondsSmart(course.totalDuration));
         Debug.Log("Duration raw = " + course.totalDuration);
 
-        // Total lessons
         int totalLessons = CountLessonsSmart(course.chapters);
         SetText(txtTotalLessons, FormatTotalLessons(totalLessons));
 
-        // Star + evaluate
         SetText(txtStar, FormatStarWithEvaluatePeople(course.stars, course.evaluate));
     }
 
@@ -98,10 +95,8 @@ public class CourseDetailViewBinder : MonoBehaviour
     {
         string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
 
-        // evaluate = 0 -> chỉ hiện sao
         if (evaluate <= 0) return starsText;
 
-        // "5.0 (12 người đánh giá)"
         return $"{starsText} ({FormatCountCompact(evaluate)} người đánh giá)";
     }
 
@@ -113,9 +108,7 @@ public class CourseDetailViewBinder : MonoBehaviour
         return (n / 1_000_000f).ToString("0.#") + "M";
     }
 
-    // ======= COUNT LESSONS (soft, no model changes) =======
-
-    private static int CountLessonsSmart(List<LmsChapter> chapters)
+    private static int CountLessonsSmart(List<CourseModels.CourseChapter> chapters)
     {
         if (chapters == null || chapters.Count == 0) return 0;
 
@@ -126,14 +119,12 @@ public class CourseDetailViewBinder : MonoBehaviour
             var ch = chapters[i];
             if (ch == null) continue;
 
-            // field lessons
             if (ch.lessons != null && ch.lessons.Count > 0)
             {
                 count += ch.lessons.Count;
                 continue;
             }
 
-            // thử list khác bằng reflection
             count += TryCountFirstListProperty(ch,
                 "lessons",
                 "items",

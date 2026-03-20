@@ -7,9 +7,9 @@ public class PTS_CourseTitle : MonoBehaviour
 
     private void OnEnable()
     {
-        if (CourseDetailStaticStore.CurrentCourse != null)
+        if (CourseDetailStaticStore.CurrentDetail != null)
         {
-            UpdateTitleText(CourseDetailStaticStore.CurrentCourse.title);
+            UpdateTitleText(CourseDetailStaticStore.CurrentDetail.title);
         }
     }
 

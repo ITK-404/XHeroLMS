@@ -49,11 +49,11 @@ public class EduCourseListSpawner : MonoBehaviour
 
         if (source == null || source.Count == 0)
         {
-            if (debugLog) Debug.Log("[EduCourseListSpawner] No course lite data.");
+            if (debugLog) Debug.Log("[EduCourseListSpawner] No course item data.");
             return;
         }
 
-        var sorted = new List<CourseModels.CourseLite>(source);
+        var sorted = new List<CourseListItemData>(source);
 
         sorted.Sort((a, b) =>
         {
@@ -70,7 +70,7 @@ public class EduCourseListSpawner : MonoBehaviour
             if (data == null) continue;
 
             var item = Instantiate(coursePrefab, contentParent);
-            item.Setup(data); // cần EduCourseElement.Setup(CourseModels.CourseLite)
+            item.Setup(data); // EduCourseElement.Setup(CourseListItemData)
             _spawnedItems.Add(item);
         }
 
@@ -89,7 +89,7 @@ public class EduCourseListSpawner : MonoBehaviour
         _spawnedItems.Clear();
     }
 
-    private DateTime GetFirstStartDate(CourseModels.CourseLite course)
+    private DateTime GetFirstStartDate(CourseListItemData course)
     {
         if (course == null || course.courseStartDate == null || course.courseStartDate.Count == 0)
             return DateTime.MinValue;

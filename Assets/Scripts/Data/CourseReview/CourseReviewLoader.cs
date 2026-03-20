@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public class CourseReviewLoader : MonoBehaviour
 {
     [Header("API")]
-    private string baseUrlOverride = "";
+    [SerializeField] private string baseUrlOverride = "";
     [SerializeField] private int limit = 10;
     [SerializeField] private bool useAuthHeader = true;
     [SerializeField] private bool useXDataHeader = true;
@@ -17,7 +17,7 @@ public class CourseReviewLoader : MonoBehaviour
     [SerializeField] private bool forceReloadSameCourse = false;
 
     [Header("Debug")]
-    [SerializeField] private string currentCourseId;
+    [SerializeField] private string currentDetailId;
 
     private Coroutine loadRoutine;
     private string lastLoadedCourseId;
@@ -29,7 +29,7 @@ public class CourseReviewLoader : MonoBehaviour
 
         if (autoLoadOnEnable)
         {
-            string courseId = ResolveCurrentCourseId();
+            string courseId = ResolveCurrentDetailId();
             if (!string.IsNullOrEmpty(courseId))
                 LoadReviews(courseId);
         }
@@ -39,11 +39,17 @@ public class CourseReviewLoader : MonoBehaviour
     {
         if (listenCourseDetailStore)
             CourseDetailStaticStore.OnChanged -= HandleCourseDetailChanged;
+
+        if (loadRoutine != null)
+        {
+            StopCoroutine(loadRoutine);
+            loadRoutine = null;
+        }
     }
 
     private void HandleCourseDetailChanged()
     {
-        string courseId = ResolveCurrentCourseId();
+        string courseId = ResolveCurrentDetailId();
         if (string.IsNullOrEmpty(courseId))
         {
             CourseReviewStaticStore.Reset();
@@ -56,15 +62,18 @@ public class CourseReviewLoader : MonoBehaviour
         LoadReviews(courseId);
     }
 
-    private string ResolveCurrentCourseId()
+    private string ResolveCurrentDetailId()
     {
-        if (CourseDetailStaticStore.CurrentCourse != null &&
-            !string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourse._id))
+        if (CourseDetailStaticStore.CurrentDetail != null &&
+            !string.IsNullOrEmpty(CourseDetailStaticStore.CurrentDetail._id))
         {
-            return CourseDetailStaticStore.CurrentCourse._id;
+            return CourseDetailStaticStore.CurrentDetail._id;
         }
 
-        return CourseDetailStaticStore.CurrentCourseId;
+        if (!string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourseId))
+            return CourseDetailStaticStore.CurrentCourseId;
+
+        return currentDetailId;
     }
 
     public void LoadReviews(string courseId)
@@ -76,7 +85,7 @@ public class CourseReviewLoader : MonoBehaviour
             return;
         }
 
-        currentCourseId = courseId;
+        currentDetailId = courseId;
 
         if (loadRoutine != null)
             StopCoroutine(loadRoutine);
@@ -86,8 +95,9 @@ public class CourseReviewLoader : MonoBehaviour
 
     public void ReloadCurrent()
     {
-        if (!string.IsNullOrEmpty(currentCourseId))
-            LoadReviews(currentCourseId);
+        string courseId = ResolveCurrentDetailId();
+        if (!string.IsNullOrEmpty(courseId))
+            LoadReviews(courseId);
     }
 
     private IEnumerator CoLoadReviews(string courseId)
@@ -98,7 +108,17 @@ public class CourseReviewLoader : MonoBehaviour
 
         string baseUrl = !string.IsNullOrEmpty(baseUrlOverride)
             ? baseUrlOverride
-            : LmsStore.Instance.baseUrl;
+            : (LmsStore.Instance != null ? LmsStore.Instance.baseUrl : "");
+
+        baseUrl = (baseUrl ?? "").Trim().TrimEnd('/');
+
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            Debug.LogError("[PTS_CourseReviewLoader] Base URL is empty");
+            CourseReviewStaticStore.SetError(courseId, "Base URL is empty");
+            loadRoutine = null;
+            yield break;
+        }
 
         string url = $"{baseUrl}/lms/reviews/{courseId}?limit={limit}";
 
@@ -107,7 +127,7 @@ public class CourseReviewLoader : MonoBehaviour
             req.SetRequestHeader("Accept", "application/json");
 
             if (useAuthHeader && !string.IsNullOrEmpty(TokenStore.AccessToken))
-                req.SetRequestHeader("Authorization", "Bearer " + TokenStore.AccessToken);
+                req.SetRequestHeader("Authorization", "Bearer " + NormalizeBearer(TokenStore.AccessToken));
 
             if (useXDataHeader)
             {
@@ -126,12 +146,13 @@ public class CourseReviewLoader : MonoBehaviour
             bool hasError = req.isNetworkError || req.isHttpError;
 #endif
 
-            string body = req.downloadHandler.text;
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
 
             if (hasError)
             {
                 Debug.LogError($"[PTS_CourseReviewLoader] HTTP Error: {req.responseCode} | {req.error}\n{body}");
                 CourseReviewStaticStore.SetError(courseId, $"HTTP {req.responseCode}: {req.error}");
+                loadRoutine = null;
                 yield break;
             }
 
@@ -151,12 +172,14 @@ public class CourseReviewLoader : MonoBehaviour
             {
                 Debug.LogError("[PTS_CourseReviewLoader] Parse Error: " + e.Message);
                 CourseReviewStaticStore.SetError(courseId, "Parse response failed");
+                loadRoutine = null;
                 yield break;
             }
 
             if (response == null)
             {
                 CourseReviewStaticStore.SetError(courseId, "Response null");
+                loadRoutine = null;
                 yield break;
             }
 
@@ -185,5 +208,13 @@ public class CourseReviewLoader : MonoBehaviour
             .Replace("\"3\":", "\"_3\":")
             .Replace("\"4\":", "\"_4\":")
             .Replace("\"5\":", "\"_5\":");
+    }
+
+    private string NormalizeBearer(string raw)
+    {
+        var t = raw != null ? raw.Trim() : "";
+        if (t.StartsWith("Bearer ", System.StringComparison.OrdinalIgnoreCase))
+            t = t.Substring("Bearer ".Length).Trim();
+        return t;
     }
 }
