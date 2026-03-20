@@ -117,4 +117,14 @@ public class WebViewTest : MonoBehaviour
             SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);
         }
     }
+
+    private void Update()
+    {
+        UpdateButtonState();
+    }
+
+    private void UpdateButtonState()
+    {
+        _navigation.SetNavigationState(webViewInstance.CanGoBack,webViewInstance.CanGoForward);
+    }
 }
