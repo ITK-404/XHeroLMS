@@ -14,6 +14,9 @@ public class WebViewNavigation : MonoBehaviour
     public event Action OnLeftNaviClicked;
     public event Action OnRightNaviClicked;
 
+    [SerializeField] private CanvasGroup leftNavCanvas;
+    [SerializeField] private CanvasGroup rightNavCanvas;
+
     private void Awake()
     {
         exitBtn.onClick.AddListener(ExitClick);
@@ -34,4 +37,10 @@ public class WebViewNavigation : MonoBehaviour
     private void ReloadClick() => OnReloadClicked?.Invoke();
     private void LeftNaviClick() => OnLeftNaviClicked?.Invoke();
     private void RightNaviClick() => OnRightNaviClicked?.Invoke();
+
+    public void SetNavigationState(bool leftNavActive, bool rightNavActive)
+    {
+        leftNavCanvas.alpha = leftNavActive ? 1 : 0.5f;
+        rightNavCanvas.alpha = rightNavActive ? 1 : 0.5f;
+    }
 }
