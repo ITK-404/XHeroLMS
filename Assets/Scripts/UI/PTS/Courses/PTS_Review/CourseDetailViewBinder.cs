@@ -78,7 +78,7 @@ public class CourseDetailViewBinder : MonoBehaviour
 
     private static string FormatDurationSecondsSmart(int totalSeconds)
     {
-        if (totalSeconds <= 0) return "—";
+        if (totalSeconds <= 0) return "Chưa có";
 
         var t = TimeSpan.FromSeconds(totalSeconds);
         int hours = (int)t.TotalHours;
@@ -98,8 +98,8 @@ public class CourseDetailViewBinder : MonoBehaviour
     {
         string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
 
-        // evaluate = 0 -> chỉ hiện sao
-        if (evaluate <= 0) return starsText;
+        // // evaluate = 0 -> chỉ hiện sao
+        // if (evaluate <= 0) return starsText;
 
         // "5.0 (12 người đánh giá)"
         return $"{starsText} ({FormatCountCompact(evaluate)} người đánh giá)";
@@ -107,7 +107,7 @@ public class CourseDetailViewBinder : MonoBehaviour
 
     private static string FormatCountCompact(int n)
     {
-        if (n <= 0) return "0";
+        if (n <= 0) return "0.0";
         if (n < 1000) return n.ToString();
         if (n < 1_000_000) return (n / 1000f).ToString("0.#") + "k";
         return (n / 1_000_000f).ToString("0.#") + "M";
