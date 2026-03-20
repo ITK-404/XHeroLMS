@@ -1,4 +1,4 @@
-[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases/ios/builds/1.0.4/" "gs://dlc-lms/addressables/releases/ios/latest/"
+[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases/android/builds/1.0.4/" "gs://dlc-lms/addressables/releases/android/latest/"
 ExitCode=0
 
 --- STDOUT ---
@@ -6,9 +6,33 @@ ExitCode=0
 
 --- STDERR ---
 Building synchronization state...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
-
 Starting synchronization...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/483192958c2089719c8dc303377b0b39_monoscripts_21d94c18193b62ec931b400cd7b71cbd.bundle [Content-Type=application/octet-stream]...
+/ [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+-
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog_1.0.4.hash [Content-Type=application/octet-stream]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_newscene_scenes_all_08d847ea8209b7357c227778fd1e46d8.bundle [Content-Type=application/octet-stream]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog.json [Content-Type=application/json]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_shared_assets_all_1e5ab3e5da74b85185ba6611afec7cb9.bundle [Content-Type=application/octet-stream]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog_1.0.4.json [Content-Type=application/json]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/catalog.hash [Content-Type=application/octet-stream]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+Copying gs://dlc-lms/addressables/releases/android/builds/1.0.4/cloud_phong_tuyen_sinh_scenes_all_7f7d1e71197ae91a767a394dfebf99cb.bundle [Content-Type=application/octet-stream]...
+- [0/8 files][    0.0 B/536.4 MiB]   0% Done                                    
+- [1/8 files][ 14.8 KiB/536.4 MiB]   0% Done                                    
+- [2/8 files][ 54.9 MiB/536.4 MiB]  10% Done                                    
+- [3/8 files][369.7 MiB/536.4 MiB]  68% Done                                    
+- [4/8 files][536.3 MiB/536.4 MiB]  99% Done                                    
+- [5/8 files][536.3 MiB/536.4 MiB]  99% Done                                    
+- [6/8 files][536.4 MiB/536.4 MiB]  99% Done                                    
+\
+\ [7/8 files][536.4 MiB/536.4 MiB]  99% Done                                    
+\ [8/8 files][536.4 MiB/536.4 MiB] 100% Done                                    
 
+Operation completed over 8 objects/536.4 MiB.                                    
 

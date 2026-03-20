@@ -58,7 +58,7 @@ public class CourseProductListBuilder : MonoBehaviour
             return;
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         if (course == null)
         {
             Debug.LogWarning("[CourseProductListBuilder] CurrentCourse is null.");

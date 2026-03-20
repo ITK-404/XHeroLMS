@@ -34,7 +34,8 @@ public class PTS_Instructor : MonoBehaviour
             return;
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        // var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         if (course == null || course.instructor == null)
         {
             ClearUI();

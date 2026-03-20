@@ -1,34 +1,24 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 public static class CourseStaticStore
 {
-    // ====== Lite cache ======
-    private static readonly List<CourseModels.CourseLite> _all = new();
-    private static readonly Dictionary<string, CourseModels.CourseLite> _byId = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, CourseModels.CourseLite> _bySku = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, CourseModels.CourseLite> _bySeo = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly List<CourseListItemData> _all = new();
+    private static readonly Dictionary<string, CourseListItemData> _byId = new(StringComparer.OrdinalIgnoreCase);
 
     public static bool HasData => _all.Count > 0;
     public static int Count => _all.Count;
 
     public static event Action OnChanged;
 
-    public static IReadOnlyList<CourseModels.CourseLite> GetAll() => _all;
+    public static IReadOnlyList<CourseListItemData> GetAll() => _all;
 
-    public static CourseModels.CourseLite GetById(string id)
+    public static CourseListItemData GetById(string id)
         => (!string.IsNullOrEmpty(id) && _byId.TryGetValue(id, out var c)) ? c : null;
 
-    public static CourseModels.CourseLite GetBySku(string sku)
-        => (!string.IsNullOrEmpty(sku) && _bySku.TryGetValue(sku, out var c)) ? c : null;
-
-    public static CourseModels.CourseLite GetBySeoUrl(string seoUrl)
-        => (!string.IsNullOrEmpty(seoUrl) && _bySeo.TryGetValue(seoUrl, out var c)) ? c : null;
-
-    public static List<CourseModels.CourseLite> GetByGroup(string groupKey)
+    public static List<CourseListItemData> GetByGroup(string groupKey)
     {
-        var result = new List<CourseModels.CourseLite>();
+        var result = new List<CourseListItemData>();
         if (string.IsNullOrEmpty(groupKey)) return result;
 
         for (int i = 0; i < _all.Count; i++)
@@ -38,8 +28,11 @@ public static class CourseStaticStore
 
             if (!string.IsNullOrEmpty(c.group) &&
                 string.Equals(c.group, groupKey, StringComparison.OrdinalIgnoreCase))
+            {
                 result.Add(c);
+            }
         }
+
         return result;
     }
 
@@ -47,144 +40,52 @@ public static class CourseStaticStore
     {
         _all.Clear();
         _byId.Clear();
-        _bySku.Clear();
-        _bySeo.Clear();
-
-        _detailById.Clear();
-        _detailLru.Clear();
-        _inflight.Clear();
-
         OnChanged?.Invoke();
     }
 
-    public static void SetCoursesLite(CourseModels.CourseLite[] courses)
+    public static void SetItems(IReadOnlyList<CourseListItemData> items)
     {
         _all.Clear();
         _byId.Clear();
-        _bySku.Clear();
-        _bySeo.Clear();
 
-        if (courses != null)
+        if (items != null)
         {
-            for (int i = 0; i < courses.Length; i++)
+            for (int i = 0; i < items.Count; i++)
             {
-                var c = courses[i];
-                if (c == null) continue;
+                var c = items[i];
+                if (c == null || string.IsNullOrEmpty(c.id))
+                    continue;
 
                 _all.Add(c);
-
-                if (!string.IsNullOrEmpty(c._id)) _byId[c._id] = c;
-                if (!string.IsNullOrEmpty(c.sku)) _bySku[c.sku] = c;
-
-                var seoUrl = c.seo != null ? c.seo.url : null;
-                if (!string.IsNullOrEmpty(seoUrl)) _bySeo[seoUrl] = c;
+                _byId[c.id] = c;
             }
         }
 
         OnChanged?.Invoke();
     }
 
-    // ====== Detail (heavy) cache: description/banner/paymentOptions ======
-    public static int MaxDetailCache = 50;
-
-    private static readonly Dictionary<string, CourseModels.CourseDetail> _detailById = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly LinkedList<string> _detailLru = new();
-    private static readonly HashSet<string> _inflight = new(StringComparer.OrdinalIgnoreCase);
-
-    public static bool TryGetDetail(string courseId, out CourseModels.CourseDetail detail)
-        => _detailById.TryGetValue(courseId, out detail);
-
-    public static string GetDescriptionCached(string courseId)
+    public static void AppendItems(IReadOnlyList<CourseListItemData> items)
     {
-        if (string.IsNullOrEmpty(courseId)) return null;
-        return _detailById.TryGetValue(courseId, out var d) ? d.description : null;
-    }
-
-    /// <summary>
-    /// Gọi khi bạn cần description. Nếu đã cache -> callback ngay.
-    /// Nếu chưa -> gọi API detail và cache (LRU).
-    /// CourseStaticStore.RequestDescription(
-    ///        runner: this,
-    ///        api: detailApiClient,
-    ///        courseId: id,
-    ///        onDone: desc => detailText.text = desc ?? "(no description)"
-    ///    );
-    /// </summary>
-    public static void RequestDescription(MonoBehaviour runner, CourseDetailApiClient api, string courseId, Action<string> onDone, Action<string> onError = null)
-    {
-        if (onDone == null) onDone = _ => { };
-
-        if (string.IsNullOrEmpty(courseId))
-        {
-            onError?.Invoke("courseId null/empty");
-            onDone(null);
+        if (items == null || items.Count == 0)
             return;
-        }
 
-        if (_detailById.TryGetValue(courseId, out var cached))
+        bool changed = false;
+
+        for (int i = 0; i < items.Count; i++)
         {
-            TouchDetail(courseId);
-            onDone(cached != null ? cached.description : null);
-            return;
+            var c = items[i];
+            if (c == null || string.IsNullOrEmpty(c.id))
+                continue;
+
+            if (_byId.ContainsKey(c.id))
+                continue;
+
+            _all.Add(c);
+            _byId[c.id] = c;
+            changed = true;
         }
 
-        if (runner == null || api == null)
-        {
-            onError?.Invoke("runner/api is null");
-            onDone(null);
-            return;
-        }
-
-        // tránh gọi trùng cùng 1 courseId
-        if (_inflight.Contains(courseId))
-        {
-            // có thể: đợi lần sau UI gọi lại, hoặc bạn nâng cấp thành event queue
-            onDone(null);
-            return;
-        }
-
-        _inflight.Add(courseId);
-
-        runner.StartCoroutine(api.FetchCourseDetail(courseId,
-            onDone: detail =>
-            {
-                _inflight.Remove(courseId);
-
-                if (detail != null)
-                {
-                    PutDetail(courseId, detail);
-                    onDone(detail.description);
-                }
-                else
-                {
-                    onDone(null);
-                }
-            },
-            onError: err =>
-            {
-                _inflight.Remove(courseId);
-                onError?.Invoke(err);
-                onDone(null);
-            }));
-    }
-
-    private static void PutDetail(string courseId, CourseModels.CourseDetail detail)
-    {
-        _detailById[courseId] = detail;
-
-        TouchDetail(courseId);
-
-        while (_detailLru.Count > MaxDetailCache)
-        {
-            var last = _detailLru.Last.Value;
-            _detailLru.RemoveLast();
-            _detailById.Remove(last);
-        }
-    }
-
-    private static void TouchDetail(string courseId)
-    {
-        _detailLru.Remove(courseId);
-        _detailLru.AddFirst(courseId);
+        if (changed)
+            OnChanged?.Invoke();
     }
 }

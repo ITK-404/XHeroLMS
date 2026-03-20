@@ -31,10 +31,10 @@ public class CourseSearch : MonoBehaviour
     [Tooltip("Delay in seconds to reduce searching every keystroke (mobile-friendly). 0 = no debounce.")]
     [SerializeField] private float debounceSeconds = 0.15f;
 
-    public event Action<List<CourseModels.CourseLite>> OnResultsChanged;
+    public event Action<List<CourseListItemData>> OnResultsChanged;
 
-    public IReadOnlyList<CourseModels.CourseLite> LastResults => _lastResults;
-    private readonly List<CourseModels.CourseLite> _lastResults = new();
+    public IReadOnlyList<CourseListItemData> LastResults => _lastResults;
+    private readonly List<CourseListItemData> _lastResults = new();
 
     public static CourseSearch Instance { get; private set; }
 
@@ -457,13 +457,13 @@ public class CourseSearch : MonoBehaviour
         return Mathf.Clamp(dd.value, 0, dd.options.Count - 1);
     }
 
-    private List<CourseModels.CourseLite> RunSearch(string keyword, ModeFilter mode, float minStars, SortMode sort)
+    private List<CourseListItemData> RunSearch(string keyword, ModeFilter mode, float minStars, SortMode sort)
     {
         var all = CourseStaticStore.GetAll();
         if (all == null || all.Count == 0)
-            return new List<CourseModels.CourseLite>();
+            return new List<CourseListItemData>();
 
-        var result = new List<CourseModels.CourseLite>(all.Count);
+        var result = new List<CourseListItemData>(all.Count);
 
         string kwNorm = NormalizeForSearch(keyword);
         string modeStr = ModeToString(mode);
@@ -484,16 +484,13 @@ public class CourseSearch : MonoBehaviour
         return result;
     }
 
-    private bool PassKeywordSmart(CourseModels.CourseLite c, string kwNorm)
+    private bool PassKeywordSmart(CourseListItemData c, string kwNorm)
     {
         if (string.IsNullOrEmpty(kwNorm)) return true;
 
-        if (ContainsSmart(c._id, kwNorm)) return true;
-        if (ContainsSmart(c.sku, kwNorm)) return true;
+        if (ContainsSmart(c.id, kwNorm)) return true;
         if (ContainsSmart(c.title, kwNorm)) return true;
-
-        var seoUrl = c.seo != null ? c.seo.url : null;
-        if (ContainsSmart(seoUrl, kwNorm)) return true;
+        if (ContainsSmart(c.seoUrl, kwNorm)) return true;
 
         return false;
     }
@@ -659,7 +656,7 @@ public class CourseSearch : MonoBehaviour
         }
     }
 
-    private bool PassMode(CourseModels.CourseLite c, string modeLowerOrNull)
+    private bool PassMode(CourseListItemData c, string modeLowerOrNull)
     {
         if (string.IsNullOrEmpty(modeLowerOrNull)) return true;
 
@@ -667,13 +664,13 @@ public class CourseSearch : MonoBehaviour
         return string.Equals(m, modeLowerOrNull, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool PassRating(CourseModels.CourseLite c, float minStars)
+    private bool PassRating(CourseListItemData c, float minStars)
     {
         if (minStars <= 0f) return true;
         return c.stars >= minStars;
     }
 
-    private void ApplySort(List<CourseModels.CourseLite> list, SortMode sort)
+    private void ApplySort(List<CourseListItemData> list, SortMode sort)
     {
         if (list == null || list.Count <= 1)
             return;
@@ -681,10 +678,7 @@ public class CourseSearch : MonoBehaviour
         switch (sort)
         {
             case SortMode.NewestFirst:
-                list.Sort((a, b) => GetUploadedTicks(b).CompareTo(GetUploadedTicks(a)));
-                break;
             case SortMode.OldestFirst:
-                list.Sort((a, b) => GetUploadedTicks(a).CompareTo(GetUploadedTicks(b)));
                 break;
             case SortMode.PriceHighToLow:
                 list.Sort((a, b) => GetPriceValue(b).CompareTo(GetPriceValue(a)));
@@ -695,87 +689,13 @@ public class CourseSearch : MonoBehaviour
         }
     }
 
-    private long GetUploadedTicks(CourseModels.CourseLite c)
+    private long GetPriceValue(CourseListItemData c)
     {
-        if (c == null) return 0;
-        if (TryParseToUtcTicks(c.startSellTime, out var ticks))
-            return ticks;
-        return 0;
-    }
+        if (c == null) return long.MaxValue;
+        if (c.isFree) return 0;
 
-    private long GetPriceValue(CourseModels.CourseLite c)
-    {
-        var p = c != null ? c.coursePrice : null;
-        if (p == null) return long.MaxValue;
-        if (p.isFree) return 0;
-
-        long v = p.currentPrice > 0 ? p.currentPrice : p.originalPrice;
+        long v = c.currentPrice > 0 ? c.currentPrice : c.originalPrice;
         return v > 0 ? v : long.MaxValue;
-    }
-
-    private bool TryParseToUtcTicks(object raw, out long ticks)
-    {
-        ticks = 0;
-        if (raw == null) return false;
-
-        try
-        {
-            if (raw is long l) return TryUnixToTicks(l, out ticks);
-            if (raw is int i) return TryUnixToTicks(i, out ticks);
-            if (raw is double d) return TryUnixToTicks((long)d, out ticks);
-            if (raw is float f) return TryUnixToTicks((long)f, out ticks);
-
-            if (raw is string s)
-            {
-                s = s.Trim();
-                if (string.IsNullOrEmpty(s)) return false;
-
-                if (long.TryParse(s, out var num))
-                    return TryUnixToTicks(num, out ticks);
-
-                if (DateTimeOffset.TryParse(s, out var dto))
-                {
-                    ticks = dto.UtcTicks;
-                    return true;
-                }
-            }
-            else
-            {
-                var str = raw.ToString();
-                if (!string.IsNullOrEmpty(str))
-                {
-                    str = str.Trim();
-                    if (long.TryParse(str, out var num2))
-                        return TryUnixToTicks(num2, out ticks);
-
-                    if (DateTimeOffset.TryParse(str, out var dto2))
-                    {
-                        ticks = dto2.UtcTicks;
-                        return true;
-                    }
-                }
-            }
-        }
-        catch { }
-
-        return false;
-    }
-
-    private bool TryUnixToTicks(long unix, out long ticks)
-    {
-        ticks = 0;
-        if (unix <= 0) return false;
-
-        try
-        {
-            DateTimeOffset dto = (unix >= 1_000_000_000_000L)
-                ? DateTimeOffset.FromUnixTimeMilliseconds(unix)
-                : DateTimeOffset.FromUnixTimeSeconds(unix);
-
-            ticks = dto.UtcTicks;
-            return true;
-        }
-        catch { return false; }
     }
 
     private float GetRatingMinStars(int ddValue)

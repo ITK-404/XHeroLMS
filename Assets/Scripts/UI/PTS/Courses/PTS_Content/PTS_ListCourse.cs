@@ -32,8 +32,8 @@ public class PTS_ListCourse : MonoBehaviour
 
     private void OnEnable()
     {
-        if (buildOnEnable) Build();
         CourseDetailStaticStore.OnChanged += HandleStoreChanged;
+        if (buildOnEnable) Build();
     }
 
     private void OnDisable()
@@ -62,19 +62,17 @@ public class PTS_ListCourse : MonoBehaviour
     {
         float t = 0f;
 
-        while (!CourseDetailStaticStore.HasData && t < waitStoreSeconds)
+        while (string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourseId) && t < waitStoreSeconds)
         {
             t += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        if (!CourseDetailStaticStore.HasData)
-        {
-            if (CourseDetailStaticStore.IsLoading)
-                Debug.LogWarning("[PTS_ListCourse] CourseDetailStaticStore vẫn đang loading...");
-            else
-                Debug.LogWarning("[PTS_ListCourse] CourseDetailStaticStore chưa có data. LastError=" + CourseDetailStaticStore.LastError);
+        string courseId = CourseDetailStaticStore.CurrentCourseId;
 
+        if (string.IsNullOrEmpty(courseId))
+        {
+            Debug.LogWarning("[PTS_ListCourse] Chưa có CurrentCourseId.");
             yield break;
         }
 
@@ -86,17 +84,19 @@ public class PTS_ListCourse : MonoBehaviour
                 yield break;
             }
 
-            if (!string.Equals(CourseDetailStaticStore.CurrentCourseId, expectedCourseId, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(courseId, expectedCourseId, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.LogWarning($"[PTS_ListCourse] Store đang giữ courseId={CourseDetailStaticStore.CurrentCourseId} khác expected={expectedCourseId}. Skip build.");
+                Debug.LogWarning($"[PTS_ListCourse] Store đang giữ courseId={courseId} khác expected={expectedCourseId}. Skip build.");
                 yield break;
             }
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        yield return LmsStore.Instance.FetchPrivateIfExpired(courseId);
+
+        var course = LmsStore.Instance.GetPrivate(courseId);
         if (course == null)
         {
-            Debug.LogWarning("[PTS_ListCourse] CurrentCourse null dù HasData=true (bất thường).");
+            Debug.LogWarning($"[PTS_ListCourse] Private course null for courseId={courseId}");
             yield break;
         }
 
@@ -124,8 +124,6 @@ public class PTS_ListCourse : MonoBehaviour
             var ui = Instantiate(chapterPrefab, contentParent);
 
             ui.chapterID = ch._id ?? "";
-
-            // ✅ Mặc định CHƯA CLICK => Normal
             ui.ChangeState(ChapterUI.ChapterState.Normal);
 
             if (ui.titleName != null)
@@ -137,43 +135,27 @@ public class PTS_ListCourse : MonoBehaviour
                 continue;
             }
 
-            // ✅ Không tự SetActive(true/false) nữa.
-            // ChapterUI.UpdateUI sẽ bật/tắt lessonContainer theo state.
-
             Transform lessonContainerTf = ui.lessonContainer.transform;
-
-            // build sẵn nội dung con (dù đang ẩn)
             ClearChildren(lessonContainerTf);
 
             if (lessonItemPrefab == null) continue;
 
-            var lessonsObj = GetMemberValue(ch, "lessons");
+            var lessonsObj = ch.lessons;
             if (lessonsObj == null) continue;
 
-            if (lessonsObj is IList list)
+            for (int j = 0; j < lessonsObj.Count; j++)
             {
-                for (int j = 0; j < list.Count; j++)
-                {
-                    var lesson = list[j];
-                    if (lesson == null) continue;
+                var lesson = lessonsObj[j];
+                if (lesson == null) continue;
 
-                    var itemGo = Instantiate(lessonItemPrefab, lessonContainerTf);
+                var itemGo = Instantiate(lessonItemPrefab, lessonContainerTf);
 
-                    string lessonTitle =
-                        GetStringMember(lesson, "title") ??
-                        GetStringMember(lesson, "lessonTitle") ??
-                        GetStringMember(lesson, "name") ??
-                        "";
+                string lessonTitle =
+                    lesson.title ?? "";
 
-                    SetAnyText(itemGo.transform, lessonTitle);
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[PTS_ListCourse] lessons không phải IList. Type=" + lessonsObj.GetType().Name);
+                SetAnyText(itemGo.transform, lessonTitle);
             }
 
-            // ✅ đảm bảo state Normal được áp lại lần nữa sau khi build con (tránh prefab/manager làm đổi)
             ui.ChangeState(ChapterUI.ChapterState.Normal);
         }
     }

@@ -13,8 +13,9 @@ public class PTS_DifferencesCourse : MonoBehaviour
 
     [Header("Display Format")]
     [SerializeField] private bool useCompactNumber = true;
-    private string learnersUnit = "học viên";
-    private string viewsUnit = "lượt xem";
+
+    private readonly string learnersUnit = "học viên";
+    private readonly string viewsUnit = "lượt xem";
 
     private readonly List<RelatedCoursesView> spawnedItems = new();
 
@@ -39,7 +40,7 @@ public class PTS_DifferencesCourse : MonoBehaviour
             return;
         }
 
-        var course = CourseDetailStaticStore.CurrentCourse;
+        var course = CourseDetailStaticStore.CurrentDetail;
         if (course == null || course.upsell == null || course.upsell.Count == 0)
         {
             ClearAllItems();
@@ -56,12 +57,9 @@ public class PTS_DifferencesCourse : MonoBehaviour
         if (clearOldItems)
             ClearAllItems();
 
-        List<LmsRelatedCourse> sortedList = new List<LmsRelatedCourse>(course.upsell);
+        List<CourseModels.CourseRelated> sortedList = new List<CourseModels.CourseRelated>(course.upsell);
 
-        // B1: sort chuẩn
         sortedList.Sort(CompareDefault);
-
-        // B2: đẩy nhẹ khóa "đặc biệt" lên 1 bậc
         PromoteSpecialCoursesOneStep(sortedList);
 
         for (int i = 0; i < sortedList.Count; i++)
@@ -87,28 +85,25 @@ public class PTS_DifferencesCourse : MonoBehaviour
         }
     }
 
-    private int CompareDefault(LmsRelatedCourse a, LmsRelatedCourse b)
+    private int CompareDefault(CourseModels.CourseRelated a, CourseModels.CourseRelated b)
     {
         if (a == null && b == null) return 0;
         if (a == null) return 1;
         if (b == null) return -1;
 
-        // Ưu tiên lượt xem cao hơn
         int compareViews = b.stars.CompareTo(a.stars);
         if (compareViews != 0) return compareViews;
 
-        // Nếu lượt xem bằng nhau -> ưu tiên học viên cao hơn
         int compareLearners = b.learners.CompareTo(a.learners);
         if (compareLearners != 0) return compareLearners;
 
         return 0;
     }
 
-    private void PromoteSpecialCoursesOneStep(List<LmsRelatedCourse> list)
+    private void PromoteSpecialCoursesOneStep(List<CourseModels.CourseRelated> list)
     {
         if (list == null || list.Count < 2) return;
 
-        // Chỉ nhích lên 1 bậc, không đẩy lên đầu
         for (int i = 1; i < list.Count; i++)
         {
             var current = list[i];
@@ -117,12 +112,10 @@ public class PTS_DifferencesCourse : MonoBehaviour
             bool isSpecial = current.learners > current.stars;
             if (!isSpecial) continue;
 
-            // swap current với item đứng trước nó
             var prev = list[i - 1];
             list[i - 1] = current;
             list[i] = prev;
 
-            // bỏ qua 1 nhịp để current không tiếp tục bị đẩy thêm
             i++;
         }
     }
@@ -138,20 +131,23 @@ public class PTS_DifferencesCourse : MonoBehaviour
         spawnedItems.Clear();
     }
 
-    private string BuildCountText(int value, string unit)
+    private string BuildCountText(float value, string unit)
     {
         return $"{FormatCompactNumber(value)} {unit}";
     }
 
-    private string FormatCompactNumber(int value)
+    private string FormatCompactNumber(float value)
     {
+        if (value < 0f)
+            value = 0f;
+
         if (!useCompactNumber)
-            return value.ToString("N0");
+            return value % 1f == 0f ? ((int)value).ToString("N0") : value.ToString("0.#");
 
-        if (value < 1000)
-            return value.ToString();
+        if (value < 1000f)
+            return value % 1f == 0f ? ((int)value).ToString() : value.ToString("0.#");
 
-        if (value < 1000000)
+        if (value < 1000000f)
         {
             float k = value / 1000f;
 

@@ -11,47 +11,48 @@ public class PTS_CourseListBuilder : MonoBehaviour
     public Transform ContentParent => contentParent;
 
     // Bật pooling để không Instantiate/Destroy liên tục.
-    private bool usePooling = true;
+    [SerializeField] private bool usePooling = true;
 
     // Số item tạo sẵn ngay từ đầu.
-    private int prewarmCount = 24;
+    [SerializeField] private int prewarmCount = 24;
 
     // Số item render ngay lập tức trong cùng frame đầu tiên.
-    private int immediateRenderCount = 12;
+    [SerializeField] private int immediateRenderCount = 12;
 
     // Số item render thêm mỗi frame.
-    private int batchSize = 8;
+    [SerializeField] private int batchSize = 8;
 
     // Nếu > 0 thì chờ giữa các batch. Để 0 để nhanh nhất.
-    private float delayBetweenBatches = 0f;
+    [SerializeField] private float delayBetweenBatches = 0f;
 
     // Tạm tắt layout trong lúc build để giảm rebuild UI.
-    private bool disableLayoutWhileBuilding = true;
+    [SerializeField] private bool disableLayoutWhileBuilding = true;
 
     // Nếu không search thì build từ CourseStaticStore.
-    private bool buildFromStoreOnEnable = true;
+    [SerializeField] private bool buildFromStoreOnEnable = true;
 
     // Cache list mặc định 1 lần, clear search sẽ restore từ cache.
-    private bool freezeInitialFallbackSnapshot = true;
+    [SerializeField] private bool freezeInitialFallbackSnapshot = true;
 
     // Sort mặc định khi build fallback từ store.
-    private bool applyDefaultPrioritySortOnFallback = true;
+    [SerializeField] private bool applyDefaultPrioritySortOnFallback = true;
 
     // Debug
-    private bool enableProfilerLog = false;
+    [SerializeField] private bool enableProfilerLog = false;
 
     // Log thời gian bind nhóm item đầu.
-    private bool debugFirstVisibleItemsReadyTime = true;
+    [SerializeField] private bool debugFirstVisibleItemsReadyTime = true;
 
     // Số item đầu cần đo thời gian hiển thị.
-    private int debugFirstVisibleItemCount = 10;
+    [SerializeField] private int debugFirstVisibleItemCount = 10;
 
     // Log thêm 1 mốc sau khi frame đầu tiên render xong.
     [SerializeField] private bool debugLogEndOfFrameAfterFirstVisible = true;
 
     private readonly List<PTS_SimpleCourseUI> _items = new();
-    private readonly List<CourseModels.CourseLite> _boundCourses = new();
-    private readonly List<CourseModels.CourseLite> _fallbackCache = new();
+    private readonly List<CourseListItemData> _boundCourses = new();
+    private readonly List<CourseListItemData> _fallbackCache = new();
+    private readonly List<CourseListItemData> _searchBuffer = new();
 
     private readonly List<LayoutGroup> _layoutGroups = new();
     private readonly List<ContentSizeFitter> _sizeFitters = new();
@@ -73,6 +74,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
 
     private void OnEnable()
     {
+        CacheLayoutDrivers();
         BindSearch();
         RefreshNow();
     }
@@ -108,7 +110,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
         _search = null;
     }
 
-    private void HandleSearchResultsChanged(List<CourseModels.CourseLite> results)
+    private void HandleSearchResultsChanged(List<CourseListItemData> results)
     {
         if (_search == null || !_search.IsSearchActive)
         {
@@ -129,6 +131,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
         if (_search != null && _search.IsSearchActive)
         {
             _isShowingFallback = false;
+            // BuildNow(ConvertCourseLiteList(_search.LastResults));
             BuildNow(_search.LastResults);
             return;
         }
@@ -136,10 +139,16 @@ public class PTS_CourseListBuilder : MonoBehaviour
         RestoreFallbackNow();
     }
 
-    public void BuildFromList(IReadOnlyList<CourseModels.CourseLite> list)
+    public void BuildFromList(IReadOnlyList<CourseListItemData> list)
     {
         _isShowingFallback = false;
         BuildNow(list);
+    }
+
+    public void BuildFromCourseLiteList(IReadOnlyList<CourseModels.CourseLite> list)
+    {
+        _isShowingFallback = false;
+        BuildNow(ConvertCourseLiteList(list));
     }
 
     public void ForceRefreshFallbackCacheAndRebuild()
@@ -204,7 +213,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     // BUILD CORE
     // =========================================================
 
-    private void BuildNow(IReadOnlyList<CourseModels.CourseLite> list)
+    private void BuildNow(IReadOnlyList<CourseListItemData> list)
     {
         StopBuildCoroutine();
         _buildVersion++;
@@ -285,7 +294,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     }
 
     private IEnumerator BuildRemaining(
-        IReadOnlyList<CourseModels.CourseLite> list,
+        IReadOnlyList<CourseListItemData> list,
         int current,
         int totalCount,
         int version,
@@ -354,7 +363,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     // BIND
     // =========================================================
 
-    private void BindRange(IReadOnlyList<CourseModels.CourseLite> list, int start, int endExclusive, int version)
+    private void BindRange(IReadOnlyList<CourseListItemData> list, int start, int endExclusive, int version)
     {
         for (int i = start; i < endExclusive; i++)
         {
@@ -379,7 +388,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
             if (!item.gameObject.activeSelf)
                 item.gameObject.SetActive(true);
 
-            // Chỉ bind lại nếu object course khác thật sự
+            // Chỉ bind lại nếu object data khác thật sự
             if (!ReferenceEquals(_boundCourses[i], course))
             {
                 item.Bind(course);
@@ -504,7 +513,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     // NO POOL MODE
     // =========================================================
 
-    private void BuildWithoutPooling(IReadOnlyList<CourseModels.CourseLite> list, int count)
+    private void BuildWithoutPooling(IReadOnlyList<CourseListItemData> list, int count)
     {
         ClearAllDestroy();
 
@@ -575,6 +584,27 @@ public class PTS_CourseListBuilder : MonoBehaviour
     {
         if (contentParent is RectTransform rt)
             LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+    }
+
+    // =========================================================
+    // CONVERT
+    // =========================================================
+
+    private IReadOnlyList<CourseListItemData> ConvertCourseLiteList(IReadOnlyList<CourseModels.CourseLite> source)
+    {
+        _searchBuffer.Clear();
+
+        if (source == null)
+            return _searchBuffer;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            var mapped = CourseModels.ToListItem(source[i]);
+            if (mapped != null)
+                _searchBuffer.Add(mapped);
+        }
+
+        return _searchBuffer;
     }
 
     // =========================================================

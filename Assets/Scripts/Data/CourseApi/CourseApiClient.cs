@@ -1,84 +1,151 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class CourseApiClient : MonoBehaviour
 {
-    string baseUrl;
+    private string baseUrl;
 
     [Header("Auth")]
-    public string overrideAccessToken = "";
-    public bool useTokenFromStore = true;
+    [SerializeField] private string overrideAccessToken = "";
+    [SerializeField] private bool useTokenFromStore = true;
 
     [Header("Query (/lms/courses)")]
-    public int limitPerPage = 100;
-    public string keyword = "";
-    public string category = "";
-    public string sortBy = "";
-    public string order = "";
+    [SerializeField] private int limitPerPage = 30;
+    [SerializeField] private string keyword = "";
+    [SerializeField] private string category = "";
+    [SerializeField] private string sortBy = "";
+    [SerializeField] private string order = "";
+
+    [Header("Debug")]
+    [SerializeField] private bool debugLog = false;
 
     private void Awake()
     {
-        if (string.IsNullOrEmpty(baseUrl))
-            baseUrl = LmsStore.Instance != null ? LmsStore.Instance.baseUrl : baseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            baseUrl = LmsStore.Instance != null ? LmsStore.Instance.baseUrl : "";
+
+        baseUrl = (baseUrl ?? "").Trim().TrimEnd('/');
+
+        if (debugLog)
+            Debug.Log($"[CourseApiClient] Awake baseUrl='{baseUrl}'");
     }
 
-    public IEnumerator FetchAllCoursesLite(Action<CourseModels.CourseLite[]> onDone, Action<string> onError = null)
+    public IEnumerator FetchCoursesPage(
+        int skip,
+        int limit,
+        Action<List<CourseListItemData>, bool> onDone,
+        Action<string> onError = null)
+    {
+        if (onDone == null) onDone = (_, __) => { };
+
+        string token = GetToken();
+        string url = BuildUrl(skip, Mathf.Max(1, limit));
+
+        string body = null;
+        bool hasError = false;
+
+        yield return GET(url, token,
+            onSuccess: s => body = s,
+            onErrorBody: err =>
+            {
+                hasError = true;
+                onError?.Invoke(err);
+            });
+
+        if (hasError || string.IsNullOrEmpty(body))
+        {
+            onDone(new List<CourseListItemData>(), false);
+            yield break;
+        }
+
+        CourseModels.CourseListResponse resp = null;
+        try
+        {
+            resp = JsonUtility.FromJson<CourseModels.CourseListResponse>(body);
+        }
+        catch (Exception e)
+        {
+            onError?.Invoke("[CourseApiClient] JSON parse exception: " + e.Message +
+                            "\nBody head:\n" + body.Substring(0, Mathf.Min(400, body.Length)));
+            onDone(new List<CourseListItemData>(), false);
+            yield break;
+        }
+
+        var arr = (resp != null && resp.data != null) ? resp.data.data : null;
+        if (arr == null || arr.Length == 0)
+        {
+            onDone(new List<CourseListItemData>(), false);
+            yield break;
+        }
+
+        var result = new List<CourseListItemData>(arr.Length);
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var mapped = CourseModels.ToListItem(arr[i]);
+            if (mapped != null)
+                result.Add(mapped);
+        }
+
+        bool hasMore = arr.Length >= limit;
+
+        if (debugLog)
+            Debug.Log($"[CourseApiClient] FetchCoursesPage skip={skip} limit={limit} result={result.Count} hasMore={hasMore}");
+
+        onDone(result, hasMore);
+    }
+
+    public IEnumerator FetchAllCourseListItems(
+        Action<List<CourseListItemData>> onDone,
+        Action<string> onError = null)
     {
         if (onDone == null) onDone = _ => { };
 
-        string token = GetToken();
+        var all = new List<CourseListItemData>();
         int nextSkip = 0;
-
-        var list = new List<CourseModels.CourseLite>();
 
         while (true)
         {
-            string url = BuildUrl(nextSkip, limitPerPage);
+            bool done = false;
+            List<CourseListItemData> pageItems = null;
+            bool hasMore = false;
 
-            string body = null;
-            // bool failed = false;
-
-            yield return GET(url, token,
-                onSuccess: s => body = s,
-                onErrorBody: err =>
+            yield return FetchCoursesPage(
+                skip: nextSkip,
+                limit: limitPerPage,
+                onDone: (items, more) =>
                 {
-                    // failed = true;
+                    pageItems = items;
+                    hasMore = more;
+                    done = true;
+                },
+                onError: err =>
+                {
                     onError?.Invoke(err);
-                    body = err; // giữ body để debug
+                    done = true;
                 });
 
-            if (string.IsNullOrEmpty(body)) break;
-
-            CourseModels.CourseListResponse resp;
-            try
-            {
-                resp = JsonUtility.FromJson<CourseModels.CourseListResponse>(body);
-            }
-            catch (Exception e)
-            {
-                onError?.Invoke("[CourseApiClient] JSON parse exception: " + e + "\nBody head:\n" +
-                                body.Substring(0, Mathf.Min(400, body.Length)));
+            if (!done || pageItems == null || pageItems.Count == 0)
                 break;
-            }
 
-            // data.data[]
-            var arr = (resp != null && resp.data != null) ? resp.data.data : null;
+            all.AddRange(pageItems);
 
-            if (arr == null || arr.Length == 0) break;
+            if (!hasMore)
+                break;
 
-            list.AddRange(arr);
-
-            if (arr.Length < limitPerPage) break;
             nextSkip += limitPerPage;
         }
 
-        onDone(list.ToArray());
+        if (debugLog)
+            Debug.Log($"[CourseApiClient] FetchAllCourseListItems total={all.Count}");
+
+        onDone(all);
     }
 
-    IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
+    private IEnumerator GET(string url, string token, Action<string> onSuccess, Action<string> onErrorBody)
     {
         using (var req = UnityWebRequest.Get(url))
         {
@@ -98,23 +165,42 @@ public class CourseApiClient : MonoBehaviour
 #else
             bool error = req.isNetworkError || req.isHttpError;
 #endif
+
             string body = req.downloadHandler != null ? req.downloadHandler.text : "";
-            if (error) onErrorBody?.Invoke(body);
-            else onSuccess?.Invoke(body);
+
+            if (error)
+            {
+                if (debugLog)
+                    Debug.LogError($"[CourseApiClient] GET ERROR url={url}\n{body}");
+                onErrorBody?.Invoke(body);
+            }
+            else
+            {
+                onSuccess?.Invoke(body);
+            }
         }
     }
 
-    string BuildUrl(int skip, int limit)
+    private string BuildUrl(int skip, int limit)
     {
-        var sb = new System.Text.StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
-        if (!string.IsNullOrEmpty(keyword)) sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
-        if (!string.IsNullOrEmpty(sortBy)) sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
-        if (!string.IsNullOrEmpty(order)) sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
-        if (!string.IsNullOrEmpty(category)) sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
+        var sb = new StringBuilder($"{baseUrl}/lms/courses?skip={skip}&limit={limit}");
+
+        if (!string.IsNullOrEmpty(keyword))
+            sb.Append("&keyword=").Append(UnityWebRequest.EscapeURL(keyword));
+
+        if (!string.IsNullOrEmpty(sortBy))
+            sb.Append("&sortBy=").Append(UnityWebRequest.EscapeURL(sortBy));
+
+        if (!string.IsNullOrEmpty(order))
+            sb.Append("&order=").Append(UnityWebRequest.EscapeURL(order));
+
+        if (!string.IsNullOrEmpty(category))
+            sb.Append("&category=").Append(UnityWebRequest.EscapeURL(category));
+
         return sb.ToString();
     }
 
-    string GetToken()
+    private string GetToken()
     {
         if (!string.IsNullOrWhiteSpace(overrideAccessToken))
             return NormalizeBearer(overrideAccessToken);
@@ -125,7 +211,7 @@ public class CourseApiClient : MonoBehaviour
         return null;
     }
 
-    string NormalizeBearer(string raw)
+    private string NormalizeBearer(string raw)
     {
         var t = raw != null ? raw.Trim() : "";
         if (t.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
