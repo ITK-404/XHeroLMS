@@ -540,14 +540,12 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             }
 
             var tex = DownloadHandlerTexture.GetContent(req);
+            tex = Resize(tex, 512);
             if (tex == null || target == null)
             {
                 _loadImgCo = null;
                 yield break;
             }
-
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
 
             if (!s_textureCache.ContainsKey(url))
                 s_textureCache[url] = tex;
@@ -568,6 +566,24 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             ApplyLoadedSprite(sprite, token, url, false);
             _loadImgCo = null;
         }
+    }
+    
+    Texture2D Resize(Texture2D source, int targetSize)
+    {
+        RenderTexture rt = RenderTexture.GetTemporary(targetSize, targetSize);
+        Graphics.Blit(source, rt);
+
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+
+        Texture2D result = new Texture2D(targetSize, targetSize, TextureFormat.RGBA32, false);
+        result.ReadPixels(new Rect(0, 0, targetSize, targetSize), 0, 0);
+        result.Apply();
+
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+
+        return result;
     }
 
     private static string FormatVndCompact(long v)
