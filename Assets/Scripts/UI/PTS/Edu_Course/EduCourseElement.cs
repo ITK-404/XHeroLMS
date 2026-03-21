@@ -67,7 +67,7 @@ public class EduCourseElement : MonoBehaviour
         if (coursSeatTmp != null)
         {
             int learners = data.learners > 0 ? data.learners : data.totalStudent;
-            coursSeatTmp.text = learners.ToString();
+            coursSeatTmp.text = $"<b>{FormatNumber(learners)}</b> lượt đặt chỗ";
         }
 
         if (courseTag != null)
@@ -86,7 +86,15 @@ public class EduCourseElement : MonoBehaviour
                 _loadImageRoutine = StartCoroutine(LoadImage(data.image));
         }
     }
+    public static string FormatNumber(int value)
+    {
+        if (value < 1000)
+            return value.ToString();
 
+        float num = value / 1000f;
+        return num.ToString("0.#") + "k";
+    }
+    
     private void GoToDetail()
     {
         if (_isLoadingCourse)
