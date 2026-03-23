@@ -99,8 +99,6 @@ public class CourseSearch : MonoBehaviour
 
     private void OnEnable()
     {
-        CourseStaticStore.OnChanged += HandleStoreChanged;
-
         if (resetToDefaultOnFirstEnableOnly && !_didFirstEnableReset)
         {
             ResetToDefaults();
@@ -114,7 +112,6 @@ public class CourseSearch : MonoBehaviour
 
     private void OnDisable()
     {
-        CourseStaticStore.OnChanged -= HandleStoreChanged;
         StopDebounce();
     }
 
@@ -126,15 +123,9 @@ public class CourseSearch : MonoBehaviour
         UnwireUI();
     }
 
-    private void HandleStoreChanged()
-    {
-        if (IsSearchActive)
-            RequestSearch();
-    }
-
     public void SearchNow()
     {
-        var keyword = inputKeyword != null ? inputKeyword.text : null;
+        string keyword = inputKeyword != null ? inputKeyword.text : null;
 
         int modeV = GetDropdownValueSafe(dropdownMode);
         int ratingV = GetDropdownValueSafe(dropdownRating);
@@ -464,6 +455,7 @@ public class CourseSearch : MonoBehaviour
             return new List<CourseListItemData>();
 
         var result = new List<CourseListItemData>(all.Count);
+        var seenIds = new HashSet<string>();
 
         string kwNorm = NormalizeForSearch(keyword);
         string modeStr = ModeToString(mode);
@@ -476,6 +468,9 @@ public class CourseSearch : MonoBehaviour
             if (!PassKeywordSmart(c, kwNorm)) continue;
             if (!PassMode(c, modeStr)) continue;
             if (!PassRating(c, minStars)) continue;
+
+            string idKey = string.IsNullOrWhiteSpace(c.id) ? $"__index_{i}" : c.id.Trim();
+            if (!seenIds.Add(idKey)) continue;
 
             result.Add(c);
         }
