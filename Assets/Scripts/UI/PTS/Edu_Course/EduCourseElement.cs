@@ -27,12 +27,34 @@ public class EduCourseElement : MonoBehaviour
     private Coroutine _loadImageRoutine;
     private Coroutine _waitDataRoutine;
 
+    private Texture2D _runtimeTexture;
+    private Sprite _runtimeSprite;
+
     private static bool _isLoadingCourse;
 
     private void Awake()
     {
         if (goToDetailBtn != null)
             goToDetailBtn.onClick.AddListener(GoToDetail);
+    }
+
+    private void OnDisable()
+    {
+        if (_loadImageRoutine != null)
+        {
+            StopCoroutine(_loadImageRoutine);
+            _loadImageRoutine = null;
+        }
+
+        if (_waitDataRoutine != null)
+        {
+            StopCoroutine(_waitDataRoutine);
+            _waitDataRoutine = null;
+        }
+
+        // Quan trọng khi dùng pooling:
+        // item bị SetActive(false) phải nhả texture runtime
+        ReleaseRuntimeImage();
     }
 
     private void OnDestroy()
@@ -45,6 +67,8 @@ public class EduCourseElement : MonoBehaviour
 
         if (_waitDataRoutine != null)
             StopCoroutine(_waitDataRoutine);
+
+        ReleaseRuntimeImage();
     }
 
     public void Setup(CourseListItemData data)
@@ -76,7 +100,13 @@ public class EduCourseElement : MonoBehaviour
         }
 
         if (_loadImageRoutine != null)
+        {
             StopCoroutine(_loadImageRoutine);
+            _loadImageRoutine = null;
+        }
+
+        // Mỗi lần setup item mới, phải nhả ảnh runtime cũ trước
+        ReleaseRuntimeImage();
 
         if (courseImg != null)
         {
@@ -86,6 +116,7 @@ public class EduCourseElement : MonoBehaviour
                 _loadImageRoutine = StartCoroutine(LoadImage(data.image));
         }
     }
+
     public static string FormatNumber(int value)
     {
         if (value < 1000)
@@ -94,7 +125,7 @@ public class EduCourseElement : MonoBehaviour
         float num = value / 1000f;
         return num.ToString("0.#") + "k";
     }
-    
+
     private void GoToDetail()
     {
         if (_isLoadingCourse)
@@ -222,7 +253,7 @@ public class EduCourseElement : MonoBehaviour
 
     private IEnumerator LoadImage(string url)
     {
-        using (var req = UnityWebRequestTexture.GetTexture(url))
+        using (var req = UnityWebRequestTexture.GetTexture(url, false))
         {
             yield return req.SendWebRequest();
 
@@ -232,23 +263,48 @@ public class EduCourseElement : MonoBehaviour
                 yield break;
             }
 
-            var texture = DownloadHandlerTexture.GetContent(req);
-            if (texture == null)
+            var downloadedTexture = DownloadHandlerTexture.GetContent(req);
+            // Resize về 512
+            var resizedTexture = downloadedTexture.Resize(512);
+            // Hủy texture gốc sau khi resize xong
+            Destroy(downloadedTexture);
+
+            if (resizedTexture == null)
             {
                 _loadImageRoutine = null;
                 yield break;
             }
 
-            var sprite = Sprite.Create(
-                texture,
-                new Rect(0, 0, texture.width, texture.height),
-                new Vector2(0.5f, 0.5f)
+            _runtimeTexture = resizedTexture;
+            _runtimeSprite = Sprite.Create(
+                _runtimeTexture,
+                new Rect(0, 0, _runtimeTexture.width, _runtimeTexture.height),
+                new Vector2(0.5f, 0.5f),
+                100f
             );
 
             if (courseImg != null)
-                courseImg.sprite = sprite;
+                courseImg.sprite = _runtimeSprite;
         }
 
         _loadImageRoutine = null;
+    }
+
+    private void ReleaseRuntimeImage()
+    {
+        if (courseImg != null && courseImg.sprite == _runtimeSprite)
+            courseImg.sprite = fallbackSprite;
+
+        if (_runtimeSprite != null)
+        {
+            Destroy(_runtimeSprite);
+            _runtimeSprite = null;
+        }
+
+        if (_runtimeTexture != null)
+        {
+            Destroy(_runtimeTexture);
+            _runtimeTexture = null;
+        }
     }
 }
