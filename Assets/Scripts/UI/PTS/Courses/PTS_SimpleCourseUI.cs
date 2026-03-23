@@ -525,7 +525,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 #if UNITY_2020_3_OR_NEWER
             if (req.result != UnityWebRequest.Result.Success)
 #else
-            if (req.isNetworkError || req.isHttpError)
+        if (req.isNetworkError || req.isHttpError)
 #endif
             {
                 Debug.LogWarning($"[PTS] Load image failed: {url} | {req.error}");
@@ -539,30 +539,34 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 yield break;
             }
 
-            var tempText = DownloadHandlerTexture.GetContent(req);
-            var tex = Resize(tempText, 512);
-            Destroy(tempText);
-            
-            if (tex == null || target == null)
-            {
-                _loadImgCo = null;
-                yield break;
-            }
-
-            if (!s_textureCache.ContainsKey(url))
-                s_textureCache[url] = tex;
-
             Sprite sprite;
             if (!s_spriteCache.TryGetValue(url, out sprite) || sprite == null)
             {
+                var tempText = DownloadHandlerTexture.GetContent(req);
+                var tex = tempText.Resize(512);
+                Destroy(tempText);
+
+                if (tex == null || target == null)
+                {
+                    _loadImgCo = null;
+                    yield break;
+                }
+
+                s_textureCache[url] = tex; 
+
                 sprite = Sprite.Create(
                     tex,
                     new Rect(0, 0, tex.width, tex.height),
                     new Vector2(0.5f, 0.5f),
                     100f
                 );
-
                 s_spriteCache[url] = sprite;
+            }
+
+            if (target == null)
+            {
+                _loadImgCo = null;
+                yield break;
             }
 
             ApplyLoadedSprite(sprite, token, url, false);
@@ -570,24 +574,6 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         }
     }
     
-    Texture2D Resize(Texture2D source, int targetSize)
-    {
-        RenderTexture rt = RenderTexture.GetTemporary(targetSize, targetSize);
-        Graphics.Blit(source, rt);
-
-        RenderTexture prev = RenderTexture.active;
-        RenderTexture.active = rt;
-
-        Texture2D result = new Texture2D(targetSize, targetSize, TextureFormat.RGBA32, false);
-        result.ReadPixels(new Rect(0, 0, targetSize, targetSize), 0, 0);
-        result.Apply();
-
-        RenderTexture.active = prev;
-        RenderTexture.ReleaseTemporary(rt);
-
-        return result;
-    }
-
     private static string FormatVndCompact(long v)
     {
         if (v <= 0) return "—";
