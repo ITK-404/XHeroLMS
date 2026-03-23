@@ -539,8 +539,10 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                 yield break;
             }
 
-            var tex = DownloadHandlerTexture.GetContent(req);
-            tex = Resize(tex, 512);
+            var tempText = DownloadHandlerTexture.GetContent(req);
+            var tex = Resize(tempText, 512);
+            Destroy(tempText);
+            
             if (tex == null || target == null)
             {
                 _loadImgCo = null;
