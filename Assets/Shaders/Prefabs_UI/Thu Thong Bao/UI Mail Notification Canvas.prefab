@@ -495,8 +495,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MailList
   mailPrefab: {fileID: 8517384750496282478, guid: f0a30293117a748a8a36a0b0a63f931a, type: 3}
-  clearOldItems: 1
-  emptyText: {fileID: 0}
   detailLoader: {fileID: 0}
 --- !u!1 &1051088003074358052
 GameObject:
@@ -905,6 +903,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2946395026650533244}
   - component: {fileID: 8272237432140018734}
+  - component: {fileID: 563842653887330931}
   m_Layer: 5
   m_Name: Container
   m_TagString: Untagged
@@ -922,7 +921,7 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6295770102369589553}
   - {fileID: 5938764396060485863}
@@ -946,6 +945,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &563842653887330931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4107456184811538730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb92e72a04e109349b5880f4aa0f01d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SafeAreaHandler
 --- !u!1 &4369534819245468818
 GameObject:
   m_ObjectHideFlags: 0
@@ -2074,8 +2085,8 @@ RectTransform:
   m_GameObject: {fileID: 8997115891618677823}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.9, y: 0.9, z: 0.9}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2769844925278942227}
   - {fileID: 2449641347929162230}
@@ -2728,7 +2739,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1633597853380286660, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_Size
-      value: 0.99999994
+      value: 0.9999999
       objectReference: {fileID: 0}
     - target: {fileID: 2409234372993658629, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3573,7 +3584,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1633597853380286660, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_Size
-      value: 0.99999994
+      value: 0.9999999
       objectReference: {fileID: 0}
     - target: {fileID: 2409234372993658629, guid: ed918ee4e0b9f40c5ad7c88d9dcecf00, type: 3}
       propertyPath: m_AnchorMax.y
