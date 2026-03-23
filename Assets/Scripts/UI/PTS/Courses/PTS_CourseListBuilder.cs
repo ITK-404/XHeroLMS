@@ -10,49 +10,30 @@ public class PTS_CourseListBuilder : MonoBehaviour
     [SerializeField] private Transform contentParent;
     public Transform ContentParent => contentParent;
 
-    // Bật pooling để không Instantiate/Destroy liên tục.
-    [SerializeField] private bool usePooling = true;
+    private bool usePooling = true;
+    private int prewarmCount = 24;
+    private int immediateRenderCount = 12;
+    private int batchSize = 8;
+    private float delayBetweenBatches = 0f;
+    private bool disableLayoutWhileBuilding = true;
+    private bool buildFromStoreOnEnable = true;
+    private bool freezeInitialFallbackSnapshot = true;
+    private bool applyDefaultPrioritySortOnFallback = true;
 
-    // Số item tạo sẵn ngay từ đầu.
-    [SerializeField] private int prewarmCount = 24;
-
-    // Số item render ngay lập tức trong cùng frame đầu tiên.
-    [SerializeField] private int immediateRenderCount = 12;
-
-    // Số item render thêm mỗi frame.
-    [SerializeField] private int batchSize = 8;
-
-    // Nếu > 0 thì chờ giữa các batch. Để 0 để nhanh nhất.
-    [SerializeField] private float delayBetweenBatches = 0f;
-
-    // Tạm tắt layout trong lúc build để giảm rebuild UI.
-    [SerializeField] private bool disableLayoutWhileBuilding = true;
-
-    // Nếu không search thì build từ CourseStaticStore.
-    [SerializeField] private bool buildFromStoreOnEnable = true;
-
-    // Cache list mặc định 1 lần, clear search sẽ restore từ cache.
-    [SerializeField] private bool freezeInitialFallbackSnapshot = true;
-
-    // Sort mặc định khi build fallback từ store.
-    [SerializeField] private bool applyDefaultPrioritySortOnFallback = true;
-
-    // Debug
+    [Header("Debug")]
     [SerializeField] private bool enableProfilerLog = false;
-
-    // Log thời gian bind nhóm item đầu.
     [SerializeField] private bool debugFirstVisibleItemsReadyTime = true;
-
-    // Số item đầu cần đo thời gian hiển thị.
     [SerializeField] private int debugFirstVisibleItemCount = 10;
-
-    // Log thêm 1 mốc sau khi frame đầu tiên render xong.
     [SerializeField] private bool debugLogEndOfFrameAfterFirstVisible = true;
+    [SerializeField] private bool debugLogDedup = true;
 
     private readonly List<PTS_SimpleCourseUI> _items = new();
     private readonly List<CourseListItemData> _boundCourses = new();
     private readonly List<CourseListItemData> _fallbackCache = new();
     private readonly List<CourseListItemData> _searchBuffer = new();
+
+    private readonly List<CourseListItemData> _dedupBuffer = new();
+    private readonly HashSet<string> _dedupKeys = new();
 
     private readonly List<LayoutGroup> _layoutGroups = new();
     private readonly List<ContentSizeFitter> _sizeFitters = new();
@@ -67,10 +48,17 @@ public class PTS_CourseListBuilder : MonoBehaviour
     private void Awake()
     {
         CacheLayoutDrivers();
+        NormalizeTemplateAndClearDuplicates();
+    }
+
+    private IEnumerator Start()
+    {
+        yield return null; // đợi Destroy hoàn tất cuối frame trước
 
         if (usePooling && prewarmCount > 0)
             Prewarm(prewarmCount);
     }
+
 
     private void OnEnable()
     {
@@ -131,7 +119,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
         if (_search != null && _search.IsSearchActive)
         {
             _isShowingFallback = false;
-            // BuildNow(ConvertCourseLiteList(_search.LastResults));
             BuildNow(_search.LastResults);
             return;
         }
@@ -183,12 +170,9 @@ public class PTS_CourseListBuilder : MonoBehaviour
         var all = CourseStaticStore.GetAll();
         if (all != null)
         {
-            for (int i = 0; i < all.Count; i++)
-            {
-                var c = all[i];
-                if (c != null)
-                    _fallbackCache.Add(c);
-            }
+            var filtered = RemoveDuplicateCourses(all, "FallbackCache");
+            for (int i = 0; i < filtered.Count; i++)
+                _fallbackCache.Add(filtered[i]);
         }
 
         if (applyDefaultPrioritySortOnFallback)
@@ -213,8 +197,10 @@ public class PTS_CourseListBuilder : MonoBehaviour
     // BUILD CORE
     // =========================================================
 
-    private void BuildNow(IReadOnlyList<CourseListItemData> list)
+    private void BuildNow(IReadOnlyList<CourseListItemData> sourceList)
     {
+        var list = RemoveDuplicateCourses(sourceList, _isShowingFallback ? "BuildNow-Fallback" : "BuildNow-Search");
+
         StopBuildCoroutine();
         _buildVersion++;
 
@@ -228,7 +214,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
         float startTime = Time.realtimeSinceStartup;
         int currentVersion = _buildVersion;
 
-        // reset mốc đo ảnh thật sự cho PTS_SimpleCourseUI
         PTS_SimpleCourseUI.DebugImageMeasureStartTime = startTime;
         PTS_SimpleCourseUI.DebugImageMeasureVersion++;
         PTS_SimpleCourseUI.DebugTrackFirstNImages = Mathf.Max(1, debugFirstVisibleItemCount);
@@ -261,7 +246,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
         int instantCount = Mathf.Clamp(immediateRenderCount, 0, count);
         EnsureCapacity(instantCount);
 
-        // Hiện ngay nhóm đầu tiên trong chính frame hiện tại
         BindRange(list, 0, instantCount, currentVersion);
 
         LogFirstVisibleReadyIfNeeded(
@@ -272,7 +256,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
             "InstantFirstBatch"
         );
 
-        // Nếu không còn gì để build tiếp thì kết thúc luôn
         if (instantCount >= count)
         {
             if (disableLayoutWhileBuilding)
@@ -300,7 +283,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
         int version,
         float startTime)
     {
-        // Nhường 1 frame để user thấy nhóm đầu tiên ngay
         yield return null;
 
         int safeBatchSize = Mathf.Max(1, batchSize);
@@ -388,7 +370,6 @@ public class PTS_CourseListBuilder : MonoBehaviour
             if (!item.gameObject.activeSelf)
                 item.gameObject.SetActive(true);
 
-            // Chỉ bind lại nếu object data khác thật sự
             if (!ReferenceEquals(_boundCourses[i], course))
             {
                 item.Bind(course);
@@ -485,6 +466,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
         while (_items.Count < needed)
         {
             var item = Instantiate(itemPrefab, contentParent);
+            item.name = "Simple Course Element_Runtime";
             item.gameObject.SetActive(false);
             _items.Add(item);
         }
@@ -608,8 +590,123 @@ public class PTS_CourseListBuilder : MonoBehaviour
     }
 
     // =========================================================
-    // UTILS
+    // DEDUP
     // =========================================================
+
+    private IReadOnlyList<CourseListItemData> RemoveDuplicateCourses(IReadOnlyList<CourseListItemData> source, string tag)
+    {
+        _dedupBuffer.Clear();
+        _dedupKeys.Clear();
+
+        if (source == null)
+            return _dedupBuffer;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            var c = source[i];
+            if (c == null)
+                continue;
+
+            string key = BuildCourseDedupKey(c, i);
+
+            if (_dedupKeys.Add(key))
+            {
+                _dedupBuffer.Add(c);
+            }
+            else if (debugLogDedup)
+            {
+                Debug.LogWarning($"[PTS][DEDUP][{tag}] Skip duplicate key={key} title={c.title}");
+            }
+        }
+
+        return _dedupBuffer;
+    }
+
+private string BuildCourseDedupKey(CourseListItemData c, int index)
+{
+    if (c == null)
+        return $"null_{index}";
+
+    string seo = SafeKey(c.seoUrl);
+    string id = SafeKey(c.id);
+    string title = SafeKey(c.title);
+    string mode = SafeKey(c.learningMode);
+
+    long cur = c.currentPrice;
+    long org = c.originalPrice;
+
+    // Ưu tiên seoUrl vì thường unique theo course thật
+    if (!string.IsNullOrEmpty(seo))
+        return $"seo:{seo}";
+
+    // Nếu không có seo thì dùng title + mode + price
+    if (!string.IsNullOrEmpty(title))
+        return $"title:{title}|mode:{mode}|cur:{cur}|org:{org}";
+
+    // Cuối cùng mới dùng id
+    if (!string.IsNullOrEmpty(id))
+        return $"id:{id}";
+
+    return $"fallback_index_{index}";
+}
+
+private string SafeKey(string s)
+{
+    return string.IsNullOrWhiteSpace(s)
+        ? string.Empty
+        : s.Trim().ToLowerInvariant();
+}
+
+    // =========================================================
+    // TEMPLATE / UTILS
+    // =========================================================
+    private void NormalizeTemplateAndClearDuplicates()
+    {
+        if (itemPrefab == null || contentParent == null)
+            return;
+
+        PTS_SimpleCourseUI templateInHierarchy = null;
+
+        // Nếu itemPrefab đang là object nằm trong contentParent
+        if (itemPrefab.transform.parent == contentParent)
+            templateInHierarchy = itemPrefab;
+
+        List<PTS_SimpleCourseUI> foundItems = new List<PTS_SimpleCourseUI>();
+        for (int i = 0; i < contentParent.childCount; i++)
+        {
+            var child = contentParent.GetChild(i);
+            var ui = child.GetComponent<PTS_SimpleCourseUI>();
+            if (ui != null)
+                foundItems.Add(ui);
+        }
+
+        if (templateInHierarchy != null)
+        {
+            // Giữ lại đúng template trong hierarchy, xóa phần còn lại
+            for (int i = foundItems.Count - 1; i >= 0; i--)
+            {
+                if (foundItems[i] == null) continue;
+                if (foundItems[i] == templateInHierarchy) continue;
+
+                Destroy(foundItems[i].gameObject);
+            }
+
+            templateInHierarchy.gameObject.SetActive(false);
+        }
+        else
+        {
+            // itemPrefab là prefab asset từ Project
+            // => xóa sạch mọi item đang có sẵn trong contentParent
+            for (int i = foundItems.Count - 1; i >= 0; i--)
+            {
+                if (foundItems[i] != null)
+                    Destroy(foundItems[i].gameObject);
+            }
+        }
+
+        _items.Clear();
+        _boundCourses.Clear();
+    }
 
     private static int LearningModePriority(string mode)
     {
