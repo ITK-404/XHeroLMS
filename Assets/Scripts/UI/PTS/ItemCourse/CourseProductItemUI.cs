@@ -127,14 +127,15 @@ public class CourseProductItemUI : MonoBehaviour
                 "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
             Debug.Log("[CourseProductItemUI] Open payment webview: " + url);
-            WebViewTest.LoadWebView(url);
+            Debug.LogError("[CourseProductItemUI] null title " + url);
+            WebViewTest.LoadWebView(url,"@@@@@@@");
             return;
         }
 
         // fallback nếu item không có productId mà chỉ có externalUrl
         if (!string.IsNullOrWhiteSpace(_externalUrl))
         {
-            WebViewTest.LoadWebView(_externalUrl);
+            WebViewTest.LoadWebView(_externalUrl,"@@@@@@@");
             return;
         }
 
