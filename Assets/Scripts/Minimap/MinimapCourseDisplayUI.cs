@@ -24,7 +24,7 @@ public class MinimapCourseDisplayUI : MonoBehaviour
     [SerializeField] private Color ownerTextColor;
     [SerializeField] private Color priceTextColor;
     public string course_id; // thêm vào MinimapCourseDisplayUI
-
+    public string course_title;
     private void Awake()
     {
         findWayBtn.onClick.AddListener(ClickFindWayButton);
@@ -55,7 +55,7 @@ public class MinimapCourseDisplayUI : MonoBehaviour
                 "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
             // Application.OpenURL(url);
-            WebViewTest.LoadWebView(url);
+            WebViewTest.LoadWebView(url,course_title);
             BookHandler.CanSelectBook = true;
             return;
         }

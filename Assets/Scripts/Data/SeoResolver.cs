@@ -197,7 +197,8 @@ if (p == null)
     // Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
 
     // Application.OpenURL(url);
-    WebViewTest.LoadWebView(url);
+    Debug.LogError("Check null title here");
+    WebViewTest.LoadWebView(url,"@@@@@@@@");
     yield break;
 }
 

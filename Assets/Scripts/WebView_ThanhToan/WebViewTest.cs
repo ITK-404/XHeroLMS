@@ -14,16 +14,16 @@ public class WebViewTest : MonoBehaviour
     [SerializeField] private string defaultUrl = "https://daotao.phongthuydainam.vn/en";
 
     private static string pendingUrl = "";
+    private static string storeTitleCourse = "";
 
     private void Awake()
     {
         _navigation = GetComponentInChildren<WebViewNavigation>();
         previousOrientation = Screen.orientation;
         Screen.orientation = ScreenOrientation.Portrait;
-
         string targetUrl = string.IsNullOrWhiteSpace(pendingUrl) ? defaultUrl : pendingUrl;
         StartCoroutine(CreateWebView(targetUrl));
-
+        
         pendingUrl = "";
 
         if (_navigation)
@@ -85,14 +85,20 @@ public class WebViewTest : MonoBehaviour
 
     private IEnumerator CreateWebView(string url)
     {
+        
+        if (!string.IsNullOrEmpty(storeTitleCourse))
+        {
+            _navigation.SetTitle(storeTitleCourse);
+        }
+        
         webViewInstance = Instantiate(webViewPrefab, transform);
         webViewInstance.gameObject.SetActive(true);
+        webViewInstance.Load(url);
 
         LoadingUI.Show();
         yield return new WaitForSeconds(1f);
         LoadingUI.Hide();
 
-        webViewInstance.Load(url);
         webViewInstance.Show();
 
         Debug.Log("[WebViewTest] Loaded URL: " + url);
@@ -108,10 +114,10 @@ public class WebViewTest : MonoBehaviour
         }
     }
 
-    public static void LoadWebView(string url)
+    public static void LoadWebView(string url, string title)
     {
         pendingUrl = url;
-
+        storeTitleCourse = title;
         if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
         {
             SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);

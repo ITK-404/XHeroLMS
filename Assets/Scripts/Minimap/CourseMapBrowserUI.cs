@@ -491,7 +491,7 @@ private bool IsRequiredArea(BigArea area)
         ui.SetDisplayCourseName(string.IsNullOrEmpty(data.title) ? "(no title)" : data.title);
 
         ui.course_id = data.id;
-
+        ui.course_title = data.title;
         bool owned = IsOwned(data);
 
         // Preview/Review mode: list đã lọc owned rồi, nhưng vẫn set UI owned cho chắc

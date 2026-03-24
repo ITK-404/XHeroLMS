@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +17,7 @@ public class WebViewNavigation : MonoBehaviour
 
     [SerializeField] private CanvasGroup leftNavCanvas;
     [SerializeField] private CanvasGroup rightNavCanvas;
-
+    [SerializeField] private TextMeshProUGUI title;
     private void Awake()
     {
         exitBtn.onClick.AddListener(ExitClick);
@@ -43,4 +44,6 @@ public class WebViewNavigation : MonoBehaviour
         leftNavCanvas.alpha = leftNavActive ? 1 : 0.5f;
         rightNavCanvas.alpha = rightNavActive ? 1 : 0.5f;
     }
+
+    public void SetTitle(string title) => this.title.text = title;
 }
