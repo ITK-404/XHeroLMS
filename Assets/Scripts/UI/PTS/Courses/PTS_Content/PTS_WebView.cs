@@ -116,7 +116,7 @@ public class PTS_WebView : MonoBehaviour
             "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
         Debug.Log("[PTS_WebView] Open payment webview: " + url);
-        WebViewTest.LoadWebView(url);
+        WebViewTest.LoadWebView(url,course.title);
     }
 
     private bool IsCourseOwned(string courseId)
