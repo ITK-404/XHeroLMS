@@ -22,6 +22,7 @@ public class PaymentWebViewUI : UIView
 
     [SerializeField] private string paymentUnCompleteString;
     [SerializeField] private string paymentCompleteString;
+    
     public void ShowPayment(bool isComplete, string price)
     {
         Show();

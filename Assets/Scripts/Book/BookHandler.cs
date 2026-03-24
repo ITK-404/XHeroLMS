@@ -95,7 +95,7 @@ public class BookHandler : MonoBehaviour
         // {
         //     BookHandler.CanSelectBook = true;
         // }
-        WebViewTest.LoadWebView(url);
+        WebViewTest.LoadWebView(url,book_name);
     }
 
     private void OnPlayerClickBook()
