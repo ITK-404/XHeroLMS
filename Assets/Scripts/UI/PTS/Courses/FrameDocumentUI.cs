@@ -32,7 +32,7 @@ public class FrameDocumentUI : PanelBaseUI
     {
         if (string.IsNullOrEmpty(pageUrl))
         {
-            emptyUI.gameObject.SetActive(true);
+            emptyUI.gameObject.SetActive(false);
             return;
         }
 
