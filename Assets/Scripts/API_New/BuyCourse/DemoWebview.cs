@@ -13,6 +13,6 @@ public class DemoWebview : MonoBehaviour
     [ContextMenu("Open")]
     private void Open()
     {
-        opener.Open("https://daotao.phongthuydainam.vn");
+        opener.Open(SecurityConfig.UrlWeb);
     }
 }

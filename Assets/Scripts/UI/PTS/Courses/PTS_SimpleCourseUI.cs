@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -180,8 +181,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         {
             float stars = course.stars;
             int count = course.evaluate;
-            string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
-
+            string starsText = stars > 0 ?  stars.ToString("0.0",CultureInfo.InvariantCulture) : "0.0";
+            Debug.Log($"Star and count{stars} {count}",gameObject);
             txt_rating.text = count <= 0
                 ? starsText
                 : $"{starsText} ({FormatCountCompact(count)})";

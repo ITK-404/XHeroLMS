@@ -233,7 +233,7 @@ public class PTS_ReviewCourse : MonoBehaviour
 
             string displayName = string.IsNullOrEmpty(review.userName) ? "Ẩn danh" : review.userName;
             string displayDate = FormatDate(review.createdAt);
-            string displayRating = Mathf.Clamp(review.rating, 1, 5).ToString("0.0");
+            string displayRating = Mathf.Clamp(review.rating, 1, 5).ToString("0.0", CultureInfo.InvariantCulture);
             string displayComment = string.IsNullOrEmpty(review.comment) ? "" : review.comment;
 
             item.SetComment(

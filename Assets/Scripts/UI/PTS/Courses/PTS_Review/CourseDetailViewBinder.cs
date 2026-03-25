@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
@@ -93,7 +94,7 @@ public class CourseDetailViewBinder : MonoBehaviour
 
     private static string FormatStarWithEvaluatePeople(float stars, int evaluate)
     {
-        string starsText = stars > 0 ? stars.ToString("0.0") : "0.0";
+        string starsText = stars > 0 ? stars.ToString("0.0", CultureInfo.InvariantCulture) : "0.0";
 
         // evaluate = 0 -> chỉ hiện sao
         // if (evaluate <= 0) return starsText;

@@ -6,8 +6,13 @@ public static class SecurityConfig
 {
     private const string XOR_KEY = "client_side_key_for_obfuscation";
 
-    // private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgEcKUgXGjodDQcFA00CGwQ="; // api-dev
-    private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgkULEgXGjodDQcFA00CGwQ="; // api-prod
+    private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgEcKUgXGjodDQcFA00CGwQ="; // api-dev
+    // private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgkULEgXGjodDQcFA00CGwQ="; // api-prod
+
+    public static string UrlWeb = "https://lms.xheroapp.com"; // api-dev
+    // public static string UrlWeb = "https://daotao.phongthuydainam.vn"; // api-prod
+
+
 
     private static string _cachedBaseUrl;
 
