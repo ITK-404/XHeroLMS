@@ -6,7 +6,7 @@ public class CourseProductListBuilder : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform contentParent;
     [SerializeField] private CourseProductItemUI itemPrefab;
-
+    [SerializeField] private GameObject xheroOpenDeepLinkBtn;
     [Header("Behavior")]
     [SerializeField] private bool buildOnEnable = true;
     [SerializeField] private bool listenStoreChanged = true;
@@ -87,6 +87,8 @@ public class CourseProductListBuilder : MonoBehaviour
 
             _spawnedItems.Add(item);
         }
+        xheroOpenDeepLinkBtn.transform.SetAsLastSibling();
+        // Instantiate(xheroPrefab, contentParent);
     }
 
     public void ClearItems()
@@ -98,10 +100,5 @@ public class CourseProductListBuilder : MonoBehaviour
         }
 
         _spawnedItems.Clear();
-
-        for (int i = contentParent.childCount - 1; i >= 0; i--)
-        {
-            Destroy(contentParent.GetChild(i).gameObject);
-        }
     }
 }
