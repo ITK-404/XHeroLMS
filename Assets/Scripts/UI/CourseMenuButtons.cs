@@ -19,7 +19,7 @@ public class CourseMenuButtons : MonoBehaviour
     [Header("Destination")] [Tooltip("Tên scene đích")]
     public string courseSceneName = "Course Scene";
 
-    // [Header("Mobile Redirect")] public string mobileAllCoursesUrl = "https://daotao.phongthuydainam.vn/vi";
+    // [Header("Mobile Redirect")] public string mobileAllCoursesUrl = SecurityConfig.UrlWeb;
 
     // Khóa lưu tạm key giữa các scene
     private const string COURSE_KEY_PREF = "CourseListKey";

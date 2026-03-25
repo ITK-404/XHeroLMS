@@ -111,7 +111,7 @@ public class PTS_WebView : MonoBehaviour
             token = token.Substring("Bearer ".Length).Trim();
 
         string url =
-            "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+            SecurityConfig.UrlWeb+"/en/thanh-toan/" +
             "?course=" + UnityWebRequest.EscapeURL(courseId) +
             "&accessToken=" + UnityWebRequest.EscapeURL(token);
 

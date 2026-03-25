@@ -83,7 +83,7 @@ public class BookHandler : MonoBehaviour
             return;
         }
         string url =
-            "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+            SecurityConfig.UrlWeb+"/en/thanh-toan/" +
             "?course=" + UnityWebRequest.EscapeURL(course_id)+
             "&accessToken=" + UnityWebRequest.EscapeURL(token) ;
 

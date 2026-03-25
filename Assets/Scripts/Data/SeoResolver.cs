@@ -190,7 +190,7 @@ if (p == null)
     }
 
     string url =
-        "https://daotao.phongthuydainam.vn/en/thanh-toan/" +
+        SecurityConfig.UrlWeb+"/en/thanh-toan/" +
         "?course=" + UnityWebRequest.EscapeURL(courseId) +
         "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
