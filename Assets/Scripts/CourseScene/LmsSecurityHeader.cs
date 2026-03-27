@@ -3,7 +3,9 @@ using UnityEngine;
 
 public static class LmsSecurityHeader
 {
-    private const string AesGcmKeyBase64 = "x7qfE7pG1Yc7YtX1XK9v3QO3Yv0xv5q3O1Iu6yGvV0Y=";
+    // private const string AesGcmKeyBase64 = "x7qfE7pG1Yc7YtX1XK9v3QO3Yv0xv5q3O1Iu6yGvV0Y="; //x-data prod
+    private const string AesGcmKeyBase64 = "6jZ4pHq2Q9xT1F6b3vX9W8eKz2nM4rT0yL5vQ7aU0sM=";// x-data dev
+
     private const string AesPlatform     = "lms-3d";
 
     // Đổi true/false để test BE dùng seconds hay milliseconds
