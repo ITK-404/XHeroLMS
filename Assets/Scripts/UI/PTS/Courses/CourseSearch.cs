@@ -123,6 +123,7 @@ public class CourseSearch : MonoBehaviour
         UnwireUI();
     }
 
+    public Action<bool> ShowEmptySearch;
     public void SearchNow()
     {
         string keyword = inputKeyword != null ? inputKeyword.text : null;
@@ -141,6 +142,9 @@ public class CourseSearch : MonoBehaviour
             ResetQueryCache();
             _lastResults.Clear();
             OnResultsChanged?.Invoke(_lastResults);
+            
+            // khong show
+            ShowEmptySearch?.Invoke(false);
             return;
         }
 
@@ -159,6 +163,7 @@ public class CourseSearch : MonoBehaviour
         _lastResults.AddRange(results);
 
         OnResultsChanged?.Invoke(_lastResults);
+        ShowEmptySearch?.Invoke(_lastResults.Count == 0);
     }
 
     private void RequestSearch()
@@ -173,6 +178,7 @@ public class CourseSearch : MonoBehaviour
         }
 
         _debounceCo = StartCoroutine(CoDebounce());
+        Debug.Log("Searching Temp");
     }
 
     private IEnumerator CoDebounce()
