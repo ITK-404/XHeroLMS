@@ -448,7 +448,7 @@ public class CourseSearch : MonoBehaviour
         return Mathf.Clamp(dd.value, 0, dd.options.Count - 1);
     }
 
-    private List<CourseListItemData> RunSearch(string keyword, ModeFilter mode, float minStars, SortMode sort)
+    private List<CourseListItemData> RunSearch(string keyword, ModeFilter mode, int minStars, SortMode sort)
     {
         var all = CourseStaticStore.GetAll();
         if (all == null || all.Count == 0)
@@ -659,10 +659,10 @@ public class CourseSearch : MonoBehaviour
         return string.Equals(m, modeLowerOrNull, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool PassRating(CourseListItemData c, float minStars)
+    private bool PassRating(CourseListItemData c, int minStars)
     {
         if (minStars <= 0f) return true;
-        return c.stars >= minStars;
+        return c.stars == minStars;
     }
 
     private void ApplySort(List<CourseListItemData> list, SortMode sort)
@@ -693,9 +693,9 @@ public class CourseSearch : MonoBehaviour
         return v > 0 ? v : long.MaxValue;
     }
 
-    private float GetRatingMinStars(int ddValue)
+    private int GetRatingMinStars(int ddValue)
     {
-        if (ddValue <= 0) return 0f;
+        if (ddValue <= 0) return 0;
         return Mathf.Clamp(6 - ddValue, 1, 5);
     }
 
