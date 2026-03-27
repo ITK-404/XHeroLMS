@@ -456,29 +456,13 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
 
             if (detailError)
-            {
-                Debug.LogWarning("[PTS] Course detail load error: " + CourseDetailStaticStore.LastError);
-                CourseLoading = false;
                 yield break;
-            }
 
-            if (reviewError)
+            bool canShow = detailDone && (reviewDone || reviewError);
+
+            if (canShow)
             {
-                Debug.LogWarning("[PTS] Course review load error: " + CourseReviewStaticStore.LastError);
-
-                if (detailDone)
-                {
-                    CourseLoading = false;
-                    ChangeViewClicked?.Invoke();
-                    yield break;
-                }
-            }
-
-            if (detailDone && reviewDone)
-            {
-                Debug.Log("[PTS] Detail + Review loaded successfully");
-                CourseLoading = false;
-                ChangeViewClicked?.Invoke();
+                Show();
                 yield break;
             }
 
@@ -486,16 +470,16 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             yield return null;
         }
 
-        Debug.LogWarning("[PTS] WaitAllDataThenShow timeout");
-
         if (IsCourseDetailLoaded(courseId))
-        {
+            Show();
+        else
             CourseLoading = false;
-            ChangeViewClicked?.Invoke();
-            yield break;
-        }
-
+    }
+    
+    private void Show()
+    {
         CourseLoading = false;
+        ChangeViewClicked?.Invoke();
     }
 
     private bool IsCourseDetailLoaded(string courseId)
