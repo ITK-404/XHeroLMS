@@ -42,7 +42,7 @@ public static class LoadingUI
     public static void Show(
         float timeoutSeconds = 0f,
         string timeoutMessage = "Hệ thống đang xử lý quá lâu.\nVui lòng kiểm tra kết nối mạng hoặc thử lại sau.",
-        string timeoutHeader  = "Timeout")
+        string timeoutHeader  = "HẾT THỜI GIAN CHỜ")
     {
         try
         {

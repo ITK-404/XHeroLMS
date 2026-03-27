@@ -31,7 +31,7 @@ public static class CourseModels
 
         public string level;
         public int learners;
-        public int stars;
+        public float stars;
         public int evaluate;
 
         public string learningMode;
@@ -242,7 +242,7 @@ public class CourseListItemData
     public string title;
     public string image;
     public string learningMode;
-    public int stars;
+    public float stars;
     public bool isJoined;
     public string group;
     public string category;

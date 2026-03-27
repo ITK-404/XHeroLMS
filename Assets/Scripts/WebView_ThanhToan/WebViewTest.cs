@@ -96,11 +96,13 @@ public class WebViewTest : MonoBehaviour
 
     private IEnumerator CreateWebView(string url)
     {
+        _navigation.SetTitle(storeTitleCourse);
+        
         webViewInstance = Instantiate(webViewPrefab, transform);
         webViewInstance.gameObject.SetActive(true);
 
         webViewInstance.OnPageFinished += OnWebPageFinished;
-
+        
         LoadingUI.Show();
         yield return new WaitForSeconds(1f);
         LoadingUI.Hide();
@@ -195,6 +197,9 @@ public class WebViewTest : MonoBehaviour
     {
         pendingUrl = url;
         storeTitleCourse = title;
+        
+        Debug.Log($"WebView Update Title {title}");
+        
         ResetPaymentState();
 
         if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
