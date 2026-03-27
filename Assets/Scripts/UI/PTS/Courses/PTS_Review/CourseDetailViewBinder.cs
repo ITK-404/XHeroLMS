@@ -99,15 +99,7 @@ public class CourseDetailViewBinder : MonoBehaviour
         // evaluate = 0 -> chỉ hiện sao
         // if (evaluate <= 0) return starsText;
 
-        return $"{starsText} ({FormatCountCompact(evaluate)} người đánh giá)";
-    }
-
-    private static string FormatCountCompact(int n)
-    {
-        if (n <= 0) return "0.0";
-        if (n < 1000) return n.ToString();
-        if (n < 1_000_000) return (n / 1000f).ToString("0.#") + "k";
-        return (n / 1_000_000f).ToString("0.#") + "M";
+        return $"{starsText} ({(int)evaluate} người đánh giá)";
     }
 
     private static int CountLessonsSmart(List<CourseModels.CourseChapter> chapters)
