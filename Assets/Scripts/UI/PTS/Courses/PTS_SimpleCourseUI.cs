@@ -375,6 +375,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         };
     }
 
+    [SerializeField] private CourseTagHandle courseTagHandle;
     private void ApplyStatus(StatusData s)
     {
         if (img_status == null)
@@ -386,9 +387,25 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             return;
         }
 
-        img_status.gameObject.SetActive(true);
-        img_status.enabled = true;
-        img_status.sprite = s.icon;
+        CourseTag courseTag = CourseTag.Offline;
+        switch (s.key)
+        {
+            case StatusKey.Zoom:
+                courseTag = CourseTag.Zoom;
+                break;
+            case StatusKey.Offline:
+                courseTag = CourseTag.Offline;
+                break;
+            case StatusKey.Online:
+                courseTag = CourseTag.Online;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        courseTagHandle.Show(newTag: courseTag);
+        // img_status.gameObject.SetActive(true);
+        // img_status.enabled = true;
+        // img_status.sprite = s.icon;
     }
 
     private void OnDirectClick()

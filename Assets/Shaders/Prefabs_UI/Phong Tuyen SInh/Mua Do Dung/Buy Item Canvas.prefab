@@ -861,6 +861,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CourseProductListBuilder
   contentParent: {fileID: 8702563990816443020}
   itemPrefab: {fileID: 5590464550921664568, guid: c181f91108c5d4e27af25c7f58df93d4, type: 3}
+  xheroOpenDeepLinkBtn: {fileID: 942664445112785880}
   buildOnEnable: 1
   listenStoreChanged: 1
   clearOldItemsBeforeBuild: 1
@@ -1060,8 +1061,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1764628070505224156}
   m_HandleRect: {fileID: 6037347803180737702}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 0.99999994
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1333,6 +1334,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Dowload XHero Element
       objectReference: {fileID: 0}
+    - target: {fileID: 1768593187632017563, guid: d0b8af1ef77c84617a43f191453d7f60, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3726910500588720490, guid: d0b8af1ef77c84617a43f191453d7f60, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1442,6 +1447,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d0b8af1ef77c84617a43f191453d7f60, type: 3}
+--- !u!1 &942664445112785880 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1768593187632017563, guid: d0b8af1ef77c84617a43f191453d7f60, type: 3}
+  m_PrefabInstance: {fileID: 1557764382080756547}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &8823416534238275531 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8065200249758108808, guid: d0b8af1ef77c84617a43f191453d7f60, type: 3}
