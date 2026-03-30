@@ -11,34 +11,29 @@ using UnityEngine.UI;
 
 public class PTS_SimpleCourseUI : MonoBehaviour
 {
-    [Header("Buttons")]
-    [SerializeField] private Button panelBtn;
+    [Header("Buttons")] [SerializeField] private Button panelBtn;
     [SerializeField] private Button directBtn;
 
-    [Header("FX")]
-    [SerializeField] private Image bgImg;
+    [Header("FX")] [SerializeField] private Image bgImg;
 
-    [Header("Course UI Fields")]
-    [SerializeField] private Image img_course;
+    [Header("Course UI Fields")] [SerializeField]
+    private Image img_course;
+
     [SerializeField] private Sprite placeholderSprite;
     [SerializeField] private bool usePlaceholderWhileLoading = true;
     [SerializeField] private bool preserveAspectAfterLoad = false;
 
-    [Header("Status UI")]
-    [SerializeField] private Image img_status;
+    [Header("Status UI")] [SerializeField] private Image img_status;
 
-    [Header("Text UI")]
-    [SerializeField] private TextMeshProUGUI txt_name;
+    [Header("Text UI")] [SerializeField] private TextMeshProUGUI txt_name;
     [SerializeField] private TextMeshProUGUI txt_rating;
     [SerializeField] private TextMeshProUGUI txt_priceDiscount;
     [SerializeField] private TextMeshProUGUI txt_priceOrigin;
 
-    [Header("Loaders")]
-    [SerializeField] private CourseDetailLoader courseDetailLoader;
+    [Header("Loaders")] [SerializeField] private CourseDetailLoader courseDetailLoader;
     [SerializeField] private CourseReviewLoader courseReviewLoader;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugBindPrice = false;
+    [Header("Debug")] [SerializeField] private bool debugBindPrice = false;
 
     public UnityEvent ChangeViewClicked;
 
@@ -65,8 +60,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         public bool hideIcon;
     }
 
-    [Header("Status Config (set in Inspector)")]
-    [SerializeField] private List<StatusData> statusConfigs = new();
+    [Header("Status Config (set in Inspector)")] [SerializeField]
+    private List<StatusData> statusConfigs = new();
 
     private readonly Dictionary<StatusKey, StatusData> _statusMap = new();
 
@@ -181,8 +176,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         {
             float stars = course.stars;
             int count = course.evaluate;
-            string starsText = stars > 0 ?  stars.ToString("0.0",CultureInfo.InvariantCulture) : "0.0";
-            Debug.Log($"Star and count{stars} {count}",gameObject);
+            string starsText = stars > 0 ? stars.ToString("0.0", CultureInfo.InvariantCulture) : "0.0";
+            Debug.Log($"Star and count{stars} {count}", gameObject);
             txt_rating.text = count <= 0
                 ? starsText
                 : $"{starsText} ({FormatCountCompact(count)})";
@@ -376,6 +371,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     }
 
     [SerializeField] private CourseTagHandle courseTagHandle;
+
     private void ApplyStatus(StatusData s)
     {
         if (img_status == null)
@@ -402,6 +398,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             default:
                 throw new ArgumentOutOfRangeException();
         }
+
         courseTagHandle.Show(newTag: courseTag);
         // img_status.gameObject.SetActive(true);
         // img_status.enabled = true;
@@ -436,66 +433,21 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (_waitDataCo != null)
             StopCoroutine(_waitDataCo);
 
-        courseDetailLoader.Load(_courseId);
-        courseReviewLoader.LoadReviews(_courseId);
-
-        _waitDataCo = StartCoroutine(WaitAllDataThenShow(_courseId));
+        APICourseLoaderService.Instance.Load(_courseId, CompleteLoad, FallLoad);
     }
 
-    private IEnumerator WaitAllDataThenShow(string courseId)
-    {
-        float timeout = 10f;
-        float t = 0f;
 
-        while (t < timeout)
-        {
-            bool detailDone = IsCourseDetailLoaded(courseId);
-            bool reviewDone = IsCourseReviewLoaded(courseId);
-
-            bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
-            bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
-
-            if (detailError)
-                yield break;
-
-            bool canShow = detailDone && (reviewDone || reviewError);
-
-            if (canShow)
-            {
-                Show();
-                yield break;
-            }
-
-            t += Time.unscaledDeltaTime;
-            yield return null;
-        }
-
-        if (IsCourseDetailLoaded(courseId))
-            Show();
-        else
-            CourseLoading = false;
-    }
-    
-    private void Show()
+    private void CompleteLoad()
     {
         CourseLoading = false;
         ChangeViewClicked?.Invoke();
     }
 
-    private bool IsCourseDetailLoaded(string courseId)
+    private void FallLoad()
     {
-        return CourseDetailStaticStore.HasData
-               && !CourseDetailStaticStore.IsLoading
-               && CourseDetailStaticStore.CurrentCourseId == courseId
-               && CourseDetailStaticStore.CurrentDetail != null;
+        CourseLoading = false;
     }
 
-    private bool IsCourseReviewLoaded(string courseId)
-    {
-        return CourseReviewStaticStore.CurrentCourseId == courseId
-               && !CourseReviewStaticStore.IsLoading
-               && string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
-    }
 
     private void OnLoadImgFx()
     {
@@ -554,7 +506,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
                     yield break;
                 }
 
-                s_textureCache[url] = tex; 
+                s_textureCache[url] = tex;
 
                 sprite = Sprite.Create(
                     tex,
@@ -575,7 +527,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             _loadImgCo = null;
         }
     }
-    
+
     private static string FormatVndCompact(long v)
     {
         if (v <= 0) return "—";

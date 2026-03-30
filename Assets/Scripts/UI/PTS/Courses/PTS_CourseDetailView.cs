@@ -83,7 +83,7 @@ public class PTS_CourseDetailView : PTS_BaseView
         btnReturn.onClick.RemoveListener(GoBackward);
     }
 
-    private void GoBackward()
+    public void GoBackward()
     {
         if (simpleHistory.Count > 0)
         {
