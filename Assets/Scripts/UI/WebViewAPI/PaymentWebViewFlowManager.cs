@@ -10,9 +10,8 @@ public class PaymentWebViewFlowManager : MonoBehaviour
     [Header("Popup Prefab (Canvas Prefab)")]
     [SerializeField] private PaymentWebViewUI popupPrefab;
 
-    [Header("Optional Button Names In Prefab")]
-    [SerializeField] private string returnButtonName = "ReturnBtn";
-    [SerializeField] private string actionButtonName = "ActionBtn";
+    private string returnButtonName = "Hover Button Yellow Variant";
+    private string actionButtonName = "Hover Button Red Variant";
 
     [Header("Optional Loading Text Name")]
     [SerializeField] private string loadingTextName = "StateTmp";
@@ -47,6 +46,7 @@ public class PaymentWebViewFlowManager : MonoBehaviour
         if (currentPopup != null)
             return;
 
+        Debug.Log("[PaymentWebViewFlowManager] StartPaymentCheckFlow");
         StartPaymentCheckFlow(WebViewTest.CurrentOrderId, TokenStore.AccessToken);
     }
 
