@@ -35,12 +35,6 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     [Header("Debug")] [SerializeField] private bool debugBindPrice = false;
 
-    private UnityWebRequest _activeImageRequest;
-    private bool _isActive;
-    private bool _isDestroyed;
-
-    private const int MaxImageCacheCount = 120;
-    private static readonly LinkedList<string> s_cacheOrder = new();
     public UnityEvent ChangeViewClicked;
 
     public enum StatusKey
@@ -110,62 +104,36 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             directBtn.onClick.AddListener(OnLoadImgFx);
     }
 
-private void OnEnable()
-{
-    _isActive = true;
-}
-
-private void OnDisable()
-{
-    _isActive = false;
-    CancelImageLoad();
-
-    if (_waitDataCo != null)
+    private void OnDisable()
     {
-        StopCoroutine(_waitDataCo);
-        _waitDataCo = null;
-    }
-}
-
-private void OnDestroy()
-{
-    _isDestroyed = true;
-    _isActive = false;
-
-    if (panelBtn != null)
-        panelBtn.onClick.RemoveListener(OnLoadImgFx);
-
-    if (directBtn != null)
-        directBtn.onClick.RemoveListener(OnLoadImgFx);
-
-    CancelImageLoad();
-
-    if (_waitDataCo != null)
-    {
-        StopCoroutine(_waitDataCo);
-        _waitDataCo = null;
-    }
-}
-private void CancelImageLoad()
-{
-    if (_loadImgCo != null)
-    {
-        StopCoroutine(_loadImgCo);
-        _loadImgCo = null;
-    }
-
-    if (_activeImageRequest != null)
-    {
-        try
+        if (_loadImgCo != null)
         {
-            _activeImageRequest.Abort();
+            StopCoroutine(_loadImgCo);
+            _loadImgCo = null;
         }
-        catch { }
 
-        _activeImageRequest.Dispose();
-        _activeImageRequest = null;
+        if (_waitDataCo != null)
+        {
+            StopCoroutine(_waitDataCo);
+            _waitDataCo = null;
+        }
     }
-}
+
+    private void OnDestroy()
+    {
+        if (panelBtn != null)
+            panelBtn.onClick.RemoveListener(OnLoadImgFx);
+
+        if (directBtn != null)
+            directBtn.onClick.RemoveListener(OnLoadImgFx);
+
+        if (_loadImgCo != null)
+            StopCoroutine(_loadImgCo);
+
+        if (_waitDataCo != null)
+            StopCoroutine(_waitDataCo);
+    }
+
     private void BuildStatusMap()
     {
         _statusMap.Clear();
@@ -266,46 +234,16 @@ private void CancelImageLoad()
     }
 
 
-    private static void TouchCacheKey(string url)
-    {
-        if (string.IsNullOrEmpty(url))
-            return;
-
-        var node = s_cacheOrder.Find(url);
-        if (node != null)
-            s_cacheOrder.Remove(node);
-
-        s_cacheOrder.AddLast(url);
-    }
-
-    private static void TrimImageCacheIfNeeded()
-    {
-        while (s_cacheOrder.Count > MaxImageCacheCount)
-        {
-            string oldest = s_cacheOrder.First.Value;
-            s_cacheOrder.RemoveFirst();
-
-            if (s_spriteCache.TryGetValue(oldest, out var sprite))
-            {
-                if (sprite != null)
-                    UnityEngine.Object.Destroy(sprite);
-                s_spriteCache.Remove(oldest);
-            }
-
-            if (s_textureCache.TryGetValue(oldest, out var tex))
-            {
-                if (tex != null)
-                    UnityEngine.Object.Destroy(tex);
-                s_textureCache.Remove(oldest);
-            }
-        }
-    }
     private void BindThumbnail(string url, int token)
     {
         if (img_course == null)
             return;
 
-        CancelImageLoad();
+        if (_loadImgCo != null)
+        {
+            StopCoroutine(_loadImgCo);
+            _loadImgCo = null;
+        }
 
         if (usePlaceholderWhileLoading)
             img_course.sprite = placeholderSprite;
@@ -320,11 +258,14 @@ private void CancelImageLoad()
         if (s_spriteCache.TryGetValue(url, out var cachedSprite) && cachedSprite != null)
         {
             ApplyLoadedSprite(cachedSprite, token, url, true);
-            TouchCacheKey(url);
             return;
         }
 
-        _loadImgCo = StartCoroutine(LoadImageTo(img_course, url, token));
+        Debug.Log($"PTSSimpleCourse: name: {txt_name.text} url: {_imageUrl}");
+        // lý do gây leak bộ nhớ là do khi coroutine bị tắt, 
+        if (isLoaded == false)
+            PTS_ViewManager.Instance.StartCoroutine(LoadImageTo(img_course, url, token));
+        // _loadImgCo = StartCoroutine(LoadImageTo(img_course, url, token));
     }
 
     private void ApplyLoadedSprite(Sprite sprite, int token, string url, bool fromCache)
