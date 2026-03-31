@@ -206,7 +206,7 @@ public class RelatedCoursesView : MonoBehaviour
             }
 
             courseImage.sprite = runtimeSprite;
-            courseImage.preserveAspect = preserveAspect;
+            courseImage.preserveAspect = false;
             loadImageDone = true;
         }
     }
