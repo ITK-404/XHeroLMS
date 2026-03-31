@@ -46,7 +46,7 @@ public static class TextureExtension
 
         Texture2D result = new Texture2D(newWidth, newHeight, TextureFormat.RGBA32, false);
         result.ReadPixels(new Rect(0, 0, newWidth, newHeight), 0, 0);
-        result.Apply();
+        result.Apply(false);
 
         RenderTexture.active = prev;
         RenderTexture.ReleaseTemporary(rt);

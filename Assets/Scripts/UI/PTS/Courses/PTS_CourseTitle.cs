@@ -5,7 +5,8 @@ public class PTS_CourseTitle : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI titleText;
 
-    private void OnEnable()
+
+    public void UpdateTitleText()
     {
         if (CourseDetailStaticStore.CurrentDetail != null)
         {
@@ -15,7 +16,7 @@ public class PTS_CourseTitle : MonoBehaviour
 
     private void UpdateTitleText(string text)
     {
-        if(titleText)
+        if (titleText)
             titleText.text = text;
     }
 }
