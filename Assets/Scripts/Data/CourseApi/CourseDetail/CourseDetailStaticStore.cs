@@ -11,6 +11,9 @@ public static class CourseDetailStaticStore
     // Giữ normalized private-flow để các UI cũ / flow chapter-lesson dùng tiếp
     public static LmsCoursePrivate CurrentCourseFlow { get; private set; }
 
+    // Lưu riêng video intro để UI khác dùng nhanh
+    public static string VideoIntro { get; private set; }
+
     public static bool IsLoading { get; private set; }
     public static string LastError { get; private set; }
 
@@ -25,6 +28,7 @@ public static class CourseDetailStaticStore
         CurrentCourseId = null;
         CurrentDetail = null;
         CurrentCourseFlow = null;
+        VideoIntro = null;
         IsLoading = false;
         LastError = null;
         OnChanged?.Invoke();
@@ -35,6 +39,7 @@ public static class CourseDetailStaticStore
         CurrentCourseId = courseId;
         CurrentDetail = null;
         CurrentCourseFlow = null;
+        VideoIntro = null;
         IsLoading = true;
         LastError = null;
         OnChanged?.Invoke();
@@ -45,6 +50,7 @@ public static class CourseDetailStaticStore
         CurrentCourseId = courseId;
         CurrentDetail = detail;
         CurrentCourseFlow = ConvertToCourseFlow(detail);
+        VideoIntro = detail != null ? detail.videoIntro : null;
         IsLoading = false;
         LastError = null;
         OnChanged?.Invoke();
@@ -55,6 +61,7 @@ public static class CourseDetailStaticStore
         CurrentCourseId = courseId;
         CurrentDetail = null;
         CurrentCourseFlow = null;
+        VideoIntro = null;
         IsLoading = false;
         LastError = error;
         OnChanged?.Invoke();
@@ -85,6 +92,17 @@ public static class CourseDetailStaticStore
             CurrentCourseFlow.banner != null &&
             CurrentCourseFlow.banner.Count > 0)
             return CurrentCourseFlow.banner[0];
+
+        return null;
+    }
+
+    public static string GetVideoIntro()
+    {
+        if (!string.IsNullOrWhiteSpace(VideoIntro))
+            return VideoIntro;
+
+        if (CurrentDetail != null && !string.IsNullOrWhiteSpace(CurrentDetail.videoIntro))
+            return CurrentDetail.videoIntro;
 
         return null;
     }
@@ -120,7 +138,9 @@ public static class CourseDetailStaticStore
             description = detail.description,
             introduction = detail.introduction,
             image = detail.image,
-            videoLink = null, // nếu API detail mới không trả thì để null
+
+            // dùng luôn videoIntro cho flow cũ nếu cần tái sử dụng
+            videoLink = detail.videoIntro,
             finalExam = "",
 
             banner = detail.banner != null ? new List<string>(detail.banner) : new List<string>(),

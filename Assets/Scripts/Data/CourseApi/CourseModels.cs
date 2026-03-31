@@ -125,6 +125,8 @@ public static class CourseModels
         public string introduction;
         public string[] banner;
 
+        public string videoIntro;
+
         public CoursePriceDetail coursePrice;
         public SeoDetail seo;
 
