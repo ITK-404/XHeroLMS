@@ -66,7 +66,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     private readonly Dictionary<StatusKey, StatusData> _statusMap = new();
 
     private string _courseId;
-    private string _imageUrl;
+    [SerializeField] private string _imageUrl;
     private Coroutine _loadImgCo;
     private Coroutine _waitDataCo;
 
@@ -177,7 +177,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             float stars = course.stars;
             int count = course.evaluate;
             string starsText = stars > 0 ? stars.ToString("0.0", CultureInfo.InvariantCulture) : "0.0";
-            Debug.Log($"Star and count{stars} {count}", gameObject);
+            // Debug.Log($"Star and count{stars} {count}", gameObject);
             txt_rating.text = count <= 0
                 ? starsText
                 : $"{starsText} ({FormatCountCompact(count)})";
@@ -261,7 +261,11 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             return;
         }
 
-        _loadImgCo = StartCoroutine(LoadImageTo(img_course, url, token));
+        Debug.Log($"PTSSimpleCourse: name: {txt_name.text} url: {_imageUrl}");
+        // lý do gây leak bộ nhớ là do khi coroutine bị tắt, 
+        if (isLoaded == false)
+            PTS_ViewManager.Instance.StartCoroutine(LoadImageTo(img_course, url, token));
+        // _loadImgCo = StartCoroutine(LoadImageTo(img_course, url, token));
     }
 
     private void ApplyLoadedSprite(Sprite sprite, int token, string url, bool fromCache)
@@ -470,8 +474,11 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         seq.Append(bgImg.DOFade(0f, 0.15f));
     }
 
+    private bool isLoaded = false;
+
     private IEnumerator LoadImageTo(Image target, string url, int token)
     {
+        isLoaded = true;
         using (var req = UnityWebRequestTexture.GetTexture(url))
         {
             yield return req.SendWebRequest();
@@ -497,8 +504,13 @@ public class PTS_SimpleCourseUI : MonoBehaviour
             if (!s_spriteCache.TryGetValue(url, out sprite) || sprite == null)
             {
                 var tempText = DownloadHandlerTexture.GetContent(req);
-                var tex = tempText.Resize(512);
-                Destroy(tempText);
+                tempText.name = txt_name.text;
+                var tex = tempText.Resize(256);
+                // tex.name = txt_name.text;
+
+                // Debug.Log($"PTS_SimpleCourse: {txt_name.text} Temp{tempText.width} {tempText.height} :Current {tex.width} {tex.height}");
+
+                DestroyImmediate(tempText);
 
                 if (tex == null || target == null)
                 {
