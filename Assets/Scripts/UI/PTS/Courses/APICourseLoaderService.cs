@@ -24,10 +24,17 @@ public class APICourseLoaderService : MonoBehaviour
 
     private IEnumerator WaitAllDataThenShow(string courseId, Action onComplete, Action OnFall)
     {
+        LoadingUI.Show();
+
         float timeout = 10f;
         float t = 0f;
-        yield return new WaitForSeconds(2);
-        while (t < timeout)
+
+        bool isDone = false;
+        bool isSuccess = false;
+
+        yield return new WaitForSeconds(1);
+
+        while (!isDone && t < timeout)
         {
             bool detailDone = IsCourseDetailLoaded(courseId);
             bool reviewDone = IsCourseReviewLoaded(courseId);
@@ -35,25 +42,42 @@ public class APICourseLoaderService : MonoBehaviour
             bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
             bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
 
+            // Case 1: Detail fail -> fail luôn
             if (detailError)
-                yield break;
-
-            bool canShow = detailDone && (reviewDone || reviewError);
-
-            if (canShow)
             {
-                onComplete?.Invoke();
-                yield break;
+                isDone = true;
+                isSuccess = false;
+                break;
+            }
+
+            // Case 2: đủ điều kiện show
+            if (detailDone && (reviewDone || reviewError))
+            {
+                isDone = true;
+                isSuccess = true;
+                break;
             }
 
             t += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        if (IsCourseDetailLoaded(courseId))
+        // Timeout handling
+        if (!isDone)
+        {
+            if (IsCourseDetailLoaded(courseId))
+                isSuccess = true;
+            else
+                isSuccess = false;
+        }
+
+        // Final result
+        if (isSuccess)
             onComplete?.Invoke();
         else
             OnFall?.Invoke();
+
+        LoadingUI.Hide();
     }
 
 
