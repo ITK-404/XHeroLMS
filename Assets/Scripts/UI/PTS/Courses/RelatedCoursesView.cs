@@ -1,28 +1,27 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 public class RelatedCoursesView : MonoBehaviour
 {
-    [Header("UI")]
-    [SerializeField] private Button clickCourseBtn;
+    [Header("UI")] [SerializeField] private Button clickCourseBtn;
     [SerializeField] private Image courseImage;
-
+    [SerializeField] private Sprite defaultImage;
     [SerializeField] private TextMeshProUGUI courseTitle;
     [SerializeField] private TextMeshProUGUI viewCount;
     [SerializeField] private TextMeshProUGUI customerCount;
 
-    [Header("Data")]
-    [SerializeField] private string courseID;
+    [Header("Data")] [SerializeField] private string courseID;
 
-    [Header("Options")]
-    [SerializeField] private bool downloadImage = true;
+    [Header("Options")] [SerializeField] private bool downloadImage = true;
 
     private string imageUrl;
-    private Coroutine loadImageCoroutine;
-    private bool pendingLoadImage;
+    private bool loadImageDone = false;
+    private Coroutine loadingImgCoroutine;
 
     private void Awake()
     {
@@ -32,11 +31,39 @@ public class RelatedCoursesView : MonoBehaviour
 
     private void OnEnable()
     {
-        if (pendingLoadImage && downloadImage && !string.IsNullOrWhiteSpace(imageUrl) && courseImage != null)
+        HandleLoadingNewImage();
+    }
+
+    private void HandleLoadingNewImage()
+    {
+        if (loadImageDone) return;
+        
+        if (!string.IsNullOrEmpty(imageUrl))
         {
-            pendingLoadImage = false;
-            StopLoadingImage();
-            loadImageCoroutine = StartCoroutine(LoadImage(imageUrl));
+            if (loadingImgCoroutine != null)
+            {
+                StopCoroutine(loadingImgCoroutine);
+            }
+
+            // loadingImgCoroutine = StartCoroutine(LoadRoutine(imageUrl,courseImage));
+        }
+        else
+        {
+            courseImage.sprite = defaultImage;
+        }
+    }
+
+    
+    private void OnDisable()
+    {
+        ResetState();
+    }
+
+    private void ResetState()
+    {
+        if (loadingImgCoroutine != null)
+        {
+            StopCoroutine(loadingImgCoroutine);
         }
     }
 
@@ -44,8 +71,12 @@ public class RelatedCoursesView : MonoBehaviour
     {
         if (clickCourseBtn)
             clickCourseBtn.onClick.RemoveListener(OnShowCourse);
-
-        StopLoadingImage();
+        
+        if (courseImage.sprite != null && courseImage.sprite != defaultImage)
+        {
+            Object.Destroy(courseImage.sprite.texture);
+            Object.Destroy(courseImage.sprite);
+        }
     }
 
     public void Setup(string id, string title, string learnersText, string viewsText, string image)
@@ -61,30 +92,15 @@ public class RelatedCoursesView : MonoBehaviour
 
         if (viewCount != null)
             viewCount.text = viewsText ?? "";
-
-        ResetImageView();
-
-        StopLoadingImage();
-        pendingLoadImage = false;
-
-        if (downloadImage && !string.IsNullOrWhiteSpace(imageUrl) && courseImage != null)
-        {
-            if (isActiveAndEnabled && gameObject.activeInHierarchy)
-            {
-                loadImageCoroutine = StartCoroutine(LoadImage(imageUrl));
-            }
-            else
-            {
-                pendingLoadImage = true;
-            }
-        }
+        
+        loadImageDone = false;
     }
+
 
     public void Clear()
     {
         courseID = "";
         imageUrl = "";
-        pendingLoadImage = false;
 
         if (courseTitle != null)
             courseTitle.text = "";
@@ -94,42 +110,13 @@ public class RelatedCoursesView : MonoBehaviour
 
         if (viewCount != null)
             viewCount.text = "";
-
-        ResetImageView();
-        StopLoadingImage();
     }
 
-    private void ResetImageView()
+    private IEnumerator LoadRoutine(string url, Image target)
     {
-        if (courseImage == null) return;
-
-        courseImage.sprite = null;
-        courseImage.enabled = false;
-        courseImage.color = Color.white;
-        courseImage.preserveAspect = false;
-
-        RectTransform rt = courseImage.rectTransform;
-        if (rt != null)
+        using (UnityWebRequest req = UnityWebRequestTexture.GetTexture(url))
         {
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.localScale = Vector3.one;
-        }
-    }
-
-    private void OnShowCourse()
-    {
-        Debug.Log($"[RelatedCoursesView] Click course id = {courseID}");
-        LoadingUI.Show(3);
-    }
-
-    private IEnumerator LoadImage(string url)
-    {
-        using (UnityWebRequest req = UnityWebRequest.Get(url))
-        {
-            req.timeout = 20;
+            req.timeout = 5;
             yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
@@ -138,28 +125,23 @@ public class RelatedCoursesView : MonoBehaviour
             if (req.isNetworkError || req.isHttpError)
 #endif
             {
-                Debug.LogWarning($"[RelatedCoursesView] Load image failed\nURL: {url}\nCode: {req.responseCode}\nError: {req.error}");
-                loadImageCoroutine = null;
+                Debug.LogWarning($"Load image failed: {req.error}");
                 yield break;
             }
 
-            byte[] data = req.downloadHandler.data;
-            if (data == null || data.Length == 0)
-            {
-                Debug.LogWarning($"[RelatedCoursesView] Image bytes empty: {url}");
-                loadImageCoroutine = null;
+            Texture2D temp = DownloadHandlerTexture.GetContent(req);
+            temp.name = courseID;
+            var tex = temp.Resize(256);
+            tex.name = courseID;
+            Destroy(temp);
+            if (tex == null)
                 yield break;
-            }
 
-            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            bool ok = tex.LoadImage(data);
-
-            if (!ok)
+            // cleanup sprite cũ
+            if (target.sprite != null && target.sprite != defaultImage)
             {
-                Debug.LogWarning($"[RelatedCoursesView] Texture.LoadImage failed: {url}");
-                Destroy(tex);
-                loadImageCoroutine = null;
-                yield break;
+                Object.Destroy(target.sprite.texture);
+                Object.Destroy(target.sprite);
             }
 
             var sprite = Sprite.Create(
@@ -167,67 +149,18 @@ public class RelatedCoursesView : MonoBehaviour
                 new Rect(0, 0, tex.width, tex.height),
                 new Vector2(0.5f, 0.5f)
             );
+            target.sprite = sprite;
 
-            if (courseImage != null)
-            {
-                courseImage.sprite = sprite;
-                courseImage.enabled = true;
-                courseImage.color = Color.white;
-                courseImage.preserveAspect = false;
-
-                ApplyCenterCrop(tex.width, tex.height);
-            }
+            loadImageDone = true;
         }
-
-        loadImageCoroutine = null;
     }
 
-    private void ApplyCenterCrop(float imageWidth, float imageHeight)
+    private void OnShowCourse()
     {
-        if (courseImage == null) return;
+        Debug.Log($"[RelatedCoursesView] Click course id = {courseID}");
+        PTS_ViewManager.Instance.Current.GetComponent<PTS_CourseDetailView>().GoBackward();
 
-        RectTransform imageRT = courseImage.rectTransform;
-        RectTransform parentRT = imageRT.parent as RectTransform;
-
-        if (imageRT == null || parentRT == null) return;
-
-        float frameWidth = parentRT.rect.width;
-        float frameHeight = parentRT.rect.height;
-
-        if (frameWidth <= 0f || frameHeight <= 0f || imageWidth <= 0f || imageHeight <= 0f)
-            return;
-
-        float frameRatio = frameWidth / frameHeight;
-        float imageRatio = imageWidth / imageHeight;
-
-        float targetWidth;
-        float targetHeight;
-
-        if (imageRatio > frameRatio)
-        {
-            targetHeight = frameHeight;
-            targetWidth = targetHeight * imageRatio;
-        }
-        else
-        {
-            targetWidth = frameWidth;
-            targetHeight = targetWidth / imageRatio;
-        }
-
-        imageRT.anchorMin = new Vector2(0.5f, 0.5f);
-        imageRT.anchorMax = new Vector2(0.5f, 0.5f);
-        imageRT.pivot = new Vector2(0.5f, 0.5f);
-        imageRT.anchoredPosition = Vector2.zero;
-        imageRT.sizeDelta = new Vector2(targetWidth, targetHeight);
-        imageRT.localScale = Vector3.one;
-    }
-
-    private void StopLoadingImage()
-    {
-        if (loadImageCoroutine != null)
-        {
-            StopCoroutine(loadImageCoroutine);
-            loadImageCoroutine = null;
-        }
+        APICourseLoaderService.Instance.Load(courseID, () => { Debug.Log("[Related Course] Load thanh cong"); },
+            () => { Debug.Log("[Related Course] Load that bai"); });
     }
 }

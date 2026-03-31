@@ -77,12 +77,27 @@ public class PTS_CourseDetailView : PTS_BaseView
         NavigateTo(CourseDetailSection.Intro);
         Hide();
     }
-
+    
     private void OnDestroy()
     {
         btnReturn.onClick.RemoveListener(GoBackward);
     }
 
+    private void OnEnable()
+    {
+        CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
+    }
+
+    private void OnDisable()
+    {
+        CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
+    }
+    
+    private void CourseDetailStaticStoreOnOnChanged()
+    {
+        title.UpdateTitleText();
+    }
+    
     public void GoBackward()
     {
         if (simpleHistory.Count > 0)
