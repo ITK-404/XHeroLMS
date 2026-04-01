@@ -10,6 +10,7 @@ public class NotificationsLoader : MonoBehaviour
     [SerializeField] private int skip = 0;
     [SerializeField] private int limit = 10;
     [SerializeField] private int timeoutSeconds = 20;
+    [SerializeField] private string platform = "lms3d";
 
     [Header("Auto Load")]
     [SerializeField] private bool autoLoadOnEnable = true;
@@ -41,6 +42,9 @@ public class NotificationsLoader : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(defaultTab))
             defaultTab = "system";
+
+        if (string.IsNullOrWhiteSpace(platform))
+            platform = "lms3d";
 
         currentTab = NormalizeTab(defaultTab);
     }
@@ -120,6 +124,15 @@ public class NotificationsLoader : MonoBehaviour
         }
     }
 
+    private string BuildNotificationsUrl(string tab)
+    {
+        return $"{baseUrl}/notifications" +
+               $"?tab={UnityWebRequest.EscapeURL(tab)}" +
+               $"&skip={skip}" +
+               $"&limit={limit}" +
+               $"&platforms={UnityWebRequest.EscapeURL(platform)}";
+    }
+
     private IEnumerator CoSilentRefresh(string tab)
     {
         isRefreshingSilently = true;
@@ -134,7 +147,8 @@ public class NotificationsLoader : MonoBehaviour
             yield break;
         }
 
-        string url = $"{baseUrl}/notifications?tab={UnityWebRequest.EscapeURL(tab)}&skip={skip}&limit={limit}";
+        string url = BuildNotificationsUrl(tab);
+
         if (debugLog)
             Debug.Log("[NotificationsLoader] Silent Refresh Request: " + url);
 
@@ -151,27 +165,31 @@ public class NotificationsLoader : MonoBehaviour
             bool failed = request.isNetworkError || request.isHttpError;
 #endif
 
+            string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
+            long statusCode = request.responseCode;
+
+            if (debugLog)
+            {
+                Debug.Log("[NotificationsLoader] Silent Refresh Status Code: " + statusCode);
+                Debug.Log("[NotificationsLoader] Silent Refresh Raw Response: " + responseText);
+            }
+
             if (failed)
             {
                 if (debugLog)
                 {
                     string err = request.error;
-                    string body = request.downloadHandler != null ? request.downloadHandler.text : "";
-                    Debug.LogWarning("[NotificationsLoader] Silent Refresh lỗi: " + err + "\n" + body);
+                    Debug.LogWarning("[NotificationsLoader] Silent Refresh lỗi: " + err + "\n" + responseText);
                 }
 
                 isRefreshingSilently = false;
                 yield break;
             }
 
-            string json = request.downloadHandler.text;
-            if (debugLog)
-                Debug.Log("[NotificationsLoader] Silent Refresh Response: " + json);
-
             NotificationMailResponse root = null;
             try
             {
-                root = JsonUtility.FromJson<NotificationMailResponse>(json);
+                root = JsonUtility.FromJson<NotificationMailResponse>(responseText);
             }
             catch (Exception e)
             {
@@ -215,7 +233,8 @@ public class NotificationsLoader : MonoBehaviour
             yield break;
         }
 
-        string url = $"{baseUrl}/notifications?tab={UnityWebRequest.EscapeURL(tab)}&skip={skip}&limit={limit}";
+        string url = BuildNotificationsUrl(tab);
+
         if (debugLog)
             Debug.Log("[NotificationsLoader] Request: " + url);
 
@@ -239,12 +258,20 @@ public class NotificationsLoader : MonoBehaviour
                 yield break;
             }
 
+            string responseText = activeRequest.downloadHandler != null ? activeRequest.downloadHandler.text : "";
+            long statusCode = activeRequest.responseCode;
+
+            if (debugLog)
+            {
+                Debug.Log("[NotificationsLoader] Status Code: " + statusCode);
+                Debug.Log("[NotificationsLoader] Raw Response: " + responseText);
+            }
+
             if (failed)
             {
                 string err = activeRequest.error;
-                string body = activeRequest.downloadHandler != null ? activeRequest.downloadHandler.text : "";
                 if (debugLog)
-                    Debug.LogError("[NotificationsLoader] API lỗi: " + err + "\n" + body);
+                    Debug.LogError("[NotificationsLoader] API lỗi: " + err + "\n" + responseText);
 
                 NotificationsStaticStore.SetError(tab, "Không tải được danh sách thông báo.");
                 activeRequest = null;
@@ -252,14 +279,10 @@ public class NotificationsLoader : MonoBehaviour
                 yield break;
             }
 
-            string json = activeRequest.downloadHandler.text;
-            if (debugLog)
-                Debug.Log("[NotificationsLoader] Response: " + json);
-
             NotificationMailResponse root = null;
             try
             {
-                root = JsonUtility.FromJson<NotificationMailResponse>(json);
+                root = JsonUtility.FromJson<NotificationMailResponse>(responseText);
             }
             catch (Exception e)
             {

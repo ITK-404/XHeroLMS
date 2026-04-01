@@ -29,7 +29,7 @@ public class NotificationUnreadData
 public class NotificationMailItem
 {
     public string _id;
-    public string to;
+    public string[] to;
     public string label;
     public string title;
     public string text;
@@ -38,6 +38,14 @@ public class NotificationMailItem
     public bool isRead;
     public NotificationMailTime time;
     public string icon;
+    public bool isIncludingCourse;
+    public NotificationAdditionalData additionalData;
+}
+
+[Serializable]
+public class NotificationAdditionalData
+{
+    public string courseId;
 }
 
 [Serializable]
