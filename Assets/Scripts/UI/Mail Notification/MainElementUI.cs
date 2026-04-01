@@ -13,6 +13,7 @@ public class MainElementUI : MonoBehaviour
     [SerializeField] private NotificationsDetailLoader detailLoader;
 
     private string notificationId;
+    private string courseId;
     private NotificationMailItem currentData;
 
     private void Awake()
@@ -40,9 +41,11 @@ public class MainElementUI : MonoBehaviour
     {
         currentData = data;
         notificationId = data != null ? data._id : "";
+        courseId = GetCourseId(data);
+
         ApplyState();
 
-        Debug.Log($"[MainElementUI] Bind item: title={data?.title}, id={notificationId}");
+        Debug.Log($"[MainElementUI] Bind item: title={data?.title}, notificationId={notificationId}, courseId={courseId}");
     }
 
     public void SetDetailLoader(NotificationsDetailLoader loader)
@@ -52,7 +55,7 @@ public class MainElementUI : MonoBehaviour
 
     private void OnClickItem()
     {
-        Debug.Log($"[Notification] Click ID = {notificationId}");
+        Debug.Log($"[MainElementUI] Click notificationId={notificationId}, courseId={courseId}");
 
         if (currentData == null)
         {
@@ -67,9 +70,7 @@ public class MainElementUI : MonoBehaviour
         }
 
         if (detailLoader == null)
-        {
             detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
-        }
 
         if (detailLoader == null)
         {
@@ -84,15 +85,29 @@ public class MainElementUI : MonoBehaviour
         }
 
         string token = TokenStore.AccessToken;
-
         if (string.IsNullOrWhiteSpace(token))
         {
             Debug.LogWarning("[MainElementUI] TokenStore.AccessToken đang rỗng.");
             return;
         }
 
-        Debug.Log($"[MainElementUI] Load detail with ID={notificationId}");
+        Debug.Log($"[MainElementUI] Load notification detail with notificationId={notificationId}");
+
+        // Truyền notificationId đúng mục đích cho NotificationsDetailLoader
         detailLoader.LoadById(notificationId, token);
+    }
+
+    private string GetCourseId(NotificationMailItem data)
+    {
+        if (data == null)
+            return "";
+
+        if (data.additionalData == null)
+            return "";
+
+        return string.IsNullOrWhiteSpace(data.additionalData.courseId)
+            ? ""
+            : data.additionalData.courseId.Trim();
     }
 
     private void ApplyState()
