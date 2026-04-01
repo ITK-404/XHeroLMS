@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -35,11 +36,88 @@ public class WebViewTest : MonoBehaviour
     [SerializeField] private int maxAutoNavigateAttempts = 3;
     [SerializeField] private bool debugLogs = true;
 
+    [Header("Auto Open Bank App")]
+    [SerializeField] private bool autoOpenBankAppLink = true;
+    [SerializeField] private float minSecondsBetweenBankAppOpen = 2.0f;
+    [SerializeField] private int maxAutoOpenBankAppAttempts = 2;
+
     private Coroutine bankTransferPollRoutine;
     private bool isNavigatingToBankTransfer = false;
     private float lastAutoLoadTime = -999f;
     private int autoNavigateAttempts = 0;
     private string lastAutoLoadedLink = "";
+
+    private float lastBankAppOpenTime = -999f;
+    private int autoOpenBankAppAttempts = 0;
+    private string lastOpenedBankAppLink = "";
+
+    private static readonly HashSet<string> BankingSchemes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "tcb",
+        "techcombank",
+        "vcb",
+        "vietcombank",
+        "vietcombankmobile",
+        "bidv",
+        "bidvsmartbanking",
+        "bidvapp",
+        "mbbank",
+        "mb",
+        "mbbankpay",
+        "acb",
+        "acbapp",
+        "acbbiz",
+        "vietinbank",
+        "vietinbankipay",
+        "vietinbankmobile",
+        "icb",
+        "vpbank",
+        "vpbankneo",
+        "tpbank",
+        "tpbankmobile",
+        "tpb-pay",
+        "hdbank",
+        "dihdbank",
+        "shb",
+        "shbmobile",
+        "shbvn",
+        "ocb",
+        "ocbomni",
+        "msb",
+        "msbmbanking",
+        "msbmbank",
+        "msbmobile",
+        "seabank",
+        "seabankconnect",
+        "agribank",
+        "agribankemobile",
+        "vba",
+        "sacombank",
+        "sacombankmobile",
+        "sacombankpay",
+        "vietbank",
+        "vietbankdigital",
+        "vib",
+        "myvib",
+        "vib-2",
+        "lpbank",
+        "lpb",
+        "kienlongbank",
+        "klb",
+        "pvcombank",
+        "pvcb",
+        "cakebyvpbank",
+        "cake",
+        "timo",
+        "sgbmobile",
+        "ncbizimobile",
+        "vabmobilebanking",
+        "newomni-app",
+        "acbone",
+        "lv24h",
+        "seamobile",
+        "zalo"
+    };
 
     private void Awake()
     {
@@ -144,60 +222,139 @@ public class WebViewTest : MonoBehaviour
         if (string.IsNullOrWhiteSpace(currentUrl))
             return;
 
-        if (IsBankTransferUrl(currentUrl))
+        // Nếu URL hiện tại tự nó đã là deeplink ngân hàng / intent
+        if (TryHandleExternalBankLink(currentUrl))
         {
-            if (debugLogs) Debug.Log("[WebView] Already in bank transfer page. Stop auto-find.");
             return;
         }
 
-        if (autoFindBankTransferLink && bankTransferPollRoutine == null)
+        if (IsBankTransferUrl(currentUrl))
         {
-            bankTransferPollRoutine = StartCoroutine(PollBankTransferLinkRoutine());
+            if (debugLogs) Debug.Log("[WebView] Already in bank transfer page. Stop auto-find transfer page, continue polling external bank app link.");
+        }
+
+        if (bankTransferPollRoutine == null)
+        {
+            bankTransferPollRoutine = StartCoroutine(PollPageRoutine());
         }
     }
 
-    private IEnumerator PollBankTransferLinkRoutine()
+    private IEnumerator PollPageRoutine()
     {
         yield return new WaitForSeconds(startPollingDelay);
 
         while (webViewInstance != null)
         {
-            if (!autoFindBankTransferLink)
-            {
-                yield return new WaitForSeconds(linkPollInterval);
-                continue;
-            }
-
-            if (isNavigatingToBankTransfer)
-            {
-                yield return new WaitForSeconds(linkPollInterval);
-                continue;
-            }
-
-            // if (autoNavigateAttempts >= maxAutoNavigateAttempts)
-            // {
-            //     if (debugLogs)
-            //         Debug.LogWarning("[WebView] Reached max auto navigate attempts. Stop polling.");
-            //     break;
-            // }
-
-            if (Time.unscaledTime - lastAutoLoadTime < minSecondsBetweenAutoLoads)
-            {
-                yield return new WaitForSeconds(linkPollInterval);
-                continue;
-            }
-
             string currentUrl = webViewInstance.Url;
-            if (!string.IsNullOrWhiteSpace(currentUrl) && IsBankTransferUrl(currentUrl))
+
+            if (!string.IsNullOrWhiteSpace(currentUrl))
             {
-                if (debugLogs) Debug.Log("[WebView] Already at bank transfer URL while polling. Stop polling.");
-                break;
+                HandleWebViewUrl(currentUrl);
+
+                if (TryHandleExternalBankLink(currentUrl))
+                {
+                    yield return new WaitForSeconds(linkPollInterval);
+                    continue;
+                }
             }
 
-            bool finished = false;
-            string foundLink = "";
+            // 1) Tìm link bank transfer từ DOM
+            if (autoFindBankTransferLink &&
+                !isNavigatingToBankTransfer &&
+                Time.unscaledTime - lastAutoLoadTime >= minSecondsBetweenAutoLoads)
+            {
+                if (string.IsNullOrWhiteSpace(currentUrl) || !IsBankTransferUrl(currentUrl))
+                {
+                    string foundTransferLink = "";
+                    yield return EvaluateJsForString(BuildFindBankTransferJs(), result => foundTransferLink = result);
 
-            string js = @"
+                    foundTransferLink = NormalizeJsResult(foundTransferLink);
+
+                    if (debugLogs && !string.IsNullOrEmpty(foundTransferLink))
+                        Debug.Log("[WebView] Found bank transfer link from DOM: " + foundTransferLink);
+
+                    if (!string.IsNullOrEmpty(foundTransferLink) && IsBankTransferUrl(foundTransferLink))
+                    {
+                        if (string.Equals(foundTransferLink, lastAutoLoadedLink, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (debugLogs)
+                                Debug.Log("[WebView] Found same link as last auto-loaded. Skip duplicate navigation.");
+                        }
+                        else
+                        {
+                            isNavigatingToBankTransfer = true;
+                            autoNavigateAttempts++;
+                            lastAutoLoadTime = Time.unscaledTime;
+                            lastAutoLoadedLink = foundTransferLink;
+
+                            if (debugLogs)
+                                Debug.Log("[WebView] Auto loading bank transfer page: " + foundTransferLink);
+
+                            webViewInstance.Load(foundTransferLink);
+
+                            yield return new WaitForSeconds(1.0f);
+
+                            isNavigatingToBankTransfer = false;
+                        }
+                    }
+                }
+            }
+
+            // 2) Tìm deeplink app ngân hàng từ DOM
+            if (autoOpenBankAppLink &&
+                Time.unscaledTime - lastBankAppOpenTime >= minSecondsBetweenBankAppOpen &&
+                autoOpenBankAppAttempts < maxAutoOpenBankAppAttempts)
+            {
+                string foundExternalLink = "";
+                yield return EvaluateJsForString(BuildFindBankAppDeepLinkJs(), result => foundExternalLink = result);
+
+                foundExternalLink = NormalizeJsResult(foundExternalLink);
+
+                if (debugLogs && !string.IsNullOrEmpty(foundExternalLink))
+                    Debug.Log("[WebView] Found bank app deeplink from DOM: " + foundExternalLink);
+
+                if (!string.IsNullOrEmpty(foundExternalLink))
+                {
+                    TryHandleExternalBankLink(foundExternalLink);
+                }
+            }
+
+            yield return new WaitForSeconds(linkPollInterval);
+        }
+
+        bankTransferPollRoutine = null;
+    }
+
+    private IEnumerator EvaluateJsForString(string js, Action<string> onDone)
+    {
+        bool finished = false;
+        string result = "";
+
+        webViewInstance.EvaluateJavaScript(js, payload =>
+        {
+            finished = true;
+            result = payload.data;
+        });
+
+        float timeoutAt = Time.unscaledTime + jsTimeout;
+        while (!finished && Time.unscaledTime < timeoutAt)
+        {
+            yield return null;
+        }
+
+        if (!finished)
+        {
+            if (debugLogs) Debug.LogWarning("[WebView] JS polling timeout.");
+            onDone?.Invoke("");
+            yield break;
+        }
+
+        onDone?.Invoke(result);
+    }
+
+    private static string BuildFindBankTransferJs()
+    {
+        return @"
 (function() {
     try {
         function normalizeHref(href) {
@@ -247,62 +404,75 @@ public class WebViewTest : MonoBehaviour
         return '';
     }
 })();";
+    }
 
-            webViewInstance.EvaluateJavaScript(js, payload =>
-            {
-                finished = true;
-                foundLink = payload.data;
-            });
-
-            float timeoutAt = Time.unscaledTime + jsTimeout;
-            while (!finished && Time.unscaledTime < timeoutAt)
-            {
-                yield return null;
-            }
-
-            if (!finished)
-            {
-                if (debugLogs) Debug.LogWarning("[WebView] JS polling timeout.");
-                yield return new WaitForSeconds(linkPollInterval);
-                continue;
-            }
-
-            foundLink = NormalizeJsResult(foundLink);
-
-            if (debugLogs && !string.IsNullOrEmpty(foundLink))
-            {
-                Debug.Log("[WebView] Found bank transfer link from DOM: " + foundLink);
-            }
-
-            if (!string.IsNullOrEmpty(foundLink) && IsBankTransferUrl(foundLink))
-            {
-                if (string.Equals(foundLink, lastAutoLoadedLink, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (debugLogs)
-                        Debug.Log("[WebView] Found same link as last auto-loaded. Skip duplicate navigation.");
-                }
-                else
-                {
-                    isNavigatingToBankTransfer = true;
-                    autoNavigateAttempts++;
-                    lastAutoLoadTime = Time.unscaledTime;
-                    lastAutoLoadedLink = foundLink;
-
-                    if (debugLogs)
-                        Debug.Log("[WebView] Auto loading bank transfer page: " + foundLink);
-
-                    webViewInstance.Load(foundLink);
-
-                    yield return new WaitForSeconds(1.0f);
-
-                    isNavigatingToBankTransfer = false;
-                }
-            }
-
-            yield return new WaitForSeconds(linkPollInterval);
+    private static string BuildFindBankAppDeepLinkJs()
+    {
+        return @"
+(function() {
+    try {
+        function getNormalized(href) {
+            if (!href) return '';
+            href = (href + '').trim();
+            return href;
         }
 
-        bankTransferPollRoutine = null;
+        function isBankScheme(href) {
+            if (!href) return false;
+            var lower = href.toLowerCase();
+
+            if (lower.indexOf('intent://') === 0) return true;
+
+            var schemes = [
+                'tcb','techcombank','vcb','vietcombank','vietcombankmobile','bidv','bidvsmartbanking','bidvapp',
+                'mbbank','mb','mbbankpay','acb','acbapp','acbbiz','vietinbank','vietinbankipay','vietinbankmobile',
+                'icb','vpbank','vpbankneo','tpbank','tpbankmobile','tpb-pay','hdbank','dihdbank','shb','shbmobile',
+                'shbvn','ocb','ocbomni','msb','msbmbanking','msbmbank','msbmobile','seabank','seabankconnect',
+                'agribank','agribankemobile','vba','sacombank','sacombankmobile','sacombankpay','vietbank',
+                'vietbankdigital','vib','myvib','vib-2','lpbank','lpb','kienlongbank','klb','pvcombank','pvcb',
+                'cakebyvpbank','cake','timo','sgbmobile','ncbizimobile','vabmobilebanking','newomni-app',
+                'acbone','lv24h','seamobile','zalo'
+            ];
+
+            for (var i = 0; i < schemes.length; i++) {
+                if (lower.indexOf(schemes[i] + '://') === 0) return true;
+            }
+
+            return false;
+        }
+
+        var all = document.querySelectorAll('[href], [data-href], [data-url], [onclick]');
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+
+            var href = getNormalized(el.getAttribute('href'));
+            if (isBankScheme(href)) return href;
+
+            var dataHref = getNormalized(el.getAttribute('data-href'));
+            if (isBankScheme(dataHref)) return dataHref;
+
+            var dataUrl = getNormalized(el.getAttribute('data-url'));
+            if (isBankScheme(dataUrl)) return dataUrl;
+
+            var onclick = getNormalized(el.getAttribute('onclick'));
+            if (onclick) {
+                var match = onclick.match(/([a-zA-Z0-9\-]+:\/\/[^'"")\s]+)/);
+                if (match && match.length > 1 && isBankScheme(match[1])) {
+                    return match[1];
+                }
+
+                var intentMatch = onclick.match(/(intent:\/\/[^'"")\s]+)/i);
+                if (intentMatch && intentMatch.length > 1) {
+                    return intentMatch[1];
+                }
+            }
+        }
+
+        return '';
+    } catch (e) {
+        return '';
+    }
+})();";
     }
 
     private static string NormalizeJsResult(string value)
@@ -331,6 +501,115 @@ public class WebViewTest : MonoBehaviour
             return false;
 
         return url.IndexOf("/payment/bank-transfer/", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private bool TryHandleExternalBankLink(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        if (!IsBankAppDeepLink(url) && !IsIntentUrl(url))
+            return false;
+
+        if (string.Equals(url, lastOpenedBankAppLink, StringComparison.OrdinalIgnoreCase) &&
+            Time.unscaledTime - lastBankAppOpenTime < minSecondsBetweenBankAppOpen)
+        {
+            if (debugLogs)
+                Debug.Log("[WebView] Same bank deeplink was opened recently. Skip duplicate open.");
+            return true;
+        }
+
+        bool opened = OpenExternalUrl(url);
+        if (!opened)
+        {
+            if (debugLogs)
+                Debug.LogWarning("[WebView] Failed to open external bank app: " + url);
+            return false;
+        }
+
+        lastOpenedBankAppLink = url;
+        lastBankAppOpenTime = Time.unscaledTime;
+        autoOpenBankAppAttempts++;
+
+        if (debugLogs)
+            Debug.Log("[WebView] Opened external bank app: " + url);
+
+        return true;
+    }
+
+    private bool IsBankAppDeepLink(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        int schemeIndex = url.IndexOf("://", StringComparison.Ordinal);
+        if (schemeIndex <= 0)
+            return false;
+
+        string scheme = url.Substring(0, schemeIndex).Trim();
+        if (string.IsNullOrEmpty(scheme))
+            return false;
+
+        return BankingSchemes.Contains(scheme);
+    }
+
+    private static bool IsIntentUrl(string url)
+    {
+        return !string.IsNullOrWhiteSpace(url) &&
+               url.StartsWith("intent://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool OpenExternalUrl(string url)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var uriClass = new AndroidJavaClass("android.net.Uri"))
+            using (var intentClass = new AndroidJavaClass("android.content.Intent"))
+            {
+                AndroidJavaObject intent = null;
+
+                if (IsIntentUrl(url))
+                {
+                    int uriIntentScheme = intentClass.GetStatic<int>("URI_INTENT_SCHEME");
+                    intent = intentClass.CallStatic<AndroidJavaObject>("parseUri", url, uriIntentScheme);
+                }
+                else
+                {
+                    string actionView = intentClass.GetStatic<string>("ACTION_VIEW");
+                    AndroidJavaObject uri = uriClass.CallStatic<AndroidJavaObject>("parse", url);
+                    intent = new AndroidJavaObject("android.content.Intent", actionView, uri);
+                }
+
+                if (intent == null)
+                    return false;
+
+                using (var packageManager = currentActivity.Call<AndroidJavaObject>("getPackageManager"))
+                {
+                    AndroidJavaObject resolved = intent.Call<AndroidJavaObject>("resolveActivity", packageManager);
+                    if (resolved == null)
+                    {
+                        if (debugLogs)
+                            Debug.LogWarning("[WebView] No app can handle this external URL: " + url);
+                        return false;
+                    }
+                }
+
+                currentActivity.Call("startActivity", intent);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[WebView] OpenExternalUrl exception: " + ex.Message);
+            return false;
+        }
+#else
+        if (debugLogs) Debug.Log("[WebView] OpenExternalUrl (editor simulated): " + url);
+        return false;
+#endif
     }
 
     private void HandleWebViewUrl(string url)
