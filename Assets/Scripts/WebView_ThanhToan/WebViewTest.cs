@@ -508,6 +508,15 @@ public class WebViewTest : MonoBehaviour
         if (string.IsNullOrWhiteSpace(url))
             return false;
 
+#if UNITY_IOS && !UNITY_EDITOR
+    if (IsIntentUrl(url))
+    {
+        if (debugLogs)
+            Debug.Log("[WebView] iOS ignores intent:// URL: " + url);
+        return false;
+    }
+#endif
+
         if (!IsBankAppDeepLink(url) && !IsIntentUrl(url))
             return false;
 
@@ -606,9 +615,20 @@ public class WebViewTest : MonoBehaviour
             Debug.LogWarning("[WebView] OpenExternalUrl exception: " + ex.Message);
             return false;
         }
-#else
-        if (debugLogs) Debug.Log("[WebView] OpenExternalUrl (editor simulated): " + url);
+#elif UNITY_IOS && !UNITY_EDITOR
+    try
+    {
+        Application.OpenURL(url);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        Debug.LogWarning("[WebView] iOS OpenExternalUrl exception: " + ex.Message);
         return false;
+    }
+#else
+    if (debugLogs) Debug.Log("[WebView] OpenExternalUrl (editor simulated): " + url);
+    return false;
 #endif
     }
 
