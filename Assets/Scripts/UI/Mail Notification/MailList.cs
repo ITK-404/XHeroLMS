@@ -19,7 +19,9 @@ public class MailList : MonoBehaviour
     private readonly List<string> removeBuffer = new();
 
     private Transform currentContentParent;
-    private MailFilter currentFilter = MailFilter.Personal;
+    // private MailFilter currentFilter = MailFilter.Personal;
+    private MailFilter currentFilter = MailFilter.System;
+
 
     private void Awake()
     {
@@ -50,10 +52,10 @@ public class MailList : MonoBehaviour
 
     public void SetFilter(MailFilter filter)
     {
-        if (currentFilter == filter)
-            return;
+        Debug.Log("[MailList] SetFilter = " + filter);
 
         currentFilter = filter;
+        ClearAllItems();
         Refresh();
     }
 
