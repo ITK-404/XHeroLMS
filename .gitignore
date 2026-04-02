@@ -59,29 +59,23 @@ sysinfo.txt
 .vs/
 .idea/
 .consulo/
+.vscode/
+
 ExportedObj/
 [Aa]ssets/Plugins/Editor/JetBrains*
 *.csproj
 *.unityproj
 *.sln
 *.suo
-*.tmp
 *.user
 *.userprefs
-*.pidb
 *.booproj
 *.svd
-*.pdb
-*.mdb
 *.opendb
 *.VC.db
 
 # Gradle cache directory
 .gradle/
-
-# Plastic SCM
-.plastic/
-*.plastic
 
 # Logs
 *.log
@@ -93,13 +87,12 @@ ExportedObj/
 *.bak
 *.old
 
-# Package Manager
+# ========== Package Manager ==========
 Packages/com.unity.package-manager.cache/
-Packages/com.unity.package-manager.cache.meta
 
-# Auto-generated
-*.booproj
-*.unitypackage
+# ========== Plastic SCM ==========
+.plastic/
+*.plastic
 
 # OS generated files
 .DS_Store
@@ -108,33 +101,10 @@ ehthumbs.db
 Icon?
 Desktop.ini
 
-# JetBrains Rider plugin
-[Aa]ssets/Plugins/Editor/JetBrains*
-
-# VS Code
-.vscode/
-
-# Ignore build artifacts
-[Bb]uild/
-[Bb]uilds/
-[Dd]ebug/
-[Rr]elease/
-
-# Ignore environment-specific or temp data
-Temp/
-obj/
-logs/
-Logs/
-UserSettings/
-MemoryCaptures/
-
-# Ignore system / editor lock files
+# ========== Lock files ==========
 *.lock
 *.swp
 *.swo
-
-# Ignore crashlytics files
-crashlytics-build.properties
 
 # Ignore LFS large binaries (handled separately)
 *.mov
@@ -145,13 +115,15 @@ crashlytics-build.properties
 *.zip
 
 # Ignore LFS large Firebase binaries
-Assets/Firebase/Plugins/x86_64/FirebaseCppApp-13_6_0.bundle
-Assets/Firebase/Plugins/x86_64/FirebaseCppApp-13_6_0.so
+Assets/Firebase/Plugins/x86_64/*.bundle
+Assets/Firebase/Plugins/x86_64/*.so
 
 # Ignore Data Cloud
 Assets/Editor/GCS/*.json
 # Ignore all files starting with "google" in StreamingAssets
 Assets/StreamingAssets/google*
+# Ignore all files starting with "google" in Firebase
+Assets/Firebase/[Gg]oogle*
 # ============================================
 # End of Unity.gitignore
 # ============================================
