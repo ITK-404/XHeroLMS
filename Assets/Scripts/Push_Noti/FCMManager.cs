@@ -7,13 +7,19 @@ using Firebase.Messaging;
 public class FCMManager : MonoBehaviour
 {
     [SerializeField] private NotificationPermissionRequester permissionRequester;
+    [SerializeField] private NotificationsLoader notificationsLoader;
 
     private bool _initialized;
     private bool _eventsRegistered;
 
+    public static event Action OnPushNotificationReceived;
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
+
+        if (notificationsLoader == null)
+            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
     }
 
     private void Start()
@@ -25,7 +31,24 @@ public class FCMManager : MonoBehaviour
     {
         UnregisterFirebaseEvents();
     }
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus) return;
 
+        if (notificationsLoader == null)
+            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
+
+        if (notificationsLoader != null)
+        {
+            Debug.Log("[FCM] App resumed -> refresh notifications");
+            notificationsLoader.ReloadCurrentTab();
+        }
+        else
+        {
+            Debug.LogWarning("[FCM] NotificationsLoader not found on app resume.");
+        }
+    }
+    
     private void InitializeFirebase()
     {
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
@@ -56,10 +79,8 @@ public class FCMManager : MonoBehaviour
 
             RegisterFirebaseEvents();
 
-            // Mặc định token registration on init là bật, nhưng set lại cũng không sao
             FirebaseMessaging.TokenRegistrationOnInitEnabled = true;
 
-            // Xin quyền thông báo
             if (permissionRequester == null)
                 permissionRequester = GetComponent<NotificationPermissionRequester>();
 
@@ -68,7 +89,6 @@ public class FCMManager : MonoBehaviour
             else
                 Debug.LogWarning("[FCM] NotificationPermissionRequester is missing.");
 
-            // Lấy token chủ động để chắc chắn có log/token gửi server
             FirebaseMessaging.GetTokenAsync().ContinueWithOnMainThread(tokenTask =>
             {
                 if (tokenTask.IsFaulted)
@@ -112,8 +132,6 @@ public class FCMManager : MonoBehaviour
     private void OnTokenReceived(object sender, TokenReceivedEventArgs token)
     {
         Debug.Log("[FCM] Received Registration Token: " + token.Token);
-
-        // TODO: gửi token mới lên server nếu token refresh
     }
 
     private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
@@ -134,8 +152,24 @@ public class FCMManager : MonoBehaviour
             }
         }
 
-        // TODO:
-        // - nếu app đang foreground: hiện popup/in-app UI của bạn
-        // - nếu muốn điều hướng theo payload: xử lý tại đây
+        RefreshInAppNotifications();
+    }
+
+    private void RefreshInAppNotifications()
+    {
+        if (notificationsLoader == null)
+            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
+
+        if (notificationsLoader != null)
+        {
+            Debug.Log("[FCM] Refresh in-app notifications from /notifications");
+            notificationsLoader.ReloadCurrentTab();
+        }
+        else
+        {
+            Debug.LogWarning("[FCM] NotificationsLoader not found. Cannot refresh /notifications.");
+        }
+
+        OnPushNotificationReceived?.Invoke();
     }
 }
