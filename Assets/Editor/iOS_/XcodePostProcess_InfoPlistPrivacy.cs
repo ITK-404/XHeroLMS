@@ -18,7 +18,9 @@ public static class XcodePostProcess_InfoPlistPrivacy
 
     private const string PhotoLibraryAddUsage =
         "Cho phép lưu chứng chỉ bạn đã sở hữu vào thư viện ảnh để bạn có thể xem lại hoặc chia sẻ bất cứ lúc nào.";
-
+    private const string NotificationUsage =
+        "Cho phép ứng dụng gửi thông báo để cập nhật thông tin game và sự kiện mới nhất đến bạn.";
+    
     [PostProcessBuild(900)]
     public static void OnPostProcessBuild(BuildTarget target, string pathToBuiltProject)
     {
@@ -48,6 +50,8 @@ public static class XcodePostProcess_InfoPlistPrivacy
 
         // Photo Library (Add Only)
         root.SetString("NSPhotoLibraryAddUsageDescription", PhotoLibraryAddUsage);
+        
+        root.SetString("NSUserNotificationUsageDescription", NotificationUsage);
 
         File.WriteAllText(plistPath, plist.WriteToString());
         UnityEngine.Debug.Log("[InfoPlistPrivacy] Wrote Photo Library usage descriptions to Info.plist");
