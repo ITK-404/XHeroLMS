@@ -2232,6 +2232,9 @@ PrefabInstance:
       insertIndex: 0
       addedObject: {fileID: 267540752907485132}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8228365840117083455}
     - targetCorrespondingSourceObject: {fileID: 2265492839702959812, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1964189721528718472}
@@ -2411,6 +2414,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
+--- !u!114 &4101404851962366685 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6064350943143892430, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &4349690706415975837 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5809307412894556814, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2798,6 +2812,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!1 &8722649435098029263 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8228365840117083455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8722649435098029263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21b66e065a0ea3e4284ccb6620675437, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseShareLink
+  shareButton: {fileID: 4101404851962366685}
+  autoUpdateButtonState: 1
 --- !u!114 &8916098621978908378 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1693250672587524553, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
