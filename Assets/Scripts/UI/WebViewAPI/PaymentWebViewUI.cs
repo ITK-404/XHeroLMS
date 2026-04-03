@@ -30,6 +30,8 @@ public class PaymentWebViewUI : UIView
         
         paymentPriceTmp.text = price;
         paymentCompleteTmp.text = isComplete ? paymentCompleteString : paymentUnCompleteString;
+
+        actionBtn.GetComponentInChildren<TextMeshProUGUI>().text = isComplete ? "Vào học ngay" : "Thanh toán lại";
     }
 
     private void UpdateByState(bool isComplete)
