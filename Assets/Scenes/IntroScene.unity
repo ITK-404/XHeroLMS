@@ -141,6 +141,7 @@ GameObject:
   - component: {fileID: 399620087}
   - component: {fileID: 399620086}
   - component: {fileID: 399620085}
+  - component: {fileID: 399620088}
   m_Layer: 0
   m_Name: FCM
   m_TagString: Untagged
@@ -167,12 +168,11 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 399620084}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1ff1529a73c59b3438c55a876bb4f859, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FCMManager
-  permissionRequester: {fileID: 399620085}
 --- !u!4 &399620087
 Transform:
   m_ObjectHideFlags: 0
@@ -188,6 +188,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &399620088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399620084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a84dde7afa87ccf40ab24c0a12cd801b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Notification
 --- !u!224 &552279929 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2922559306942421797, guid: ea101c3c7c9bd8c4b9273b69c3de93e6, type: 3}
