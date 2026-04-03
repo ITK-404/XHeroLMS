@@ -63,7 +63,7 @@ public class CourseShareLink : MonoBehaviour
             return;
         }
 
-        string shareText = BuildShareText(courseId, GetCurrentCourseName());
+        string shareText = BuildShareText(GetCurrentCourseName());
         if (string.IsNullOrWhiteSpace(shareText))
         {
             Debug.LogWarning("[CourseShareLink] Share text is empty.");
@@ -95,9 +95,9 @@ public class CourseShareLink : MonoBehaviour
         return "này";
     }
 
-    private string BuildShareText(string courseId, string courseName)
+    private string BuildShareText(string courseName)
     {
-        string courseUrl = BuildCourseUrl(courseId);
+        string courseUrl = BuildCourseUrl();
         string finalCourseName = string.IsNullOrWhiteSpace(courseName) ? "này" : courseName;
 
         return shareTemplate
@@ -105,10 +105,20 @@ public class CourseShareLink : MonoBehaviour
             .Replace("{COURSE_URL}", courseUrl);
     }
 
-    private string BuildCourseUrl(string courseId)
+    private string BuildCourseUrl()
     {
-        return SecurityConfig.UrlWeb + "/en/course-detail/" +
-               "?course=" + UnityWebRequest.EscapeURL(courseId);
+        string seoUrl = CourseDetailStaticStore.CurrentDetail.seo.url;
+
+        // nếu backend trả về dạng "/khoa-hoc/abc"
+        if (seoUrl.StartsWith("/"))
+            return SecurityConfig.UrlWeb + seoUrl;
+
+        // nếu đã là full url thì dùng luôn
+        if (seoUrl.StartsWith("http"))
+            return seoUrl;
+
+        // fallback nếu format lạ
+        return SecurityConfig.UrlWeb + "/course-detail/" + seoUrl;
     }
 
     private void ShareTextOnly(string text)
