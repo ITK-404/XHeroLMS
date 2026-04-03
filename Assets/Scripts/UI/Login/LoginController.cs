@@ -645,6 +645,7 @@ public class AuthData
 {
     public string token;
     public AuthUser user;
+    // public AuthUser password;
     public AuthUnread totalUnread;
 }
 
@@ -653,6 +654,7 @@ public class AuthUser
 {
     public string id;
     public string username;
+    public string password;
     public string fullName;
     public string gender;
     public string role;
