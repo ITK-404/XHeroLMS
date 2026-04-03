@@ -24,6 +24,19 @@ public class WebViewNavigation : MonoBehaviour
         reloadBtn.onClick.AddListener(ReloadClick);
         leftBtn.onClick.AddListener(LeftNaviClick);
         rightBtn.onClick.AddListener(RightNaviClick);
+
+        // Set title ngay khi mở WebView
+        InitTitle();
+    }
+
+    private void InitTitle()
+    {
+        string t = WebViewTest.StoreTitleCourse;
+
+        if (string.IsNullOrWhiteSpace(t))
+            t = "Web View"; // fallback
+
+        title.text = t;
     }
 
     private void OnDestroy()
