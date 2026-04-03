@@ -99,7 +99,7 @@ public class CourseDetailViewBinder : MonoBehaviour
         // evaluate = 0 -> chỉ hiện sao
         // if (evaluate <= 0) return starsText;
 
-        return $"{starsText} ({(int)evaluate} người đánh giá)";
+        return $"{starsText} ({(int)evaluate} đánh giá)";
     }
 
     private static int CountLessonsSmart(List<CourseModels.CourseChapter> chapters)
