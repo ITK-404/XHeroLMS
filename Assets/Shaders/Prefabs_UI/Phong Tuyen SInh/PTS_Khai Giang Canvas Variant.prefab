@@ -2099,6 +2099,9 @@ PrefabInstance:
       insertIndex: 0
       addedObject: {fileID: 860560338210632596}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8301591263734182090}
     - targetCorrespondingSourceObject: {fileID: 2265492839702959812, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3988806027790184244}
@@ -2488,6 +2491,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!1 &3421201881563821795 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1571450075985855452, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 4230117518475769151}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8301591263734182090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3421201881563821795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21b66e065a0ea3e4284ccb6620675437, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CourseShareLink
+  shareButton: {fileID: 7970388883345121521}
+  autoUpdateButtonState: 1
 --- !u!114 &3732467629371238355 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 682302971923829484, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2624,6 +2646,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
+--- !u!114 &7970388883345121521 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6064350943143892430, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 4230117518475769151}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &8228123771829797937 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5225388884555952398, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
