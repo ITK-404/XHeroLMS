@@ -14,6 +14,8 @@ public class FCMManager : MonoBehaviour
 
     public static event Action OnPushNotificationReceived;
 
+    public const string PlayerPrefsFcmTokenKey = "FCM_DEVICE_TOKEN";
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -31,6 +33,7 @@ public class FCMManager : MonoBehaviour
     {
         UnregisterFirebaseEvents();
     }
+
     private void OnApplicationFocus(bool hasFocus)
     {
         if (!hasFocus) return;
@@ -48,7 +51,7 @@ public class FCMManager : MonoBehaviour
             Debug.LogWarning("[FCM] NotificationsLoader not found on app resume.");
         }
     }
-    
+
     private void InitializeFirebase()
     {
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
@@ -104,7 +107,7 @@ public class FCMManager : MonoBehaviour
                 }
 
                 string token = tokenTask.Result;
-                Debug.Log("[FCM] FCM Token: " + token);
+                SaveFcmToken(token, "GetTokenAsync");
             });
         });
     }
@@ -131,11 +134,36 @@ public class FCMManager : MonoBehaviour
 
     private void OnTokenReceived(object sender, TokenReceivedEventArgs token)
     {
-        Debug.Log("[FCM] Received Registration Token: " + token.Token);
+        SaveFcmToken(token != null ? token.Token : string.Empty, "TokenReceived");
+    }
+
+    private void SaveFcmToken(string token, string source)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Debug.LogWarning("[FCM] " + source + " token is null/empty");
+            return;
+        }
+
+        PlayerPrefs.SetString(PlayerPrefsFcmTokenKey, token);
+        PlayerPrefs.Save();
+
+        Debug.Log("[FCM] " + source + " token saved: " + token);
+    }
+
+    public static string GetSavedFcmToken()
+    {
+        return PlayerPrefs.GetString(PlayerPrefsFcmTokenKey, "");
     }
 
     private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
     {
+        if (e == null || e.Message == null)
+        {
+            Debug.LogWarning("[FCM] MessageReceived args/message is null.");
+            return;
+        }
+
         Debug.Log("[FCM] Received a new message from: " + e.Message.From);
 
         if (e.Message.Notification != null)

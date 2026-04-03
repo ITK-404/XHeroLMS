@@ -10,6 +10,7 @@ public static class TokenStore
     // ==== USER INFO ====
     public static string UserID { get; private set; }
     public static string Username { get; private set; }
+    public static string Password { get; private set; }
     public static string FullName { get; private set; }
     public static string Gender { get; private set; }
     public static string Role { get; private set; }
@@ -30,6 +31,7 @@ public static class TokenStore
     private const string PREF_USER_JSON   = "AUTH_USER_JSON";
     private const string PREF_UNREAD_JSON = "AUTH_UNREAD_JSON";
     private const string PREF_SAVED_AT    = "AUTH_SAVED_AT";
+    private const string PREF_PASSWORD    = "AUTH_PASSWORD";
 
     [Serializable] private class PersistUser
     {
@@ -50,6 +52,10 @@ public static class TokenStore
         }
 
         AccessToken = auth.data.token;
+
+        // Chọn 1 trong 2 dòng dưới tùy field thật của response:
+        // Password = auth.data.password;
+        Password = auth.data.user.password;
 
         if (auth.data.user != null)
         {
@@ -91,6 +97,7 @@ public static class TokenStore
 
         PlayerPrefs.SetInt(PREF_HAS_SESSION, hasToken ? 1 : 0);
         PlayerPrefs.SetString(PREF_TOKEN, AccessToken ?? "");
+        PlayerPrefs.SetString(PREF_PASSWORD, Password ?? "");
 
         if (!string.IsNullOrEmpty(UserID) || !string.IsNullOrEmpty(Username) || !string.IsNullOrEmpty(FullName))
         {
@@ -137,6 +144,7 @@ public static class TokenStore
         }
 
         AccessToken = token;
+        Password = PlayerPrefs.GetString(PREF_PASSWORD, "");
 
         string userJson = PlayerPrefs.GetString(PREF_USER_JSON, "");
         if (!string.IsNullOrEmpty(userJson))
@@ -158,7 +166,7 @@ public static class TokenStore
                     Jit = pu.jit;
                 }
             }
-            catch { /* ignore */ }
+            catch { }
         }
 
         string unreadJson = PlayerPrefs.GetString(PREF_UNREAD_JSON, "");
@@ -174,7 +182,7 @@ public static class TokenStore
                     UnreadSystem = pr.system;
                 }
             }
-            catch { /* ignore */ }
+            catch { }
         }
 
         Debug.Log("[TokenStore] Restore session OK.");
@@ -184,7 +192,7 @@ public static class TokenStore
     public static void Clear()
     {
         AccessToken = null;
-        UserID = Username = FullName = Gender = Role = Email = Status = Avatar = ReferralCode = Jit = null;
+        UserID = Username = Password = FullName = Gender = Role = Email = Status = Avatar = ReferralCode = Jit = null;
         UnreadAll = UnreadPersonal = UnreadSystem = null;
 
         ClearDiskOnly();
@@ -195,6 +203,7 @@ public static class TokenStore
     {
         PlayerPrefs.DeleteKey(PREF_HAS_SESSION);
         PlayerPrefs.DeleteKey(PREF_TOKEN);
+        PlayerPrefs.DeleteKey(PREF_PASSWORD);
         PlayerPrefs.DeleteKey(PREF_USER_JSON);
         PlayerPrefs.DeleteKey(PREF_UNREAD_JSON);
         PlayerPrefs.DeleteKey(PREF_SAVED_AT);
