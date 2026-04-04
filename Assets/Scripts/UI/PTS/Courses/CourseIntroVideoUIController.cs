@@ -34,6 +34,7 @@ public class CourseIntroVideoUIController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private bool autoFindPlayer = true;
     [SerializeField] private bool autoInitVolume = true;
+    [SerializeField] private bool resetWhenCourseChanges = true;
 
     private VideoPlayer _videoPlayer;
     private AudioSource _audioSource;
@@ -44,31 +45,34 @@ public class CourseIntroVideoUIController : MonoBehaviour
     private float _lastVolumeBeforeMute = 1f;
     private bool _isMuted;
 
+    private string _observedCourseId;
+
     private void Awake()
     {
         ResolveReferences();
         WireUI();
+        _observedCourseId = CourseDetailStaticStore.CurrentCourseId;
         SyncInitialUI();
 
         if (introPlayer != null)
-        {
             introPlayer.RefreshBannerFromStore();
-        }
     }
 
     private void OnEnable()
     {
+        CourseDetailStaticStore.OnChanged += HandleCourseStoreChanged;
+
+        ResolveReferences();
         BindVideoEvents();
         RefreshAllUI();
 
         if (introPlayer != null)
-        {
             introPlayer.RefreshBannerFromStore();
-        }
     }
 
     private void OnDisable()
     {
+        CourseDetailStaticStore.OnChanged -= HandleCourseStoreChanged;
         UnbindVideoEvents();
     }
 
@@ -79,6 +83,22 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
         UpdateTimelineUI();
         UpdatePlayPauseIcon();
+    }
+
+    private void HandleCourseStoreChanged()
+    {
+        string newCourseId = CourseDetailStaticStore.CurrentCourseId;
+
+        bool courseChanged = !string.Equals(_observedCourseId, newCourseId, StringComparison.Ordinal);
+        _observedCourseId = newCourseId;
+
+        if (courseChanged && resetWhenCourseChanges)
+        {
+            ResetForNewCourse();
+            return;
+        }
+
+        RefreshAllUI();
     }
 
     private void ResolveReferences()
@@ -97,21 +117,6 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
         if (_videoPlayer == null)
             Debug.LogError("[CourseIntroVideoUIController] Không lấy được VideoPlayer từ CourseIntroVideoPlayer.");
-    }
-
-    private RawImage FindBannerRawImage()
-    {
-        if (introPlayer == null)
-            return null;
-
-        var raw = introPlayer.GetComponent<RawImage>();
-        if (raw != null) return raw;
-
-        raw = introPlayer.GetComponentInChildren<RawImage>(true);
-        if (raw != null) return raw;
-
-        raw = introPlayer.GetComponentInParent<RawImage>(true);
-        return raw;
     }
 
     private void WireUI()
@@ -274,7 +279,6 @@ public class CourseIntroVideoUIController : MonoBehaviour
         {
             if (!introPlayer.HasStartedVideo())
             {
-
                 introPlayer.StartPlayFromCurrentSource();
                 UpdatePlayPauseIcon();
                 return;
@@ -427,5 +431,46 @@ public class CourseIntroVideoUIController : MonoBehaviour
         return hours > 0
             ? $"{hours:00}:{minutes:00}:{secs:00}"
             : $"{minutes:00}:{secs:00}";
+    }
+
+    public void ResetForNewCourse()
+    {
+
+        ResolveReferences();
+        UnbindVideoEvents();
+
+        if (introPlayer != null)
+            introPlayer.ResetForNewCourse();
+
+        ResolveReferences();
+        BindVideoEvents();
+
+        _isDraggingTimeSlider = false;
+        _isDraggingVolumeSlider = false;
+
+        if (_audioSource != null)
+        {
+            _lastVolumeBeforeMute = Mathf.Clamp01(_audioSource.volume);
+            _isMuted = _audioSource.volume <= 0.0001f;
+        }
+        else
+        {
+            _lastVolumeBeforeMute = 1f;
+            _isMuted = false;
+        }
+
+        if (sliderTime != null)
+            sliderTime.SetValueWithoutNotify(0f);
+
+        if (sliderVolume != null && autoInitVolume)
+        {
+            float v = _audioSource != null ? _audioSource.volume : 1f;
+            sliderVolume.SetValueWithoutNotify(v);
+        }
+
+        if (txtTimeline != null)
+            txtTimeline.text = "00:00 / 00:00";
+
+        RefreshAllUI();
     }
 }

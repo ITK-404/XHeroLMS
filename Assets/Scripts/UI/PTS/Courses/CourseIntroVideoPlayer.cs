@@ -22,10 +22,11 @@ public class CourseIntroVideoPlayer : MonoBehaviour
     private int bannerResizeMaxSize = 512;
     private int bannerRequestTimeout = 8;
     private bool preferBannerOverImage = true;
-    private bool preserveAspect = true;
+    private bool resetWhenCourseChanges = true;
 
     private VideoPlayer _videoPlayer;
     private RenderTexture _renderTexture;
+
     private string _currentUrl;
     private bool _isPrepared;
     private bool _didSetup;
@@ -39,20 +40,27 @@ public class CourseIntroVideoPlayer : MonoBehaviour
     private Texture _currentBannerTexture;
     private string _currentBannerUrl;
 
+    private string _observedCourseId;
+
     private void Awake()
     {
         ResolveReferences(forceSetup: true);
+        _observedCourseId = CourseDetailStaticStore.CurrentCourseId;
         ShowFallbackBannerOnly();
     }
 
     private void OnEnable()
     {
+        CourseDetailStaticStore.OnChanged += HandleCourseStoreChanged;
+
         if (loadBannerOnEnable)
             RefreshBannerFromStore();
     }
 
     private void OnDisable()
     {
+        CourseDetailStaticStore.OnChanged -= HandleCourseStoreChanged;
+
         StopPlayback();
         ReleaseRenderTexture();
         CancelBannerLoad();
@@ -61,10 +69,13 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
     private void OnDestroy()
     {
+        CourseDetailStaticStore.OnChanged -= HandleCourseStoreChanged;
+
         if (_videoPlayer != null)
         {
             _videoPlayer.errorReceived -= OnVideoError;
             _videoPlayer.prepareCompleted -= OnPrepared;
+            _videoPlayer.loopPointReached -= OnLoopPointReached;
         }
 
         CancelBannerLoad();
@@ -87,6 +98,46 @@ public class CourseIntroVideoPlayer : MonoBehaviour
     public bool HasStartedVideo() => _hasStartedVideo;
     public bool IsPrepared() => _videoPlayer != null && _videoPlayer.isPrepared;
     public bool IsPreparing() => _isPreparing;
+
+    private void HandleCourseStoreChanged()
+    {
+        string newCourseId = CourseDetailStaticStore.CurrentCourseId;
+
+        bool courseChanged = !string.Equals(_observedCourseId, newCourseId, System.StringComparison.Ordinal);
+
+        _observedCourseId = newCourseId;
+
+        if (courseChanged && resetWhenCourseChanges)
+        {
+            ResetForNewCourse();
+            return;
+        }
+
+        if (!_hasStartedVideo && loadBannerOnEnable)
+            RefreshBannerFromStore();
+    }
+
+    public void ResetForNewCourse()
+    {
+        CancelBannerLoad();
+        StopPlaybackInternal(clearSource: true);
+        ReleaseRenderTexture();
+        ReleaseRuntimeBannerTexture();
+
+        _currentUrl = null;
+        _currentBannerUrl = null;
+        _currentBannerTexture = fallbackBannerTexture;
+
+        _isPrepared = false;
+        _isPreparing = false;
+        _hasStartedVideo = false;
+
+        if (targetRawImage != null)
+            targetRawImage.texture = _currentBannerTexture != null ? _currentBannerTexture : fallbackBannerTexture;
+
+        if (loadBannerOnEnable)
+            RefreshBannerFromStore();
+    }
 
     public void RefreshBannerFromStore()
     {
@@ -195,6 +246,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         if (string.IsNullOrWhiteSpace(introUrl))
         {
             _hasStartedVideo = false;
+            
             return;
         }
 
@@ -210,7 +262,6 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(introUrl))
         {
-            Debug.LogWarning("[CourseIntroVideoPlayer] CourseDetailStaticStore không có videoIntro.");
             return;
         }
 
@@ -232,7 +283,6 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            Debug.LogWarning("[CourseIntroVideoPlayer] url null/empty.");
             return;
         }
 
@@ -298,6 +348,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
     {
         if (_videoPlayer == null) return;
 
+        _videoPlayer.playOnAwake = false;
         _videoPlayer.waitForFirstFrame = true;
         _videoPlayer.skipOnDrop = true;
         _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
@@ -312,9 +363,11 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         _videoPlayer.errorReceived -= OnVideoError;
         _videoPlayer.prepareCompleted -= OnPrepared;
+        _videoPlayer.loopPointReached -= OnLoopPointReached;
 
         _videoPlayer.errorReceived += OnVideoError;
         _videoPlayer.prepareCompleted += OnPrepared;
+        _videoPlayer.loopPointReached += OnLoopPointReached;
     }
 
     private string GetBannerUrlFromStore()
@@ -373,7 +426,6 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             if (req.isNetworkError || req.isHttpError)
 #endif
             {
-                Debug.LogWarning($"[CourseIntroVideoPlayer] Load banner failed: {req.error} | url={url}");
                 yield break;
             }
 
@@ -396,12 +448,8 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             _runtimeBannerTexture.name = "CourseIntroBanner_Runtime";
             _currentBannerTexture = _runtimeBannerTexture;
 
-            // if (!_hasStartedVideo && targetRawImage != null)
             if (!_hasStartedVideo && !_isPreparing && targetRawImage != null)
-            {
                 targetRawImage.texture = _currentBannerTexture;
-                // targetRawImage.SetNativeSize();
-            }
         }
     }
 
@@ -479,17 +527,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
 
         if (proxyBoot != null)
-        {
             result = proxyBoot.GetPlayableUrl(rawUrl);
-
-            if (debugLog)
-                Debug.Log($"[CourseIntroVideoPlayer] Proxy URL: {result}");
-        }
-        else
-        {
-            if (debugLog)
-                Debug.LogWarning("[CourseIntroVideoPlayer] Không tìm thấy LocalProxyAutoBoot, fallback direct url.");
-        }
 #endif
 
         return result;
@@ -531,6 +569,11 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (audioSource != null && !audioSource.isPlaying)
             audioSource.Play();
+    }
+
+    private void OnLoopPointReached(VideoPlayer vp)
+    {
+        Debug.Log("[CourseIntroVideoPlayer] Video finished.");
     }
 
     private void OnVideoError(VideoPlayer vp, string message)
