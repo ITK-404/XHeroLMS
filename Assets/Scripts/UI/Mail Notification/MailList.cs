@@ -21,7 +21,7 @@ public class MailList : MonoBehaviour
     private Transform currentContentParent;
     // private MailFilter currentFilter = MailFilter.Personal;
     private MailFilter currentFilter = MailFilter.System;
-
+    [SerializeField] private Transform emptyMailState;
 
     private void Awake()
     {
@@ -47,7 +47,7 @@ public class MailList : MonoBehaviour
 
         currentContentParent = contentParent;
         ClearAllItems();
-        Refresh();
+        // Refresh();
     }
 
     public void SetFilter(MailFilter filter)
@@ -56,11 +56,13 @@ public class MailList : MonoBehaviour
 
         currentFilter = filter;
         ClearAllItems();
-        Refresh();
+        // Refresh();
     }
 
     public void Refresh()
     {
+        emptyMailState.gameObject.SetActive(false);
+        
         if (mailPrefab == null)
         {
             Debug.LogWarning("[MailList] mailPrefab đang null.");
@@ -145,6 +147,10 @@ public class MailList : MonoBehaviour
         {
             RemoveItem(removeBuffer[i]);
         }
+        
+        Debug.Log("So luong item count: " + currentContentParent.childCount,currentContentParent.gameObject);
+
+        emptyMailState.gameObject.SetActive(currentContentParent.childCount == 0);
     }
 
     private bool MatchFilter(NotificationMailItem item)

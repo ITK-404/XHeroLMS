@@ -4,7 +4,6 @@ public class MailViewUI : MonoBehaviour
 {
     [SerializeField] private GameObject root;
     [SerializeField] private Transform contentParent;
-
     public Transform ContentParent => contentParent;
 
     public void Show()
