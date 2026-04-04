@@ -1,13 +1,14 @@
 using System;
 using DG.Tweening;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 
-public class SnapElementCenterScrollView : MonoBehaviour, IEndDragHandler
+public partial class SnapElementCenterScrollView : MonoBehaviour
 {
     [SerializeField] private ScrollRect scrollRect;
+    [SerializeField] private int centerIndex;
+    [SerializeField] private float snapDuration = 0.25f;
     private Tween dragTween;
     public Action<int> OnUpdateCenterIndexEvent;
     private void OnValidate()
@@ -18,10 +19,8 @@ public class SnapElementCenterScrollView : MonoBehaviour, IEndDragHandler
         }
     }
 
-    [SerializeField] private int centerIndex;
-
     [ContextMenu("Align Center Of Element")]
-    private void AlignCenterOfElement()
+    public void AlignCenterOfElement()
     {
         // lấy center của view port
         Vector3 center = Vector2.zero;
@@ -52,15 +51,12 @@ public class SnapElementCenterScrollView : MonoBehaviour, IEndDragHandler
         Vector3 offset = center - targetItem.position;
         var targetPos = scrollRect.content.position + offset;
         var startPos = scrollRect.content.position;
-        dragTween = DOVirtual.Vector3(startPos, targetPos, 0.25f, (pos) => { scrollRect.content.position = pos; })
+        dragTween = DOVirtual.Vector3(startPos, targetPos, snapDuration, (pos) => { scrollRect.content.position = pos; })
             .SetEase(Ease.OutSine);
         
         OnUpdateCenterIndexEvent?.Invoke(shortestIndex);
     }
 
 
-    public void OnEndDrag(PointerEventData eventData)
-    {
-        AlignCenterOfElement();
-    }
+    public float GetMagnitude() => scrollRect.velocity.magnitude;
 }
