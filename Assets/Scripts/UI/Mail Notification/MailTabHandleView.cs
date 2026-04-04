@@ -7,7 +7,7 @@ public class MailTabHandleView : MonoBehaviour
     [SerializeField] private MailViewUI[] views;
     [SerializeField] private Button[] buttons;
     [SerializeField] private MailList mailList;
-
+    [SerializeField] private Transform emptyMailState;
     private void Awake()
     {
         Binding();
@@ -76,5 +76,6 @@ public class MailTabHandleView : MonoBehaviour
         }
 
         HandleButtonVisual(index);
+
     }
 }
