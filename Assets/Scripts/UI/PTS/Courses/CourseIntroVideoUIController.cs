@@ -14,6 +14,7 @@ public class CourseIntroVideoUIController : MonoBehaviour
     [SerializeField] private Button btnPlayPause;
     [SerializeField] private Button btnVolume;
     [SerializeField] private Button btnFullscreen;
+    [SerializeField] private Button buyBtn;
 
     [Header("Sliders")]
     [SerializeField] private Slider sliderTime;
@@ -68,12 +69,15 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
         if (introPlayer != null)
             introPlayer.RefreshBannerFromStore();
+
+        if(buyBtn != null) buyBtn.onClick.AddListener(OnClickPlayPause);
     }
 
     private void OnDisable()
     {
         CourseDetailStaticStore.OnChanged -= HandleCourseStoreChanged;
         UnbindVideoEvents();
+        if(buyBtn != null) buyBtn.onClick.RemoveListener(OnClickPlayPause);
     }
 
     private void Update()
