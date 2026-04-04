@@ -34,7 +34,6 @@ public class CourseIntroVideoUIController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private bool autoFindPlayer = true;
     [SerializeField] private bool autoInitVolume = true;
-    [SerializeField] private bool debugLog = false;
 
     private VideoPlayer _videoPlayer;
     private AudioSource _audioSource;
@@ -50,12 +49,22 @@ public class CourseIntroVideoUIController : MonoBehaviour
         ResolveReferences();
         WireUI();
         SyncInitialUI();
+
+        if (introPlayer != null)
+        {
+            introPlayer.RefreshBannerFromStore();
+        }
     }
 
     private void OnEnable()
     {
         BindVideoEvents();
         RefreshAllUI();
+
+        if (introPlayer != null)
+        {
+            introPlayer.RefreshBannerFromStore();
+        }
     }
 
     private void OnDisable()
@@ -88,9 +97,21 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
         if (_videoPlayer == null)
             Debug.LogError("[CourseIntroVideoUIController] Không lấy được VideoPlayer từ CourseIntroVideoPlayer.");
+    }
 
-        if (_audioSource == null && debugLog)
-            Debug.LogWarning("[CourseIntroVideoUIController] Không có AudioSource, volume UI có thể không hoạt động đầy đủ.");
+    private RawImage FindBannerRawImage()
+    {
+        if (introPlayer == null)
+            return null;
+
+        var raw = introPlayer.GetComponent<RawImage>();
+        if (raw != null) return raw;
+
+        raw = introPlayer.GetComponentInChildren<RawImage>(true);
+        if (raw != null) return raw;
+
+        raw = introPlayer.GetComponentInParent<RawImage>(true);
+        return raw;
     }
 
     private void WireUI()
@@ -118,6 +139,7 @@ public class CourseIntroVideoUIController : MonoBehaviour
             sliderTime.minValue = 0f;
             sliderTime.maxValue = 1f;
             sliderTime.wholeNumbers = false;
+            sliderTime.SetValueWithoutNotify(0f);
 
             sliderTime.onValueChanged.RemoveListener(OnTimeSliderChanged);
             sliderTime.onValueChanged.AddListener(OnTimeSliderChanged);
@@ -176,6 +198,12 @@ public class CourseIntroVideoUIController : MonoBehaviour
             sliderVolume.SetValueWithoutNotify(v);
         }
 
+        if (sliderTime != null)
+            sliderTime.SetValueWithoutNotify(0f);
+
+        if (txtTimeline != null)
+            txtTimeline.text = "00:00 / 00:00";
+
         RefreshAllUI();
     }
 
@@ -188,10 +216,10 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
     private void UpdatePlayPauseIcon()
     {
-        if (imgPlayPause == null || _videoPlayer == null)
+        if (imgPlayPause == null || introPlayer == null)
             return;
 
-        bool isPlaying = _videoPlayer.isPlaying;
+        bool isPlaying = _videoPlayer != null && _videoPlayer.isPlaying;
         imgPlayPause.sprite = isPlaying ? iconPause : iconPlay;
     }
 
@@ -205,21 +233,18 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
     private void UpdateTimelineUI()
     {
-        if (_videoPlayer == null)
+        if (_videoPlayer == null || !_videoPlayer.isPrepared)
         {
+            if (!_isDraggingTimeSlider && sliderTime != null)
+                sliderTime.SetValueWithoutNotify(0f);
+
             if (txtTimeline != null)
                 txtTimeline.text = "00:00 / 00:00";
             return;
         }
 
-        double current = 0;
-        double length = 0;
-
-        if (_videoPlayer.isPrepared)
-        {
-            current = _videoPlayer.time;
-            length = _videoPlayer.length;
-        }
+        double current = _videoPlayer.time;
+        double length = _videoPlayer.length;
 
         if (sliderTime != null && !_isDraggingTimeSlider)
         {
@@ -236,13 +261,24 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
     private void OnClickPlayPause()
     {
-        if (_videoPlayer == null)
+        if (introPlayer == null)
             return;
+
+        if (_videoPlayer == null)
+        {
+            ResolveReferences();
+            if (_videoPlayer == null) return;
+        }
 
         if (!_videoPlayer.isPrepared)
         {
-            if (debugLog)
-                Debug.Log("[CourseIntroVideoUIController] Video chưa prepare xong.");
+            if (!introPlayer.HasStartedVideo())
+            {
+
+                introPlayer.StartPlayFromCurrentSource();
+                UpdatePlayPauseIcon();
+                return;
+            }
             return;
         }
 
@@ -349,17 +385,11 @@ public class CourseIntroVideoUIController : MonoBehaviour
 
     private void OnVideoPrepared(VideoPlayer vp)
     {
-        if (debugLog)
-            Debug.Log("[CourseIntroVideoUIController] Video prepared.");
-
         RefreshAllUI();
     }
 
     private void OnVideoFinished(VideoPlayer vp)
     {
-        if (debugLog)
-            Debug.Log("[CourseIntroVideoUIController] Video finished.");
-
         UpdatePlayPauseIcon();
     }
 
