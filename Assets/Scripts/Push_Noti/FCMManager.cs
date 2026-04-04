@@ -7,21 +7,18 @@ using Firebase.Messaging;
 public class FCMManager : MonoBehaviour
 {
     [SerializeField] private NotificationPermissionRequester permissionRequester;
-    [SerializeField] private NotificationsLoader notificationsLoader;
 
     private bool _initialized;
     private bool _eventsRegistered;
 
     public static event Action OnPushNotificationReceived;
+    public static event Action OnAppResumed;
 
     public const string PlayerPrefsFcmTokenKey = "FCM_DEVICE_TOKEN";
 
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
-
-        if (notificationsLoader == null)
-            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
     }
 
     private void Start()
@@ -37,19 +34,9 @@ public class FCMManager : MonoBehaviour
     private void OnApplicationFocus(bool hasFocus)
     {
         if (!hasFocus) return;
+        Debug.Log("[FCM] App resumed.");
 
-        if (notificationsLoader == null)
-            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
-
-        if (notificationsLoader != null)
-        {
-            Debug.Log("[FCM] App resumed -> refresh notifications");
-            notificationsLoader.ReloadCurrentTab();
-        }
-        else
-        {
-            Debug.LogWarning("[FCM] NotificationsLoader not found on app resume.");
-        }
+        OnAppResumed?.Invoke();
     }
 
     private void InitializeFirebase()
@@ -162,40 +149,6 @@ public class FCMManager : MonoBehaviour
         {
             Debug.LogWarning("[FCM] MessageReceived args/message is null.");
             return;
-        }
-
-        Debug.Log("[FCM] Received a new message from: " + e.Message.From);
-
-        if (e.Message.Notification != null)
-        {
-            Debug.Log("[FCM] Notification Title: " + e.Message.Notification.Title);
-            Debug.Log("[FCM] Notification Body: " + e.Message.Notification.Body);
-        }
-
-        if (e.Message.Data != null && e.Message.Data.Count > 0)
-        {
-            foreach (var pair in e.Message.Data)
-            {
-                Debug.Log($"[FCM] Data: {pair.Key} = {pair.Value}");
-            }
-        }
-
-        RefreshInAppNotifications();
-    }
-
-    private void RefreshInAppNotifications()
-    {
-        if (notificationsLoader == null)
-            notificationsLoader = FindFirstObjectByType<NotificationsLoader>();
-
-        if (notificationsLoader != null)
-        {
-            Debug.Log("[FCM] Refresh in-app notifications from /notifications");
-            notificationsLoader.ReloadCurrentTab();
-        }
-        else
-        {
-            Debug.LogWarning("[FCM] NotificationsLoader not found. Cannot refresh /notifications.");
         }
 
         OnPushNotificationReceived?.Invoke();

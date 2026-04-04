@@ -378,16 +378,16 @@ public class LoginController : MonoBehaviour
         var u = payloadObj.user;
         userOut = new AuthUser
         {
-            id           = u.id,
-            username     = u.username,
-            fullName     = u.fullName,
-            gender       = u.gender,
-            role         = u.role,
-            email        = u.email,
-            status       = u.status,
-            avatar       = u.avatar,
+            id = u.id,
+            username = u.username,
+            fullName = u.fullName,
+            gender = u.gender,
+            role = u.role,
+            email = u.email,
+            status = u.status,
+            avatar = u.avatar,
             referralCode = u.referralCode,
-            jit          = u.jit
+            jit = u.jit
         };
 
         return true;
@@ -481,7 +481,17 @@ public class LoginController : MonoBehaviour
 
         string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
-        string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
+        // string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
+        string currentDeviceToken = GetCurrentDeviceToken();
+
+        string jsonData = JsonUtility.ToJson(new LoginRequest
+        {
+            username = username,
+            password = password,
+            deviceToken = currentDeviceToken,
+            fromPlatform = "lms3d"
+        });
+
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
 
         using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
@@ -568,6 +578,8 @@ public class LoginController : MonoBehaviour
     {
         public string username;
         public string password;
+        public string deviceToken;
+        public string fromPlatform;
     }
 
     private void ApplyPrefillOrFocus()
@@ -629,7 +641,10 @@ public class LoginController : MonoBehaviour
         if (field.isFocused)
             field.ActivateInputField();
     }
-
+    private string GetCurrentDeviceToken()
+    {
+        return FCMManager.GetSavedFcmToken();
+    }
 }
 
 // ====== Models (đặt riêng file cũng được) ======
