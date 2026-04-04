@@ -1,7 +1,9 @@
-using System;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using Object = UnityEngine.Object;
 
 public class CourseIntroVideoPlayer : MonoBehaviour
 {
@@ -14,25 +16,60 @@ public class CourseIntroVideoPlayer : MonoBehaviour
     [Header("Proxy")]
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugLog = true;
-    [SerializeField] private bool autoPlayOnEnable = false;
+    // Banner
+    private Texture fallbackBannerTexture;
+    private bool loadBannerOnEnable = true;
+    private int bannerResizeMaxSize = 512;
+    private int bannerRequestTimeout = 8;
+    private bool preferBannerOverImage = true;
+    private bool preserveAspect = true;
 
     private VideoPlayer _videoPlayer;
     private RenderTexture _renderTexture;
     private string _currentUrl;
     private bool _isPrepared;
     private bool _didSetup;
+    private bool _hasStartedVideo;
+    private bool _isPreparing;
+
+    private Coroutine _loadBannerCoroutine;
+    private UnityWebRequest _activeBannerRequest;
+
+    private Texture2D _runtimeBannerTexture;
+    private Texture _currentBannerTexture;
+    private string _currentBannerUrl;
 
     private void Awake()
     {
         ResolveReferences(forceSetup: true);
+        ShowFallbackBannerOnly();
     }
 
     private void OnEnable()
     {
-        if (autoPlayOnEnable)
-            PlayAuto(targetRawImage);
+        if (loadBannerOnEnable)
+            RefreshBannerFromStore();
+    }
+
+    private void OnDisable()
+    {
+        StopPlayback();
+        ReleaseRenderTexture();
+        CancelBannerLoad();
+        ShowCurrentBannerOrFallback();
+    }
+
+    private void OnDestroy()
+    {
+        if (_videoPlayer != null)
+        {
+            _videoPlayer.errorReceived -= OnVideoError;
+            _videoPlayer.prepareCompleted -= OnPrepared;
+        }
+
+        CancelBannerLoad();
+        ReleaseRenderTexture();
+        ReleaseRuntimeBannerTexture();
     }
 
     public VideoPlayer GetVideoPlayer()
@@ -47,91 +84,60 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         return audioSource;
     }
 
-    private void ResolveReferences(bool forceSetup)
+    public bool HasStartedVideo() => _hasStartedVideo;
+    public bool IsPrepared() => _videoPlayer != null && _videoPlayer.isPrepared;
+    public bool IsPreparing() => _isPreparing;
+
+    public void RefreshBannerFromStore()
     {
-        // 1) targetRawImage tự tìm nếu chưa gán
-        if (targetRawImage == null)
+        ResolveReferences(forceSetup: false);
+
+        string bannerUrl = GetBannerUrlFromStore();
+
+        if (string.IsNullOrWhiteSpace(bannerUrl))
         {
-            targetRawImage = GetComponent<RawImage>();
-
-            if (targetRawImage == null)
-                targetRawImage = GetComponentInChildren<RawImage>(true);
-
-            if (targetRawImage == null)
-                targetRawImage = GetComponentInParent<RawImage>(true);
-        }
-
-        // 2) VideoPlayer tự tìm trên cùng object trước
-        if (_videoPlayer == null)
-        {
-            _videoPlayer = GetComponent<VideoPlayer>();
-
-            if (_videoPlayer == null && targetRawImage != null)
-                _videoPlayer = targetRawImage.GetComponent<VideoPlayer>();
-
-            if (_videoPlayer == null)
-                _videoPlayer = GetComponentInChildren<VideoPlayer>(true);
-
-            if (_videoPlayer == null)
-                _videoPlayer = GetComponentInParent<VideoPlayer>(true);
-        }
-
-        // 3) AudioSource tự tìm
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-
-            if (audioSource == null)
-                audioSource = GetComponentInChildren<AudioSource>(true);
-
-            if (audioSource == null)
-                audioSource = GetComponentInParent<AudioSource>(true);
-        }
-
-        // 4) Proxy tự tìm
-        if (proxyBoot == null)
-            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
-
-        if (_videoPlayer == null)
-        {
-            Debug.LogError("[CourseIntroVideoPlayer] Không tìm thấy VideoPlayer trên object hiện tại / parent / children.");
+            CancelBannerLoad();
+            ReleaseRuntimeBannerTexture();
+            _currentBannerUrl = null;
+            _currentBannerTexture = fallbackBannerTexture;
+            ShowCurrentBannerOrFallback();
             return;
         }
 
-        if (forceSetup || !_didSetup)
+        if (_currentBannerUrl == bannerUrl && _currentBannerTexture != null)
         {
-            SetupVideoPlayer();
-            _didSetup = true;
+            ShowCurrentBannerOrFallback();
+            return;
         }
+
+        CancelBannerLoad();
+        ReleaseRuntimeBannerTexture();
+
+        _currentBannerUrl = bannerUrl;
+        _currentBannerTexture = fallbackBannerTexture;
+        ShowCurrentBannerOrFallback();
+
+        _loadBannerCoroutine = StartCoroutine(LoadBannerRoutine(bannerUrl));
     }
 
-    private void SetupVideoPlayer()
+    public void SetFallbackBannerTexture(Texture texture)
     {
-        if (_videoPlayer == null) return;
+        fallbackBannerTexture = texture;
 
-        _videoPlayer.playOnAwake = false;
-        _videoPlayer.waitForFirstFrame = true;
-        _videoPlayer.skipOnDrop = true;
-        _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
-        _videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
-
-        if (audioSource != null)
+        if (!_hasStartedVideo && _runtimeBannerTexture == null)
         {
-            _videoPlayer.EnableAudioTrack(0, true);
-            _videoPlayer.SetTargetAudioSource(0, audioSource);
-            audioSource.playOnAwake = false;
+            _currentBannerTexture = fallbackBannerTexture;
+            ShowCurrentBannerOrFallback();
         }
-
-        _videoPlayer.errorReceived -= OnVideoError;
-        _videoPlayer.prepareCompleted -= OnPrepared;
-        _videoPlayer.loopPointReached -= OnLoopPointReached;
-
-        _videoPlayer.errorReceived += OnVideoError;
-        _videoPlayer.prepareCompleted += OnPrepared;
-        _videoPlayer.loopPointReached += OnLoopPointReached;
     }
 
-    public void PlayAuto(RawImage rawImage = null)
+    public void ShowFallbackBannerOnly()
+    {
+        _currentBannerTexture = _runtimeBannerTexture != null ? _runtimeBannerTexture : fallbackBannerTexture;
+        ShowCurrentBannerOrFallback();
+    }
+
+    public void StartPlayFromCurrentSource(RawImage rawImage = null)
     {
         if (rawImage != null)
             targetRawImage = rawImage;
@@ -144,17 +150,32 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             return;
         }
 
-        EnsureRenderTexture();
+        if (_hasStartedVideo)
+        {
+            if (_videoPlayer.isPrepared)
+            {
+                Resume();
+            }
+            else if (!_isPreparing)
+            {
+                _isPreparing = true;
+                _videoPlayer.Prepare();
+            }
+
+            return;
+        }
+
+        _hasStartedVideo = true;
 
         if (_videoPlayer.source == VideoSource.VideoClip && _videoPlayer.clip != null)
         {
-            if (debugLog)
-                Debug.Log("[CourseIntroVideoPlayer] Ưu tiên VideoClip đang gán sẵn trên VideoPlayer.");
-
             StopPlaybackInternal(clearSource: false);
 
             _currentUrl = null;
             _isPrepared = false;
+            _isPreparing = true;
+
+            EnsureRenderTexture();
 
             _videoPlayer.targetTexture = _renderTexture;
             if (targetRawImage != null)
@@ -166,9 +187,6 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (_videoPlayer.source == VideoSource.Url && !string.IsNullOrWhiteSpace(_videoPlayer.url))
         {
-            if (debugLog)
-                Debug.Log($"[CourseIntroVideoPlayer] Ưu tiên URL đang có sẵn trên VideoPlayer: {_videoPlayer.url}");
-
             PlayResolvedUrl(_videoPlayer.url);
             return;
         }
@@ -176,13 +194,9 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         string introUrl = CourseDetailStaticStore.GetVideoIntro();
         if (string.IsNullOrWhiteSpace(introUrl))
         {
-            if (debugLog)
-                Debug.LogWarning("[CourseIntroVideoPlayer] CourseDetailStaticStore không có videoIntro.");
+            _hasStartedVideo = false;
             return;
         }
-
-        if (debugLog)
-            Debug.Log($"[CourseIntroVideoPlayer] URL rỗng -> fallback sang detail: {introUrl}");
 
         PlayResolvedUrl(introUrl);
     }
@@ -196,8 +210,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(introUrl))
         {
-            if (debugLog)
-                Debug.LogWarning("[CourseIntroVideoPlayer] CourseDetailStaticStore không có videoIntro.");
+            Debug.LogWarning("[CourseIntroVideoPlayer] CourseDetailStaticStore không có videoIntro.");
             return;
         }
 
@@ -219,12 +232,214 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            if (debugLog)
-                Debug.LogWarning("[CourseIntroVideoPlayer] url null/empty.");
+            Debug.LogWarning("[CourseIntroVideoPlayer] url null/empty.");
             return;
         }
 
+        _hasStartedVideo = true;
         PlayResolvedUrl(url);
+    }
+
+    private void ResolveReferences(bool forceSetup)
+    {
+        if (targetRawImage == null)
+        {
+            targetRawImage = GetComponent<RawImage>();
+
+            if (targetRawImage == null)
+                targetRawImage = GetComponentInChildren<RawImage>(true);
+
+            if (targetRawImage == null)
+                targetRawImage = GetComponentInParent<RawImage>(true);
+        }
+
+        if (_videoPlayer == null)
+        {
+            _videoPlayer = GetComponent<VideoPlayer>();
+
+            if (_videoPlayer == null && targetRawImage != null)
+                _videoPlayer = targetRawImage.GetComponent<VideoPlayer>();
+
+            if (_videoPlayer == null)
+                _videoPlayer = GetComponentInChildren<VideoPlayer>(true);
+
+            if (_videoPlayer == null)
+                _videoPlayer = GetComponentInParent<VideoPlayer>(true);
+        }
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+
+            if (audioSource == null)
+                audioSource = GetComponentInChildren<AudioSource>(true);
+
+            if (audioSource == null)
+                audioSource = GetComponentInParent<AudioSource>(true);
+        }
+
+        if (proxyBoot == null)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        if (_videoPlayer == null)
+        {
+            Debug.LogError("[CourseIntroVideoPlayer] Không tìm thấy VideoPlayer trên object hiện tại / parent / children.");
+            return;
+        }
+
+        if (forceSetup || !_didSetup)
+        {
+            SetupVideoPlayer();
+            _didSetup = true;
+        }
+    }
+
+    private void SetupVideoPlayer()
+    {
+        if (_videoPlayer == null) return;
+
+        _videoPlayer.waitForFirstFrame = true;
+        _videoPlayer.skipOnDrop = true;
+        _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
+        _videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+
+        if (audioSource != null)
+        {
+            _videoPlayer.EnableAudioTrack(0, true);
+            _videoPlayer.SetTargetAudioSource(0, audioSource);
+            audioSource.playOnAwake = false;
+        }
+
+        _videoPlayer.errorReceived -= OnVideoError;
+        _videoPlayer.prepareCompleted -= OnPrepared;
+
+        _videoPlayer.errorReceived += OnVideoError;
+        _videoPlayer.prepareCompleted += OnPrepared;
+    }
+
+    private string GetBannerUrlFromStore()
+    {
+        string bannerUrl = null;
+        string imageUrl = null;
+
+        var detail = CourseDetailStaticStore.CurrentDetail;
+        var flow = CourseDetailStaticStore.GetCourseFlow();
+
+        if (detail != null)
+        {
+            if (detail.banner != null && detail.banner.Length > 0)
+                bannerUrl = detail.banner[0];
+
+            imageUrl = detail.image;
+        }
+
+        if (flow != null)
+        {
+            if (string.IsNullOrWhiteSpace(bannerUrl) &&
+                flow.banner != null &&
+                flow.banner.Count > 0)
+            {
+                bannerUrl = flow.banner[0];
+            }
+
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                imageUrl = flow.image;
+        }
+
+        if (preferBannerOverImage)
+            return !string.IsNullOrWhiteSpace(bannerUrl) ? bannerUrl : imageUrl;
+
+        return !string.IsNullOrWhiteSpace(imageUrl) ? imageUrl : bannerUrl;
+    }
+
+    private IEnumerator LoadBannerRoutine(string url)
+    {
+        using (var req = UnityWebRequestTexture.GetTexture(url, true))
+        {
+            _activeBannerRequest = req;
+            req.timeout = bannerRequestTimeout;
+
+            yield return req.SendWebRequest();
+
+            if (_activeBannerRequest != req)
+                yield break;
+
+            _activeBannerRequest = null;
+            _loadBannerCoroutine = null;
+
+#if UNITY_2020_2_OR_NEWER
+            if (req.result != UnityWebRequest.Result.Success)
+#else
+            if (req.isNetworkError || req.isHttpError)
+#endif
+            {
+                Debug.LogWarning($"[CourseIntroVideoPlayer] Load banner failed: {req.error} | url={url}");
+                yield break;
+            }
+
+            Texture2D downloaded = DownloadHandlerTexture.GetContent(req);
+            if (downloaded == null)
+                yield break;
+
+            downloaded.name = "CourseIntroBanner_Downloaded";
+
+            Texture2D resized = ResizeTexture(downloaded, bannerResizeMaxSize);
+            if (resized != downloaded)
+                Object.Destroy(downloaded);
+
+            if (resized == null)
+                yield break;
+
+            ReleaseRuntimeBannerTexture();
+
+            _runtimeBannerTexture = resized;
+            _runtimeBannerTexture.name = "CourseIntroBanner_Runtime";
+            _currentBannerTexture = _runtimeBannerTexture;
+
+            // if (!_hasStartedVideo && targetRawImage != null)
+            if (!_hasStartedVideo && !_isPreparing && targetRawImage != null)
+            {
+                targetRawImage.texture = _currentBannerTexture;
+                // targetRawImage.SetNativeSize();
+            }
+        }
+    }
+
+    private Texture2D ResizeTexture(Texture2D source, int maxSize)
+    {
+        if (source == null)
+            return null;
+
+        if (maxSize <= 0)
+            return source;
+
+        int srcW = source.width;
+        int srcH = source.height;
+
+        if (srcW <= maxSize && srcH <= maxSize)
+            return source;
+
+        float ratio = srcW >= srcH
+            ? (float)maxSize / srcW
+            : (float)maxSize / srcH;
+
+        int dstW = Mathf.Max(2, Mathf.RoundToInt(srcW * ratio));
+        int dstH = Mathf.Max(2, Mathf.RoundToInt(srcH * ratio));
+
+        RenderTexture rt = RenderTexture.GetTemporary(dstW, dstH, 0, RenderTextureFormat.ARGB32);
+        RenderTexture prev = RenderTexture.active;
+
+        Graphics.Blit(source, rt);
+        RenderTexture.active = rt;
+
+        Texture2D result = new Texture2D(dstW, dstH, TextureFormat.RGBA32, false);
+        result.ReadPixels(new Rect(0, 0, dstW, dstH), 0, 0);
+        result.Apply(false, false);
+
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+
+        return result;
     }
 
     private void PlayResolvedUrl(string url)
@@ -240,6 +455,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         string finalUrl = BuildPlayableUrl(url);
         _currentUrl = finalUrl;
         _isPrepared = false;
+        _isPreparing = true;
 
         EnsureRenderTexture();
 
@@ -250,16 +466,6 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
         if (targetRawImage != null)
             targetRawImage.texture = _renderTexture;
-
-        if (debugLog)
-        {
-            Debug.Log($"[CourseIntroVideoPlayer] Prepare video: {finalUrl}");
-#if UNITY_ANDROID && !UNITY_EDITOR
-            Debug.Log("[CourseIntroVideoPlayer] Android mode: dùng LocalProxy nếu có.");
-#else
-            Debug.Log("[CourseIntroVideoPlayer] Non-Android mode: có thể dùng direct url.");
-#endif
-        }
 
         _videoPlayer.Prepare();
     }
@@ -309,25 +515,14 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         };
         _renderTexture.Create();
 
-        if (targetRawImage != null)
+        if (_hasStartedVideo && targetRawImage != null)
             targetRawImage.texture = _renderTexture;
     }
 
     private void OnPrepared(VideoPlayer vp)
     {
         _isPrepared = true;
-
-        if (debugLog)
-        {
-            string sourceInfo = vp.source == VideoSource.VideoClip
-                ? (vp.clip != null ? vp.clip.name : "<null clip>")
-                : vp.url;
-
-            Debug.Log(
-                $"[CourseIntroVideoPlayer] Prepared. " +
-                $"width={vp.width}, height={vp.height}, length={vp.length:F2}, source={sourceInfo}"
-            );
-        }
+        _isPreparing = false;
 
         if (targetRawImage != null && vp.targetTexture != null)
             targetRawImage.texture = vp.targetTexture;
@@ -338,14 +533,10 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             audioSource.Play();
     }
 
-    private void OnLoopPointReached(VideoPlayer vp)
-    {
-        if (debugLog)
-            Debug.Log("[CourseIntroVideoPlayer] Video finished.");
-    }
-
     private void OnVideoError(VideoPlayer vp, string message)
     {
+        _isPreparing = false;
+
         string sourceInfo = vp.source == VideoSource.VideoClip
             ? (vp.clip != null ? vp.clip.name : "<null clip>")
             : _currentUrl;
@@ -364,7 +555,7 @@ public class CourseIntroVideoPlayer : MonoBehaviour
 
     public void Resume()
     {
-        if (_videoPlayer != null && _isPrepared)
+        if (_videoPlayer != null && _videoPlayer.isPrepared)
             _videoPlayer.Play();
 
         if (audioSource != null)
@@ -395,6 +586,45 @@ public class CourseIntroVideoPlayer : MonoBehaviour
         }
     }
 
+    private void ShowCurrentBannerOrFallback()
+    {
+        if (targetRawImage == null)
+            return;
+
+        targetRawImage.texture = _currentBannerTexture != null ? _currentBannerTexture : fallbackBannerTexture;
+    }
+
+    private void CancelBannerLoad()
+    {
+        if (_loadBannerCoroutine != null)
+        {
+            StopCoroutine(_loadBannerCoroutine);
+            _loadBannerCoroutine = null;
+        }
+
+        if (_activeBannerRequest != null)
+        {
+            try { _activeBannerRequest.Abort(); } catch { }
+            _activeBannerRequest.Dispose();
+            _activeBannerRequest = null;
+        }
+    }
+
+    private void ReleaseRuntimeBannerTexture()
+    {
+        if (_runtimeBannerTexture != null)
+        {
+            if (_currentBannerTexture == _runtimeBannerTexture)
+                _currentBannerTexture = null;
+
+            if (targetRawImage != null && targetRawImage.texture == _runtimeBannerTexture && !_hasStartedVideo)
+                targetRawImage.texture = fallbackBannerTexture;
+
+            Object.Destroy(_runtimeBannerTexture);
+            _runtimeBannerTexture = null;
+        }
+    }
+
     private void ReleaseRenderTexture()
     {
         if (_renderTexture != null)
@@ -409,22 +639,5 @@ public class CourseIntroVideoPlayer : MonoBehaviour
             Destroy(_renderTexture);
             _renderTexture = null;
         }
-    }
-
-    private void OnDisable()
-    {
-        StopPlayback();
-    }
-
-    private void OnDestroy()
-    {
-        if (_videoPlayer != null)
-        {
-            _videoPlayer.errorReceived -= OnVideoError;
-            _videoPlayer.prepareCompleted -= OnPrepared;
-            _videoPlayer.loopPointReached -= OnLoopPointReached;
-        }
-
-        ReleaseRenderTexture();
     }
 }
