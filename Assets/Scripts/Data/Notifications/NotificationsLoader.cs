@@ -12,9 +12,11 @@ public class NotificationsLoader : MonoBehaviour
     [SerializeField] private int timeoutSeconds = 20;
     [SerializeField] private string platform = "lms3d";
 
-    [Header("Auto Load")]
-    [SerializeField] private bool autoLoadOnEnable = true;
-    [SerializeField] private string defaultTab = "system";
+    // Auto Load
+    private bool autoLoadOnEnable = true;
+    private bool reloadOnPushReceived = true;
+    private bool reloadOnAppResumed = true;
+    private string defaultTab = "system";
 
     [Header("Options")]
     [SerializeField] private bool debugLog = true;
@@ -45,12 +47,18 @@ public class NotificationsLoader : MonoBehaviour
 
     private void OnEnable()
     {
+        FCMManager.OnPushNotificationReceived += HandlePushReceived;
+        FCMManager.OnAppResumed += HandleAppResumed;
+
         if (autoLoadOnEnable)
             Load(currentTab);
     }
 
     private void OnDisable()
     {
+        FCMManager.OnPushNotificationReceived -= HandlePushReceived;
+        FCMManager.OnAppResumed -= HandleAppResumed;
+
         if (loadRoutine != null)
         {
             StopCoroutine(loadRoutine);
@@ -85,6 +93,26 @@ public class NotificationsLoader : MonoBehaviour
 
         CancelActiveRequest();
         loadRoutine = StartCoroutine(CoLoad(tab));
+    }
+
+    private void HandlePushReceived()
+    {
+        if (!reloadOnPushReceived) return;
+
+        if (debugLog)
+            Debug.Log("[NotificationsLoader] Push received -> reload current tab: " + currentTab);
+
+        ReloadCurrentTab();
+    }
+
+    private void HandleAppResumed()
+    {
+        if (!reloadOnAppResumed) return;
+
+        if (debugLog)
+            Debug.Log("[NotificationsLoader] App resumed -> reload current tab: " + currentTab);
+
+        ReloadCurrentTab();
     }
 
     private string BuildNotificationsUrl(string tab)
@@ -183,15 +211,15 @@ public class NotificationsLoader : MonoBehaviour
                 yield break;
             }
 
-if (!NotificationsStaticStore.IsSameData(tab, root.data))
-{
-    NotificationsStaticStore.SetData(tab, root.data);
-}
-else
-{
+            if (!NotificationsStaticStore.IsSameData(tab, root.data))
+            {
+                NotificationsStaticStore.SetData(tab, root.data);
+            }
+            else
+            {
     // vẫn phát tín hiệu để UI rebuild lại theo tab/content parent hiện tại
-    NotificationsStaticStore.SetData(tab, root.data);
-}
+                NotificationsStaticStore.SetData(tab, root.data);
+            }
         }
 
         activeRequest = null;
