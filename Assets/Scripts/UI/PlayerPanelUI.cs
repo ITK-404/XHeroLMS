@@ -32,14 +32,19 @@ public class PlayerPanelUI : MonoBehaviour
     public Action OnClickTryExitAutoFindWay;
 
     public PlayerControllerUI controllerUI;
-    // users 
-    public string deleteUserPath = "/users"; // <-- chỉnh theo API thật
+
+    [Header("API Paths")]
+    public string deleteUserPath = "/users";
+    public string logoutPath = "/users/logout";
+    public string fromPlatform = "lms3d";
+
     public bool disableButtonsWhileDeleting = true;
 
     private bool _isDeleting = false;
+    private bool _isLoggingOut = false;
 
     private DeleteAccountApi _deleteAccountApi;
-    
+
     private void Awake()
     {
         Instance = this;
@@ -88,15 +93,76 @@ public class PlayerPanelUI : MonoBehaviour
 
     private void OnLogout()
     {
-        if (isLoaded) return;
+        if (isLoaded || _isLoggingOut) return;
 
-        if (TokenStore.IsAuthenticated)
+        if (!TokenStore.IsAuthenticated || string.IsNullOrEmpty(TokenStore.AccessToken))
         {
-            isLoaded = true;
-            TokenStore.Clear();
-            // LoadingTransition.Load(defaultLoadScene);
-            StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
+            Debug.LogWarning("[PlayerPanelUI] Cannot logout: not authenticated.");
+            return;
         }
+
+        StartCoroutine(CoLogout());
+    }
+
+    private IEnumerator CoLogout()
+    {
+        _isLoggingOut = true;
+
+        if (logoutPopupUI != null)
+            logoutPopupUI.SetInteractable(false);
+
+        string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
+        string accessToken = TokenStore.AccessToken;
+
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            Debug.LogError("[PlayerPanelUI] Logout failed: baseUrl is null or empty.");
+            RestoreLogoutInteractable();
+            yield break;
+        }
+
+        string url = $"{baseUrl}{logoutPath}?fromPlatform={UnityWebRequest.EscapeURL(fromPlatform)}";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("authorization", $"Bearer {accessToken}");
+            request.timeout = 20;
+
+            yield return request.SendWebRequest();
+
+#if UNITY_2020_1_OR_NEWER
+            bool success = request.result == UnityWebRequest.Result.Success;
+#else
+            bool success = !request.isNetworkError && !request.isHttpError;
+#endif
+
+            if (success)
+            {
+                Debug.Log("[PlayerPanelUI] Logout API success.");
+
+                isLoaded = true;
+                TokenStore.Clear();
+
+                if (logoutPopupUI != null)
+                    logoutPopupUI.Hide();
+
+                StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
+            }
+            else
+            {
+                Debug.LogError($"[PlayerPanelUI] Logout API failed: {request.error}\nResponse: {request.downloadHandler.text}");
+
+                RestoreLogoutInteractable();
+            }
+        }
+    }
+
+    private void RestoreLogoutInteractable()
+    {
+        _isLoggingOut = false;
+
+        if (logoutPopupUI != null)
+            logoutPopupUI.SetInteractable(true);
     }
 
     public void OnDeleteAccount()
@@ -151,10 +217,10 @@ public class PlayerPanelUI : MonoBehaviour
     {
         loginContainer.gameObject.SetActive(true);
         unLogginContainer.gameObject.SetActive(false);
-        
+
         string baseUrl = LmsStore.Instance.baseUrl?.TrimEnd('/');
         string accessToken = TokenStore.AccessToken;
-        _deleteAccountApi = new DeleteAccountApi(baseUrl: baseUrl, accessToken:accessToken, deleteUserPath: null);
+        _deleteAccountApi = new DeleteAccountApi(baseUrl: baseUrl, accessToken: accessToken, deleteUserPath: null);
     }
 
     public void HideAll()
@@ -169,7 +235,6 @@ public class PlayerPanelUI : MonoBehaviour
 
     public void ShowUnLoginContainer(bool b)
     {
-        // don't try to turn on or off this of is logged
         if (TokenStore.IsAuthenticated) return;
         unLogginContainer.gameObject.SetActive(b);
     }
@@ -189,7 +254,6 @@ public class PlayerPanelUI : MonoBehaviour
     private IEnumerator CoLoadSceneSmart(string targetScene)
     {
 #if ADDRESSABLES
-        // Nếu scene là addressable (cloud) -> dùng LoadAssetBundle
         bool isCloud = false;
         yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
 
@@ -198,23 +262,20 @@ public class PlayerPanelUI : MonoBehaviour
         else
             LoadingTransition.Load(targetScene);
 #else
-    LoadingTransition.Load(targetScene);
-    yield break;
+        LoadingTransition.Load(targetScene);
+        yield break;
 #endif
     }
 
 #if ADDRESSABLES
-// Check: sceneName có tồn tại như 1 addressable scene không?
     private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
     {
-        // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
         var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
 
         yield return h;
 
         bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
 
-        // Release handle (tránh leak)
         Addressables.Release(h);
 
         result?.Invoke(ok);

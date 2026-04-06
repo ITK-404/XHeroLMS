@@ -492,6 +492,8 @@ public class LoginController : MonoBehaviour
             fromPlatform = "lms3d"
         });
 
+        Debug.Log("DeviceToken: " + currentDeviceToken);
+
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
 
         using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
