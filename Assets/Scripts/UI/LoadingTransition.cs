@@ -19,13 +19,13 @@ public static class LoadingTransition
     /// LoadingScene sẽ đọc TargetSceneName và load async scene đích.
     /// </summary>
     private static void Load(string sceneName)
-{
-    PreviousSceneName = SceneManager.GetActiveScene().name;
-    TargetSceneName = sceneName;
-    UseAddressables = false;
+    {
+        PreviousSceneName = SceneManager.GetActiveScene().name;
+        TargetSceneName = sceneName;
+        UseAddressables = false;
 
-    SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
-}
+        SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
+    }
 
 private static void LoadAssetBundle(string sceneName)
 {
