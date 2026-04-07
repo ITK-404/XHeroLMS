@@ -19,7 +19,8 @@ public class PTS_ListCourse : MonoBehaviour
     [Header("Chapter Prefab & Parent")]
     [SerializeField] private ChapterUI chapterPrefab;
     [SerializeField] private Transform contentParent;
-
+    [SerializeField] private Transform decorImg;
+    [SerializeField] private Transform emptyState;
     [Header("Lesson Item Prefab")]
     [SerializeField] private GameObject lessonItemPrefab;
 
@@ -96,6 +97,8 @@ public class PTS_ListCourse : MonoBehaviour
         var course = LmsStore.Instance.GetPrivate(courseId);
         if (course == null)
         {
+            emptyState.gameObject.SetActive(true);
+            decorImg.gameObject.SetActive(false);
             Debug.LogWarning($"[PTS_ListCourse] Private course null for courseId={courseId}");
             yield break;
         }
@@ -106,13 +109,18 @@ public class PTS_ListCourse : MonoBehaviour
     private void BuildFromCourse(LmsCoursePrivate course)
     {
         List<LmsChapter> chapters = course.chapters;
-
-        if (chapters == null || chapters.Count == 0)
+        bool isEmpty = chapters == null || chapters.Count == 0;
+        
+        emptyState.gameObject.SetActive(isEmpty);
+        decorImg.gameObject.SetActive(!isEmpty);
+        
+        if (isEmpty)
         {
             Debug.LogWarning("[PTS_ListCourse] Course không có chapters hoặc chapters rỗng.");
             if (clearChildrenBeforeBuild) ClearChildren(contentParent);
             return;
         }
+        
 
         if (clearChildrenBeforeBuild) ClearChildren(contentParent);
 
