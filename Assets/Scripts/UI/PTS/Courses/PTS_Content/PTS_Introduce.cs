@@ -294,7 +294,7 @@ public class PTS_Introduce : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(html))
         {
-            introductionText.text = "";
+            introductionText.text = "Thông tin đang được chúng tôi cập nhật";
             if (enableDebugLogs)
                 Debug.Log("[PTS_Introduce] Introduction empty.");
             return;
