@@ -253,32 +253,6 @@ public class PlayerPanelUI : MonoBehaviour
 
     private IEnumerator CoLoadSceneSmart(string targetScene)
     {
-#if ADDRESSABLES
-        bool isCloud = false;
-        yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
-
-        if (isCloud)
-            LoadingTransition.LoadAssetBundle(targetScene);
-        else
-            LoadingTransition.Load(targetScene);
-#else
-        LoadingTransition.Load(targetScene);
-        yield break;
-#endif
+        yield return LoadingTransition.LoadScene(targetScene);
     }
-
-#if ADDRESSABLES
-    private IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
-    {
-        var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
-
-        yield return h;
-
-        bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
-
-        Addressables.Release(h);
-
-        result?.Invoke(ok);
-    }
-#endif
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;  
 
@@ -17,7 +18,7 @@ public static class LoadingTransition
     /// Gọi hàm này để chuyển sang LoadingScene.
     /// LoadingScene sẽ đọc TargetSceneName và load async scene đích.
     /// </summary>
-public static void Load(string sceneName)
+    private static void Load(string sceneName)
 {
     PreviousSceneName = SceneManager.GetActiveScene().name;
     TargetSceneName = sceneName;
@@ -26,7 +27,7 @@ public static void Load(string sceneName)
     SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
 }
 
-public static void LoadAssetBundle(string sceneName)
+private static void LoadAssetBundle(string sceneName)
 {
     PreviousSceneName = SceneManager.GetActiveScene().name;
     TargetSceneName = sceneName;
@@ -34,6 +35,32 @@ public static void LoadAssetBundle(string sceneName)
 
     Debug.Log($"[LoadingTransition] Load ADDRESSABLE scene --> {sceneName}");
     SceneManager.LoadScene("LoadingScene", LoadSceneMode.Additive);
+}
+
+public static IEnumerator LoadScene(string targetScene)
+{
+    bool isCloud = false;
+    yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
+
+    if (isCloud)
+        LoadAssetBundle(targetScene);
+    else
+        Load(targetScene);
+}
+
+private static IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)
+{
+    // var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName, typeof(SceneInstance));
+    var h = Addressables.LoadResourceLocationsAsync(sceneKeyOrName);
+
+    yield return h;
+
+    bool ok = (h.Status == AsyncOperationStatus.Succeeded && h.Result != null && h.Result.Count > 0);
+
+    // Release handle (tránh leak)
+    Addressables.Release(h);
+
+    result?.Invoke(ok);
 }
 
 #if ADDRESSABLES
