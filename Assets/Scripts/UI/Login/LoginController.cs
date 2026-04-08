@@ -25,19 +25,20 @@ public class LoginController : MonoBehaviour
 
     [Header("Password Show/Hide")]
     public Button btnTogglePassword;
-    public Image  btnTogglePasswordIcon;
+    public Image btnTogglePasswordIcon;
     public Sprite iconShow;
     public Sprite iconHide;
 
     [Header("Options")]
     public bool autoFocusUsername = true;
-
     public bool showSuccessPopup = false;
 
+    [Header("FCM")]
+    [SerializeField] private float waitForFcmTokenTimeout = 8f;
+    [SerializeField] private bool allowLoginIfTokenStillEmptyAfterTimeout = true;
+
     bool autoRestoreOnStart = true;
-
     string verifyPath = "/users/me";
-
     bool disableLoginWhileVerifying = true;
 
     bool _isLoggingIn = false;
@@ -79,9 +80,8 @@ public class LoginController : MonoBehaviour
         if (btnTogglePassword != null)
             btnTogglePassword.onClick.AddListener(TogglePassword);
 
-        ApplyPasswordMask(false); // mặc định ẩn mật khẩu
+        ApplyPasswordMask(false);
 
-        // ===== AUTO CHECK LOGIN ON BOOT =====
         if (autoRestoreOnStart)
             StartCoroutine(AutoRestoreSession());
     }
@@ -112,9 +112,6 @@ public class LoginController : MonoBehaviour
         }
     }
 
-    // ============================================================
-    //  AUTO RESTORE + VERIFY TOKEN
-    // ============================================================
     private IEnumerator AutoRestoreSession()
     {
         if (_isVerifying) yield break;
@@ -143,16 +140,14 @@ public class LoginController : MonoBehaviour
             onInvalid401: (reason) =>
             {
                 Debug.LogWarning("[LoginController] Token invalid (401/403) -> require login. " + reason);
-                TokenStore.Clear();            // CHỈ xoá khi chắc chắn invalid
+                TokenStore.Clear();
                 ApplyPrefillOrFocus();
             },
             onNetworkOrServerError: (reason) =>
             {
                 Debug.LogWarning("[LoginController] Verify failed (network/server). Keep token. Reason: " + reason);
-
                 OnLoginComplete?.Invoke();
                 if (openClosePanel != null) openClosePanel.CloseUI();
-
             }
         ));
 
@@ -190,6 +185,7 @@ public class LoginController : MonoBehaviour
             {
                 if (!token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                     token = "Bearer " + token;
+
                 www.SetRequestHeader("Authorization", token);
             }
 
@@ -205,13 +201,9 @@ public class LoginController : MonoBehaviour
             string serverText = www.downloadHandler != null ? www.downloadHandler.text : "";
 
             if (code == 401 || code == 403)
-            {
                 onInvalid401?.Invoke($"HTTP {code} body: {serverText}");
-            }
             else
-            {
                 onNetworkOrServerError?.Invoke($"HTTP {code} err={www.error} body={serverText}");
-            }
         }
     }
 
@@ -229,7 +221,6 @@ public class LoginController : MonoBehaviour
         PlayerPrefs.DeleteKey(PREF_LOGIN_PREFILL);
         PlayerPrefs.Save();
 
-        // Nếu không muốn hiện popup thành công -> đóng UI + invoke luôn
         if (!showSuccessPopup || successPopupPrefab == null)
         {
             OnLoginComplete?.Invoke();
@@ -242,7 +233,6 @@ public class LoginController : MonoBehaviour
             return;
         }
 
-        // (Giữ lại nếu bạn muốn bật popup trong một số trường hợp)
         ShowPopup(
             successPopupPrefab,
             "Thành công",
@@ -258,9 +248,6 @@ public class LoginController : MonoBehaviour
             });
     }
 
-    /// <summary>
-    /// Hàm static để các kênh khác (QR, OTP, v.v.) gọi vào khi đã có JWT token.
-    /// </summary>
     public static void LoginWithQrToken(string raw)
     {
         if (string.IsNullOrEmpty(raw))
@@ -269,17 +256,13 @@ public class LoginController : MonoBehaviour
             return;
         }
 
-        // Trường hợp Firebase gửi cả JSON:
-        // {"status":true,"data":{"token":"<jwt>"}}
         if (raw[0] == '{')
         {
             try
             {
                 var resp = JsonUtility.FromJson<AuthResponseRoot>(raw);
                 if (resp != null && resp.data != null && !string.IsNullOrEmpty(resp.data.token))
-                {
                     raw = resp.data.token;
-                }
             }
             catch (Exception e)
             {
@@ -289,7 +272,6 @@ public class LoginController : MonoBehaviour
 
         string jwt = raw;
 
-        // Decode JWT -> lấy user
         AuthUser userFromJwt = null;
         bool hasUser = TryGetUserFromJwt(jwt, out userFromJwt);
 
@@ -305,9 +287,7 @@ public class LoginController : MonoBehaviour
         };
 
         if (Instance != null)
-        {
             Instance.HandleLoginSuccess(auth, "Chào mừng bạn trở lại");
-        }
         else
         {
             TokenStore.SetData(auth);
@@ -330,9 +310,8 @@ public class LoginController : MonoBehaviour
         }
 
         string payload = parts[1];
-
-        // Base64Url -> Base64
         payload = payload.Replace('-', '+').Replace('_', '/');
+
         switch (payload.Length % 4)
         {
             case 2: payload += "=="; break;
@@ -374,7 +353,6 @@ public class LoginController : MonoBehaviour
             return false;
         }
 
-        // Map sang AuthUser cho thống nhất với login thường
         var u = payloadObj.user;
         userOut = new AuthUser
         {
@@ -393,12 +371,9 @@ public class LoginController : MonoBehaviour
         return true;
     }
 
-    // ============================================================
-    //  LOGIN CLICK / VALIDATION (GIỮ NGUYÊN)
-    // ============================================================
     private void HandleKeyboardNavigation()
     {
-        if (_isVerifying) return; // đang verify thì bỏ qua keyboard login
+        if (_isVerifying) return;
 
         if (Input.GetKeyDown(KeyCode.Tab))
         {
@@ -479,20 +454,42 @@ public class LoginController : MonoBehaviour
         _isLoggingIn = true;
         if (buttonLogin) buttonLogin.interactable = false;
 
-        string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
+        string readyToken = null;
+        yield return StartCoroutine(FCMManager.WaitForReadyToken(waitForFcmTokenTimeout, token =>
+        {
+            readyToken = token;
+        }));
 
-        // string jsonData = JsonUtility.ToJson(new LoginRequest { username = username, password = password });
-        string currentDeviceToken = GetCurrentDeviceToken();
+        if (string.IsNullOrWhiteSpace(readyToken))
+        {
+            Debug.LogWarning("[LoginController] FCM token still empty after waiting.");
+
+            if (!allowLoginIfTokenStillEmptyAfterTimeout)
+            {
+                ShowPopup(
+                    failPopupPrefab,
+                    "Đăng nhập thất bại",
+                    "Không lấy được device token. Vui lòng thử lại sau vài giây.",
+                    icon: LoginPopupUI.PopupIconType.Warning
+                );
+
+                _isLoggingIn = false;
+                if (buttonLogin) buttonLogin.interactable = true;
+                yield break;
+            }
+        }
+
+        Debug.Log("[LoginController] Login using FCM token: " + MaskTokenForLog(readyToken));
+
+        string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
         string jsonData = JsonUtility.ToJson(new LoginRequest
         {
             username = username,
             password = password,
-            deviceToken = currentDeviceToken,
+            deviceToken = readyToken ?? string.Empty,
             fromPlatform = "lms3d"
         });
-
-        Debug.Log("DeviceToken: " + currentDeviceToken);
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
 
@@ -520,7 +517,12 @@ public class LoginController : MonoBehaviour
                 }
                 else
                 {
-                    ShowPopup(failPopupPrefab, "Đăng nhập thất bại", "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.", icon: LoginPopupUI.PopupIconType.Error);
+                    ShowPopup(
+                        failPopupPrefab,
+                        "Đăng nhập thất bại",
+                        "Dữ liệu phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại sau.",
+                        icon: LoginPopupUI.PopupIconType.Error
+                    );
                 }
             }
             else
@@ -529,7 +531,12 @@ public class LoginController : MonoBehaviour
                 Debug.LogError($"Đăng nhập thất bại: {www.error}\nResponse: {serverText}");
 
                 string errorMessage = ServerErrorConverter.Convert(serverText);
-                ShowPopup(failPopupPrefab, "Đăng nhập thất bại", errorMessage, icon: LoginPopupUI.PopupIconType.Warning);
+                ShowPopup(
+                    failPopupPrefab,
+                    "Đăng nhập thất bại",
+                    errorMessage,
+                    icon: LoginPopupUI.PopupIconType.Warning
+                );
             }
         }
 
@@ -561,7 +568,6 @@ public class LoginController : MonoBehaviour
 
         Transform parent = popupParent != null ? popupParent : transform.root;
         LoginPopupUI popupInstance = Instantiate(prefab, parent);
-
         popupInstance.Init(header, message, icon, () => { onReturn?.Invoke(); });
     }
 
@@ -572,6 +578,7 @@ public class LoginController : MonoBehaviour
             Debug.LogWarning("[LoginController] ShowWarning được gọi nhưng Instance == null. Message: " + message);
             return;
         }
+
         Instance.ShowPopup(Instance.failPopupPrefab, header, message, icon: LoginPopupUI.PopupIconType.Warning);
     }
 
@@ -612,12 +619,11 @@ public class LoginController : MonoBehaviour
     {
         ApplyPrefillOrFocus();
     }
+
     private void TogglePassword()
     {
         _passShown = !_passShown;
         ApplyPasswordMask(_passShown);
-
-        // Giữ con trỏ, tránh bị chọn bôi đen text khi toggle
         ClearPasswordSelection();
     }
 
@@ -632,24 +638,29 @@ public class LoginController : MonoBehaviour
     {
         if (field == null) return;
 
-        // TMP cần set contentType rồi ForceLabelUpdate
         field.contentType = showPlain
             ? TMP_InputField.ContentType.Standard
             : TMP_InputField.ContentType.Password;
 
         field.asteriskChar = '*';
         field.ForceLabelUpdate();
-        
+
         if (field.isFocused)
             field.ActivateInputField();
     }
-    private string GetCurrentDeviceToken()
+
+    private static string MaskTokenForLog(string token)
     {
-        return FCMManager.GetSavedFcmToken();
+        if (string.IsNullOrWhiteSpace(token))
+            return "(empty)";
+
+        if (token.Length <= 16)
+            return token;
+
+        return token.Substring(0, 8) + "..." + token.Substring(token.Length - 8);
     }
 }
 
-// ====== Models (đặt riêng file cũng được) ======
 [System.Serializable]
 public class AuthResponseRoot
 {
@@ -662,7 +673,6 @@ public class AuthData
 {
     public string token;
     public AuthUser user;
-    // public AuthUser password;
     public AuthUnread totalUnread;
 }
 
@@ -689,6 +699,7 @@ public class AuthUnread
     public string personal;
     public string system;
 }
+
 [Serializable]
 public class JwtPayloadUser
 {
