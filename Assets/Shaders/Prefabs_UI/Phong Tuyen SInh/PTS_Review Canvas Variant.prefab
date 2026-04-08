@@ -81,6 +81,8 @@ MonoBehaviour:
   waitStoreSeconds: 5
   chapterPrefab: {fileID: 4065018219018977313, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
   contentParent: {fileID: 5294626525964664987}
+  decorImg: {fileID: 809625769919579585}
+  emptyState: {fileID: 933682306674827630}
   lessonItemPrefab: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
   clearChildrenBeforeBuild: 1
   buildOnEnable: 1
@@ -1832,6 +1834,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -147.15674
       objectReference: {fileID: 0}
+    - target: {fileID: 6932977073942822525, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6932977073942822525, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6933723119829389066, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_AnchorMax.x
       value: 1
@@ -2047,6 +2057,11 @@ PrefabInstance:
     - target: {fileID: 8155648802227331751, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -80.92745
+      objectReference: {fileID: 0}
+    - target: {fileID: 8166654769089834620, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+      propertyPath: m_text
+      value: "N\u1ED9i dung b\xE0i h\u1ECDc \u0111ang \u0111\u01B0\u1EE3c c\u1EADp
+        nh\u1EADt"
       objectReference: {fileID: 0}
     - target: {fileID: 8169702909360842151, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
       propertyPath: m_Size
@@ -2290,6 +2305,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!224 &809625769919579585 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7493889380238318290, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &933682306674827630 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6932977073942822525, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1415677653350431994 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 9180171837417153513, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2799,6 +2824,7 @@ MonoBehaviour:
   iconVolumeOff: {fileID: 21300000, guid: 8e11377ed80c765419f081932a4eacb0, type: 3}
   autoFindPlayer: 1
   autoInitVolume: 1
+  resetWhenCourseChanges: 1
 --- !u!114 &8484538432129070123 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1836580477655427896, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
