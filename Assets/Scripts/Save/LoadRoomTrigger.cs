@@ -38,14 +38,14 @@ public class LoadRoomTrigger : MonoBehaviour
         var col = GetComponent<Collider>();
         if (col) col.isTrigger = true;
     }
-
+    
     private void Start()
     {
         if (!restoreOnSceneStart) return;
-
+    
         var curScene = SceneManager.GetActiveScene().name;
         if (_restoredSceneOnce == curScene) return;
-
+    
         if (TravelContext.TryGetReturnPoint(curScene, out var pos, out var rot))
         {
             var player = GameObject.FindWithTag("Player");
@@ -54,7 +54,7 @@ public class LoadRoomTrigger : MonoBehaviour
                 // Snap nhẹ xuống mặt đất nếu cần
                 if (snapToGround && Physics.Raycast(pos + Vector3.up * 1.5f, Vector3.down, out var hit, 3f))
                     pos.y = hit.point.y + 0.02f;
-
+    
                 PlayerLocator.PlacePlayer(player, pos + extraOffset, rot);
                 _restoredSceneOnce = curScene;
                 if (verbose) Debug.Log($"[LoadRoomTrigger] Restored player at {pos} in scene '{curScene}'");

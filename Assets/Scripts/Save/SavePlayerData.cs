@@ -22,42 +22,46 @@ public class SceneLocation
     }
 }
 
-public class RollbackHistory {
 
-}
-
-
-public class SceneHistory
+public class SceneNavigationHistory
 {
-    private Stack<SceneLocation> stack = new Stack<SceneLocation>();
+    private readonly Stack<SceneLocation> historyStack = new Stack<SceneLocation>();
+    private readonly bool isDebug = false;
 
-    public void Push(SceneLocation sceneLocation)
+    public SceneNavigationHistory(bool isDebug)
+    {
+        this.isDebug = isDebug;
+    }
+    
+    public void Record(SceneLocation sceneLocation)
     {
         if (sceneLocation == null)
         {
-            Debug.Log($"[SceneHistory] Element is null");
+            Debug.LogWarning("[SceneNavigationHistory] Cannot record null scene");
             return;
         }
-        
-        Debug.Log($"[SceneHistory] Push {sceneLocation.Debug()}");
-        stack.Push(sceneLocation);
+        if(isDebug)
+            Debug.Log($"[SceneNavigationHistory] Record {sceneLocation.Debug()}");
+        historyStack.Push(sceneLocation);
     }
 
-    public SceneLocation Pop()
+    public SceneLocation GetPrevious()
     {
-        var sceneLocation = stack.Pop();
-        Debug.Log($"[SceneHistory] Pop {sceneLocation.Debug()}");
-        return sceneLocation;
-    }
-    
-    public bool CanGetScene()
-    {
-        return stack.Count > 0;
+        var previousScene = historyStack.Pop();
+        if(isDebug)
+            Debug.Log($"[SceneNavigationHistory] GetPrevious {previousScene.Debug()}");
+        return previousScene;
     }
 
-    public void Clear()
+    public bool HasHistory()
     {
-        Debug.Log("[SceneHistory] Is Clear");
-        stack.Clear();
+        return historyStack.Count > 0;
+    }
+
+    public void ClearHistory()
+    {
+        if(isDebug)
+            Debug.Log("[SceneNavigationHistory] Clear history");
+        historyStack.Clear();
     }
 }
