@@ -145,8 +145,8 @@ public class PlayerPanelUI : MonoBehaviour
 
                 if (logoutPopupUI != null)
                     logoutPopupUI.Hide();
-
-                StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
+                
+                LoadingTransition.Load_Scene(defaultLoadScene);
             }
             else
             {
@@ -188,7 +188,7 @@ public class PlayerPanelUI : MonoBehaviour
 
                 isLoaded = true;
                 TokenStore.Clear();
-                StartCoroutine(CoLoadSceneSmart(defaultLoadScene));
+                LoadingTransition.Load_Scene(defaultLoadScene);
             },
             onFail: (err) =>
             {
@@ -249,10 +249,5 @@ public class PlayerPanelUI : MonoBehaviour
     {
         pathfindPanel.gameObject.SetActive(false);
         playerInformation.gameObject.SetActive(true);
-    }
-
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }

@@ -147,7 +147,7 @@ public class BookHandler : MonoBehaviour
         {
             AudioManager.Instance.Resume();
             // LoadingTransition.Load("dai_dao_chi_gian_2");
-            StartCoroutine(LoadingTransition.LoadScene("dai_dao_chi_gian_2"));
+            LoadingTransition.Load_Scene("dai_dao_chi_gian_2");
         }
         else if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
                  book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
@@ -155,7 +155,7 @@ public class BookHandler : MonoBehaviour
                  book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
         {
             // LoadingTransition.Load(SeoResolver.DefaultScene);
-            StartCoroutine(LoadingTransition.LoadScene(SeoResolver.DefaultScene));
+            LoadingTransition.Load_Scene(SeoResolver.DefaultScene);
             AudioManager.Instance.Resume();
         }
         else

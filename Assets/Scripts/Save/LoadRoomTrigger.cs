@@ -79,7 +79,7 @@ public class LoadRoomTrigger : MonoBehaviour
         else
         {
             // LoadingTransition.Load(sceneName);
-            StartCoroutine(CoLoadSceneSmart(sceneName));
+            LoadingTransition.Load_Scene(sceneName);
         }
 
         var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
@@ -109,7 +109,7 @@ public class LoadRoomTrigger : MonoBehaviour
         {
             Debug.Log("Đã tìm thấy seo URL để load");
             // LoadingTransition.Load(sceneName);
-            StartCoroutine(CoLoadSceneSmart(sceneName));
+            LoadingTransition.Load_Scene(sceneName);
         }
         else
         {
@@ -123,10 +123,5 @@ public class LoadRoomTrigger : MonoBehaviour
     public static void ClearSceneRestoreFlag()
     {
         _restoredSceneOnce = null;
-    }
-
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }

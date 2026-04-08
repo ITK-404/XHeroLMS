@@ -162,7 +162,7 @@ public class CertificatesController : MonoBehaviour
                 LoadingUI.ShowErrorPopup(
                     "Bạn chưa có bằng nào để hiển thị!",
                     "Thông báo",
-                    () => StartCoroutine(CoLoadSceneSmart("New Scene"))
+                    () => LoadingTransition.Load_Scene("New Scene")
                 );
 
                 yield break;
@@ -370,10 +370,5 @@ public class CertificatesController : MonoBehaviour
     public bool HasAnyCertificate()
     {
         return _certDataList != null && _certDataList.Count > 0;
-    }
-
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }

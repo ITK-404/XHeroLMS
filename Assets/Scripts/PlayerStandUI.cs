@@ -56,7 +56,7 @@ public class PlayerStandUI : MonoBehaviour
     private void ReturnMainScene()
     {
         // LoadingTransition.Load("New Scene");
-        StartCoroutine(CoLoadSceneSmart("New Scene"));
+        LoadingTransition.Load_Scene("New Scene");
     }
     
     private bool localIsShow = false;
@@ -142,10 +142,5 @@ public class PlayerStandUI : MonoBehaviour
         // Hiện giao diện danh sách bài học
         UILearnCanvas.Show();
         CourseListShow(localIsShow);
-    }
-
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }

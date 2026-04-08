@@ -33,7 +33,7 @@ public class TabItemManagerUI : MonoBehaviour
         returnBtn.onClick.AddListener(() =>
         {
             // LoadingTransition.Load("New Scene");
-            StartCoroutine(CoLoadSceneSmart("New Scene"));
+            LoadingTransition.Load_Scene("New Scene");
         });
         foreach (var item in tabIDs)
         {
@@ -104,10 +104,4 @@ public class TabItemManagerUI : MonoBehaviour
     {
         container.gameObject.SetActive(false);
     }
-    
-
-private IEnumerator CoLoadSceneSmart(string targetScene)
-{
-    yield return LoadingTransition.LoadScene(targetScene);
-}
 }
