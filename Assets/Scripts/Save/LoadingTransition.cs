@@ -1,4 +1,7 @@
+using System;
 using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -16,6 +19,23 @@ public static class LoadingTransition
     public static bool UseAddressables;
     private static SceneNavigationHistory sceneHistory = new (isDebug:false);
     private static RollbackConfig rollbackConfig;
+
+    private static MonoBehaviour runner;
+    private static Coroutine _coroutine;
+    
+    public static async UniTaskVoid Init(MonoBehaviour _runner,CancellationToken token)
+    {
+        runner = _runner;
+        
+        var result = await Addressables.LoadAssetAsync<RollbackConfig>("Rollback Scene Config").WithCancellation(token);
+        
+        if (result != null)
+        {
+            Debug.Log("[Loading Transition] Init Complete");
+            rollbackConfig = result;
+        }
+    }
+    
     // /// <summary>
     // /// Dùng để quay về scene trước đó, nếu lịch sử trống thì rollback default scene của scene hiện tại
     // /// </summary>
@@ -69,6 +89,17 @@ public static class LoadingTransition
             LoadAssetBundle(targetScene);
         else
             Load(targetScene);
+    }
+
+    public static void Load_Scene(string targetScene)
+    {
+        if (_coroutine != null)
+        {
+            Debug.Log("Stop Coroutine loading");
+            runner.StopCoroutine(_coroutine);
+        }
+
+        _coroutine = runner.StartCoroutine(LoadScene(targetScene));
     }
 
     private static IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)

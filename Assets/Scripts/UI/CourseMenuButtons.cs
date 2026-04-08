@@ -93,7 +93,7 @@ public class CourseMenuButtons : MonoBehaviour
         PlayerPrefs.Save();
 
         // LoadingTransition.Load(courseSceneName);
-        StartCoroutine(CoLoadSceneSmart(courseSceneName));
+        LoadingTransition.Load_Scene(courseSceneName);
     }
 
     // --- Hàm tiện lợi: để script ở scene đích gọi đọc key ---
@@ -109,10 +109,6 @@ public class CourseMenuButtons : MonoBehaviour
 #else
         return false;
 #endif
-    }
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }
 

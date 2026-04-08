@@ -28,11 +28,7 @@ public class LoadTest : MonoBehaviour
     private void LoadScene()
     {
         // LoadingTransition.Load(nameScene);
-        StartCoroutine(CoLoadSceneSmart(nameScene));
+        LoadingTransition.Load_Scene(nameScene);
     }
 
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
-    }
 }
