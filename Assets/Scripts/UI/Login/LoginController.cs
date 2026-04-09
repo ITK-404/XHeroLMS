@@ -479,7 +479,7 @@ public class LoginController : MonoBehaviour
             }
         }
 
-        Debug.Log("[LoginController] Login using FCM token: " + MaskTokenForLog(readyToken));
+        Debug.Log("[LoginController] Login using FCM token: " + readyToken);
 
         string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
