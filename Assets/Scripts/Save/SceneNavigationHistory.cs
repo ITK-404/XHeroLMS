@@ -13,7 +13,8 @@ public class SceneNavigationHistory : MonoBehaviour
             Debug.LogWarning("[SceneNavigationHistory] Cannot record null scene");
             return;
         }
-        if(isDebug)
+
+        if (isDebug)
             Debug.Log($"[SceneNavigationHistory] Record {sceneLocation}");
         historyStack.Add(sceneLocation);
     }
@@ -22,7 +23,7 @@ public class SceneNavigationHistory : MonoBehaviour
     {
         var previousScene = historyStack[historyStack.Count - 1];
         historyStack.RemoveAt(historyStack.Count - 1);
-        if(isDebug)
+        if (isDebug)
             Debug.Log($"[SceneNavigationHistory] GetPrevious {previousScene}");
         return previousScene;
     }
@@ -34,7 +35,7 @@ public class SceneNavigationHistory : MonoBehaviour
 
     public void ClearHistory()
     {
-        if(isDebug)
+        if (isDebug)
             Debug.Log("[SceneNavigationHistory] Clear history");
         historyStack.Clear();
     }
