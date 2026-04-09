@@ -56,7 +56,8 @@ public class PlayerStandUI : MonoBehaviour
     private void ReturnMainScene()
     {
         // LoadingTransition.Load("New Scene");
-        LoadingTransition.Load_Scene("New Scene");
+        // LoadingTransition.Load_Scene("New Scene",false);
+        LoadingTransition.LoadPreviousSceneOrDefault();
     }
     
     private bool localIsShow = false;
