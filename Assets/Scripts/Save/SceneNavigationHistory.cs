@@ -1,17 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SceneNavigationHistory 
+public class SceneNavigationHistory : MonoBehaviour
 {
-    private readonly Stack<SceneLocation> historyStack = new Stack<SceneLocation>();
-    private readonly bool isDebug = false;
+    [SerializeField] private List<string> historyStack = new List<string>();
+    [SerializeField] private bool isDebug = false;
 
-    public SceneNavigationHistory(bool isDebug)
-    {
-        this.isDebug = isDebug;
-    }
-    
-    public void Record(SceneLocation sceneLocation)
+    public void Record(string sceneLocation)
     {
         if (sceneLocation == null)
         {
@@ -19,15 +14,16 @@ public class SceneNavigationHistory
             return;
         }
         if(isDebug)
-            Debug.Log($"[SceneNavigationHistory] Record {sceneLocation.Debug()}");
-        historyStack.Push(sceneLocation);
+            Debug.Log($"[SceneNavigationHistory] Record {sceneLocation}");
+        historyStack.Add(sceneLocation);
     }
 
-    public SceneLocation GetPrevious()
+    public string GetPrevious()
     {
-        var previousScene = historyStack.Pop();
+        var previousScene = historyStack[historyStack.Count - 1];
+        historyStack.RemoveAt(historyStack.Count - 1);
         if(isDebug)
-            Debug.Log($"[SceneNavigationHistory] GetPrevious {previousScene.Debug()}");
+            Debug.Log($"[SceneNavigationHistory] GetPrevious {previousScene}");
         return previousScene;
     }
 
