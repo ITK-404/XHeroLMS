@@ -8,6 +8,7 @@ public class MailTabHandleView : MonoBehaviour
     [SerializeField] private Button[] buttons;
     [SerializeField] private MailList mailList;
     [SerializeField] private Transform emptyMailState;
+
     private void Awake()
     {
         Binding();
@@ -17,6 +18,14 @@ public class MailTabHandleView : MonoBehaviour
     private void OnDestroy()
     {
         UnBinding();
+    }
+
+    private MailContentView GetMailContentView()
+    {
+        if (MailContentView.Instance != null)
+            return MailContentView.Instance;
+
+        return FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
     }
 
     private void HandleButtonVisual(int index)
@@ -60,22 +69,24 @@ public class MailTabHandleView : MonoBehaviour
             else view.Hide();
         }
 
+        var contentView = GetMailContentView();
+        if (contentView != null)
+            contentView.ResetView();
+
+        NotificationsDetailStaticStore.Reset();
+
         if (mailList != null && index >= 0 && index < views.Length && views[index] != null)
         {
             mailList.SetRenderTarget(views[index].ContentParent);
 
-            // btn 0 = system
             if (index == 0)
                 mailList.SetFilter(MailList.MailFilter.System);
-
-            // btn 1 = cá nhân
             else if (index == 1)
                 mailList.SetFilter(MailList.MailFilter.Personal);
 
-            mailList.Refresh();
+            mailList.ForceResetToFirstItem();
         }
 
         HandleButtonVisual(index);
-
     }
 }

@@ -25,7 +25,7 @@ public class MainElementUI : MonoBehaviour
             visual = GetComponent<MailElementVisualUI>();
 
         if (detailLoader == null)
-            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
 
         if (btn != null)
             btn.onClick.AddListener(OnClickItem);
@@ -69,18 +69,18 @@ public class MainElementUI : MonoBehaviour
             ApplyState();
         }
 
+        if (string.IsNullOrWhiteSpace(notificationId))
+        {
+            Debug.LogWarning("[MainElementUI] notificationId đang rỗng.");
+            return;
+        }
+
         if (detailLoader == null)
-            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
 
         if (detailLoader == null)
         {
             Debug.LogWarning("[MainElementUI] detailLoader đang null.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(notificationId))
-        {
-            Debug.LogWarning("[MainElementUI] notificationId đang rỗng.");
             return;
         }
 
@@ -91,9 +91,7 @@ public class MainElementUI : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[MainElementUI] Load notification detail with notificationId={notificationId}");
-
-        // Truyền notificationId đúng mục đích cho NotificationsDetailLoader
+        Debug.Log($"[MainElementUI] Load notification detail: notificationId={notificationId}");
         detailLoader.LoadById(notificationId, token);
     }
 

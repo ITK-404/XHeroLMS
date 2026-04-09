@@ -1,5 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public class MailList : MonoBehaviour
 {
@@ -15,29 +18,50 @@ public class MailList : MonoBehaviour
     [Header("Optional")]
     [SerializeField] private NotificationsDetailLoader detailLoader;
 
+    [Header("State")]
+    [SerializeField] private Transform emptyMailState;
+
     private readonly Dictionary<string, MailElementVisualUI> spawnedItemMap = new();
     private readonly List<string> removeBuffer = new();
 
     private Transform currentContentParent;
-    // private MailFilter currentFilter = MailFilter.Personal;
     private MailFilter currentFilter = MailFilter.System;
-    [SerializeField] private Transform emptyMailState;
+
+    private NotificationMailItem _currentSelectedItem;
+    private bool hasInitializedSelection = false;
+    private bool forceSelectFirstOnNextRefresh = false;
+
+    private Coroutine resetScrollRoutine;
+    private bool pendingRefresh;
 
     private void Awake()
     {
         if (detailLoader == null)
-            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
     }
 
     private void OnEnable()
     {
         NotificationsStaticStore.OnChanged += Refresh;
-        Refresh();
+
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        _currentSelectedItem = null;
+        pendingRefresh = true;
+
+        ResetScrollToTopDeferred();
+        TryConsumePendingRefresh();
     }
 
     private void OnDisable()
     {
         NotificationsStaticStore.OnChanged -= Refresh;
+
+        if (resetScrollRoutine != null)
+        {
+            StopCoroutine(resetScrollRoutine);
+            resetScrollRoutine = null;
+        }
     }
 
     public void SetRenderTarget(Transform contentParent)
@@ -47,53 +71,75 @@ public class MailList : MonoBehaviour
 
         currentContentParent = contentParent;
         ClearAllItems();
-        // Refresh();
+        ClearSelectionAndDetail();
+
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        pendingRefresh = true;
+
+        ResetScrollToTopDeferred();
+        TryConsumePendingRefresh();
     }
 
     public void SetFilter(MailFilter filter)
     {
-        Debug.Log("[MailList] SetFilter = " + filter);
-
         currentFilter = filter;
+
         ClearAllItems();
-        // Refresh();
+        ClearSelectionAndDetail();
+
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        pendingRefresh = true;
+
+        ResetScrollToTopDeferred();
+        TryConsumePendingRefresh();
+    }
+
+    public void ForceResetToFirstItem()
+    {
+        ClearSelectionAndDetail();
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        ResetScrollToTopDeferred();
+        Refresh();
     }
 
     public void Refresh()
     {
-        emptyMailState.gameObject.SetActive(false);
-        
-        if (mailPrefab == null)
-        {
-            Debug.LogWarning("[MailList] mailPrefab đang null.");
-            return;
-        }
+        if (emptyMailState != null)
+            emptyMailState.gameObject.SetActive(false);
 
-        if (currentContentParent == null)
+        if (!IsReadyToRefresh())
         {
-            Debug.LogWarning("[MailList] currentContentParent đang null khi Refresh.");
-            return;
-        }
-
-        if (NotificationsStaticStore.IsLoading)
-        {
+            pendingRefresh = true;
             return;
         }
 
         if (!string.IsNullOrEmpty(NotificationsStaticStore.LastError))
         {
+            pendingRefresh = false;
             return;
         }
 
+        pendingRefresh = false;
+
         var items = NotificationsStaticStore.Items;
+
         if (items == null || items.Count == 0)
         {
             RemoveAllSpawnedItems();
+            ClearSelectionAndDetail();
+
+            if (emptyMailState != null)
+                emptyMailState.gameObject.SetActive(true);
+
             return;
         }
 
         HashSet<string> aliveIds = new();
         int visibleIndex = 0;
+        NotificationMailItem firstMatchedItem = null;
 
         for (int i = 0; i < items.Count; i++)
         {
@@ -104,12 +150,12 @@ public class MailList : MonoBehaviour
             if (!MatchFilter(item))
                 continue;
 
+            if (firstMatchedItem == null)
+                firstMatchedItem = item;
+
             string id = GetItemId(item);
             if (string.IsNullOrEmpty(id))
-            {
-                Debug.LogWarning("[MailList] Notification item không có id hợp lệ, bỏ qua.");
                 continue;
-            }
 
             aliveIds.Add(id);
 
@@ -136,7 +182,6 @@ public class MailList : MonoBehaviour
         }
 
         removeBuffer.Clear();
-
         foreach (var kvp in spawnedItemMap)
         {
             if (!aliveIds.Contains(kvp.Key))
@@ -144,13 +189,152 @@ public class MailList : MonoBehaviour
         }
 
         for (int i = 0; i < removeBuffer.Count; i++)
-        {
             RemoveItem(removeBuffer[i]);
-        }
-        
-        Debug.Log("So luong item count: " + currentContentParent.childCount,currentContentParent.gameObject);
 
-        emptyMailState.gameObject.SetActive(currentContentParent.childCount == 0);
+        bool hasAnyVisibleItem = visibleIndex > 0;
+
+        if (emptyMailState != null)
+            emptyMailState.gameObject.SetActive(!hasAnyVisibleItem);
+
+        if (!hasAnyVisibleItem)
+        {
+            ClearSelectionAndDetail();
+            return;
+        }
+
+        AutoSelectFirstItem(firstMatchedItem);
+    }
+
+    private void AutoSelectFirstItem(NotificationMailItem firstItem)
+    {
+        if (firstItem == null)
+        {
+            ClearSelectionAndDetail();
+            return;
+        }
+
+        string currentId = GetItemId(_currentSelectedItem);
+
+        bool shouldResetToFirst =
+            forceSelectFirstOnNextRefresh ||
+            !hasInitializedSelection ||
+            _currentSelectedItem == null ||
+            string.IsNullOrEmpty(currentId) ||
+            !spawnedItemMap.ContainsKey(currentId) ||
+            !MatchFilter(_currentSelectedItem);
+
+        if (shouldResetToFirst)
+        {
+            _currentSelectedItem = firstItem;
+            hasInitializedSelection = true;
+            forceSelectFirstOnNextRefresh = false;
+
+            ResetScrollToTopDeferred();
+            UpdateDetailView(firstItem);
+            return;
+        }
+
+        for (int i = 0; i < NotificationsStaticStore.Items.Count; i++)
+        {
+            var item = NotificationsStaticStore.Items[i];
+            if (item == null)
+                continue;
+
+            if (!MatchFilter(item))
+                continue;
+
+            if (GetItemId(item) == currentId)
+            {
+                _currentSelectedItem = item;
+                UpdateDetailView(item);
+                return;
+            }
+        }
+
+        _currentSelectedItem = firstItem;
+        hasInitializedSelection = true;
+        forceSelectFirstOnNextRefresh = false;
+
+        ResetScrollToTopDeferred();
+        UpdateDetailView(firstItem);
+    }
+
+    public void SelectItem(NotificationMailItem item)
+    {
+        if (item == null)
+            return;
+
+        _currentSelectedItem = item;
+        hasInitializedSelection = true;
+        forceSelectFirstOnNextRefresh = false;
+
+        UpdateDetailView(item);
+    }
+
+    private void UpdateDetailView(NotificationMailItem item)
+    {
+        if (detailLoader == null)
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
+
+        if (detailLoader == null || item == null || string.IsNullOrWhiteSpace(item._id))
+            return;
+
+        detailLoader.LoadById(item._id);
+    }
+
+    private void ClearSelectionAndDetail()
+    {
+        _currentSelectedItem = null;
+    }
+
+    private ScrollRect GetScrollRect()
+    {
+        if (currentContentParent == null)
+            return null;
+
+        return currentContentParent.GetComponentInParent<ScrollRect>(true);
+    }
+
+    private void ResetScrollToTopDeferred()
+    {
+        if (resetScrollRoutine != null)
+        {
+            StopCoroutine(resetScrollRoutine);
+            resetScrollRoutine = null;
+        }
+
+        resetScrollRoutine = StartCoroutine(CoResetScrollToTop());
+    }
+
+    private IEnumerator CoResetScrollToTop()
+    {
+        yield return null;
+
+        var sr = GetScrollRect();
+        if (sr == null)
+            yield break;
+
+        Canvas.ForceUpdateCanvases();
+
+        if (currentContentParent is RectTransform contentRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        sr.StopMovement();
+        sr.verticalNormalizedPosition = 1f;
+        sr.velocity = Vector2.zero;
+
+        yield return null;
+
+        Canvas.ForceUpdateCanvases();
+
+        if (currentContentParent is RectTransform contentRect2)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect2);
+
+        sr.StopMovement();
+        sr.verticalNormalizedPosition = 1f;
+        sr.velocity = Vector2.zero;
+
+        resetScrollRoutine = null;
     }
 
     private bool MatchFilter(NotificationMailItem item)
@@ -160,25 +344,17 @@ public class MailList : MonoBehaviour
 
         string label = (item.label ?? "").Trim().ToLower();
 
-        switch (currentFilter)
+        return currentFilter switch
         {
-            case MailFilter.Personal:
-                return label == "personal";
-
-            case MailFilter.System:
-                return label == "system";
-
-            default:
-                return false;
-        }
+            MailFilter.Personal => label == "personal",
+            MailFilter.System => label == "system",
+            _ => false
+        };
     }
 
     private string GetItemId(NotificationMailItem data)
     {
-        if (data == null)
-            return string.Empty;
-
-        return (data._id ?? "").Trim();
+        return data == null ? string.Empty : (data._id ?? "").Trim();
     }
 
     private MailElementVisualUI CreateItemUI(NotificationMailItem data)
@@ -186,7 +362,7 @@ public class MailList : MonoBehaviour
         if (data == null)
             return null;
 
-        MailElementVisualUI ui = Instantiate(mailPrefab, currentContentParent);
+        var ui = Instantiate(mailPrefab, currentContentParent);
         ApplyDataToUI(ui, data);
         return ui;
     }
@@ -204,49 +380,24 @@ public class MailList : MonoBehaviour
         if (ui == null || data == null)
             return;
 
-        string timeText = BuildTimeText(data.time);
         string readState = data.isRead ? "Đã đọc" : "Chưa đọc";
 
-        ui.BindData(
-            title: data.title,
-            description: data.text,
-            timeText: timeText,
-            readStateText: readState
-        );
+        ui.BindData(data.title, data.text, readState);
+        ui.SetTimeFromApi(data.time);
 
-        MainElementUI mainUI = ui.GetComponent<MainElementUI>();
+        var mainUI = ui.GetComponent<MainElementUI>();
         if (mainUI != null)
         {
             if (detailLoader == null)
-                detailLoader = FindFirstObjectByType<NotificationsDetailLoader>();
+                detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
 
             mainUI.SetDetailLoader(detailLoader);
             mainUI.Bind(data);
         }
-        else
-        {
-            Debug.LogWarning("[MailList] Không tìm thấy MainElementUI trên prefab item.");
-        }
-    }
-
-    private string BuildTimeText(NotificationMailTime t)
-    {
-        if (t == null) return "";
-
-        if (!string.IsNullOrEmpty(t.time))
-            return t.time;
-
-        if (!string.IsNullOrEmpty(t.day))
-            return t.day;
-
-        return "";
     }
 
     private void RemoveItem(string id)
     {
-        if (string.IsNullOrEmpty(id))
-            return;
-
         if (!spawnedItemMap.TryGetValue(id, out var ui))
             return;
 
@@ -270,5 +421,22 @@ public class MailList : MonoBehaviour
     private void ClearAllItems()
     {
         RemoveAllSpawnedItems();
+    }
+
+    private bool IsReadyToRefresh()
+    {
+        return mailPrefab != null
+            && currentContentParent != null
+            && !NotificationsStaticStore.IsLoading;
+    }
+    private void TryConsumePendingRefresh()
+    {
+        if (!pendingRefresh)
+            return;
+
+        if (!IsReadyToRefresh())
+            return;
+
+        Refresh();
     }
 }
