@@ -70,7 +70,7 @@ public static class LoadingTransition
             Load(targetScene);
     }
 
-    public static void Load_Scene(string targetScene, bool isSaveHistory = false)
+    public static void Load_Scene(string targetScene, bool isSaveHistory = true)
     {
         if (_coroutine != null)
         {
@@ -89,8 +89,9 @@ public static class LoadingTransition
         }
     }
 
-    public static void LoadPreviousScene()
+    public static void LoadPreviousSceneOrDefault()
     {
+        Debug.Log("[LoadingTransition] Load Previous Scene");
         var targetScene = rollbackConfig.defaultSceneName;
         if (sceneHistory.HasHistory())
         {
@@ -102,7 +103,7 @@ public static class LoadingTransition
             targetScene = rollbackConfig.GetRollbackScene(currentScene);
         }
         
-        Load_Scene(targetScene);
+        Load_Scene(targetScene,false);
     }
 
     private static IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)

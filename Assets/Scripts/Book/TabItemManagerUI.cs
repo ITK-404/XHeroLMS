@@ -33,7 +33,8 @@ public class TabItemManagerUI : MonoBehaviour
         returnBtn.onClick.AddListener(() =>
         {
             // LoadingTransition.Load("New Scene");
-            LoadingTransition.Load_Scene("New Scene");
+            // LoadingTransition.Load_Scene("New Scene");
+            LoadingTransition.LoadPreviousSceneOrDefault();
         });
         foreach (var item in tabIDs)
         {

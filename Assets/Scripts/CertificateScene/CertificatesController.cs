@@ -162,7 +162,7 @@ public class CertificatesController : MonoBehaviour
                 LoadingUI.ShowErrorPopup(
                     "Bạn chưa có bằng nào để hiển thị!",
                     "Thông báo",
-                    () => LoadingTransition.Load_Scene("New Scene")
+                    () => LoadingTransition.LoadPreviousSceneOrDefault()
                 );
 
                 yield break;
