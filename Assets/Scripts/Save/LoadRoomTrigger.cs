@@ -31,7 +31,6 @@ public class LoadRoomTrigger : MonoBehaviour
     public bool savePlayerPosition = false;
 
     // Chặn đặt trùng nhiều lần trong cùng 1 scene (nếu có nhiều cổng)
-    private static string _restoredSceneOnce = null;
 
     private void Reset()
     {
@@ -39,29 +38,6 @@ public class LoadRoomTrigger : MonoBehaviour
         if (col) col.isTrigger = true;
     }
     
-    private void Start()
-    {
-        if (!restoreOnSceneStart) return;
-    
-        var curScene = SceneManager.GetActiveScene().name;
-        if (_restoredSceneOnce == curScene) return;
-    
-        if (TravelContext.TryGetReturnPoint(curScene, out var pos, out var rot))
-        {
-            var player = GameObject.FindWithTag("Player");
-            if (player)
-            {
-                // Snap nhẹ xuống mặt đất nếu cần
-                if (snapToGround && Physics.Raycast(pos + Vector3.up * 1.5f, Vector3.down, out var hit, 3f))
-                    pos.y = hit.point.y + 0.02f;
-    
-                PlayerLocator.PlacePlayer(player, pos + extraOffset, rot);
-                _restoredSceneOnce = curScene;
-                if (verbose) Debug.Log($"[LoadRoomTrigger] Restored player at {pos} in scene '{curScene}'");
-            }
-        }
-    }
-
     private void OnTriggerEnter(Collider other)
     {
         if (isLoading) return;
@@ -87,7 +63,6 @@ public class LoadRoomTrigger : MonoBehaviour
         var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
         if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
 
-        TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
     }
 
     private bool isLoading = false;
@@ -117,11 +92,5 @@ public class LoadRoomTrigger : MonoBehaviour
         }
 
         isLoading = false;
-    }
-
-
-    public static void ClearSceneRestoreFlag()
-    {
-        _restoredSceneOnce = null;
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class SavePlayerData
@@ -8,7 +9,7 @@ public class SavePlayerData
     public SceneLocation SceneLocation;
 
 }
-
+[Serializable]
 public class SceneLocation 
 {
     public Vector3 Position;
