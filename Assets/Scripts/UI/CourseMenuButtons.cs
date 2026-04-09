@@ -55,7 +55,6 @@ public class CourseMenuButtons : MonoBehaviour
                 // }
 
                 // PC/Editor: giữ nguyên logic cũ
-                PlayerLocator.Save(player.gameObject);
                 Go(KEY_ALL);
             });
         }
@@ -66,7 +65,6 @@ public class CourseMenuButtons : MonoBehaviour
             btnMyCourses.onClick.RemoveAllListeners();
             btnMyCourses.onClick.AddListener(() =>
             {
-                PlayerLocator.Save(player.gameObject);
                 Go(KEY_MY);
             });
         }
