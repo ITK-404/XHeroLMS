@@ -23,41 +23,44 @@ public class SceneLocationHandler : MonoBehaviour
     {
         if (loadSceneMode == LoadSceneMode.Single)
         {
-            LoadPlayerPosition();
+            LoadPlayerPosition(scene.name);
         }
     }
-    
+
     private void OnLoadSceneEvent()
     {
         // try save player location in scene
         SavePlayerInformation();
     }
 
-    private void LoadPlayerPosition()
+    public void LoadPlayerPosition(string sceneName)
     {
-        var currentScene = SceneManager.GetActiveScene().name;
-
-        if (TryExtractSceneLocation(currentScene, out Vector3 position, out Quaternion rotation))
+        if (TryExtractSceneLocation(sceneName, out Vector3 position, out Quaternion rotation))
         {
-            var player = GameObject.FindGameObjectWithTag("Player");
-            player.transform.position = position;
+            Debug.Log("[SceneLocationHandler] Tim thay scene valid + vi tri");
+            var player = GameObject.FindGameObjectWithTag("Player").GetComponent<PointClickSystem>();
+            player.TeleportDelay(position);
+            // player.transform.position = position;
             player.transform.rotation = rotation;
         }
     }
-
+    
     public bool TryExtractSceneLocation(string sceneName, out Vector3 position, out Quaternion rotation)
     {
         position = Vector3.zero;
         rotation = new Quaternion(0, 0, 0, 0);
-        
+
         var sceneLocation = GetItemBySceneName(sceneName);
         if (sceneLocation != null)
         {
             position = sceneLocation.Position;
             rotation = sceneLocation.Rotation;
-            
+
             sceneLocationList.Remove(sceneLocation);
         }
+
+        string debugValue = sceneLocation != null ? "Thành công" : "Thất bại";
+        Debug.Log($"[SceneLocationHandler] Cố gắng extract vị trí trong scene {sceneName} {debugValue}");
 
         return sceneLocation != null;
     }
@@ -74,7 +77,7 @@ public class SceneLocationHandler : MonoBehaviour
 
         return null;
     }
-    
+
     public void SavePlayerInformation()
     {
         var player = GameObject.FindGameObjectWithTag("Player");
@@ -83,30 +86,31 @@ public class SceneLocationHandler : MonoBehaviour
         if (player != null)
         {
             Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
-
-            bool isExitData = false;
-            foreach (var item in sceneLocationList)
-            {
-                if (item.SceneName == currentScene)
-                {
-                    item.Position = player.transform.position;
-                    item.Rotation = player.transform.rotation;
-                    isExitData = true;
-                    break;
-                }
-            }
-
-            if (!isExitData)
-            {
-                SceneLocation sceneLocation = new SceneLocation
-                {
-                    Position = player.transform.position,
-                    Rotation = player.transform.rotation,
-                    SceneName = currentScene 
-                };
-                sceneLocationList.Add(sceneLocation);
-            }
+            TryAddOrUpdate(currentScene, player.transform.position, player.transform.rotation);
         }
     }
-    
+
+    public void TryAddOrUpdate(string currentScene, Vector3 position, Quaternion rotation)
+    {
+        Debug.Log($"[SceneLocationHandle] Try add or update {currentScene} {position} {rotation}");
+        bool isExitData = false;
+        foreach (var item in sceneLocationList)
+        {
+            if (item.SceneName == currentScene)
+            {
+                item.Position = position;
+                item.Rotation = rotation;
+                Debug.Log($"[SceneLocationHandle] Cập nhật vị trí trong scene thành công {currentScene}");
+                isExitData = true;
+                break;
+            }
+        }
+
+        if (!isExitData)
+        {
+            SceneLocation sceneLocation = SceneLocation.CaptureFromPlayer(position, rotation);
+            sceneLocationList.Add(sceneLocation);
+            Debug.Log($"[SceneLocationHandle] Thêm vị trí trong scene thành công {currentScene}");
+        }
+    }
 }
