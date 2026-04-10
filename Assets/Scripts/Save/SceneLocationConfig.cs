@@ -20,10 +20,11 @@ public class SceneLocationConfig : ScriptableObject
         {
             if (item.sceneName == checkSceneName)
             {
-                return true;
+                Debug.Log($"[SceneLocationConfig] Có thể save scene này {checkSceneName}");
+                return item.canSaveLocation;
             }
         }
-
+        Debug.Log($"[SceneLocationConfig] Không thể save scene này {checkSceneName}");
         return false;
     }
 }

@@ -1,15 +1,25 @@
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
 
 public class SceneLocationHandler : MonoBehaviour
 {
     [SerializeField] private List<SceneLocation> sceneLocationList = new();
-
+    [SerializeField] private SceneLocationConfig config;
     private void Awake()
     {
         LoadingTransition.OnLoadSceneEvent += OnLoadSceneEvent;
         SceneManager.sceneLoaded += SceneManagerOnsceneLoaded;
+
+        LoadConfig(destroyCancellationToken).Forget();
+    }
+
+    private async UniTask LoadConfig(CancellationToken cancellationToken)
+    {
+        config = await Addressables.LoadAssetAsync<SceneLocationConfig>("SceneLocationConfig").WithCancellation(cancellationToken);
     }
 
     private void OnDestroy()
@@ -80,11 +90,16 @@ public class SceneLocationHandler : MonoBehaviour
         return null;
     }
 
-    public void SavePlayerInformation()
+    private void SavePlayerInformation()
     {
-        var player = GameObject.FindGameObjectWithTag("Player");
         var currentScene = SceneManager.GetActiveScene().name;
+        if (!config.IsSceneCanSave(currentScene))
+        {
+            return;
+        }
         Debug.Log($"Try save player");
+
+        var player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
             Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
