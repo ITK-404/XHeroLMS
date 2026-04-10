@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -35,13 +34,16 @@ public class SceneLocationHandler : MonoBehaviour
 
     public void LoadPlayerPosition(string sceneName)
     {
+        Debug.Log($"[SceneLocationHandler] Cập nhật vị trí khi load scene");
         if (TryExtractSceneLocation(sceneName, out Vector3 position, out Quaternion rotation))
         {
-            Debug.Log("[SceneLocationHandler] Tim thay scene valid + vi tri");
+            Debug.Log("[SceneLocationHandler] Tìm thấy data của scene trong danh sách, bắt đầu cập nhật vị trí");
             var player = GameObject.FindGameObjectWithTag("Player").GetComponent<PointClickSystem>();
             player.TeleportDelay(position);
+            // TeleMapController._mapActive = true;
             // player.transform.position = position;
             player.transform.rotation = rotation;
+            // TeleMapController._mapActive = false;
         }
     }
     
@@ -86,21 +88,22 @@ public class SceneLocationHandler : MonoBehaviour
         if (player != null)
         {
             Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
-            TryAddOrUpdate(currentScene, player.transform.position, player.transform.rotation);
+            SceneLocation playerLocation = new SceneLocation(currentScene, player.transform.position, player.transform.rotation);
+            TryAddOrUpdate(playerLocation);
         }
     }
 
-    public void TryAddOrUpdate(string currentScene, Vector3 position, Quaternion rotation)
+    public void TryAddOrUpdate(SceneLocation addLocation)
     {
-        Debug.Log($"[SceneLocationHandle] Try add or update {currentScene} {position} {rotation}");
+        Debug.Log($"[SceneLocationHandle] Try add or update {addLocation.SceneName} {addLocation.Position} {addLocation.Rotation}");
         bool isExitData = false;
         foreach (var item in sceneLocationList)
         {
-            if (item.SceneName == currentScene)
+            if (item.SceneName == addLocation.SceneName)
             {
-                item.Position = position;
-                item.Rotation = rotation;
-                Debug.Log($"[SceneLocationHandle] Cập nhật vị trí trong scene thành công {currentScene}");
+                item.Position = addLocation.Position;
+                item.Rotation = addLocation.Rotation;
+                Debug.Log($"[SceneLocationHandle] Cập nhật vị trí trong scene thành công {addLocation.SceneName}");
                 isExitData = true;
                 break;
             }
@@ -108,9 +111,8 @@ public class SceneLocationHandler : MonoBehaviour
 
         if (!isExitData)
         {
-            SceneLocation sceneLocation = SceneLocation.CaptureFromPlayer(position, rotation);
-            sceneLocationList.Add(sceneLocation);
-            Debug.Log($"[SceneLocationHandle] Thêm vị trí trong scene thành công {currentScene}");
+            sceneLocationList.Add(addLocation);
+            Debug.Log($"[SceneLocationHandle] Thêm vị trí trong scene thành công {addLocation.SceneName}");
         }
     }
 }
