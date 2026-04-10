@@ -1,35 +1,37 @@
+using System;
 using System.Collections;
-using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
+using UnityEngine.UIElements;
 
-#if ADDRESSABLES
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.ResourceManagement.ResourceProviders;
-#endif
 
 public class LoadRoomTrigger : MonoBehaviour
 {
     [Header("Scene đích")]
-    public string sceneName;
+    [SceneDropdown] public string sceneName;
 
+    [SceneSeoDropdown] public string courseId;
     [Header("Điểm dịch chuyển khi QUAY LẠI scene này")]
     [Tooltip("Kéo 1 GameObject/Empty làm mốc trả về khi scene này được load lại.")]
     public Transform returnPoint;
 
     [Header("Khôi phục khi scene mở")]
-    public bool restoreOnSceneStart = true; // Bật để tự đặt Player khi scene load
-
     public bool snapToGround = true; // Snap nhẹ xuống nền để tránh rơi
     public Vector3 extraOffset = new Vector3(0f, 0.03f, 0f); // offset nhỏ khi đặt
 
     [Header("Debug")]
     public bool verbose = false;
 
-    public bool savePlayerPosition = false;
+    [FormerlySerializedAs("savePlayerPosition")] public bool loadByCourse = false;
+    public enum LoadType
+    {
+        Course,
+        Scene,
+        Previous
+    }
 
+    [SerializeField] private LoadType loadType = LoadType.Scene;
     // Chặn đặt trùng nhiều lần trong cùng 1 scene (nếu có nhiều cổng)
 
     private void Reset()
@@ -43,26 +45,30 @@ public class LoadRoomTrigger : MonoBehaviour
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
-        if (!TokenStore.IsAuthenticated && savePlayerPosition)
+        if (!TokenStore.IsAuthenticated && loadByCourse)
         {
             return;
         }
-        if (savePlayerPosition)
+
+        LoadByType(loadType);
+    }
+
+    private void LoadByType(LoadType currentType)
+    {
+        switch (currentType)
         {
-
-            StartCoroutine(TryEnterCourse());
+            case LoadType.Course:
+                StartCoroutine(TryEnterCourse());
+                break;
+            case LoadType.Scene:
+                LoadingTransition.Load_Scene(sceneName);
+                break;
+            case LoadType.Previous:
+                LoadingTransition.LoadPreviousSceneOrDefault();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
-        else
-        {
-            // LoadingTransition.Load(sceneName);
-            LoadingTransition.Load_Scene(sceneName);
-        }
-
-        var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
-        var savePos = (returnPoint ? returnPoint.position : transform.position) + extraOffset;
-        var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
-        if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
-
     }
 
     private bool isLoading = false;
@@ -92,5 +98,38 @@ public class LoadRoomTrigger : MonoBehaviour
         }
 
         isLoading = false;
+    }
+}
+[CustomEditor(typeof(LoadRoomTrigger))]
+public class LoadRoomTriggerEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update(); // Đồng bộ data từ object thật
+        // get field
+        var loadTypeProp = serializedObject.FindProperty("loadType");
+        var scenenameProp = serializedObject.FindProperty("sceneName");
+        var courseIdProp  = serializedObject.FindProperty("courseId");
+        // ... vẽ fields ở đây
+        var style = new GUIStyle(EditorStyles.helpBox);
+        style.wordWrap = true;
+        EditorGUILayout.LabelField("Note", "Tuỳ chỉnh field này để thiết lập cách logic được chạy",style);
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(loadTypeProp);
+        var currentType = (LoadRoomTrigger.LoadType)loadTypeProp.enumValueIndex;
+        switch (currentType)
+        {
+            case LoadRoomTrigger.LoadType.Course:
+                EditorGUILayout.PropertyField(courseIdProp, new GUIContent("Course ID"));
+                break;
+            case LoadRoomTrigger.LoadType.Scene:
+                EditorGUILayout.PropertyField(scenenameProp, new GUIContent("Scene Name"));
+                break;
+            case LoadRoomTrigger.LoadType.Previous:
+                EditorGUILayout.HelpBox("Sẽ load scene trước đó", MessageType.Info);
+                break;
+        }
+        
+        serializedObject.ApplyModifiedProperties(); // Lưu thay đổi + hỗ trợ Undo
     }
 }

@@ -62,7 +62,7 @@ public class HouseHandler : MonoBehaviour
             // Record for Undo so user can revert
             Undo.RecordObject(item, "Set Scene To Room");
             item.sceneName = sceneNameToLoad;
-            item.savePlayerPosition = savePlayerPosition;
+            item.loadByCourse = savePlayerPosition;
             // Mark the component dirty so Unity serializes the change
             EditorUtility.SetDirty(item);
         }
