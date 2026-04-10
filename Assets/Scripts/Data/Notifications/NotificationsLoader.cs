@@ -129,7 +129,7 @@ public class NotificationsLoader : MonoBehaviour
         int myVersion = ++loadVersion;
 
         NotificationsStaticStore.SetLoading(tab);
-
+        // có thể bỏ chỗ này -> mặc định flow mới access token luôn được load nếu có
         if (string.IsNullOrEmpty(TokenStore.AccessToken))
             TokenStore.TryRestoreFromDisk();
 

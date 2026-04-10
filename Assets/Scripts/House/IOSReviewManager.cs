@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -35,19 +37,15 @@ public class IOSReviewManager
         public ReviewConfigData data; // <-- config thật nằm ở đây
         public int __v;
     }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Init()
-    {
-        // Fire-and-forget ở startup (không block load scene)
-        _ = CheckIOSReviewStatusAsync();
-    }
-
-    public static async Task CheckIOSReviewStatusAsync()
+    
+    public static async UniTask CheckIOSReviewStatusAsync(CancellationToken ct = default)
     {
         try
         {
-            ReviewConfigData config = await FetchIOSReviewStatusAsync();
+            // Gọi bình thường, await vẫn như cũ
+            // Chỉ khác là FetchIOSReviewStatusAsync giờ trả UniTask<T> thay vì Task<T>
+            ReviewConfigData config = await FetchIOSReviewStatusAsync(ct);
+
             if (config?.xheroApp == null)
             {
                 AppDataGlobal.isInReviewMode = false;
@@ -74,6 +72,11 @@ public class IOSReviewManager
             AppDataGlobal.isInReviewMode = false;
             Debug.Log("Review Mode: INACTIVE");
         }
+        catch (OperationCanceledException)
+        {
+            Debug.Log("CheckIOSReviewStatus: Cancelled (object destroyed)");
+            AppDataGlobal.isInReviewMode = false;
+        }
         catch (Exception e)
         {
             Debug.LogError($"Check Review Mode Error: {e}");
@@ -81,7 +84,7 @@ public class IOSReviewManager
         }
     }
 
-    public static async Task<ReviewConfigData> FetchIOSReviewStatusAsync()
+    public static async UniTask<ReviewConfigData> FetchIOSReviewStatusAsync(CancellationToken ct)
     {
         string url = $"{LmsStore.Instance.baseUrl}/config?key=ios-in-review";
 
@@ -89,9 +92,7 @@ public class IOSReviewManager
         {
             request.timeout = 10;
 
-            var operation = request.SendWebRequest();
-            while (!operation.isDone)
-                await Task.Yield();
+            await request.SendWebRequest().WithCancellation(ct);
 
             if (request.result == UnityWebRequest.Result.Success)
             {
