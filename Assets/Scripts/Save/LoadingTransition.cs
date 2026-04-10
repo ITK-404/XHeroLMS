@@ -1,4 +1,7 @@
+using System;
 using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,33 +17,31 @@ public static class LoadingTransition
     public static string PreviousSceneName;
 
     public static bool UseAddressables;
-    private static SceneNavigationHistory sceneHistory = new (isDebug:false);
+    private static SceneNavigationHistory sceneHistory;
+    private static SceneLocationHandler sceneLocationHandler;
     private static RollbackConfig rollbackConfig;
-    // /// <summary>
-    // /// Dùng để quay về scene trước đó, nếu lịch sử trống thì rollback default scene của scene hiện tại
-    // /// </summary>
-    // /// <param name="currentScene"></param>
-    // /// <returns></returns>
-    // public static IEnumerator RollbackScene(string currentScene)
-    // {
-    //     var sceneToLoad = GetSceneToLoad(currentScene);
-    //
-    // }
-    //
-    // private string GetSceneToLoad(string currentScene)
-    // {
-    //     string sceneToLoad = rollbackConfig.defaultSceneName;
-    //     if (sceneHistory.HasHistory())
-    //     {
-    //         var sceneLocation = sceneHistory.GetPrevious();
-    //     }
-    //
-    //     return sceneToLoad;
-    // }
-    /// <summary>
-    /// Gọi hàm này để chuyển sang LoadingScene.
-    /// LoadingScene sẽ đọc TargetSceneName và load async scene đích.
-    /// </summary>
+
+    private static MonoBehaviour runner;
+    private static Coroutine _coroutine;
+
+    public static Action OnLoadSceneEvent;
+    
+    public static async UniTaskVoid Init(MonoBehaviour _runner, SceneNavigationHistory sceneNavigationHistory,SceneLocationHandler _sceneLocationHandler,CancellationToken token)
+    {
+        runner = _runner;
+        
+        var result = await Addressables.LoadAssetAsync<RollbackConfig>("Rollback Scene Config").WithCancellation(token);
+        await UniTask.SwitchToMainThread();
+        if (result != null)
+        {
+            Debug.Log("[Loading Transition] Init Complete");
+            rollbackConfig = result;
+        }
+
+        sceneHistory = sceneNavigationHistory;
+        sceneLocationHandler = _sceneLocationHandler;
+    }
+
     private static void Load(string sceneName)
     {
         PreviousSceneName = SceneManager.GetActiveScene().name;
@@ -69,6 +70,46 @@ public static class LoadingTransition
             LoadAssetBundle(targetScene);
         else
             Load(targetScene);
+    }
+
+    public static void Load_Scene(string targetScene, bool isSaveHistory = true)
+    {
+        if (_coroutine != null)
+        {
+            Debug.Log("Stop Coroutine loading");
+            runner.StopCoroutine(_coroutine);
+        }
+
+        _coroutine = runner.StartCoroutine(LoadScene(targetScene));
+        OnLoadSceneEvent?.Invoke();
+
+        var currentScene = SceneManager.GetActiveScene().name;
+
+        if (isSaveHistory)
+        {
+            sceneHistory.Record(currentScene);
+        }
+    }
+
+    public static void SavePosition(Vector3 position, Quaternion rotation)
+    {
+        sceneLocationHandler.SavePlayerPosition(position, rotation);
+    }
+    public static void LoadPreviousSceneOrDefault()
+    {
+        Debug.Log("[LoadingTransition] Load Previous Scene");
+        var targetScene = rollbackConfig.defaultSceneName;
+        if (sceneHistory.HasHistory())
+        {
+            targetScene = sceneHistory.GetPrevious();
+        }
+        else
+        {
+            var currentScene = SceneManager.GetActiveScene().name;
+            targetScene = rollbackConfig.GetRollbackScene(currentScene);
+        }
+        
+        Load_Scene(targetScene,false);
     }
 
     private static IEnumerator CoCheckIsCloudScene(string sceneKeyOrName, System.Action<bool> result)

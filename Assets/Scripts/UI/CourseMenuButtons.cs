@@ -55,7 +55,6 @@ public class CourseMenuButtons : MonoBehaviour
                 // }
 
                 // PC/Editor: giữ nguyên logic cũ
-                PlayerLocator.Save(player.gameObject);
                 Go(KEY_ALL);
             });
         }
@@ -66,7 +65,6 @@ public class CourseMenuButtons : MonoBehaviour
             btnMyCourses.onClick.RemoveAllListeners();
             btnMyCourses.onClick.AddListener(() =>
             {
-                PlayerLocator.Save(player.gameObject);
                 Go(KEY_MY);
             });
         }
@@ -93,7 +91,8 @@ public class CourseMenuButtons : MonoBehaviour
         PlayerPrefs.Save();
 
         // LoadingTransition.Load(courseSceneName);
-        StartCoroutine(CoLoadSceneSmart(courseSceneName));
+        LoadingTransition.Load_Scene(courseSceneName);
+        LoadingTransition.SavePosition(player.position, player.rotation);
     }
 
     // --- Hàm tiện lợi: để script ở scene đích gọi đọc key ---
@@ -109,10 +108,6 @@ public class CourseMenuButtons : MonoBehaviour
 #else
         return false;
 #endif
-    }
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }
 
