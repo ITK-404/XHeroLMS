@@ -18,6 +18,7 @@ public static class LoadingTransition
 
     public static bool UseAddressables;
     private static SceneNavigationHistory sceneHistory;
+    private static SceneLocationHandler sceneLocationHandler;
     private static RollbackConfig rollbackConfig;
 
     private static MonoBehaviour runner;
@@ -25,7 +26,7 @@ public static class LoadingTransition
 
     public static Action OnLoadSceneEvent;
     
-    public static async UniTaskVoid Init(MonoBehaviour _runner, SceneNavigationHistory sceneNavigationHistory,CancellationToken token)
+    public static async UniTaskVoid Init(MonoBehaviour _runner, SceneNavigationHistory sceneNavigationHistory,SceneLocationHandler _sceneLocationHandler,CancellationToken token)
     {
         runner = _runner;
         
@@ -38,6 +39,7 @@ public static class LoadingTransition
         }
 
         sceneHistory = sceneNavigationHistory;
+        sceneLocationHandler = _sceneLocationHandler;
     }
 
     private static void Load(string sceneName)
@@ -89,6 +91,10 @@ public static class LoadingTransition
         }
     }
 
+    public static void SavePosition(Vector3 position, Quaternion rotation)
+    {
+        sceneLocationHandler.SavePlayerPosition(position, rotation);
+    }
     public static void LoadPreviousSceneOrDefault()
     {
         Debug.Log("[LoadingTransition] Load Previous Scene");

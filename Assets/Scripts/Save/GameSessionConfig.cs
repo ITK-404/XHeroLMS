@@ -1,5 +1,4 @@
 using System.IO;
-using UnityEditor;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "GameSessionConfig", menuName = "Game Session Config")]
@@ -10,6 +9,7 @@ public class GameSessionConfig : ScriptableObject
 
     public float MinSaveInterval = 1f;
     [SerializeField] string saveFileName = "gamesessiondata";
+    public GameSessionData previewData = null;
 
     public string BuildSavePath()
     {
@@ -17,3 +17,4 @@ public class GameSessionConfig : ScriptableObject
         return fullPath;
     }
 }
+

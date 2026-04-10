@@ -39,7 +39,7 @@ public class SceneLocationHandler : MonoBehaviour
     private void OnLoadSceneEvent()
     {
         // try save player location in scene
-        SavePlayerInformation();
+        // SavePlayerInformation();
     }
 
     public void LoadPlayerPosition(string sceneName)
@@ -65,7 +65,7 @@ public class SceneLocationHandler : MonoBehaviour
         var sceneLocation = GetItemBySceneName(sceneName);
         if (sceneLocation != null)
         {
-            position = sceneLocation.Position;
+            position = sceneLocation.Position + config.offset;
             rotation = sceneLocation.Rotation;
 
             sceneLocationList.Remove(sceneLocation);
@@ -90,7 +90,7 @@ public class SceneLocationHandler : MonoBehaviour
         return null;
     }
 
-    private void SavePlayerInformation()
+    public void SavePlayerInformation()
     {
         var currentScene = SceneManager.GetActiveScene().name;
         if (!config.IsSceneCanSave(currentScene))
@@ -104,6 +104,24 @@ public class SceneLocationHandler : MonoBehaviour
         {
             Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
             SceneLocation playerLocation = new SceneLocation(currentScene, player.transform.position, player.transform.rotation);
+            TryAddOrUpdate(playerLocation);
+        }
+    }
+
+    public void SavePlayerPosition(Vector3 position, Quaternion rotation)
+    {
+        var currentScene = SceneManager.GetActiveScene().name;
+        if (!config.IsSceneCanSave(currentScene))
+        {
+            return;
+        }
+        Debug.Log($"Try save player");
+
+        var player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
+            SceneLocation playerLocation = new SceneLocation(currentScene, position, rotation);
             TryAddOrUpdate(playerLocation);
         }
     }

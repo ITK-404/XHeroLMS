@@ -14,6 +14,7 @@ public class SceneLocationConfig : ScriptableObject
     [Header("Config này dùng để quy định xem scene có được phép lưu vị trí sau khi load qua scene khác không")]
     [SerializeField] private List<SceneConfig> sceneConfigs;
 
+    public Vector3 offset = new Vector3(0, 1, 0);
     public bool IsSceneCanSave(string checkSceneName)
     {
         foreach (var item in sceneConfigs)
