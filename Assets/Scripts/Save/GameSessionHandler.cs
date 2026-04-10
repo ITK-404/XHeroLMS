@@ -11,8 +11,8 @@ public class GameSessionHandler : MonoBehaviour
     private SceneLocationHandler sceneLocationHandler;
     
     private float lastSaveTime;
-    private const float MinSaveInterval = 1f;
-    private  string savePath => Application.persistentDataPath + "/save.json";
+
+    private string savePath => config.BuildSavePath();
 
     public void Init(SceneLocationHandler sceneLocationHandler)
     {
@@ -40,21 +40,24 @@ public class GameSessionHandler : MonoBehaviour
     public async UniTaskVoid StartSession()
     {
         config = await Addressables.LoadAssetAsync<GameSessionConfig>("GameSessionConfig").WithCancellation(destroyCancellationToken);
-        
+        if (config == null)
+        {
+            Debug.LogError($"Game Session config is null, load failed");
+            return;
+        }
         Debug.Log("[GameSessionHandler] Bắt đầu game session");
         // Test        
-        if (config.canLoad == false) return;
 
-        GameSessionData data = await LoadSessionData();
-
-        Result sessionValidResult = await IsSessionDataValid(data);
+        GameSessionData lastSessionData = await LoadLastSessionData();
+        
+        Result sessionValidResult = await IsSessionDataValid(lastSessionData);
 
         bool isResumeSession = IsSameAccountID() && sessionValidResult.IsSessionValid;
         
         await UniTask.SwitchToMainThread();
         if (isResumeSession)
         {
-            LoadGameSessionData(data);
+            LoadGameSessionData(lastSessionData);
         }
         else
         {
@@ -62,11 +65,13 @@ public class GameSessionHandler : MonoBehaviour
         }
     }
 
-    public async UniTask<GameSessionData> LoadSessionData()
+    public async UniTask<GameSessionData> LoadLastSessionData()
     {
+        if (config.canLoad == false) return null;
+        
         if (!File.Exists(savePath))
         {
-            Debug.LogWarning("Save file not found!");
+            Debug.LogError("Save file not found!");
             return null;
         }
         string json = await File.ReadAllTextAsync(savePath);
@@ -82,7 +87,7 @@ public class GameSessionHandler : MonoBehaviour
 
         if (!TokenStore.IsAuthenticated) return;
 
-        if (Time.time - lastSaveTime < MinSaveInterval) return;
+        if (Time.time - lastSaveTime < config.MinSaveInterval) return;
 
         var player = GameObject.FindGameObjectWithTag("Player");
         if (player == null) return;
@@ -102,7 +107,7 @@ public class GameSessionHandler : MonoBehaviour
     {
         var result = new Result
         {
-            IsSessionValid = true
+            IsSessionValid = data != null
         };
         return result;
     }
@@ -113,14 +118,16 @@ public class GameSessionHandler : MonoBehaviour
         var sceneLocation = data.SceneLocation;
         var currentScene = SceneManager.GetActiveScene().name;
         // CAP NHAT VI TRI O SCENE DO
-        sceneLocationHandler.TryAddOrUpdate(sceneLocation.SceneName, sceneLocation.Position, sceneLocation.Rotation);
+        sceneLocationHandler.TryAddOrUpdate(sceneLocation);
         
         if (sceneLocation.SceneName == currentScene)
         {
+            Debug.Log($"[GameSessionHandler] cùng scene hiện tại, load vị trí thôi");
             sceneLocationHandler.LoadPlayerPosition(currentScene);
         }
         else
         {
+            Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
             LoadingTransition.Load_Scene(sceneLocation.SceneName);
         }
     }

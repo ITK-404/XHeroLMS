@@ -15,7 +15,7 @@ public class GameSessionData
     {
         return new GameSessionData
         {
-            AccountID   = TokenStore.AccessToken,
+            AccountID   = TokenStore.UserID,
             LoginToken  = TokenStore.AccessToken,
             SceneLocation = SceneLocation.CaptureFromPlayer(player)
         };
@@ -47,15 +47,6 @@ public class SceneLocation
         var sceneName = SceneManager.GetActiveScene().name;
         var sceneLocation = new SceneLocation(sceneName: sceneName, position: player.transform.position,
             rotation: player.transform.rotation);
-
-        return sceneLocation;
-    }
-    
-    public static SceneLocation CaptureFromPlayer(Vector3 position, Quaternion rotation)
-    {
-        var sceneName = SceneManager.GetActiveScene().name;
-        var sceneLocation = new SceneLocation(sceneName: sceneName, position: position,
-            rotation: rotation);
 
         return sceneLocation;
     }
