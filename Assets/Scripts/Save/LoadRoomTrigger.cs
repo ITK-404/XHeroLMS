@@ -1,104 +1,107 @@
+using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
+using UnityEngine.UIElements;
 
-#if ADDRESSABLES
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.ResourceManagement.ResourceProviders;
-#endif
 
 public class LoadRoomTrigger : MonoBehaviour
 {
-    [Header("Scene đích")]
-    public string sceneName;
+    [Header("Scene đích")] [SceneDropdown] public string sceneName;
+
+    [SceneSeoDropdown] public string courseId;
 
     [Header("Điểm dịch chuyển khi QUAY LẠI scene này")]
     [Tooltip("Kéo 1 GameObject/Empty làm mốc trả về khi scene này được load lại.")]
     public Transform returnPoint;
 
-    [Header("Khôi phục khi scene mở")]
-    public bool restoreOnSceneStart = true; // Bật để tự đặt Player khi scene load
-
-    public bool snapToGround = true; // Snap nhẹ xuống nền để tránh rơi
+    [Header("Khôi phục khi scene mở")] public bool snapToGround = true; // Snap nhẹ xuống nền để tránh rơi
     public Vector3 extraOffset = new Vector3(0f, 0.03f, 0f); // offset nhỏ khi đặt
 
-    [Header("Debug")]
-    public bool verbose = false;
+    [Header("Debug")] public bool verbose = false;
 
-    public bool savePlayerPosition = false;
+    private static bool isEnter = false;
 
+    [FormerlySerializedAs("savePlayerPosition")]
+    public bool loadByCourse = false;
+
+    public enum LoadType
+    {
+        Lock = 0,
+        Course = 1,
+        Scene = 2,
+        Previous = 3
+    }
+
+    [SerializeField] private LoadType loadType = LoadType.Scene;
     // Chặn đặt trùng nhiều lần trong cùng 1 scene (nếu có nhiều cổng)
-    private static string _restoredSceneOnce = null;
 
     private void Reset()
     {
         var col = GetComponent<Collider>();
         if (col) col.isTrigger = true;
     }
-    
-    private void Start()
+
+    private void OnTriggerExit(Collider other)
     {
-        if (!restoreOnSceneStart) return;
-    
-        var curScene = SceneManager.GetActiveScene().name;
-        if (_restoredSceneOnce == curScene) return;
-    
-        if (TravelContext.TryGetReturnPoint(curScene, out var pos, out var rot))
-        {
-            var player = GameObject.FindWithTag("Player");
-            if (player)
-            {
-                // Snap nhẹ xuống mặt đất nếu cần
-                if (snapToGround && Physics.Raycast(pos + Vector3.up * 1.5f, Vector3.down, out var hit, 3f))
-                    pos.y = hit.point.y + 0.02f;
-    
-                PlayerLocator.PlacePlayer(player, pos + extraOffset, rot);
-                _restoredSceneOnce = curScene;
-                if (verbose) Debug.Log($"[LoadRoomTrigger] Restored player at {pos} in scene '{curScene}'");
-            }
-        }
+        if (!other.CompareTag("Player")) return;
+        isEnter = false;
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        if (isEnter) return;
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;
         if (string.IsNullOrEmpty(sceneName)) return;
-        if (!TokenStore.IsAuthenticated && savePlayerPosition)
+        if (!TokenStore.IsAuthenticated && loadByCourse)
         {
             return;
         }
-        if (savePlayerPosition)
+
+        isEnter = true;
+        LoadByType(loadType);
+    }
+
+    private void LoadByType(LoadType currentType)
+    {
+        switch (currentType)
         {
-
-            StartCoroutine(TryEnterCourse());
+            case LoadType.Lock:
+                break;
+            case LoadType.Course:
+                SavePositionToLoad();
+                StartCoroutine(TryEnterCourse());
+                break;
+            case LoadType.Scene:
+                SavePositionToLoad();
+                LoadingTransition.Load_Scene(sceneName);
+                break;
+            case LoadType.Previous:
+                LoadingTransition.LoadPreviousSceneOrDefault();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
-        else
-        {
-            // LoadingTransition.Load(sceneName);
-            StartCoroutine(CoLoadSceneSmart(sceneName));
-        }
+    }
 
-        var keyScene = SceneManager.GetActiveScene().name; // key = scene hiện tại
-        var savePos = (returnPoint ? returnPoint.position : transform.position) + extraOffset;
-        var saveRot = (returnPoint ? returnPoint.rotation : transform.rotation);
-        if (verbose) Debug.Log($"[LoadRoomTrigger] Save return for '{keyScene}' at {savePos}");
-
-        TravelContext.SaveReturnPoint(keyScene, savePos, saveRot);
+    private void SavePositionToLoad()
+    {
+        Vector3 spawnPosition = returnPoint.transform.position + extraOffset;
+        Quaternion rotation = returnPoint.transform.rotation;
+        LoadingTransition.SavePosition(spawnPosition, rotation);
     }
 
     private bool isLoading = false;
+
     private IEnumerator TryEnterCourse()
     {
         isLoading = true;
         LoadingUI.Show(
-                timeoutSeconds: 60f,
-                timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
-                timeoutHeader: "Lỗi Mạng"
-            );
+            timeoutSeconds: 60f,
+            timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
+            timeoutHeader: "Lỗi Mạng"
+        );
         SeoResolver.SetSeoCourse(sceneName);
         yield return new WaitForSecondsRealtime(1);
         yield return SeoResolver.LoadPrivateAndFillData();
@@ -109,7 +112,8 @@ public class LoadRoomTrigger : MonoBehaviour
         {
             Debug.Log("Đã tìm thấy seo URL để load");
             // LoadingTransition.Load(sceneName);
-            StartCoroutine(CoLoadSceneSmart(sceneName));
+            SavePositionToLoad();
+            LoadingTransition.Load_Scene(sceneName);
         }
         else
         {
@@ -117,16 +121,5 @@ public class LoadRoomTrigger : MonoBehaviour
         }
 
         isLoading = false;
-    }
-
-
-    public static void ClearSceneRestoreFlag()
-    {
-        _restoredSceneOnce = null;
-    }
-
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
     }
 }

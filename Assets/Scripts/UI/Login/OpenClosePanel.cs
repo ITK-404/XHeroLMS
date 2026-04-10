@@ -130,10 +130,4 @@ public class OpenClosePanel : MonoBehaviour
         if (cursorMgr) cursorMgr.SetUIOpen(false);
         InputBlocker.SetBlocked(false);
     }
-
-    
-    private IEnumerator CoLoadSceneSmart(string targetScene)
-    {
-        yield return LoadingTransition.LoadScene(targetScene);
-    }
 }
