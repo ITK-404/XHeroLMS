@@ -92,6 +92,7 @@ public class CourseMenuButtons : MonoBehaviour
 
         // LoadingTransition.Load(courseSceneName);
         LoadingTransition.Load_Scene(courseSceneName);
+        LoadingTransition.SavePosition(player.position, player.rotation);
     }
 
     // --- Hàm tiện lợi: để script ở scene đích gọi đọc key ---

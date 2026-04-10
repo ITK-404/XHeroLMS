@@ -146,7 +146,7 @@ public class PlayerPanelUI : MonoBehaviour
                 if (logoutPopupUI != null)
                     logoutPopupUI.Hide();
                 
-                LoadingTransition.Load_Scene(defaultLoadScene);
+                LoadingTransition.Load_Scene(defaultLoadScene,false);
             }
             else
             {
@@ -188,7 +188,7 @@ public class PlayerPanelUI : MonoBehaviour
 
                 isLoaded = true;
                 TokenStore.Clear();
-                LoadingTransition.Load_Scene(defaultLoadScene);
+                LoadingTransition.Load_Scene(defaultLoadScene,false);
             },
             onFail: (err) =>
             {
