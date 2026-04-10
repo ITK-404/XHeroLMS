@@ -663,4 +663,3 @@ public class PointClickSystem : MonoBehaviour
         }
     }
 }
-
