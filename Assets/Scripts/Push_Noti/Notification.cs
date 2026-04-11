@@ -37,7 +37,7 @@ public class Notification : MonoBehaviour
         await RequestPermissionAsync();
 
         // Lấy token
-        await GetTokenAsync();
+        // await GetTokenAsync();
     }
 
     private async Task RequestPermissionAsync()
@@ -72,6 +72,7 @@ public class Notification : MonoBehaviour
     private void OnTokenReceived(object sender, TokenReceivedEventArgs token)
     {
         Debug.Log("[FCM] TokenReceived: " + token.Token);
+        _ = GetTokenAsync();
     }
 
     private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
