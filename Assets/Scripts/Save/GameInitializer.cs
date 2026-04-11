@@ -1,5 +1,7 @@
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 public class GameInitializer : MonoBehaviour
 {
@@ -12,10 +14,16 @@ public class GameInitializer : MonoBehaviour
 
     private void Awake()
     {
-        // Init call here
-        Debug.Log($"[GameInitializer] Load các tác vụ ngầm");
+        Debug.Log("[GameInitializer] Load các tác vụ ngầm");
         var ct = this.GetCancellationTokenOnDestroy();
-        var runner = this;
+  
+        InitTask(ct).Forget();
+    }
+
+private async UniTaskVoid InitTask(CancellationToken ct)
+    {
+        await Addressables.InitializeAsync().WithCancellation(ct);
+         var runner = this;
 
         var sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
         var sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
@@ -25,7 +33,13 @@ public class GameInitializer : MonoBehaviour
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
 
         gameSessionHandle.Init(sceneLocationHandle);
+
+        // BUG NOTE:
+        // StartSession chạy quá sớm trong boot flow và có thể tranh quyền điều hướng scene,
+        // gây kẹt hoặc đè lên flow load scene hiện tại.
+        // Tạm thời disable để xác nhận nguyên nhân và tránh chặn scene mới.
         gameSessionHandle.StartSession().Forget();
+
     }
 
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
