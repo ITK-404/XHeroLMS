@@ -257,7 +257,6 @@ public class FCMManager : MonoBehaviour
             if (permissionRequester != null)
                 permissionRequester.RequestPermissionIfNeeded();
 
-            RequestCurrentToken("InitializeFirebase");
         });
     }
 
@@ -333,7 +332,7 @@ public class FCMManager : MonoBehaviour
     private void OnTokenReceived(object sender, TokenReceivedEventArgs tokenArgs)
     {
         string token = tokenArgs != null ? tokenArgs.Token : string.Empty;
-        SaveFcmToken(token, "TokenReceived");
+        RequestCurrentToken("InitializeFirebase");
     }
 
     private void SaveFcmToken(string token, string source)
