@@ -45,6 +45,16 @@ public class GameSessionConfigEditor : Editor
             error = "";
         }
 
+        if (GUILayout.Button("Save", GUILayout.Height(30)))
+        {
+            if (script.previewData != null)
+            {
+                var path = script.BuildSavePath();
+                var data = JsonUtility.ToJson(script.previewData);
+                File.WriteAllTextAsync(path, data);
+            }
+        }
+
         if (!string.IsNullOrEmpty(error))
         {
             EditorGUILayout.HelpBox($"Có lỗi {error}",MessageType.Error);
