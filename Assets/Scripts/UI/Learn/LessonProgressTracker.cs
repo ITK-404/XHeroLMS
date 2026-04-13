@@ -14,6 +14,12 @@ public class LessonProgressTracker : MonoBehaviour
     private bool hasPostedCompletion;
 
     private WaitForSecondsRealtime wait15s;
+    private string courseID;
+
+    public string CourseID
+    {
+        get => courseID;
+    }
 
     private void Awake()
     {
@@ -30,6 +36,7 @@ public class LessonProgressTracker : MonoBehaviour
         if (obj != null)
         {
             lmsVideoProgressApiClient.SetCourseID(obj._id);
+            courseID = obj._id;
         }
     }
 
@@ -37,6 +44,7 @@ public class LessonProgressTracker : MonoBehaviour
     {
         videoPlayerControllerPro.GetSkipVideoDuration -= GetSkipVideoDuration;
         sceneLessonUI.OnLoadCourseDone -= OnLoadCourseDone;
+        Instance = null;
     }
 
     private bool GetSkipVideoDuration(double second)

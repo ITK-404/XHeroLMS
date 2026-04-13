@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -15,32 +16,67 @@ public class GameInitializer : MonoBehaviour
     private void Awake()
     {
         Debug.Log("[GameInitializer] Load các tác vụ ngầm");
+        LoginController.OnLoginComplete += LoginComplete;
+    }
+
+    private void Start()
+    {
         var ct = this.GetCancellationTokenOnDestroy();
-  
         InitTask(ct).Forget();
     }
 
-private async UniTaskVoid InitTask(CancellationToken ct)
+    private void OnDestroy()
+    {
+        LoginController.OnLoginComplete -= LoginComplete;
+    }
+
+    private float _lastLoginCompleteTime = -999f;
+    private const float LOGIN_COOLDOWN = 5f;
+
+    private void LoginComplete()
+    {
+        if (Time.time - _lastLoginCompleteTime < LOGIN_COOLDOWN)
+        {
+            Debug.Log("[GameSessionHandler] LoginComplete bị chặn, cooldown chưa hết");
+            return;
+        }
+    
+        _lastLoginCompleteTime = Time.time;
+        PlaySession().Forget();
+    }
+    
+    private SceneNavigationHistory sceneHistory;
+    private SceneLocationHandler sceneLocationHandle;
+    private async UniTaskVoid InitTask(CancellationToken ct)
     {
         await Addressables.InitializeAsync().WithCancellation(ct);
          var runner = this;
-
-        var sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
-        var sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
-        var gameSessionHandle = CreateGameObject<GameSessionHandler>(donDestroyOnLoad: true);
+        
+        sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
+        sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
 
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
+    }
 
-        gameSessionHandle.Init(sceneLocationHandle);
-
+    private async UniTaskVoid PlaySession()
+    {
         // BUG NOTE:
         // StartSession chạy quá sớm trong boot flow và có thể tranh quyền điều hướng scene,
         // gây kẹt hoặc đè lên flow load scene hiện tại.
         // Tạm thời disable để xác nhận nguyên nhân và tránh chặn scene mới.
-        gameSessionHandle.StartSession().Forget();
-
+        
+        await AddressablesLoader.EnsureInitialized();
+        if (gameSessionHandle == null)
+        {
+            gameSessionHandle = CreateGameObject<GameSessionHandler>(donDestroyOnLoad: true);
+            gameSessionHandle.Init(sceneLocationHandle);
+        }
+        if(gameSessionHandle)
+            gameSessionHandle.StartSession().Forget();
     }
+
+    private GameSessionHandler gameSessionHandle;
 
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
     {

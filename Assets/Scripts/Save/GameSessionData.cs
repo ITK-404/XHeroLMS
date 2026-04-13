@@ -6,19 +6,40 @@ using UnityEngine.UIElements;
 [Serializable]
 public class GameSessionData
 {
-    public string AccountID;
-    public string LoginToken;
+    public string UserID;
 
     public SceneLocation SceneLocation;
-    
+    public CourseData CourseData;
     public static GameSessionData CaptureCurrentState(GameObject player)
     {
         return new GameSessionData
         {
-            AccountID   = TokenStore.UserID,
-            LoginToken  = TokenStore.AccessToken,
-            SceneLocation = SceneLocation.CaptureFromPlayer(player)
+            UserID   = TokenStore.UserID,
+            SceneLocation = CaptureFromPlayer(player),
+            CourseData = CaptureCourseData()
         };
+    }
+
+    private static CourseData CaptureCourseData()
+    {
+        var tracker = LessonProgressTracker.Instance;
+        if (tracker != null && !string.IsNullOrEmpty(tracker.CourseID))
+        {
+            CourseData courseData = new();
+            courseData.seoId = SeoResolver.seoCourse;
+            return courseData;
+        }
+
+        return new();
+    }
+    
+    public static SceneLocation CaptureFromPlayer(GameObject player)
+    {
+        var sceneName = SceneManager.GetActiveScene().name;
+        var sceneLocation = new SceneLocation(sceneName: sceneName, position: player.transform.position,
+            rotation: player.transform.rotation);
+
+        return sceneLocation;
     }
 }
 [Serializable]
@@ -42,12 +63,11 @@ public class SceneLocation
         return $"SceneName {SceneName} Position: {Position} Rotation {Rotation}";
     }
 
-    public static SceneLocation CaptureFromPlayer(GameObject player)
-    {
-        var sceneName = SceneManager.GetActiveScene().name;
-        var sceneLocation = new SceneLocation(sceneName: sceneName, position: player.transform.position,
-            rotation: player.transform.rotation);
+}
 
-        return sceneLocation;
-    }
+[Serializable]
+public class CourseData
+{
+    // using this id to check
+    public string seoId;
 }
