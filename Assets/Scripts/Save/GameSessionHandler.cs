@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 
 public class GameSessionHandler : MonoBehaviour
 {
+    private const string DEFAULT_SCENE = "New Scene";
+    
     [SerializeField] private GameSessionConfig config;
     private SceneLocationHandler sceneLocationHandler;
     
@@ -118,6 +120,9 @@ public class GameSessionHandler : MonoBehaviour
         var sceneLocation = data.SceneLocation;
         var currentScene = SceneManager.GetActiveScene().name;
         // CAP NHAT VI TRI O SCENE DO
+        if (sceneLocation.SceneName == DEFAULT_SCENE)
+            return;
+        
         sceneLocationHandler.TryAddOrUpdate(sceneLocation);
         
         if (sceneLocation.SceneName == currentScene)
