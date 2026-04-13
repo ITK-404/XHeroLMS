@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
@@ -66,6 +67,7 @@ public class FrameEduCourseUI : PanelBaseUI
         if (ChildCount == 0) return;
         if (currentIndex < 0) currentIndex = 0;
         currentIndex = Mathf.Min(ChildCount - 1, currentIndex + 1);
+        Debug.Log($"FrameEduCourseUI next {currentIndex}");
         CenterOnIndex(currentIndex);
     }
 
@@ -73,6 +75,7 @@ public class FrameEduCourseUI : PanelBaseUI
     {
         if (ChildCount == 0) return;
         currentIndex = Mathf.Clamp(index, 0, ChildCount - 1);
+        // Debug.Log($"FrameEduCourseUI previous {currentIndex}");
         CenterOnIndex(currentIndex);
     }
 
@@ -81,15 +84,28 @@ public class FrameEduCourseUI : PanelBaseUI
         if (scrollView == null || scrollView.content == null) return;
         if (ChildCount == 0) return;
         index = Mathf.Clamp(index, 0, ChildCount - 1);
+        
+        // Debug.Log($"FrameEduCourseUI vị trí {index}");
+        
         var target = scrollView.content.GetChild(index);
         if (target == null) return;
         var rect = target.GetComponent<RectTransform>();
         if (rect == null) return;
+
+        StartCoroutine(DelayForUI(isAnim: anim, rect));
+    }
+
+    private IEnumerator DelayForUI(bool isAnim, RectTransform rect)
+    {
+        // delay one frame ?
+        yield return new WaitForSeconds(0.1f);
         moveTween?.Kill();
-        float duration = anim ? 0.5f : 0;
+        float duration = isAnim ? 0.5f : 0;
         // Use ForceCenterOnItem so the element is centered even if it requires moving content beyond normal bounds
+        // Debug.Log($"FrameEduCourseUI di chuyen la",rect.gameObject);
         moveTween = scrollView.ForceCenterOnItem(rect, duration, false);
     }
+    
 
     [ContextMenu("Force Center Current Index")]
     public void ForceCenterIndex()

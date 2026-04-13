@@ -34,7 +34,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.00012207031}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1921889423650736882
@@ -347,7 +347,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7512961637259320176}
   m_HandleRect: {fileID: 6912304795787623249}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -473,7 +473,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3135029424629079163}
   m_HandleRect: {fileID: 1595406068613940302}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -548,7 +548,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 605.3482, y: -322.26105}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5213072569593615381
@@ -563,7 +563,7 @@ GameObject:
   - component: {fileID: 7993623162461759838}
   - component: {fileID: 43724529210924654}
   m_Layer: 5
-  m_Name: Image
+  m_Name: decor Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -641,6 +641,7 @@ GameObject:
   - component: {fileID: 3310320615503328893}
   - component: {fileID: 7360979770070664038}
   - component: {fileID: 4305207747255848131}
+  - component: {fileID: 612893455213634055}
   m_Layer: 5
   m_Name: Frame_Detail
   m_TagString: Untagged
@@ -781,11 +782,26 @@ MonoBehaviour:
   waitStoreSeconds: 5
   chapterPrefab: {fileID: 4065018219018977313, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
   contentParent: {fileID: 3623529162450904734}
-  decorImg: {fileID: 0}
-  emptyState: {fileID: 0}
   lessonItemPrefab: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
   clearChildrenBeforeBuild: 1
   buildOnEnable: 1
+  frameDetail: {fileID: 0}
+--- !u!114 &612893455213634055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6386665308609912048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4479c98f104b86a15a55ac0c0ddc35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FrameDetail
+  _canvasGroup: {fileID: 3310320615503328893}
+  scrollView: {fileID: 7833303923757598788}
+  decorImg: {fileID: 5213072569593615381}
+  emptyUI: {fileID: 2152660335688703647}
 --- !u!1 &6542497599906184522
 GameObject:
   m_ObjectHideFlags: 0
