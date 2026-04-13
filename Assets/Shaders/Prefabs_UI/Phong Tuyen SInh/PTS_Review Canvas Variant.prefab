@@ -81,11 +81,10 @@ MonoBehaviour:
   waitStoreSeconds: 5
   chapterPrefab: {fileID: 4065018219018977313, guid: f5b11cca7a1eb4247b6e95ff72386962, type: 3}
   contentParent: {fileID: 5294626525964664987}
-  decorImg: {fileID: 809625769919579585}
-  emptyState: {fileID: 933682306674827630}
   lessonItemPrefab: {fileID: 3448464897272530781, guid: 305ca95c5eedfba4f8031221dcdd6ae6, type: 3}
   clearChildrenBeforeBuild: 1
   buildOnEnable: 1
+  frameDetail: {fileID: 8336858967299851266}
 --- !u!114 &4241708764059609255
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2305,16 +2304,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
---- !u!224 &809625769919579585 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 7493889380238318290, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
-  m_PrefabInstance: {fileID: 7837383715287359251}
-  m_PrefabAsset: {fileID: 0}
---- !u!224 &933682306674827630 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 6932977073942822525, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
-  m_PrefabInstance: {fileID: 7837383715287359251}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1415677653350431994 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 9180171837417153513, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
@@ -2776,6 +2765,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &8336858967299851266 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2265737195536145169, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
+  m_PrefabInstance: {fileID: 7837383715287359251}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4479c98f104b86a15a55ac0c0ddc35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FrameDetail
 --- !u!1 &8337112110677739991 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2265492839702959812, guid: 3706ff79bc5d440d0a29d868548f0425, type: 3}
