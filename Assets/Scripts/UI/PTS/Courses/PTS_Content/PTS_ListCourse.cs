@@ -26,7 +26,7 @@ public class PTS_ListCourse : MonoBehaviour
     [SerializeField] private bool clearChildrenBeforeBuild = true;
 
     [SerializeField] private bool buildOnEnable = true;
-
+    [SerializeField] private FrameDetail frameDetail;
     private Coroutine _running;
 
     private void OnEnable()
@@ -95,6 +95,7 @@ public class PTS_ListCourse : MonoBehaviour
         var course = LmsStore.Instance.GetPrivate(courseId);
         if (course == null)
         {
+            isEmpty = true;
             Debug.LogWarning($"[PTS_ListCourse] Private course null for courseId={courseId}");
             yield break;
         }
@@ -102,10 +103,23 @@ public class PTS_ListCourse : MonoBehaviour
         BuildFromCourse(course);
     }
 
+    private bool isEmpty = false;
+
+    private void Update()
+    {
+        UpdateEmptyState();
+    }
+
+    private void UpdateEmptyState()
+    {
+        if(frameDetail != null)
+            frameDetail.ActiveEmptyUI(isEmpty);
+    }
+    
     private void BuildFromCourse(LmsCoursePrivate course)
     {
         List<LmsChapter> chapters = course.chapters;
-        bool isEmpty = chapters == null || chapters.Count == 0;
+        isEmpty = chapters == null || chapters.Count == 0;
         
         if (isEmpty)
         {
