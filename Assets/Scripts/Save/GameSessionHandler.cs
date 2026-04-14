@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -7,12 +6,36 @@ using UnityEngine.SceneManagement;
 
 public class GameSessionHandler : MonoBehaviour
 {
+    private const string DEFAULT_SCENE = "New Scene";
+    
     [SerializeField] private GameSessionConfig config;
     private SceneLocationHandler sceneLocationHandler;
     
     private float lastSaveTime;
 
-    private string savePath => config.BuildSavePath();
+    private string previousLoadingID;
+    private SaveManager saveManager;
+
+    private void Awake()
+    {
+        saveManager = new();
+        EventHub.OnPlayerLogout += ClearCatchData;
+        EventHub.OnPlayerDeleteAccount += ClearCatchData;
+    }
+
+    private void OnDestroy()
+    {
+        EventHub.OnPlayerLogout -= ClearCatchData;
+        EventHub.OnPlayerDeleteAccount -= ClearCatchData;
+    }
+
+    private void ClearCatchData()
+    {
+        // dọn data vị trí, scene đã lưu
+        previousLoadingID = string.Empty;
+        GameInitializer.Instance.SceneHistory.ClearHistory();
+        GameInitializer.Instance.SceneLocationHandle.Clear();
+    }
 
     public void Init(SceneLocationHandler sceneLocationHandler)
     {
@@ -27,16 +50,22 @@ public class GameSessionHandler : MonoBehaviour
         }
     }
 
-    // private void OnApplicationQuit()
-    // {
-    //     SaveSession().Forget();
-    // }
+    private void OnApplicationQuit()
+    {
+        SaveSession().Forget();
+    }
 
     public struct Result
     {
         public bool IsSessionValid;
     }
-
+    /// <summary>
+    /// NOTE: LUỒNG HIỆN TẠI CỦA LOAD SESSION
+    /// 1. LOADING CÁC GAME SESSION ĐƯỢC LƯU
+    /// 2. KIỂM TRA ACCOUNT HIỆN TẠI CÓ NẰM TRONG GAME SESSION ĐƯỢC LƯU KHÔNG
+    ///     2.1 KIỂM TRA SESSION CÓ HỢP LỆ KHÔNG
+    /// 3. NẾU CÓ THÌ LOAD LẠI SESSION TRƯỚC ĐÓ
+    /// </summary>
     public async UniTaskVoid StartSession()
     {
         config = await Addressables.LoadAssetAsync<GameSessionConfig>("GameSessionConfig").WithCancellation(destroyCancellationToken);
@@ -45,39 +74,56 @@ public class GameSessionHandler : MonoBehaviour
             Debug.LogError($"Game Session config is null, load failed");
             return;
         }
+        // protect to load when load any scene
+        if (SceneManager.GetActiveScene().name != DEFAULT_SCENE)
+        {
+            Debug.Log($"[GameSessionHandler] không load khi không đứng ở new scene");
+            return;
+        }
+        
         Debug.Log("[GameSessionHandler] Bắt đầu game session");
         // Test        
-
-        GameSessionData lastSessionData = await LoadLastSessionData();
+        var userID = TokenStore.UserID;
+        var lastSessionData = await GetLastSessionData(userID);
         
-        Result sessionValidResult = await IsSessionDataValid(lastSessionData);
+        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
 
-        bool isResumeSession = IsSameAccountID() && sessionValidResult.IsSessionValid;
-        
+        bool isResumeSession = sessionValidResult.IsSessionValid;
         await UniTask.SwitchToMainThread();
         if (isResumeSession)
         {
-            LoadGameSessionData(lastSessionData);
+            Debug.Log($"[GameSessionHandler] Tiếp tục session");
+            // update user id
+            LoadGameSessionData(lastSessionData).Forget();
+            previousLoadingID = lastSessionData.UserID;
         }
         else
         {
+            Debug.Log($"[GameSessionHandler] không thể tiếp tục session");
             LoadDefaultSession();
         }
     }
 
-    public async UniTask<GameSessionData> LoadLastSessionData()
+    public async UniTask<GameSessionData> GetLastSessionData(string userID)
     {
+        if (config == null) return null;
         if (config.canLoad == false) return null;
-        
-        if (!File.Exists(savePath))
+        var saves = saveManager.LoadAllGameSession();
+        if (saves == null || saves.Count == 0)
         {
-            Debug.LogWarning("Save file not found!");
+            Debug.Log("[GameSessionHandler] Máy này chưa có lưu game session data");
             return null;
         }
-        string json = await File.ReadAllTextAsync(savePath);
-        GameSessionData data = JsonUtility.FromJson<GameSessionData>(json);
-        Debug.Log("Loaded from: " + savePath);
-        return data;
+        foreach (var item in saves)
+        {
+            if (item.UserID == userID)
+            {
+                Debug.Log("[GameSessionHandler] Tìm thấy game session data của account id này");
+                return item;
+            }
+        }
+        Debug.Log("[GameSessionHandler] Không tìm thấy data của account id này");
+        return null;
     }
 
     public async UniTask SaveSession()
@@ -87,49 +133,71 @@ public class GameSessionHandler : MonoBehaviour
 
         if (!TokenStore.IsAuthenticated) return;
 
-        if (Time.time - lastSaveTime < config.MinSaveInterval) return;
-
         var player = GameObject.FindGameObjectWithTag("Player");
         if (player == null) return;
-
-        var rawData = GameSessionData.CaptureCurrentState(player);
-        var data = JsonUtility.ToJson(rawData);
-        await File.WriteAllTextAsync(savePath, data);
-
-        Debug.Log($"[GameSessionHandler] Save Session data {savePath}");
-
+        try
+        {
+            var rawData = GameSessionData.CaptureCurrentState(player);
+            saveManager.SaveGameSession(rawData);
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.Message);
+            throw;
+        }
         lastSaveTime = Time.time;
     }
+    
 
-    public bool IsSameAccountID() => true;
-
-    public async UniTask<Result> IsSessionDataValid(GameSessionData data)
+    public async UniTask<Result> CheckSessionDataValid(GameSessionData data)
     {
+        bool isCorrectAccount =data != null && TokenStore.UserID == data.UserID;
+        bool alreadyLoaded = previousLoadingID == TokenStore.UserID;
+
+        bool isResumeSession = isCorrectAccount && !alreadyLoaded;
         var result = new Result
         {
-            IsSessionValid = data != null
+            IsSessionValid = isResumeSession
         };
         return result;
     }
 
-    public void LoadGameSessionData(GameSessionData data)
+    public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
         // load by session data
-        var sceneLocation = data.SceneLocation;
-        var currentScene = SceneManager.GetActiveScene().name;
-        // CAP NHAT VI TRI O SCENE DO
-        sceneLocationHandler.TryAddOrUpdate(sceneLocation);
+        var seoId = data.CourseData.seoId;
+        Debug.Log($"[GameSessionHandler] seo id là {seoId}");
+        if (!string.IsNullOrEmpty(seoId))
+        {
+            Debug.Log("[GameSessionHandler] Fetech data và thử load khoá học");
+            //fetech data xong moi laod
+            SeoResolver.seoCourse = seoId;
+            await SeoResolver.LoadPrivateAndFillData();
+            // co the vao khoa hoc
+            if (SeoResolver.canEnterCourse)
+            {
+                var sceneLocation = data.SceneLocation;
+                var currentScene = SceneManager.GetActiveScene().name;
+                // CAP NHAT VI TRI O SCENE DO
         
-        if (sceneLocation.SceneName == currentScene)
-        {
-            Debug.Log($"[GameSessionHandler] cùng scene hiện tại, load vị trí thôi");
-            sceneLocationHandler.LoadPlayerPosition(currentScene);
+                sceneLocationHandler.TryAddOrUpdate(sceneLocation);
+        
+                if (sceneLocation.SceneName == currentScene)
+                {
+                    Debug.Log($"[GameSessionHandler] cùng scene hiện tại, load vị trí thôi");
+                    sceneLocationHandler.LoadPlayerPosition(currentScene);
+                }
+                else
+                {
+                    Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
+                    LoadingTransition.Load_Scene(sceneLocation.SceneName);
+                }
+
+                return;
+            }
+            Debug.Log("[GameSessionHandler] Không thể load khoá học");
         }
-        else
-        {
-            Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
-            LoadingTransition.Load_Scene(sceneLocation.SceneName);
-        }
+        
     }
 
     public void LoadDefaultSession()

@@ -46,7 +46,10 @@ public static class SeoResolver
         var wrapped = "{\"items\":" + txt.text + "}";
         SceneSeoList map = null;
 
-        try { map = JsonUtility.FromJson<SceneSeoList>(wrapped); }
+        try
+        {
+            map = JsonUtility.FromJson<SceneSeoList>(wrapped);
+        }
         catch (Exception ex)
         {
             Debug.LogError($"[SeoResolver] Failed parsing {resourceJsonName}: {ex}");
@@ -170,54 +173,54 @@ public static class SeoResolver
         if (LmsStore.Instance.GetPrivate(courseId) == null)
             yield return LmsStore.Instance.FetchPrivateIfExpired(courseId);
 
-var p = LmsStore.Instance.GetPrivate(courseId);
-if (p == null)
-{
-    // login mà vẫn không có private => dẫn đi mua luôn (đã login sẵn bằng token)
-    canEnterCourse = false;
-    shouldHavePrivate = false;
+        var p = LmsStore.Instance.GetPrivate(courseId);
+        if (p == null)
+        {
+            // login mà vẫn không có private => dẫn đi mua luôn (đã login sẵn bằng token)
+            canEnterCourse = false;
+            shouldHavePrivate = false;
 
-    // token
-    string token = TokenStore.AccessToken;
-    token = (token ?? "").Trim();
-    if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        token = token.Substring("Bearer ".Length).Trim();
+            // token
+            string token = TokenStore.AccessToken;
+            token = (token ?? "").Trim();
+            if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                token = token.Substring("Bearer ".Length).Trim();
 
-    if (string.IsNullOrWhiteSpace(token))
-    {
-        Debug.LogError($"[SeoResolver] Private null + token empty. courseId='{courseId}' => BLOCK");
-        yield break;
-    }
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                Debug.LogError($"[SeoResolver] Private null + token empty. courseId='{courseId}' => BLOCK");
+                yield break;
+            }
 
-    string url =
-        SecurityConfig.UrlWeb+"/en/thanh-toan/" +
-        "?course=" + UnityWebRequest.EscapeURL(courseId) +
-        "&accessToken=" + UnityWebRequest.EscapeURL(token);
+            string url =
+                SecurityConfig.UrlWeb + "/en/thanh-toan/" +
+                "?course=" + UnityWebRequest.EscapeURL(courseId) +
+                "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
-    // Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
+            // Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
 
-    // Application.OpenURL(url);
-    Debug.LogError("Check null title here");
-    WebViewTest.LoadWebView(url,"@@@@@@@@");
-    yield break;
-}
+            // Application.OpenURL(url);
+            Debug.LogError("Check null title here");
+            WebViewTest.LoadWebView(url, "@@@@@@@@");
+            yield break;
+        }
 
         _lmsCoursePrivate = p;
     }
 
-private static IEnumerator ResolveCourseIdBySeo(string seo, Action<string> onDone)
-{
-    if (onDone == null) onDone = _ => { };
+    private static IEnumerator ResolveCourseIdBySeo(string seo, Action<string> onDone)
+    {
+        if (onDone == null) onDone = _ => { };
 
-    // ĐỪNG dùng cache nữa để tránh lẫn prod/dev
-    yield return LmsStore.Instance.FetchMarketIfExpired(0, 500, "", "", "", "");
+        // ĐỪNG dùng cache nữa để tránh lẫn prod/dev
+        yield return LmsStore.Instance.FetchMarketIfExpired(0, 500, "", "", "", "");
 
-    if (TokenStore.IsAuthenticated)
-        yield return LmsStore.Instance.FetchMyCoursesIfExpired();
+        if (TokenStore.IsAuthenticated)
+            yield return LmsStore.Instance.FetchMyCoursesIfExpired();
 
-    var id = LmsStore.Instance.GetCourseIdBySeo(seo);
-    onDone(id);
-}
+        var id = LmsStore.Instance.GetCourseIdBySeo(seo);
+        onDone(id);
+    }
 
     private static IEnumerator GrantFreeCourse(string courseId, string token, Action<bool> onDone)
     {
@@ -288,7 +291,10 @@ private static IEnumerator ResolveCourseIdBySeo(string seo, Action<string> onDon
 
             return false;
         }
-        catch { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     public static bool IsContainData()

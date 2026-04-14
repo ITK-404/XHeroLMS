@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_VFX_URP_Water_Surface_05
+  m_Shader: {fileID: 4800000, guid: 356f986cd6b31014fb6805b617646869, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _ENABLEFAKESPECULAR_ON
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _FakeSpecs:
+        m_Texture: {fileID: 2800000, guid: b3d47e33b03b1be41b06b28ecbf60e3b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Foam:
+        m_Texture: {fileID: 2800000, guid: 6faa3d76cafe3d54a989b59f058597c7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Height:
+        m_Texture: {fileID: 2800000, guid: d111e6c55fc228a4ea428c2e2f177288, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Noise:
+        m_Texture: {fileID: 2800000, guid: fe426db6ff66e814ebcc9dafec308df1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Normals:
+        m_Texture: {fileID: 2800000, guid: d8b25f5310d09034091a93e5ece9fcdd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture:
+        m_Texture: {fileID: 2800000, guid: d8b25f5310d09034091a93e5ece9fcdd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WavesNormal:
+        m_Texture: {fileID: 2800000, guid: 684be0415ac1495448e72d783260d2a2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _CameraDepthFadeLength: 1
+    - _CameraDepthFadeOffset: 0
+    - _ColorStrength: 0.1
+    - _Cull: 0
+    - _DepthFade: 0.3
+    - _DepthFadeColor: 3
+    - _DepthFadeOpacity: 1
+    - _Dst: 10
+    - _Emission: 0
+    - _EnableFakeSpecular: 1
+    - _EnvironmentReflections: 1
+    - _FoamDFMultiply: 5
+    - _FoamDFPower: 3
+    - _FoamDepthFade: 2
+    - _FoamOpacity: 0.69
+    - _FresnelBias: 0.5
+    - _FresnelPower: 1
+    - _FresnelScale: 1
+    - _HeightOpacityMax: 0.8
+    - _HeightOpacityMin: 1
+    - _NormalIntensity: 0.02
+    - _NormalIntensityMax: 0.1
+    - _NormalIntensityMin: 0.5
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _ReceiveShadows: 1
+    - _RefractNormalIntensityMax: 0.3
+    - _RefractNormalIntensityMin: 0.25
+    - _RefractionFresnelBias: 0.05
+    - _RefractionFresnelPower: 5
+    - _RefractionFresnelScale: 1
+    - _RefractionMax: 1
+    - _RefractionMin: 0
+    - _Smoothness: 1
+    - _SmoothnessMax: 1
+    - _SmoothnessMin: 1
+    - _SpecsMultiply: 30
+    - _SpecsPower: 10
+    - _SpecsScale: 1
+    - _SpecularHighlights: 1
+    - _SpecularMax: 1
+    - _SpecularMin: 0.001
+    - _SpecularMultiply: 1
+    - _SpecularPower: 1
+    - _Src: 5
+    - _TilingXMeshUV: 1
+    - _TilingYMeshUV: 1
+    - _UVNoiseScale: 8
+    - _UVNoiseStrength: 0.2
+    - _UseMeshUVs: 0
+    - _WPOAmplitude: 0.2
+    - _WavesNormalStrength: 1
+    - _WavesScale: 8
+    - _ZTest: 2
+    - _ZWrite: 0
+    m_Colors:
+    - _Color01: {r: 1, g: 1, b: 1, a: 0.99215686}
+    - _Color02: {r: 0.7372549, g: 0.7372549, b: 0.7372549, a: 0.99215686}
+    - _ColorDF: {r: 0.43529412, g: 0.43529412, b: 0.43529412, a: 0.99215686}
+    - _ColorFoam: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorOverallTint: {r: 1, g: 1, b: 1, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _FoamPanSpeed: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _FoamUVScale: {r: 4, g: 4, b: 0, a: 0}
+    - _NoisePanSpeed: {r: 0.2, g: 0.2, b: 0, a: 0}
+    - _SpecsPanSpeed: {r: 0.05, g: 0.05, b: 0, a: 0}
+    - _SpecularPanSpeed: {r: 0.05, g: 0.05, b: 0, a: 0}
+    - _WavesPanSpeed01: {r: 0.1, g: 0.1, b: 0, a: 0}
+    - _WavesPanSpeed02: {r: -0.1, g: -0.1, b: 0, a: 0}
+  m_BuildTextureStacks: []

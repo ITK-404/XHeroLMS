@@ -14,4 +14,18 @@ public class EventHub
     {
         OnExamIndexCenterChanged?.Invoke(score);
     }
+
+    public static event Action OnPlayerLogout;
+    
+    public static void RaisePlayerLogout()
+    {
+        OnPlayerLogout?.Invoke();
+    }
+
+    public static event Action OnPlayerDeleteAccount;
+    
+    public static void RaisePlayerDeleteAccount()
+    {
+        OnPlayerLogout?.Invoke();
+    }
 }
