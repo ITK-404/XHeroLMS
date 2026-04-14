@@ -38,6 +38,8 @@ public static class AddressablesCloudAutoSetup
     private const string DefaultProdIssuer = "LMS3D-PROD";
     private const string DefaultProdAccount = "LMS@XheroZone";
 
+    private const string RuntimeEnvAssetPath = "Assets/Resources/AppBuildEnv.asset";
+
     private static readonly string ProjectKeyJsonPath =
         Path.Combine(Application.dataPath, "Editor", "GCS", "lms-3-479211-dc999d4c697c.json");
 
@@ -449,35 +451,49 @@ internal static bool GenerateAuthFileAndShowQr()
 {
     if (!IsAdminMachine())
     {
-        EditorUtility.DisplayDialog("Không có quyền", "Máy này không có TotpSeedGenerator nên không được tạo QR/auth file.", "OK");
+        EditorUtility.DisplayDialog(
+            "Không có quyền",
+            "Máy này không có TotpSeedGenerator nên không được tạo QR/auth file.",
+            "OK");
         return false;
     }
 
-    if (!TryCreateSecretFromAdminGenerator(out string secret))
+    ProdAuthPayload payload = null;
+
+    // Nếu đã có file auth thì dùng lại secret cũ
+    if (TryGetProdAuthPayload(out var existingPayload))
     {
-        EditorUtility.DisplayDialog("Lỗi", "Không tạo được secret từ TotpSeedGenerator.", "OK");
-        return false;
+        payload = existingPayload;
     }
-
-    var payload = new ProdAuthPayload
+    else
     {
-        issuer = DefaultProdIssuer,
-        account = DefaultProdAccount,
-        secret = secret
-    };
+        // Chỉ khi chưa có file mới tạo secret mới
+        if (!TryCreateSecretFromAdminGenerator(out string secret))
+        {
+            EditorUtility.DisplayDialog("Lỗi", "Không tạo được secret từ TotpSeedGenerator.", "OK");
+            return false;
+        }
 
-    byte[] fileBytes = ProdAuthFileUtility.CreateFileBytes(payload);
+        payload = new ProdAuthPayload
+        {
+            issuer = DefaultProdIssuer,
+            account = DefaultProdAccount,
+            secret = secret
+        };
 
-    try
-    {
-        Directory.CreateDirectory(ProdAuthFolderAbsolute);
-        File.WriteAllBytes(ProdAuthFileAbsolutePath, fileBytes);
-        AssetDatabase.Refresh();
-    }
-    catch (Exception ex)
-    {
-        EditorUtility.DisplayDialog("Lỗi", "Không ghi được file .dat\n" + ex.Message, "OK");
-        return false;
+        byte[] fileBytes = ProdAuthFileUtility.CreateFileBytes(payload);
+
+        try
+        {
+            Directory.CreateDirectory(ProdAuthFolderAbsolute);
+            File.WriteAllBytes(ProdAuthFileAbsolutePath, fileBytes);
+            AssetDatabase.Refresh();
+        }
+        catch (Exception ex)
+        {
+            EditorUtility.DisplayDialog("Lỗi", "Không ghi được file .dat\n" + ex.Message, "OK");
+            return false;
+        }
     }
 
     string otpAuth = TotpUtility.BuildOtpAuthUri(
@@ -494,7 +510,7 @@ internal static bool GenerateAuthFileAndShowQr()
 
     EditorUtility.DisplayDialog(
         "OK",
-        $"Đã tạo auth file tại:\n{ProdAuthFileAssetPath}\n\nĐã mở QR để quét authenticator.",
+        $"Đã dùng auth file tại:\n{ProdAuthFileAssetPath}\n\nQR này luôn đồng nhất theo secret hiện tại.",
         "OK");
 
     return true;
@@ -854,6 +870,47 @@ internal static bool VerifyProdCode(string code)
             logPath = "";
         }
     }
+
+    internal static void WriteRuntimeBuildEnv(EnvironmentMode env, ApiEnvironment apiEnv)
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            AssetDatabase.CreateFolder("Assets", "Resources");
+
+        var asset = AssetDatabase.LoadAssetAtPath<AppBuildEnv>(RuntimeEnvAssetPath);
+        if (asset == null)
+        {
+            asset = ScriptableObject.CreateInstance<AppBuildEnv>();
+            AssetDatabase.CreateAsset(asset, RuntimeEnvAssetPath);
+        }
+
+        string platformName = GetPlatformName(EditorUserBuildSettings.activeBuildTarget);
+        string releasesFolder = GetReleasesFolder(env);
+
+        asset.environment = env == EnvironmentMode.Prod ? AppEnvironment.Prod : AppEnvironment.Dev;
+        asset.apiEnvironment = env == EnvironmentMode.Prod ? ApiEnvironment.Prod : apiEnv;
+
+        asset.gcsBucket = BucketName;
+        asset.addressablesRootFolder = RootFolder;
+        asset.releasesFolder = releasesFolder;
+        asset.platformName = platformName;
+        asset.remoteCatalogJsonUrl =
+            $"https://storage.googleapis.com/{BucketName}/{RootFolder}/{releasesFolder}/{platformName}/latest/catalog.json";
+        asset.remoteCatalogHashUrl =
+            $"https://storage.googleapis.com/{BucketName}/{RootFolder}/{releasesFolder}/{platformName}/latest/catalog.hash";
+
+        EditorUtility.SetDirty(asset);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        UnityEngine.Debug.Log(
+            "[AddressablesCloudAutoSetup] Runtime build env updated:\n" +
+            $"APP_ENV={asset.environment}\n" +
+            $"API_ENV={asset.apiEnvironment}\n" +
+            $"RELEASES={asset.releasesFolder}\n" +
+            $"PLATFORM={asset.platformName}\n" +
+            $"CATALOG_JSON={asset.remoteCatalogJsonUrl}"
+        );
+    }
 }
 
 internal enum EnvironmentMode
@@ -869,6 +926,8 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
     private string prodAccount;
     private string prodSecret;
     private string manualCode = "";
+
+    private ApiEnvironment apiEnvMode = ApiEnvironment.Dev;
 
     public static void Open()
     {
@@ -892,8 +951,32 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
         envMode = (EnvironmentMode)EditorGUILayout.EnumPopup("Environment", envMode);
         if (EditorGUI.EndChangeCheck())
         {
+            if (envMode == EnvironmentMode.Prod)
+                apiEnvMode = ApiEnvironment.Prod;
+
             AddressablesCloudAutoSetup.SaveEnvironmentMode(envMode);
+            AddressablesCloudAutoSetup.EnsureAddressablesSetup(envMode);
+            AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
             GUI.FocusControl(null);
+        }
+        using (new EditorGUI.DisabledScope(envMode == EnvironmentMode.Prod))
+        {
+            EditorGUI.BeginChangeCheck();
+            apiEnvMode = (ApiEnvironment)EditorGUILayout.EnumPopup("API Target", apiEnvMode);
+            if (EditorGUI.EndChangeCheck())
+            {
+                AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
+                GUI.FocusControl(null);
+            }
+        }
+
+        if (envMode == EnvironmentMode.Prod)
+        {
+            EditorGUILayout.HelpBox("Prod build sẽ khóa API = Prod.", MessageType.Warning);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("Dev build có thể chọn API Dev hoặc API Prod để test.", MessageType.Info);
         }
 
         GUILayout.Space(8);
@@ -927,6 +1010,7 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
             if (GUILayout.Button("Ensure Setup", GUILayout.Height(32)))
             {
                 AddressablesCloudAutoSetup.EnsureAddressablesSetup(envMode);
+                AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
             }
 
             GUI.backgroundColor = envMode == EnvironmentMode.Prod ? new Color(1f, 0.85f, 0.3f) : Color.green;
@@ -996,6 +1080,8 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
 
     private void TryBuild()
     {
+        AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
+
         if (envMode == EnvironmentMode.Dev)
         {
             AddressablesCloudAutoSetup.BuildAndUpload(EnvironmentMode.Dev);
