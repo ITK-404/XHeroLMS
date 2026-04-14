@@ -1014,9 +1014,12 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
             }
 
             GUI.backgroundColor = envMode == EnvironmentMode.Prod ? new Color(1f, 0.85f, 0.3f) : Color.green;
-            if (GUILayout.Button("Build + Upload", GUILayout.Height(36)))
+            if (GUILayout.Button("Build + Upload"))
             {
-                TryBuild();
+                EditorApplication.delayCall += () =>
+                {
+                    TryBuild();
+                };
             }
             GUI.backgroundColor = Color.white;
         }

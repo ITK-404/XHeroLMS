@@ -13,7 +13,8 @@ public class WebViewTest : MonoBehaviour
     private ScreenOrientation previousOrientation;
 
     [Header("Default URL")]
-    [SerializeField] private string defaultUrl = SecurityConfig.UrlWeb + "/en";
+    // [SerializeField] private string defaultUrl = SecurityConfig.UrlWeb + "/en";
+    [SerializeField] private string defaultUrl;
 
     private static string pendingUrl = "";
     private static string storeTitleCourse = "";
@@ -124,6 +125,9 @@ public class WebViewTest : MonoBehaviour
         _navigation = GetComponentInChildren<WebViewNavigation>();
         previousOrientation = Screen.orientation;
         Screen.orientation = ScreenOrientation.Portrait;
+
+        if (string.IsNullOrWhiteSpace(defaultUrl))
+            defaultUrl = SecurityConfig.UrlWeb + "/en";
 
         string targetUrl = string.IsNullOrWhiteSpace(pendingUrl) ? defaultUrl : pendingUrl;
         StartCoroutine(CreateWebView(targetUrl));

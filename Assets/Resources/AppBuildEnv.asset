@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa6f79d87a133d341bec805aa1264c8d, type: 3}
   m_Name: AppBuildEnv
   m_EditorClassIdentifier: Assembly-CSharp::AppBuildEnv
-  environment: 0
-  apiEnvironment: 0
+  environment: 1
+  apiEnvironment: 1
   gcsBucket: dlc-lms
   addressablesRootFolder: addressables
-  releasesFolder: releases-dev
+  releasesFolder: releases-prod
   platformName: android
-  remoteCatalogJsonUrl: https://storage.googleapis.com/dlc-lms/addressables/releases-dev/android/latest/catalog.json
-  remoteCatalogHashUrl: https://storage.googleapis.com/dlc-lms/addressables/releases-dev/android/latest/catalog.hash
+  remoteCatalogJsonUrl: https://storage.googleapis.com/dlc-lms/addressables/releases-prod/android/latest/catalog.json
+  remoteCatalogHashUrl: https://storage.googleapis.com/dlc-lms/addressables/releases-prod/android/latest/catalog.hash
