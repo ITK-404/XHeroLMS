@@ -6,6 +6,8 @@ using UnityEngine.AddressableAssets;
 
 public class GameInitializer : MonoBehaviour
 {
+    public static GameInitializer Instance;
+    
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Init()
     {
@@ -15,9 +17,11 @@ public class GameInitializer : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         Debug.Log("[GameInitializer] Load các tác vụ ngầm");
         LoginController.OnLoginComplete += LoginComplete;
     }
+
 
     private void Start()
     {
@@ -77,7 +81,10 @@ public class GameInitializer : MonoBehaviour
     }
 
     private GameSessionHandler gameSessionHandle;
-
+    public GameSessionHandler GameSessionHandler
+    {
+        get => gameSessionHandle;
+    }
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
     {
         var go = new GameObject(typeof(T).Name).AddComponent<T>();

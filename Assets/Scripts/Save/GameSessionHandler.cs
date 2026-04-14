@@ -17,6 +17,22 @@ public class GameSessionHandler : MonoBehaviour
     private string savePath => config.BuildSavePath();
     private string previousLoadingID;
 
+    private void Awake()
+    {
+        EventHub.OnPlayerLogout += PlayerLogoutEvent;
+    }
+
+    private void OnDestroy()
+    {
+        EventHub.OnPlayerLogout -= PlayerLogoutEvent;
+    }
+
+    private void PlayerLogoutEvent()
+    {
+        // khi đăng xuất hoặc delete data ?
+        previousLoadingID = string.Empty;
+    }
+
     public void Init(SceneLocationHandler sceneLocationHandler)
     {
         this.sceneLocationHandler = sceneLocationHandler;
@@ -108,8 +124,6 @@ public class GameSessionHandler : MonoBehaviour
         Debug.Log($"[GameSessionHandler] Bắt đầu save game session");
 
         if (!TokenStore.IsAuthenticated) return;
-
-        if (Time.time - lastSaveTime < config.MinSaveInterval) return;
 
         var player = GameObject.FindGameObjectWithTag("Player");
         if (player == null) return;
