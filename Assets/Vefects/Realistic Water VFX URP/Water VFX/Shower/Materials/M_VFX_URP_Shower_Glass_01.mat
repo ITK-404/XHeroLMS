@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_VFX_URP_Shower_Glass_01
+  m_Shader: {fileID: 4800000, guid: eb6f1ba388f0b0c4c8973a25e36c8244, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseColorTexture:
+        m_Texture: {fileID: 2800000, guid: 6c026cc7a5c18e14988f611210421a60, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseNormalTexture:
+        m_Texture: {fileID: 2800000, guid: 612f2c484b632aa4baa8d6c64ae4972e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Noise:
+        m_Texture: {fileID: 2800000, guid: fe426db6ff66e814ebcc9dafec308df1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterDripMask:
+        m_Texture: {fileID: 2800000, guid: fa2c02d18d7aa704a9e65de10de94586, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterDripsTexture:
+        m_Texture: {fileID: 2800000, guid: 1dc9c68fb7267b146b6da676d223b1ec, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterDropsMask:
+        m_Texture: {fileID: 2800000, guid: 53b6485d2fd59b44885cbde79c40ad71, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterDropsNormal:
+        m_Texture: {fileID: 2800000, guid: dd34fd10588295040bd75037baf46367, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _BaseNormalIntensity: 10
+    - _BottomMaskOffset: 0
+    - _BottomMaskPower: 1
+    - _BottomMaskWorldNormal: 0
+    - _Cull: 2
+    - _DripTextureWorldSpace: 3
+    - _DropsMaskThreshold: 0.7
+    - _DropsSpawnRate: 0.7
+    - _DropsSpecular: 0.005
+    - _DropsTextureSizeWorldSpace: 3
+    - _Dst: 10
+    - _EnvironmentReflections: 1
+    - _FresnelBias: 0
+    - _FresnelPower: 5
+    - _FresnelScale: 1
+    - _InputRoughness: 1
+    - _Maskoutdropsfrombottomofobjects: 0
+    - _NoiseIntensity: 1
+    - _NoiseSizeWorldSpace: 2
+    - _NormalIntensity: 1
+    - _Opacity: 0.02
+    - _OpacityMax: 0.3
+    - _OpacityMin: 0.1
+    - _ProjectTransitionContrast: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _RainDrippingAngleMaskPower: 5
+    - _ReceiveShadows: 1
+    - _Specular: 0.05
+    - _SpecularHighlights: 1
+    - _Src: 5
+    - _UseVertexColorAsMask: 1
+    - _UseWorldSpace: 0
+    - _ZTest: 2
+    - _ZWrite: 0
+    m_Colors:
+    - _Color01: {r: 0.38314345, g: 0.3962264, b: 0.39561146, a: 1}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _InputNormal: {r: 0, g: 0, b: 1, a: 0}
+    - _TriplanarTile: {r: 1, g: 1, b: 1, a: 0}
+    - _TriplanarTileOffsetCustom: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
