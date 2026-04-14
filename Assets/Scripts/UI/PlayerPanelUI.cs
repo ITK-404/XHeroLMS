@@ -191,6 +191,7 @@ public class PlayerPanelUI : MonoBehaviour
                     logoutPopupUI.SetInteractable(true);
 
                 isLoaded = true;
+                EventHub.RaisePlayerDeleteAccount();
                 TokenStore.Clear();
                 LoadingTransition.Load_Scene(defaultLoadScene,false);
             },

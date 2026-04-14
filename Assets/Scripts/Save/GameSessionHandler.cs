@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -14,23 +13,28 @@ public class GameSessionHandler : MonoBehaviour
     
     private float lastSaveTime;
 
-    private string savePath => config.BuildSavePath();
     private string previousLoadingID;
+    private SaveManager saveManager;
 
     private void Awake()
     {
-        EventHub.OnPlayerLogout += PlayerLogoutEvent;
+        saveManager = new();
+        EventHub.OnPlayerLogout += ClearCatchData;
+        EventHub.OnPlayerDeleteAccount += ClearCatchData;
     }
 
     private void OnDestroy()
     {
-        EventHub.OnPlayerLogout -= PlayerLogoutEvent;
+        EventHub.OnPlayerLogout -= ClearCatchData;
+        EventHub.OnPlayerDeleteAccount -= ClearCatchData;
     }
 
-    private void PlayerLogoutEvent()
+    private void ClearCatchData()
     {
-        // khi đăng xuất hoặc delete data ?
+        // dọn data vị trí, scene đã lưu
         previousLoadingID = string.Empty;
+        GameInitializer.Instance.SceneHistory.ClearHistory();
+        GameInitializer.Instance.SceneLocationHandle.Clear();
     }
 
     public void Init(SceneLocationHandler sceneLocationHandler)
@@ -55,7 +59,13 @@ public class GameSessionHandler : MonoBehaviour
     {
         public bool IsSessionValid;
     }
-
+    /// <summary>
+    /// NOTE: LUỒNG HIỆN TẠI CỦA LOAD SESSION
+    /// 1. LOADING CÁC GAME SESSION ĐƯỢC LƯU
+    /// 2. KIỂM TRA ACCOUNT HIỆN TẠI CÓ NẰM TRONG GAME SESSION ĐƯỢC LƯU KHÔNG
+    ///     2.1 KIỂM TRA SESSION CÓ HỢP LỆ KHÔNG
+    /// 3. NẾU CÓ THÌ LOAD LẠI SESSION TRƯỚC ĐÓ
+    /// </summary>
     public async UniTaskVoid StartSession()
     {
         config = await Addressables.LoadAssetAsync<GameSessionConfig>("GameSessionConfig").WithCancellation(destroyCancellationToken);
@@ -73,10 +83,10 @@ public class GameSessionHandler : MonoBehaviour
         
         Debug.Log("[GameSessionHandler] Bắt đầu game session");
         // Test        
-
-        var lastSessionData = await LoadLastSessionData();
+        var userID = TokenStore.UserID;
+        var lastSessionData = await GetLastSessionData(userID);
         
-        Result sessionValidResult = await IsSessionDataValid(lastSessionData);
+        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
 
         bool isResumeSession = sessionValidResult.IsSessionValid;
         await UniTask.SwitchToMainThread();
@@ -94,28 +104,26 @@ public class GameSessionHandler : MonoBehaviour
         }
     }
 
-    public async UniTask<GameSessionData> LoadLastSessionData()
+    public async UniTask<GameSessionData> GetLastSessionData(string userID)
     {
+        if (config == null) return null;
         if (config.canLoad == false) return null;
-        
-        if (!File.Exists(savePath))
+        var saves = saveManager.LoadAllGameSession();
+        if (saves == null || saves.Count == 0)
         {
-            Debug.LogWarning("Save file not found!");
+            Debug.Log("[GameSessionHandler] Máy này chưa có lưu game session data");
             return null;
         }
-
-        try
+        foreach (var item in saves)
         {
-            string json = await File.ReadAllTextAsync(savePath);
-            var data = JsonUtility.FromJson<GameSessionData>(json);
-            Debug.Log("Loaded from: " + savePath);
-            return data;
+            if (item.UserID == userID)
+            {
+                Debug.Log("[GameSessionHandler] Tìm thấy game session data của account id này");
+                return item;
+            }
         }
-        catch (Exception e)
-        {
-            Debug.Log(e.Message);
-            throw;
-        }
+        Debug.Log("[GameSessionHandler] Không tìm thấy data của account id này");
+        return null;
     }
 
     public async UniTask SaveSession()
@@ -130,24 +138,20 @@ public class GameSessionHandler : MonoBehaviour
         try
         {
             var rawData = GameSessionData.CaptureCurrentState(player);
-            var data = JsonUtility.ToJson(rawData);
-            await File.WriteAllTextAsync(savePath, data);
+            saveManager.SaveGameSession(rawData);
         }
         catch (Exception e)
         {
             Debug.Log(e.Message);
             throw;
         }
-
-        Debug.Log($"[GameSessionHandler] Save Session data {savePath}");
-
         lastSaveTime = Time.time;
     }
     
 
-    public async UniTask<Result> IsSessionDataValid(GameSessionData data)
+    public async UniTask<Result> CheckSessionDataValid(GameSessionData data)
     {
-        bool isCorrectAccount = TokenStore.UserID == data.UserID;
+        bool isCorrectAccount =data != null && TokenStore.UserID == data.UserID;
         bool alreadyLoaded = previousLoadingID == TokenStore.UserID;
 
         bool isResumeSession = isCorrectAccount && !alreadyLoaded;

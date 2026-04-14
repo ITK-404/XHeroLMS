@@ -50,7 +50,13 @@ public class GameInitializer : MonoBehaviour
     }
     
     private SceneNavigationHistory sceneHistory;
+
+    public SceneNavigationHistory SceneHistory => sceneHistory;
+
     private SceneLocationHandler sceneLocationHandle;
+
+    public SceneLocationHandler SceneLocationHandle => sceneLocationHandle;
+
     private async UniTaskVoid InitTask(CancellationToken ct)
     {
         await Addressables.InitializeAsync().WithCancellation(ct);
