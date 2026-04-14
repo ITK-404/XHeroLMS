@@ -6,9 +6,9 @@ using UnityEngine;
 
 public class SaveManager
 {
-    private const int MAX_SLOTS = 3;
-    private string SaveDir => Application.persistentDataPath + "/Saves";
-    private const string SAVE_PREFIX = "save_";
+    public const int MAX_SLOTS = 3;
+    public static string SaveDir => Application.persistentDataPath + "/Saves";
+    public const string SAVE_PREFIX = "save_";
     private readonly object _saveLock = new object();
 
     public void SaveGameSession(GameSessionData data)

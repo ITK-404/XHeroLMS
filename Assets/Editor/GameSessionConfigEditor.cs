@@ -40,21 +40,21 @@ public class SaveFileViewer : EditorWindow
 
     private void LoadAllSlots()
     {
-        string dir = Application.persistentDataPath + "/Saves";
+        string dir = SaveManager.SaveDir;
 
         if (!Directory.Exists(dir))
         {
-            _slots = new (GameSessionData, string)[3];
+            _slots = new (GameSessionData, string)[SaveManager.MAX_SLOTS];
             return;
         }
 
         var files = new DirectoryInfo(dir)
-            .GetFiles("save_*.json")
+            .GetFiles($"{SaveManager.SAVE_PREFIX}*.json")
             .OrderByDescending(f => f.LastWriteTime)
             .Take(3)
             .ToArray();
 
-        _slots = new (GameSessionData, string)[3];
+        _slots = new (GameSessionData, string)[SaveManager.MAX_SLOTS];
         for (int i = 0; i < files.Length; i++)
         {
             var data = JsonUtility.FromJson<GameSessionData>(File.ReadAllText(files[i].FullName));
@@ -72,7 +72,7 @@ public class SaveFileViewer : EditorWindow
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Refresh")) LoadAllSlots();
         if (GUILayout.Button("Open Folder"))
-            EditorUtility.RevealInFinder(Application.persistentDataPath + "/Saves");
+            EditorUtility.RevealInFinder(SaveManager.SaveDir);
         EditorGUILayout.EndHorizontal();
 
         GUILayout.Space(10);
