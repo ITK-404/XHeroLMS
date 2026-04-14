@@ -21,4 +21,11 @@ public class EventHub
     {
         OnPlayerLogout?.Invoke();
     }
+
+    public static event Action OnPlayerDeleteAccount;
+    
+    public static void RaisePlayerDeleteAccount()
+    {
+        OnPlayerLogout?.Invoke();
+    }
 }

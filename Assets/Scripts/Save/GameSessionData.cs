@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 public class GameSessionData
 {
     public string UserID;
-
+    public DateTime SavedAt { get; set; } = DateTime.Now;
     public SceneLocation SceneLocation;
     public CourseData CourseData;
     public static GameSessionData CaptureCurrentState(GameObject player)
