@@ -148,4 +148,9 @@ public class SceneLocationHandler : MonoBehaviour
             Debug.Log($"[SceneLocationHandle] Thêm vị trí trong scene thành công {addLocation.SceneName}");
         }
     }
+
+    public void Clear()
+    {
+        sceneLocationList.Clear();
+    }
 }

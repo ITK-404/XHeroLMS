@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using System.Collections;
+using Cysharp.Threading.Tasks;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
@@ -127,6 +128,8 @@ public class PlayerPanelUI : MonoBehaviour
         {
             request.SetRequestHeader("authorization", $"Bearer {accessToken}");
             request.timeout = 20;
+            // lưu trước khi logout
+            yield return GameInitializer.Instance.GameSessionHandler.SaveSession().ToCoroutine();
 
             yield return request.SendWebRequest();
 
@@ -146,6 +149,7 @@ public class PlayerPanelUI : MonoBehaviour
                 if (logoutPopupUI != null)
                     logoutPopupUI.Hide();
                 
+                EventHub.RaisePlayerLogout();
                 LoadingTransition.Load_Scene(defaultLoadScene,false);
             }
             else
@@ -187,6 +191,7 @@ public class PlayerPanelUI : MonoBehaviour
                     logoutPopupUI.SetInteractable(true);
 
                 isLoaded = true;
+                EventHub.RaisePlayerDeleteAccount();
                 TokenStore.Clear();
                 LoadingTransition.Load_Scene(defaultLoadScene,false);
             },

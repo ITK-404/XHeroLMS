@@ -279,7 +279,7 @@ public class PointClickSystem : MonoBehaviour
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
-                Debug.Log("Chặn bởi UI");
+                // Debug.Log("Chặn bởi UI");
                 return;
             }
 
