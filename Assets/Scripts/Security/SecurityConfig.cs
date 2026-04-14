@@ -6,13 +6,13 @@ public static class SecurityConfig
 {
     private const string XOR_KEY = "client_side_key_for_obfuscation";
 
-    private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgEcKUgXGjodDQcFA00CGwQ="; // api-dev
-    // private const string ENCODED_BASE_URL = "CxgdFR1OcFwIFAwsRgkULEgXGjodDQcFA00CGwQ="; // api-prod
+    // DEV
+    private const string ENCODED_BASE_URL_DEV =
+        "CxgdFR1OcFwIFAwsRgEcKUgXGjodDQcFA00CGwQ=";
 
-    public static string UrlWeb = "https://lms.xheroapp.com"; // api-dev
-    // public static string UrlWeb = "https://daotao.phongthuydainam.vn"; // api-prod
-
-
+    // PROD
+    private const string ENCODED_BASE_URL_PROD =
+        "CxgdFR1OcFwIFAwsRgkULEgXGjodDQcFA00CGwQ=";
 
     private static string _cachedBaseUrl;
 
@@ -21,17 +21,24 @@ public static class SecurityConfig
         if (!string.IsNullOrEmpty(_cachedBaseUrl))
             return _cachedBaseUrl;
 
-        _cachedBaseUrl = Decode(ENCODED_BASE_URL);
+        string encoded = AppBuildEnvRuntime.IsApiProd
+            ? ENCODED_BASE_URL_PROD
+            : ENCODED_BASE_URL_DEV;
+
+        _cachedBaseUrl = Decode(encoded);
         return _cachedBaseUrl;
     }
 
-    // === clear cache để lần sau decode lại (dùng khi switch env runtime) ===
+    public static string UrlWeb =>
+        AppBuildEnvRuntime.IsApiProd
+            ? "https://daotao.phongthuydainam.vn"
+            : "https://lms.xheroapp.com";
+
     public static void ClearCache()
     {
         _cachedBaseUrl = null;
     }
 
-    // === force decode ngay lập tức ===
     public static string ForceRefreshAndGet()
     {
         ClearCache();

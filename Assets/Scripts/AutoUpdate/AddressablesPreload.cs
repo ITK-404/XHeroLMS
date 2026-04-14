@@ -51,11 +51,8 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private bool enableProbeRemoteCatalog = true;
     [SerializeField] private int probeReadBytes = 64;
 
-    [SerializeField] private string remoteCatalogHashUrl =
-        "https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.hash";
-
-    [SerializeField] private string remoteCatalogJsonUrl =
-        "https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.json";
+    private string remoteCatalogHashUrl = "";
+    private string remoteCatalogJsonUrl = "";
 
     [Header("Force latest catalog (Recommended)")]
     [Tooltip("Nếu bật: sau Initialize sẽ LoadContentCatalogAsync(remoteCatalogJsonUrl) để ép runtime dùng catalog latest.")]
@@ -90,6 +87,8 @@ public class AddressablesPreload : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
 #if ADDRESSABLES
+        ApplyUrlsFromRuntimeEnv();
+
         if (enableAddressablesRequestLog)
         {
             Addressables.WebRequestOverride = (req) =>
@@ -112,6 +111,30 @@ public class AddressablesPreload : MonoBehaviour
     }
 
 #if ADDRESSABLES
+
+    private void ApplyUrlsFromRuntimeEnv()
+    {
+        if (!AppBuildEnvRuntime.HasConfig)
+        {
+            Debug.LogWarning("[Preload] Missing AppBuildEnv.asset in Resources/AppBuildEnv. Fallback to inspector URLs.");
+            return;
+        }
+
+        remoteCatalogJsonUrl = AppBuildEnvRuntime.RemoteCatalogJsonUrl;
+        remoteCatalogHashUrl = AppBuildEnvRuntime.RemoteCatalogHashUrl;
+
+        Debug.Log(
+            "[Preload] Runtime ENV loaded:\n" +
+            $"APP_ENV={AppBuildEnvRuntime.EnvironmentName}\n" +
+            $"API_ENV={AppBuildEnvRuntime.ApiEnvironmentName}\n" +
+            $"RELEASES={AppBuildEnvRuntime.ReleasesFolder}\n" +
+            $"PLATFORM={AppBuildEnvRuntime.PlatformName}\n" +
+            $"GCS_BUCKET={AppBuildEnvRuntime.GcsBucket}\n" +
+            $"ROOT={AppBuildEnvRuntime.AddressablesRootFolder}\n" +
+            $"CATALOG_JSON={remoteCatalogJsonUrl}\n" +
+            $"CATALOG_HASH={remoteCatalogHashUrl}"
+        );
+    }
 
     private IEnumerator RunPreloadFlow()
     {
@@ -158,10 +181,14 @@ public class AddressablesPreload : MonoBehaviour
 
     private IEnumerator CoPreloadOnce(int attempt)
     {
-        // để báo lỗi sớm
-        if (enableProbeRemoteCatalog &&
-            !string.IsNullOrWhiteSpace(remoteCatalogHashUrl) &&
-            !string.IsNullOrWhiteSpace(remoteCatalogJsonUrl))
+        if (string.IsNullOrWhiteSpace(remoteCatalogJsonUrl) || string.IsNullOrWhiteSpace(remoteCatalogHashUrl))
+        {
+            Fail("[Preload] Remote catalog URLs are empty. Check AppBuildEnv.asset or inspector fallback values.");
+            yield break;
+        }
+
+        // Báo lỗi sớm
+        if (enableProbeRemoteCatalog)
         {
             Stage = PreloadStage.Probe;
             SetStageProgress(0.02f);
@@ -181,7 +208,7 @@ public class AddressablesPreload : MonoBehaviour
             ClearAddressablesCatalogCache();
         }
 
-        // Khởi tạo
+        // Initialize
         Stage = PreloadStage.Initialize;
         SetStageProgress(0.05f);
 
@@ -201,10 +228,11 @@ public class AddressablesPreload : MonoBehaviour
             SafeRelease(init);
             yield break;
         }
+
         SafeRelease(init);
 
-        // đảm bảo luôn dùng /latest/
-        if (forceLoadRemoteCatalog && !string.IsNullOrWhiteSpace(remoteCatalogJsonUrl))
+        // Force latest catalog
+        if (forceLoadRemoteCatalog)
         {
             Stage = PreloadStage.ForceLoadCatalog;
             SetStageProgress(0.08f);
@@ -380,8 +408,10 @@ public class AddressablesPreload : MonoBehaviour
                 SafeRelease(dl);
 
                 downloadedBytesApprox += thisLabelBytes;
-                DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f,
-                    (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes)));
+                DownloadPercent01 = Mathf.Max(
+                    DownloadPercent01,
+                    Mathf.Lerp(0.35f, 1f, (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes))
+                );
             }
         }
 
