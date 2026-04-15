@@ -44,11 +44,22 @@ public class SaveManager
     {
         if (!Directory.Exists(SaveDir)) return new List<GameSessionData>();
 
-        return GetSaveFilesSortedByDate()
-            .Reverse()
-            .Select(f => JsonUtility.FromJson<GameSessionData>(File.ReadAllText(f.FullName)))
-            .Where(d => d != null && !string.IsNullOrEmpty(d.UserID))
-            .ToList();
+        var files = GetSaveFilesSortedByDate().Reverse();
+        var result = new List<GameSessionData>();
+
+        foreach (var f in files)
+        {
+            var data = JsonUtility.FromJson<GameSessionData>(File.ReadAllText(f.FullName));
+            if (data == null || data.SaveVersion != GameSessionData.CurrentVersion)
+            {
+                File.Delete(f.FullName);
+                continue;
+            }
+            if (!string.IsNullOrEmpty(data.UserID))
+                result.Add(data);
+        }
+
+        return result;
     }
 
     private FileInfo[] GetSaveFilesSortedByDate()
