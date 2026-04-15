@@ -7,6 +7,8 @@ using UnityEngine.UIElements;
 public class GameSessionData
 {
     public string UserID;
+    public string SaveVersion;
+    public static string CurrentVersion => Application.version;
     public DateTime SavedAt { get; set; } = DateTime.Now;
     public SceneLocation SceneLocation;
     public CourseData CourseData;
@@ -14,6 +16,7 @@ public class GameSessionData
     {
         return new GameSessionData
         {
+            SaveVersion = Application.version,
             UserID   = TokenStore.UserID,
             SceneLocation = CaptureFromPlayer(player),
             CourseData = CaptureCourseData()
