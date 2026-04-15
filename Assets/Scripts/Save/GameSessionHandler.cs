@@ -165,7 +165,6 @@ public class GameSessionHandler : MonoBehaviour
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
         // load by session data
-        Debug.Log($"[GameSessionHandler] seo id là {seoId}");
         if (data.CourseData != null && string.IsNullOrEmpty(data.CourseData.seoId))
         {
             var seoId = data.CourseData.seoId;
