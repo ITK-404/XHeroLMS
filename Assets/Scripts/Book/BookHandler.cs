@@ -49,7 +49,6 @@ public class BookHandler : MonoBehaviour
             bookHandleUI.enterCourseBtn.onClick.RemoveListener(EnterCourse);
             bookHandleUI.buyCourseBtn.onClick.RemoveListener(BuyCourse);
         }
-
         if (bookModel != null)
             bookModel.OnPlayerClickBook -= OnPlayerClickBook;
     }

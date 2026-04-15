@@ -33,6 +33,7 @@ public static class AddressablesCloudAutoSetup
     private const bool AutoBumpPatch = false;
 
     private const string PrefEnvMode = "AddressablesCloudAutoSetup.EnvMode";
+    private const string PrefDevApiMode = "AddressablesCloudAutoSetup.DevApiMode";
     private const string PrefProdAuthBlob = "AddressablesCloudAutoSetup.ProdAuthBlob";
 
     private const string DefaultProdIssuer = "LMS3D-PROD";
@@ -81,7 +82,13 @@ public static class AddressablesCloudAutoSetup
 
     static AddressablesCloudAutoSetup()
     {
-        EnsureAddressablesSetup(GetSavedEnvironmentMode());
+        var env = GetSavedEnvironmentMode();
+        var apiEnv = env == EnvironmentMode.Prod
+            ? ApiEnvironment.Prod
+            : GetSavedDevApiEnvironment();
+
+        EnsureAddressablesSetup(env);
+        WriteRuntimeBuildEnv(env, apiEnv);
     }
 
     internal static bool IsAdminMachine()
@@ -247,7 +254,11 @@ public static class AddressablesCloudAutoSetup
 
         SaveEnvironmentMode(env);
         EnsureAddressablesSetup(env);
+var apiEnv = env == EnvironmentMode.Prod
+    ? ApiEnvironment.Prod
+    : GetSavedDevApiEnvironment();
 
+WriteRuntimeBuildEnv(env, apiEnv);
         var settings = AddressableAssetSettingsDefaultObject.Settings;
         if (settings == null)
         {
@@ -413,6 +424,22 @@ public static class AddressablesCloudAutoSetup
     internal static void SaveEnvironmentMode(EnvironmentMode env)
     {
         EditorPrefs.SetInt(PrefEnvMode, (int)env);
+    }
+    internal static ApiEnvironment GetSavedDevApiEnvironment()
+    {
+        int raw = EditorPrefs.GetInt(PrefDevApiMode, (int)ApiEnvironment.Dev);
+        if (!Enum.IsDefined(typeof(ApiEnvironment), raw))
+            raw = (int)ApiEnvironment.Dev;
+
+        return (ApiEnvironment)raw;
+    }
+
+    internal static void SaveDevApiEnvironment(ApiEnvironment apiEnv)
+    {
+        // Dev mode mới được lưu pref này.
+        // Nếu ai lỡ truyền Prod vào đây thì vẫn ép về Dev cho an toàn.
+        if (apiEnv == ApiEnvironment.Prod || apiEnv == ApiEnvironment.Dev)
+            EditorPrefs.SetInt(PrefDevApiMode, (int)apiEnv);
     }
 
 internal static bool HasProdAuthFile()
@@ -939,6 +966,9 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
     private void OnEnable()
     {
         envMode = AddressablesCloudAutoSetup.GetSavedEnvironmentMode();
+        apiEnvMode = envMode == EnvironmentMode.Prod
+            ? ApiEnvironment.Prod
+            : AddressablesCloudAutoSetup.GetSavedDevApiEnvironment();
     }
 
     private void OnGUI()
@@ -952,9 +982,20 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
         if (EditorGUI.EndChangeCheck())
         {
             if (envMode == EnvironmentMode.Prod)
+            {
                 apiEnvMode = ApiEnvironment.Prod;
+            }
+            else
+            {
+                // Khi quay lại Dev thì khôi phục lựa chọn Dev API trước đó
+                apiEnvMode = AddressablesCloudAutoSetup.GetSavedDevApiEnvironment();
+            }
 
             AddressablesCloudAutoSetup.SaveEnvironmentMode(envMode);
+
+            if (envMode == EnvironmentMode.Dev)
+                AddressablesCloudAutoSetup.SaveDevApiEnvironment(apiEnvMode);
+
             AddressablesCloudAutoSetup.EnsureAddressablesSetup(envMode);
             AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
             GUI.FocusControl(null);
@@ -965,6 +1006,7 @@ internal sealed class AddressablesBuildAndUploadWindow : EditorWindow
             apiEnvMode = (ApiEnvironment)EditorGUILayout.EnumPopup("API Target", apiEnvMode);
             if (EditorGUI.EndChangeCheck())
             {
+                AddressablesCloudAutoSetup.SaveDevApiEnvironment(apiEnvMode);
                 AddressablesCloudAutoSetup.WriteRuntimeBuildEnv(envMode, apiEnvMode);
                 GUI.FocusControl(null);
             }
