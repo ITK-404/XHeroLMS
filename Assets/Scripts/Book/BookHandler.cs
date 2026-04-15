@@ -125,7 +125,7 @@ public class BookHandler : MonoBehaviour
 
         SeoResolver.seoCourse = book_seo;
 
-        yield return null; // bỏ wait 1s cho nhanh
+        yield return null;
         yield return SeoResolver.LoadPrivateAndFillData();
 
         LoadingUI.Hide();
@@ -142,23 +142,15 @@ public class BookHandler : MonoBehaviour
             yield break;
         }
 
-        // Vào scene theo seo như cũ
-        if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii")
-        {
-            AudioManager.Instance.Resume();
-            // LoadingTransition.Load("dai_dao_chi_gian_2");
-            LoadingTransition.Load_Scene("dai_dao_chi_gian_2");
-        }
-        else if (book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
-                 book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
-                 book_seo == "cong-dong-phong-thuy-khoa-hoc" ||
-                 book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep")
-        {
-            // LoadingTransition.Load(SeoResolver.DefaultScene);
-            LoadingTransition.Load_Scene(SeoResolver.DefaultScene);
-            AudioManager.Instance.Resume();
-        }
-        else
+        // Giữ logic cũ: chỉ xử lý các SEO đang hỗ trợ
+        bool isSupportedSeo =
+            book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-ii" ||
+            book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-i" ||
+            book_seo == "dai-dao-chi-gian-phong-thuy-co-hoc-(trai-nghiem)" ||
+            book_seo == "cong-dong-phong-thuy-khoa-hoc" ||
+            book_seo == "tro-chuyen-ve-phong-thuy-quan-tri-nang-luong-doanh-nghiep";
+
+        if (!isSupportedSeo)
         {
             BookHandler.CanSelectBook = false;
             LoadingUI.ShowErrorPopup(
@@ -166,7 +158,40 @@ public class BookHandler : MonoBehaviour
                 "Thông báo",
                 () => { BookHandler.CanSelectBook = true; }
             );
+            yield break;
         }
+
+        // Quyết định scene mới
+        string targetScene = null;
+
+        string courseId = SeoResolver.lastResolvedCourseId;
+        var market = !string.IsNullOrEmpty(courseId) ? LmsStore.Instance.GetMarketCourse(courseId) : null;
+
+        bool isFree = market != null && market.isFree;
+        bool isJoined = market != null && market.isJoined;
+
+        if (isFree)
+        {
+            targetScene = "dai_dao_chi_gian_1";
+        }
+        else if (isJoined)
+        {
+            targetScene = "dai_dao_chi_gian_2";
+        }
+
+        if (string.IsNullOrEmpty(targetScene))
+        {
+            BookHandler.CanSelectBook = false;
+            LoadingUI.ShowErrorPopup(
+                "Phiên bản hiện tại chưa hỗ trợ.\nVui lòng thử lại sau hoặc chọn khóa học khác.",
+                "Thông báo",
+                () => { BookHandler.CanSelectBook = true; }
+            );
+            yield break;
+        }
+
+        AudioManager.Instance.Resume();
+        LoadingTransition.Load_Scene(targetScene);
     }
 
     public void SetBuyCourse(bool state)
