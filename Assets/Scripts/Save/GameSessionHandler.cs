@@ -165,10 +165,11 @@ public class GameSessionHandler : MonoBehaviour
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
         // load by session data
-        var seoId = data.CourseData.seoId;
         Debug.Log($"[GameSessionHandler] seo id là {seoId}");
-        if (!string.IsNullOrEmpty(seoId))
+        if (data.CourseData != null && string.IsNullOrEmpty(data.CourseData.seoId))
         {
+            var seoId = data.CourseData.seoId;
+            
             Debug.Log("[GameSessionHandler] Fetech data và thử load khoá học");
             //fetech data xong moi laod
             SeoResolver.seoCourse = seoId;
@@ -197,7 +198,6 @@ public class GameSessionHandler : MonoBehaviour
             }
             Debug.Log("[GameSessionHandler] Không thể load khoá học");
         }
-        
     }
 
     public void LoadDefaultSession()
