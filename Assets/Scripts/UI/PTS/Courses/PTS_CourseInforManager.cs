@@ -12,5 +12,6 @@ public class PTS_CourseInforManager : PTS_CourseSectionBase
     public override void Hide()
     {
         ActiveList(false);
+        videoControllerTest.GetComponent<VideoPlayerCore>().Stop();
     }
 }
