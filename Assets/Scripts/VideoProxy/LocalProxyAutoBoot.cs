@@ -23,7 +23,7 @@ public class LocalProxyAutoBoot : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         // tùy bạn: nếu muốn tắt khi scene unload
-        // AndroidLocalVideoProxy.Stop();
+        // AndroidLocalVideoProxy.Stop();\
 #endif
     }
 
