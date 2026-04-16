@@ -39,9 +39,9 @@ public class VideoControllerTest : MonoBehaviour
 
     private void CourseDetailStaticStoreOnOnChanged()
     {
-        Debug.Log($"Video Intro: "+CourseDetailStaticStore.VideoIntro);
-        Debug.Log($"Video Intro: "+CourseDetailStaticStore.CurrentCourseId);
-        core.LoadAndPlay(CourseDetailStaticStore.VideoIntro,"");
+        // Debug.Log($"Video Intro: "+CourseDetailStaticStore.VideoIntro);
+        // Debug.Log($"Video Intro: "+CourseDetailStaticStore.CurrentCourseId);
+        core.LoadAndPlay(CourseDetailStaticStore.VideoIntro, CourseDetailStaticStore.GetFirstBanner());
     }
 
     public void ShowViewA()
