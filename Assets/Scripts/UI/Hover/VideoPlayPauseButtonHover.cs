@@ -3,7 +3,7 @@ using UnityEngine;
 public class VideoPlayPauseButtonHover : HoverButtonBase
 {
     [SerializeField] private VideoPlayerControllerPro videoPlayer;
-
+    
     [SerializeField] private Sprite playSprite;
     [SerializeField] private Sprite playSpriteHover;
 
@@ -13,16 +13,18 @@ public class VideoPlayPauseButtonHover : HoverButtonBase
     private bool isPlaying = true;
     private void Awake()
     {
-        videoPlayer.OnPlayStateChanged.AddListener(VideoPlayer_OnPlayStateChanged);
+        if(videoPlayer)
+            videoPlayer.OnPlayStateChanged.AddListener(VideoPlayer_OnPlayStateChanged);
         HandleSprite(isPlaying);
     }
 
     private void OnDestroy()
     {
-        videoPlayer.OnPlayStateChanged.RemoveListener(VideoPlayer_OnPlayStateChanged);
+        if(videoPlayer)
+            videoPlayer.OnPlayStateChanged.RemoveListener(VideoPlayer_OnPlayStateChanged);
     }
 
-    private void VideoPlayer_OnPlayStateChanged(bool isPlay)
+    public void VideoPlayer_OnPlayStateChanged(bool isPlay)
     {
         isPlaying = isPlay;
         HandleSprite(isPlaying);
