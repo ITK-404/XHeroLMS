@@ -44,11 +44,15 @@ public class VideoControllerTest : MonoBehaviour
         core.LoadAndPlay(CourseDetailStaticStore.VideoIntro,"");
     }
 
-    [ContextMenu("SnapView")]
-    public void SwapView()
+    public void ShowViewA()
     {
-        bool aActive = viewA.gameObject.activeSelf;
-        viewA.gameObject.SetActive(!aActive);  // OnDisable → Unbind tự động
-        viewB.gameObject.SetActive(aActive);   // OnEnable  → Bind tự động
+        viewA.gameObject.SetActive(true);  
+        viewB.gameObject.SetActive(false);  
+    }
+    
+    public void ShowViewB()
+    {
+        viewA.gameObject.SetActive(false);  
+        viewB.gameObject.SetActive(true);   
     }
 }
