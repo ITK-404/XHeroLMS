@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CourseProductListBuilder : MonoBehaviour
 {
@@ -7,6 +8,7 @@ public class CourseProductListBuilder : MonoBehaviour
     [SerializeField] private Transform contentParent;
     [SerializeField] private CourseProductItemUI itemPrefab;
     [SerializeField] private GameObject xheroOpenDeepLinkBtn;
+    [SerializeField] private Button btn;
     [Header("Behavior")]
     [SerializeField] private bool buildOnEnable = true;
     [SerializeField] private bool listenStoreChanged = true;
@@ -21,14 +23,26 @@ public class CourseProductListBuilder : MonoBehaviour
 
         if (buildOnEnable)
             Rebuild();
+        if(btn)
+            btn.onClick.AddListener(OpenXheroApp);
     }
 
     private void OnDisable()
     {
         if (listenStoreChanged)
             CourseDetailStaticStore.OnChanged -= HandleStoreChanged;
+        
+        if(btn)
+            btn.onClick.RemoveListener(OpenXheroApp);
+        
     }
 
+    private void OpenXheroApp()
+    {
+        Debug.Log("Deeplink open app external");
+        Application.OpenURL("xhero://");
+    }
+    
     private void HandleStoreChanged()
     {
         Rebuild();

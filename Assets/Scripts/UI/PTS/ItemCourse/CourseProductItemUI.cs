@@ -135,7 +135,8 @@ public class CourseProductItemUI : MonoBehaviour
         // fallback nếu item không có productId mà chỉ có externalUrl
         if (!string.IsNullOrWhiteSpace(_externalUrl))
         {
-            WebViewTest.LoadWebView(_externalUrl,"@@@@@@@");
+            // WebViewTest.LoadWebView(_externalUrl,"@@@@@@@");
+            WebViewTest.LoadWebView(_externalUrl,"");
             return;
         }
 
