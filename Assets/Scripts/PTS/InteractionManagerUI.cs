@@ -16,6 +16,7 @@ public class InteractionManagerUI : MonoBehaviour
 
     public void OnExitNoneView()
     {
+        PlayerPanelUI.Instance.ShowAll();
         InputBlocker.SetBlocked(false);
         //apiInstance.gameObject.SetActive(false);
         
@@ -27,6 +28,7 @@ public class InteractionManagerUI : MonoBehaviour
 
     public void OnEnterCourseView()
     {
+        PlayerPanelUI.Instance.HideAll();
         InputBlocker.SetBlocked(true);
         
         UIManager.CourseMenuButtons.Hide();
