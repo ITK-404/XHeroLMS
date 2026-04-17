@@ -22,6 +22,13 @@ public class FCMManager : MonoBehaviour
     [Header("Foreground Local Notification")]
     [SerializeField] private bool showLocalNotificationWhenAppIsOpen = true;
 
+#if UNITY_IOS
+    // OFF để tránh cảm giác spam/đúp.
+    private bool showIOSForegroundBannerWhenAppIsOpen = false;
+
+    private bool requestIOSAuthorizationOnStart = true;
+#endif
+
 #if UNITY_ANDROID
     [Header("Android Local Notification")]
     [SerializeField] private string androidChannelId = "fcm_default_channel";
@@ -30,21 +37,24 @@ public class FCMManager : MonoBehaviour
     [SerializeField] private string androidSmallIcon = "default";
 #endif
 
-#if UNITY_IOS
-    [Header("iOS Local Notification")]
-    [SerializeField] private bool requestIOSAuthorizationOnStart = true;
-#endif
-
     private static FCMManager _instance;
 
     private bool _initialized;
     private bool _eventsRegistered;
     private bool _appInForeground = true;
-
-    private string _lastHandledMessageId;
-    private float _lastHandledRealtime;
+    private bool _openedFromNotificationRaised;
 
     private string _currentFcmToken;
+
+    private readonly Dictionary<string, float> _handledMessageIds = new Dictionary<string, float>();
+    private const float DuplicateWindowSeconds = 10f;
+
+#if UNITY_IOS
+    private AuthorizationRequest _iosAuthRequest;
+    private string _lastIosForegroundTitle;
+    private string _lastIosForegroundBody;
+    private float _lastIosForegroundShownTime;
+#endif
 
     public static event Action OnPushNotificationReceived;
     public static event Action OnAppResumed;
@@ -68,6 +78,7 @@ public class FCMManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _currentFcmToken = PlayerPrefs.GetString(PlayerPrefsFcmTokenKey, "");
+        _appInForeground = Application.isFocused;
 
 #if UNITY_ANDROID
         RegisterAndroidNotificationChannel();
@@ -82,7 +93,7 @@ public class FCMManager : MonoBehaviour
     {
 #if UNITY_IOS
         if (requestIOSAuthorizationOnStart)
-            RequestIOSAuthorization();
+            StartCoroutine(RequestIOSAuthorizationCoroutine());
 #endif
 
         InitializeFirebase();
@@ -116,6 +127,7 @@ public class FCMManager : MonoBehaviour
     {
 #if UNITY_IOS
         UnregisterIOSNotificationHooks();
+        DisposeIOSAuthorizationRequest();
 #endif
 
         if (_instance == this)
@@ -162,8 +174,13 @@ public class FCMManager : MonoBehaviour
     private void CheckIfOpenedFromAndroidNotification()
     {
         var intentData = AndroidNotificationCenter.GetLastNotificationIntent();
-        if (intentData == null) return;
+        if (intentData == null)
+            return;
 
+        if (_openedFromNotificationRaised)
+            return;
+
+        _openedFromNotificationRaised = true;
         Debug.Log("[FCM] App opened from Android notification.");
         OnOpenedFromNotification?.Invoke();
     }
@@ -186,14 +203,36 @@ public class FCMManager : MonoBehaviour
         Debug.Log("[FCM] iOS local notification received by OS. title=" + notification.Title);
     }
 
-    private void RequestIOSAuthorization()
+    private IEnumerator RequestIOSAuthorizationCoroutine()
     {
-        var authorizationOption = AuthorizationOption.Alert | AuthorizationOption.Badge | AuthorizationOption.Sound;
-        using var req = new AuthorizationRequest(authorizationOption, true);
-        Debug.Log("[FCM] iOS authorization requested.");
+        DisposeIOSAuthorizationRequest();
+
+        var options = AuthorizationOption.Alert | AuthorizationOption.Badge | AuthorizationOption.Sound;
+        _iosAuthRequest = new AuthorizationRequest(options, true);
+
+        while (!_iosAuthRequest.IsFinished)
+            yield return null;
+
+        Debug.Log(
+            "[FCM] iOS authorization finished. " +
+            "granted=" + _iosAuthRequest.Granted +
+            " error=" + _iosAuthRequest.Error +
+            " deviceToken=" + Safe(_iosAuthRequest.DeviceToken)
+        );
+
+        DisposeIOSAuthorizationRequest();
     }
 
-    private void ShowIOSLocalNotification(string title, string body)
+    private void DisposeIOSAuthorizationRequest()
+    {
+        if (_iosAuthRequest != null)
+        {
+            _iosAuthRequest.Dispose();
+            _iosAuthRequest = null;
+        }
+    }
+
+    private void ShowIOSForegroundLocalNotification(string title, string body)
     {
         if (string.IsNullOrWhiteSpace(title))
             title = "Thông báo mới";
@@ -201,9 +240,22 @@ public class FCMManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(body))
             body = "Bạn có thông báo mới.";
 
+        // Chặn spam cùng nội dung trong thời gian ngắn
+        if (_lastIosForegroundTitle == title &&
+            _lastIosForegroundBody == body &&
+            Time.realtimeSinceStartup - _lastIosForegroundShownTime < 3f)
+        {
+            Debug.Log("[FCM] iOS foreground local notification skipped (same content too soon).");
+            return;
+        }
+
+        _lastIosForegroundTitle = title;
+        _lastIosForegroundBody = body;
+        _lastIosForegroundShownTime = Time.realtimeSinceStartup;
+
         var trigger = new iOSNotificationTimeIntervalTrigger
         {
-            TimeInterval = new TimeSpan(0, 0, 1),
+            TimeInterval = TimeSpan.FromSeconds(0.1f),
             Repeats = false
         };
 
@@ -219,7 +271,7 @@ public class FCMManager : MonoBehaviour
         };
 
         iOSNotificationCenter.ScheduleNotification(notification);
-        Debug.Log("[FCM] iOS local notification scheduled.");
+        Debug.Log("[FCM] iOS foreground local notification scheduled.");
     }
 #endif
 
@@ -247,9 +299,9 @@ public class FCMManager : MonoBehaviour
             }
 
             _initialized = true;
-            RegisterFirebaseEvents();
-
             FirebaseMessaging.TokenRegistrationOnInitEnabled = true;
+
+            RegisterFirebaseEvents();
 
             if (permissionRequester == null)
                 permissionRequester = GetComponent<NotificationPermissionRequester>();
@@ -257,11 +309,19 @@ public class FCMManager : MonoBehaviour
             if (permissionRequester != null)
                 permissionRequester.RequestPermissionIfNeeded();
 
+            // Chủ động lấy token thật sau khi init xong
+            RequestCurrentToken("InitializeFirebase");
         });
     }
 
     public void RequestCurrentToken(string source = "ManualRequest")
     {
+        if (!_initialized)
+        {
+            Debug.LogWarning("[FCM] RequestCurrentToken ignored because Firebase is not initialized yet. source=" + source);
+            return;
+        }
+
         FirebaseMessaging.GetTokenAsync().ContinueWithOnMainThread(tokenTask =>
         {
             if (tokenTask.IsFaulted || tokenTask.IsCanceled)
@@ -307,32 +367,41 @@ public class FCMManager : MonoBehaviour
             yield return null;
         }
 
-        string fallback = GetBestKnownFcmToken();
-        onDone?.Invoke(fallback);
+        onDone?.Invoke(GetBestKnownFcmToken());
     }
 
     private void RegisterFirebaseEvents()
     {
-        if (_eventsRegistered) return;
+        if (_eventsRegistered)
+            return;
 
         FirebaseMessaging.TokenReceived += OnTokenReceived;
         FirebaseMessaging.MessageReceived += OnMessageReceived;
         _eventsRegistered = true;
+
+        Debug.Log("[FCM] Firebase messaging events registered.");
     }
 
     private void UnregisterFirebaseEvents()
     {
-        if (!_eventsRegistered) return;
+        if (!_eventsRegistered)
+            return;
 
         FirebaseMessaging.TokenReceived -= OnTokenReceived;
         FirebaseMessaging.MessageReceived -= OnMessageReceived;
         _eventsRegistered = false;
+
+        Debug.Log("[FCM] Firebase messaging events unregistered.");
     }
 
     private void OnTokenReceived(object sender, TokenReceivedEventArgs tokenArgs)
     {
         string token = tokenArgs != null ? tokenArgs.Token : string.Empty;
-        RequestCurrentToken("InitializeFirebase");
+        SaveFcmToken(token, "OnTokenReceived");
+
+        // Gọi lại GetTokenAsync để chắc chắn lấy token usable mới nhất
+        if (_initialized)
+            RequestCurrentToken("OnTokenReceivedRefresh");
     }
 
     private void SaveFcmToken(string token, string source)
@@ -350,7 +419,6 @@ public class FCMManager : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log("[FCM] Token saved from " + source + " | preview=" + GetTokenPreview(token) + " | changed=" + changed);
-
         OnFcmTokenReady?.Invoke(token);
     }
 
@@ -370,8 +438,35 @@ public class FCMManager : MonoBehaviour
             return;
         }
 
-        string title = null;
-        string body = null;
+        ExtractVisibleContent(msg, out string title, out string body);
+        bool hasVisibleContent = !string.IsNullOrWhiteSpace(title) || !string.IsNullOrWhiteSpace(body);
+
+        Debug.Log(BuildMessageLog(msg, title, body));
+
+        // App đang mở: xử lý foreground
+        if (_appInForeground && showLocalNotificationWhenAppIsOpen && hasVisibleContent)
+        {
+#if UNITY_ANDROID
+            ShowAndroidLocalNotification(title, body);
+#elif UNITY_IOS
+            // iOS mặc định nên để OFF để tránh cảm giác spam/đúp
+            if (showIOSForegroundBannerWhenAppIsOpen)
+                ShowIOSForegroundLocalNotification(title, body);
+            else
+                Debug.Log("[FCM] iOS foreground message received. Skipped local banner to avoid duplicate/spam.");
+#else
+            Debug.Log("[FCM] Foreground local notification not implemented on this platform.");
+#endif
+        }
+
+        // Quan trọng: event này vẫn luôn bắn để app đang mở có thể reload UI/inbox/chat
+        OnPushNotificationReceived?.Invoke();
+    }
+
+    private static void ExtractVisibleContent(FirebaseMessage msg, out string title, out string body)
+    {
+        title = null;
+        body = null;
 
         if (msg.Notification != null)
         {
@@ -379,29 +474,24 @@ public class FCMManager : MonoBehaviour
             body = msg.Notification.Body;
         }
 
-        if (msg.Data != null && msg.Data.Count > 0)
-        {
-            foreach (KeyValuePair<string, string> kv in msg.Data)
-            {
-                if (string.IsNullOrWhiteSpace(title) &&
-                    kv.Key.Equals("title", StringComparison.OrdinalIgnoreCase))
-                    title = kv.Value;
+        if (msg.Data == null || msg.Data.Count <= 0)
+            return;
 
-                if (string.IsNullOrWhiteSpace(body) &&
-                    (kv.Key.Equals("body", StringComparison.OrdinalIgnoreCase) ||
-                     kv.Key.Equals("message", StringComparison.OrdinalIgnoreCase)))
-                    body = kv.Value;
+        foreach (KeyValuePair<string, string> kv in msg.Data)
+        {
+            if (string.IsNullOrWhiteSpace(title) &&
+                kv.Key.Equals("title", StringComparison.OrdinalIgnoreCase))
+            {
+                title = kv.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(body) &&
+                (kv.Key.Equals("body", StringComparison.OrdinalIgnoreCase) ||
+                 kv.Key.Equals("message", StringComparison.OrdinalIgnoreCase)))
+            {
+                body = kv.Value;
             }
         }
-
-        Debug.Log(BuildMessageLog(msg, title, body));
-
-        if (_appInForeground && showLocalNotificationWhenAppIsOpen)
-        {
-            ShowForegroundLocalNotification(title, body);
-        }
-
-        OnPushNotificationReceived?.Invoke();
     }
 
     private string BuildMessageLog(FirebaseMessage msg, string title, string body)
@@ -432,30 +522,40 @@ public class FCMManager : MonoBehaviour
         return sb.ToString();
     }
 
-    private void ShowForegroundLocalNotification(string title, string body)
-    {
-#if UNITY_ANDROID
-        ShowAndroidLocalNotification(title, body);
-#elif UNITY_IOS
-        ShowIOSLocalNotification(title, body);
-#else
-        Debug.Log("[FCM] Foreground local notification not implemented on this platform.");
-#endif
-    }
-
     private bool IsDuplicateMessage(string messageId)
     {
         if (string.IsNullOrWhiteSpace(messageId))
             return false;
 
-        if (_lastHandledMessageId == messageId &&
-            Time.realtimeSinceStartup - _lastHandledRealtime < 5f)
+        float now = Time.realtimeSinceStartup;
+
+        if (_handledMessageIds.Count > 0)
         {
-            return true;
+            List<string> expiredKeys = null;
+
+            foreach (var kv in _handledMessageIds)
+            {
+                if (now - kv.Value > DuplicateWindowSeconds)
+                {
+                    expiredKeys ??= new List<string>();
+                    expiredKeys.Add(kv.Key);
+                }
+            }
+
+            if (expiredKeys != null)
+            {
+                for (int i = 0; i < expiredKeys.Count; i++)
+                    _handledMessageIds.Remove(expiredKeys[i]);
+            }
         }
 
-        _lastHandledMessageId = messageId;
-        _lastHandledRealtime = Time.realtimeSinceStartup;
+        if (_handledMessageIds.TryGetValue(messageId, out float lastTime))
+        {
+            if (now - lastTime < DuplicateWindowSeconds)
+                return true;
+        }
+
+        _handledMessageIds[messageId] = now;
         return false;
     }
 
