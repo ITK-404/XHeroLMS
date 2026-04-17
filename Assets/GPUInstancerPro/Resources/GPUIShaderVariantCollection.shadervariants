@@ -8,6 +8,27 @@ ShaderVariantCollection:
   m_PrefabAsset: {fileID: 0}
   m_Name: GPUIShaderVariantCollection
   m_Shaders:
+  - first: {fileID: 4800000, guid: 0e9d5a909a1f7e84882a534d0d11e49f, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE
+        passType: 0
+  - first: {fileID: -6465566751694194690, guid: 9920c1f1781549a46ba081a2a15a16ec, type: 3}
+    second:
+      variants:
+      - keywords: BACKFACE_NORMAL_MODE_FLIP EFFECT_BILLBOARD LOD_FADE_CROSSFADE _WINDQUALITY_FASTEST
+        passType: 0
+      - keywords: BACKFACE_NORMAL_MODE_FLIP EFFECT_BILLBOARD _WINDQUALITY_FASTEST
+        passType: 0
+      - keywords: BACKFACE_NORMAL_MODE_MIRROR EFFECT_BILLBOARD LOD_FADE_CROSSFADE
+          _WINDQUALITY_FASTEST
+        passType: 0
+      - keywords: BACKFACE_NORMAL_MODE_MIRROR EFFECT_BILLBOARD _WINDQUALITY_FASTEST
+        passType: 0
+      - keywords: BACKFACE_NORMAL_MODE_MIRROR _WINDQUALITY_BEST
+        passType: 0
   - first: {fileID: 4800000, guid: 8478781d80234fa29651593b02782b9d, type: 3}
     second:
       variants:
@@ -17,4 +38,61 @@ ShaderVariantCollection:
     second:
       variants:
       - keywords: 
+        passType: 0
+  - first: {fileID: -6465566751694194690, guid: 4061145e244733a4d9e4bac2abbb417d, type: 3}
+    second:
+      variants:
+      - keywords: BILLBOARD_FACE_CAMERA_POS
+        passType: 0
+      - keywords: BILLBOARD_FACE_CAMERA_POS LOD_FADE_CROSSFADE
+        passType: 0
+  - first: {fileID: 4800000, guid: a1d29e1ff4a0a4e44be5a850d8ab4da2, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHAPREMULTIPLY_ON _ALPHATEST_ON _ENVIRONMENTREFLECTIONS_OFF
+          _NORMALMAP _SPECULARHIGHLIGHTS_OFF _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ENVIRONMENTREFLECTIONS_OFF _NORMALMAP _SPECULARHIGHLIGHTS_OFF
+        passType: 0
+      - keywords: _ALPHAPREMULTIPLY_ON _ALPHATEST_ON _ENVIRONMENTREFLECTIONS_OFF
+          _NORMALMAP _SPECULARHIGHLIGHTS_OFF _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: _ALPHAPREMULTIPLY_ON _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: _ALPHATEST_ON
+        passType: 0
+      - keywords: _DETAIL_MULX2 _NORMALMAP
+        passType: 0
+      - keywords: _DETAIL_SCALED
+        passType: 0
+      - keywords: _DETAIL_SCALED _NORMALMAP
+        passType: 0
+      - keywords: _ENVIRONMENTREFLECTIONS_OFF _NORMALMAP _SPECULARHIGHLIGHTS_OFF
+        passType: 0
+      - keywords: _NORMALMAP
+        passType: 0
+  - first: {fileID: 4800000, guid: 8a6d08fc66b24594eabcf3e67c76fd17, type: 3}
+    second:
+      variants:
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON _NORMALMAP _SPECULAR_COLOR
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON _SPECULAR_COLOR
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _NORMALMAP
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _NORMALMAP _SPECULAR_COLOR
+        passType: 0
+      - keywords: _ALPHATEST_ON
+        passType: 0
+      - keywords: _ALPHATEST_ON _NORMALMAP _SPECULAR_COLOR
+        passType: 0
+      - keywords: _ALPHATEST_ON _SPECULAR_COLOR
+        passType: 0
+      - keywords: _NORMALMAP
+        passType: 0
+      - keywords: _NORMALMAP _SPECULAR_COLOR
         passType: 0
