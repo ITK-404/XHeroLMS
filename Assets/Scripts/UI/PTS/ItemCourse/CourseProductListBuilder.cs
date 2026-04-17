@@ -40,7 +40,7 @@ public class CourseProductListBuilder : MonoBehaviour
     private void OpenXheroApp()
     {
         Debug.Log("Deeplink open app external");
-        Application.OpenURL("xhero://");
+        Application.OpenURL("https://download.xheroapp.com/");
     }
     
     private void HandleStoreChanged()
