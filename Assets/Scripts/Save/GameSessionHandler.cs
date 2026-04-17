@@ -165,7 +165,7 @@ public class GameSessionHandler : MonoBehaviour
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
         // load by session data
-        if (data.CourseData != null && string.IsNullOrEmpty(data.CourseData.seoId))
+        if (data.CourseData != null && !string.IsNullOrEmpty(data.CourseData.seoId))
         {
             var seoId = data.CourseData.seoId;
             
@@ -174,28 +174,33 @@ public class GameSessionHandler : MonoBehaviour
             SeoResolver.seoCourse = seoId;
             await SeoResolver.LoadPrivateAndFillData();
             // co the vao khoa hoc
-            if (SeoResolver.canEnterCourse)
+            if (!SeoResolver.canEnterCourse)
             {
-                var sceneLocation = data.SceneLocation;
-                var currentScene = SceneManager.GetActiveScene().name;
-                // CAP NHAT VI TRI O SCENE DO
-        
-                sceneLocationHandler.TryAddOrUpdate(sceneLocation);
-        
-                if (sceneLocation.SceneName == currentScene)
-                {
-                    Debug.Log($"[GameSessionHandler] cùng scene hiện tại, load vị trí thôi");
-                    sceneLocationHandler.LoadPlayerPosition(currentScene);
-                }
-                else
-                {
-                    Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
-                    LoadingTransition.Load_Scene(sceneLocation.SceneName);
-                }
-
                 return;
             }
             Debug.Log("[GameSessionHandler] Không thể load khoá học");
+        }
+        
+        LoadSceneBySession(data);
+    }
+
+    private void LoadSceneBySession(GameSessionData data)
+    {
+        var sceneLocation = data.SceneLocation;
+        var currentScene = SceneManager.GetActiveScene().name;
+        // CAP NHAT VI TRI O SCENE DO
+        Debug.Log($"[GameSessionHandler]Không có khoá học");
+        sceneLocationHandler.TryAddOrUpdate(sceneLocation);
+        
+        if (sceneLocation.SceneName == currentScene)
+        {
+            Debug.Log($"[GameSessionHandler] cùng scene hiện tại, load vị trí thôi");
+            sceneLocationHandler.LoadPlayerPosition(currentScene);
+        }
+        else
+        {
+            Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
+            LoadingTransition.Load_Scene(sceneLocation.SceneName);
         }
     }
 
