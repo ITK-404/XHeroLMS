@@ -128,7 +128,7 @@ public class CourseProductItemUI : MonoBehaviour
 
             Debug.Log("[CourseProductItemUI] Open payment webview: " + url);
             Debug.LogError("[CourseProductItemUI] null title " + url);
-            WebViewTest.LoadWebView(url,"@@@@@@@");
+            WebViewTest.LoadWebView(url,nameText.text);
             return;
         }
 
@@ -136,7 +136,7 @@ public class CourseProductItemUI : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(_externalUrl))
         {
             // WebViewTest.LoadWebView(_externalUrl,"@@@@@@@");
-            WebViewTest.LoadWebView(_externalUrl,"");
+            WebViewTest.LoadWebView(_externalUrl,nameText.text);
             return;
         }
 
