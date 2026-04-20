@@ -30,4 +30,14 @@ public class PTS_FrameArrowNavigation : MonoBehaviour
         leftCallback = _leftCallback;
         rightCallback = _rightCallback;
     }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
 }
