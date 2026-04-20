@@ -23,10 +23,25 @@ ShaderVariantCollection:
       variants:
       - keywords: BILLBOARD_FACE_CAMERA_POS
         passType: 0
+      - keywords: BILLBOARD_FACE_CAMERA_POS LOD_FADE_CROSSFADE
+        passType: 0
+  - first: {fileID: -6465566751694194690, guid: 1867e9583175d42f7a81024c9c6877ce, type: 3}
+    second:
+      variants:
+      - keywords: BACKFACE_NORMAL_MODE_FLIP EFFECT_BILLBOARD LOD_FADE_CROSSFADE _WINDQUALITY_FASTEST
+        passType: 0
+      - keywords: BACKFACE_NORMAL_MODE_MIRROR EFFECT_BILLBOARD LOD_FADE_CROSSFADE
+          _WINDQUALITY_FASTEST
+        passType: 0
   - first: {fileID: 4800000, guid: c358d98ad71b445c1bf1ac13965c3b24, type: 3}
     second:
       variants:
       - keywords: 
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHAPREMULTIPLY_ON _ALPHATEST_ON _ENVIRONMENTREFLECTIONS_OFF
+          _NORMALMAP _SPECULARHIGHLIGHTS_OFF _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ENVIRONMENTREFLECTIONS_OFF _NORMALMAP _SPECULARHIGHLIGHTS_OFF
         passType: 0
       - keywords: _ALPHAPREMULTIPLY_ON _SURFACE_TYPE_TRANSPARENT
         passType: 0
@@ -39,4 +54,17 @@ ShaderVariantCollection:
       - keywords: _DETAIL_SCALED _NORMALMAP
         passType: 0
       - keywords: _NORMALMAP
+        passType: 0
+  - first: {fileID: 4800000, guid: 8392c437af023474698a289771f2d3d5, type: 3}
+    second:
+      variants:
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON _NORMALMAP _SPECULAR_COLOR
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _ALPHATEST_ON _SPECULAR_COLOR
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _NORMALMAP
+        passType: 0
+      - keywords: LOD_FADE_CROSSFADE _NORMALMAP _SPECULAR_COLOR
         passType: 0
