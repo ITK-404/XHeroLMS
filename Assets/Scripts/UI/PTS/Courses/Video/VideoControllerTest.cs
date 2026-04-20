@@ -9,8 +9,12 @@ public class VideoControllerTest : MonoBehaviour
     [SerializeField] private CourseIntroVideoView viewB;
     [SerializeField] private string testUrl = "https://www.youtube.com/watch?v=dk6ZFR_Ebkg&list=RDdk6ZFR_Ebkg&start_radio=1";
 
+    private LocalProxyAutoBoot _proxy;
+    
     private void Start()
     {
+        _proxy = FindFirstObjectByType<LocalProxyAutoBoot>();
+        
         // Truyền Core vào từng View — chỉ cần làm 1 lần
         viewA.SetCore(core);
         viewB.SetCore(core);
@@ -41,7 +45,8 @@ public class VideoControllerTest : MonoBehaviour
     {
         // Debug.Log($"Video Intro: "+CourseDetailStaticStore.VideoIntro);
         // Debug.Log($"Video Intro: "+CourseDetailStaticStore.CurrentCourseId);
-        core.LoadAndPlay(CourseDetailStaticStore.VideoIntro, CourseDetailStaticStore.GetFirstBanner());
+        string videoUrl = CourseDetailStaticStore.VideoIntro;
+        core.LoadAndPlay(_proxy.GetPlayableUrl(videoUrl), CourseDetailStaticStore.GetFirstBanner());
     }
 
     public void ShowViewA()
