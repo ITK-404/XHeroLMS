@@ -202,7 +202,7 @@ public static class SeoResolver
             // Application.OpenURL(url);
             Debug.LogError("Check null title here");
             // WebViewTest.LoadWebView(url, "@@@@@@@@");
-            WebViewTest.LoadWebView(url, "");
+            WebViewTest.LoadWebView(url, "@@@@@@@@");
             yield break;
         }
 
