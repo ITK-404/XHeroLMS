@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
 
 public class MailList : MonoBehaviour
 {
@@ -11,6 +10,8 @@ public class MailList : MonoBehaviour
         Personal,
         System
     }
+
+    private string currentDetailLoadingId;
 
     [Header("UI Spawn")]
     [SerializeField] private MailElementVisualUI mailPrefab;
@@ -66,12 +67,10 @@ public class MailList : MonoBehaviour
 
     public void SetRenderTarget(Transform contentParent)
     {
-        if (currentContentParent == contentParent)
-            return;
-
         currentContentParent = contentParent;
+
         ClearAllItems();
-        ClearSelectionAndDetail();
+        ClearSelectionAndDetail(true);
 
         hasInitializedSelection = false;
         forceSelectFirstOnNextRefresh = true;
@@ -86,7 +85,7 @@ public class MailList : MonoBehaviour
         currentFilter = filter;
 
         ClearAllItems();
-        ClearSelectionAndDetail();
+        ClearSelectionAndDetail(true);
 
         hasInitializedSelection = false;
         forceSelectFirstOnNextRefresh = true;
@@ -96,19 +95,30 @@ public class MailList : MonoBehaviour
         TryConsumePendingRefresh();
     }
 
-    public void ForceResetToFirstItem()
-    {
-        ClearSelectionAndDetail();
-        hasInitializedSelection = false;
-        forceSelectFirstOnNextRefresh = true;
-        ResetScrollToTopDeferred();
-        Refresh();
-    }
+public void ForceResetToFirstItem()
+{
+    ClearSelectionAndDetail(true);
+    hasInitializedSelection = false;
+    forceSelectFirstOnNextRefresh = true;
+    pendingRefresh = true;
 
+    ResetScrollToTopDeferred();
+
+    if (!NotificationsStaticStore.IsLoading && IsReadyToRefresh())
+        Refresh();
+    else
+        TryConsumePendingRefresh();
+}
     public void Refresh()
     {
         if (emptyMailState != null)
             emptyMailState.gameObject.SetActive(false);
+
+        if (NotificationsStaticStore.IsLoading)
+        {
+            pendingRefresh = true;
+            return;
+        }
 
         if (!IsReadyToRefresh())
         {
@@ -119,6 +129,12 @@ public class MailList : MonoBehaviour
         if (!string.IsNullOrEmpty(NotificationsStaticStore.LastError))
         {
             pendingRefresh = false;
+            RemoveAllSpawnedItems();
+            ClearSelectionAndDetail(true);
+
+            if (emptyMailState != null)
+                emptyMailState.gameObject.SetActive(true);
+
             return;
         }
 
@@ -129,7 +145,7 @@ public class MailList : MonoBehaviour
         if (items == null || items.Count == 0)
         {
             RemoveAllSpawnedItems();
-            ClearSelectionAndDetail();
+            ClearSelectionAndDetail(true);
 
             if (emptyMailState != null)
                 emptyMailState.gameObject.SetActive(true);
@@ -198,7 +214,7 @@ public class MailList : MonoBehaviour
 
         if (!hasAnyVisibleItem)
         {
-            ClearSelectionAndDetail();
+            ClearSelectionAndDetail(true);
             return;
         }
 
@@ -209,7 +225,7 @@ public class MailList : MonoBehaviour
     {
         if (firstItem == null)
         {
-            ClearSelectionAndDetail();
+            ClearSelectionAndDetail(true);
             return;
         }
 
@@ -271,21 +287,56 @@ public class MailList : MonoBehaviour
         UpdateDetailView(item);
     }
 
-    private void UpdateDetailView(NotificationMailItem item)
+private void UpdateDetailView(NotificationMailItem item)
+{
+    if (item == null)
     {
-        if (detailLoader == null)
-            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
-
-        if (detailLoader == null || item == null || string.IsNullOrWhiteSpace(item._id))
-            return;
-
-        detailLoader.LoadById(item._id);
+        ClearSelectionAndDetail(true);
+        return;
     }
 
-    private void ClearSelectionAndDetail()
+    var contentView = MailContentView.Instance;
+    if (contentView == null)
+        contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
+
+    if (contentView != null)
+        contentView.ShowPreview(item);
+
+    if (NotificationsStaticStore.IsLoading)
     {
-        _currentSelectedItem = null;
+        pendingRefresh = true;
+        return;
     }
+
+    if (detailLoader == null)
+        detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
+
+    if (detailLoader == null || string.IsNullOrWhiteSpace(item._id))
+        return;
+
+    if (currentDetailLoadingId == item._id &&
+        NotificationsDetailStaticStore.IsLoading)
+        return;
+
+    currentDetailLoadingId = item._id;
+    detailLoader.LoadById(item._id);
+}
+
+private void ClearSelectionAndDetail(bool resetDetailStore)
+{
+    _currentSelectedItem = null;
+    currentDetailLoadingId = null;
+
+    if (resetDetailStore)
+        NotificationsDetailStaticStore.Reset();
+
+    var contentView = MailContentView.Instance;
+    if (contentView == null)
+        contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
+
+    if (contentView != null)
+        contentView.ResetView();
+}
 
     private ScrollRect GetScrollRect()
     {
@@ -425,18 +476,20 @@ public class MailList : MonoBehaviour
 
     private bool IsReadyToRefresh()
     {
-        return mailPrefab != null
-            && currentContentParent != null
-            && !NotificationsStaticStore.IsLoading;
+        return mailPrefab != null && currentContentParent != null;
     }
-    private void TryConsumePendingRefresh()
-    {
-        if (!pendingRefresh)
-            return;
 
-        if (!IsReadyToRefresh())
-            return;
+private void TryConsumePendingRefresh()
+{
+    if (!pendingRefresh)
+        return;
 
-        Refresh();
-    }
+    if (NotificationsStaticStore.IsLoading)
+        return;
+
+    if (!IsReadyToRefresh())
+        return;
+
+    Refresh();
+}
 }

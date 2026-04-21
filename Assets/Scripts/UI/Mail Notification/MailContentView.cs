@@ -14,6 +14,7 @@ public class MailContentView : MonoBehaviour
     [SerializeField] private GameObject viewRoot;
 
     private bool isInitialized;
+    private bool isShowingPreview;
 
     private void Awake()
     {
@@ -25,9 +26,7 @@ public class MailContentView : MonoBehaviour
         }
 
         Instance = this;
-
         NotificationsDetailStaticStore.OnChanged += RefreshView;
-
         InitializeOnce();
     }
 
@@ -72,8 +71,31 @@ public class MailContentView : MonoBehaviour
 
     public void ResetView()
     {
+        isShowingPreview = false;
         Clear();
         Hide();
+    }
+
+    public void ShowPreview(NotificationMailItem data)
+    {
+        if (data == null)
+        {
+            ResetView();
+            return;
+        }
+
+        isShowingPreview = true;
+
+        if (titleTmp != null)
+            titleTmp.text = data.title ?? "";
+
+        if (contentTmp != null)
+            contentTmp.text = data.text ?? "";
+
+        if (courseNameTmp != null)
+            courseNameTmp.text = "";
+
+        Show();
     }
 
     private void Bind(NotificationMailItem data)
@@ -84,6 +106,8 @@ public class MailContentView : MonoBehaviour
             return;
         }
 
+        isShowingPreview = false;
+
         if (titleTmp != null)
             titleTmp.text = data.title ?? "";
 
@@ -91,7 +115,9 @@ public class MailContentView : MonoBehaviour
             contentTmp.text = data.text ?? "";
 
         if (courseNameTmp != null)
-            courseNameTmp.text = data.text ?? "";
+            courseNameTmp.text = "";
+
+        Show();
     }
 
     private void RefreshView()
@@ -104,18 +130,20 @@ public class MailContentView : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(NotificationsDetailStaticStore.LastError))
         {
             Debug.LogWarning("[MailContentView] Load detail lỗi: " + NotificationsDetailStaticStore.LastError);
-            ResetView();
+
+            // Nếu đang show preview thì giữ preview, không reset trắng ngay
+            if (!isShowingPreview)
+                ResetView();
+
             return;
         }
 
         var data = NotificationsDetailStaticStore.CurrentDetail;
+
+        // Nếu chưa có detail thật thì giữ nguyên preview đang hiển thị
         if (data == null)
-        {
-            ResetView();
             return;
-        }
 
         Bind(data);
-        Show();
     }
 }
