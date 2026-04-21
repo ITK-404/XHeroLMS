@@ -16,6 +16,9 @@ public class MailContentView : MonoBehaviour
     private bool isInitialized;
     private bool isShowingPreview;
 
+    // khóa nhận detail
+    private bool allowApplyDetail = false;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -72,6 +75,7 @@ public class MailContentView : MonoBehaviour
     public void ResetView()
     {
         isShowingPreview = false;
+        allowApplyDetail = false;
         Clear();
         Hide();
     }
@@ -85,6 +89,7 @@ public class MailContentView : MonoBehaviour
         }
 
         isShowingPreview = true;
+        allowApplyDetail = true;
 
         if (titleTmp != null)
             titleTmp.text = data.title ?? "";
@@ -122,6 +127,9 @@ public class MailContentView : MonoBehaviour
 
     private void RefreshView()
     {
+        if (!allowApplyDetail)
+            return;
+
         Debug.Log("[MailContentView] RefreshView called");
 
         if (NotificationsDetailStaticStore.IsLoading)
@@ -129,18 +137,12 @@ public class MailContentView : MonoBehaviour
 
         if (!string.IsNullOrWhiteSpace(NotificationsDetailStaticStore.LastError))
         {
-            Debug.LogWarning("[MailContentView] Load detail lỗi: " + NotificationsDetailStaticStore.LastError);
-
-            // Nếu đang show preview thì giữ preview, không reset trắng ngay
             if (!isShowingPreview)
                 ResetView();
-
             return;
         }
 
         var data = NotificationsDetailStaticStore.CurrentDetail;
-
-        // Nếu chưa có detail thật thì giữ nguyên preview đang hiển thị
         if (data == null)
             return;
 

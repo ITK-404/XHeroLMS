@@ -34,6 +34,7 @@ public class MailList : MonoBehaviour
 
     private Coroutine resetScrollRoutine;
     private bool pendingRefresh;
+    private string currentVisibleDetailId;
 
     private void Awake()
     {
@@ -95,20 +96,40 @@ public class MailList : MonoBehaviour
         TryConsumePendingRefresh();
     }
 
-public void ForceResetToFirstItem()
-{
-    ClearSelectionAndDetail(true);
-    hasInitializedSelection = false;
-    forceSelectFirstOnNextRefresh = true;
-    pendingRefresh = true;
+    public void ForceResetToFirstItem()
+    {
+        ClearSelectionAndDetail(true);
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        pendingRefresh = true;
 
-    ResetScrollToTopDeferred();
+        ResetScrollToTopDeferred();
 
-    if (!NotificationsStaticStore.IsLoading && IsReadyToRefresh())
-        Refresh();
-    else
-        TryConsumePendingRefresh();
-}
+        if (!NotificationsStaticStore.IsLoading && IsReadyToRefresh())
+            Refresh();
+        else
+            TryConsumePendingRefresh();
+    }
+
+    public void ResetMailState()
+    {
+        ClearAllItems();
+        ClearSelectionAndDetail(true);
+
+        hasInitializedSelection = false;
+        forceSelectFirstOnNextRefresh = true;
+        pendingRefresh = false;
+
+        if (resetScrollRoutine != null)
+        {
+            StopCoroutine(resetScrollRoutine);
+            resetScrollRoutine = null;
+        }
+
+        if (emptyMailState != null)
+            emptyMailState.gameObject.SetActive(false);
+    }
+
     public void Refresh()
     {
         if (emptyMailState != null)
@@ -207,16 +228,29 @@ public void ForceResetToFirstItem()
         for (int i = 0; i < removeBuffer.Count; i++)
             RemoveItem(removeBuffer[i]);
 
-        bool hasAnyVisibleItem = visibleIndex > 0;
+bool hasAnyVisibleItem = visibleIndex > 0;
 
-        if (emptyMailState != null)
-            emptyMailState.gameObject.SetActive(!hasAnyVisibleItem);
 
-        if (!hasAnyVisibleItem)
-        {
-            ClearSelectionAndDetail(true);
-            return;
-        }
+if (emptyMailState != null)
+    emptyMailState.gameObject.SetActive(!hasAnyVisibleItem);
+
+if (!hasAnyVisibleItem)
+{
+    // QUAN TRỌNG: reset cứng luôn
+    _currentSelectedItem = null;
+    currentDetailLoadingId = null;
+
+    NotificationsDetailStaticStore.Reset();
+
+    var contentView = MailContentView.Instance;
+    if (contentView == null)
+        contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
+
+    if (contentView != null)
+        contentView.ResetView();
+
+    return;
+}
 
         AutoSelectFirstItem(firstMatchedItem);
     }
@@ -287,56 +321,58 @@ public void ForceResetToFirstItem()
         UpdateDetailView(item);
     }
 
-private void UpdateDetailView(NotificationMailItem item)
-{
-    if (item == null)
+    private void UpdateDetailView(NotificationMailItem item)
     {
-        ClearSelectionAndDetail(true);
-        return;
+        if (item == null)
+        {
+            ClearSelectionAndDetail(true);
+            return;
+        }
+
+        currentVisibleDetailId = item._id;
+
+        var contentView = MailContentView.Instance;
+        if (contentView == null)
+            contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
+
+        if (contentView != null)
+            contentView.ShowPreview(item);
+
+        if (NotificationsStaticStore.IsLoading)
+        {
+            pendingRefresh = true;
+            return;
+        }
+
+        if (detailLoader == null)
+            detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
+
+        if (detailLoader == null || string.IsNullOrWhiteSpace(item._id))
+            return;
+
+        if (currentDetailLoadingId == item._id && NotificationsDetailStaticStore.IsLoading)
+            return;
+
+        currentDetailLoadingId = item._id;
+        detailLoader.LoadById(item._id);
     }
 
-    var contentView = MailContentView.Instance;
-    if (contentView == null)
-        contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
-
-    if (contentView != null)
-        contentView.ShowPreview(item);
-
-    if (NotificationsStaticStore.IsLoading)
+    private void ClearSelectionAndDetail(bool resetDetailStore)
     {
-        pendingRefresh = true;
-        return;
+        _currentSelectedItem = null;
+        currentDetailLoadingId = null;
+        currentVisibleDetailId = null;
+
+        if (resetDetailStore)
+            NotificationsDetailStaticStore.Reset();
+
+        var contentView = MailContentView.Instance;
+        if (contentView == null)
+            contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
+
+        if (contentView != null)
+            contentView.ResetView();
     }
-
-    if (detailLoader == null)
-        detailLoader = FindFirstObjectByType<NotificationsDetailLoader>(FindObjectsInactive.Include);
-
-    if (detailLoader == null || string.IsNullOrWhiteSpace(item._id))
-        return;
-
-    if (currentDetailLoadingId == item._id &&
-        NotificationsDetailStaticStore.IsLoading)
-        return;
-
-    currentDetailLoadingId = item._id;
-    detailLoader.LoadById(item._id);
-}
-
-private void ClearSelectionAndDetail(bool resetDetailStore)
-{
-    _currentSelectedItem = null;
-    currentDetailLoadingId = null;
-
-    if (resetDetailStore)
-        NotificationsDetailStaticStore.Reset();
-
-    var contentView = MailContentView.Instance;
-    if (contentView == null)
-        contentView = FindFirstObjectByType<MailContentView>(FindObjectsInactive.Include);
-
-    if (contentView != null)
-        contentView.ResetView();
-}
 
     private ScrollRect GetScrollRect()
     {
@@ -479,17 +515,17 @@ private void ClearSelectionAndDetail(bool resetDetailStore)
         return mailPrefab != null && currentContentParent != null;
     }
 
-private void TryConsumePendingRefresh()
-{
-    if (!pendingRefresh)
-        return;
+    private void TryConsumePendingRefresh()
+    {
+        if (!pendingRefresh)
+            return;
 
-    if (NotificationsStaticStore.IsLoading)
-        return;
+        if (NotificationsStaticStore.IsLoading)
+            return;
 
-    if (!IsReadyToRefresh())
-        return;
+        if (!IsReadyToRefresh())
+            return;
 
-    Refresh();
-}
+        Refresh();
+    }
 }
