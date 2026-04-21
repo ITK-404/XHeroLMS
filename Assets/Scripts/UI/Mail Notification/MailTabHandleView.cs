@@ -75,9 +75,6 @@ public class MailTabHandleView : MonoBehaviour
 
         NotificationsDetailStaticStore.Reset();
 
-        if (emptyMailState != null)
-            emptyMailState.gameObject.SetActive(false);
-
         if (mailList != null && index >= 0 && index < views.Length && views[index] != null)
         {
             mailList.SetRenderTarget(views[index].ContentParent);
@@ -87,7 +84,6 @@ public class MailTabHandleView : MonoBehaviour
             else if (index == 1)
                 mailList.SetFilter(MailList.MailFilter.Personal);
 
-            // Chủ động yêu cầu reset + refresh lại để auto chọn item đầu khi data sẵn sàng
             mailList.ForceResetToFirstItem();
         }
 
