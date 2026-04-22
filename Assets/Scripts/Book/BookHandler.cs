@@ -94,6 +94,7 @@ public class BookHandler : MonoBehaviour
         // {
         //     BookHandler.CanSelectBook = true;
         // }
+        WebViewTest.SetCourseContext(course_id, book_seo, book_name);
         WebViewTest.LoadWebView(url,book_name);
     }
 

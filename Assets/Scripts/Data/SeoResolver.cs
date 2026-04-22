@@ -204,6 +204,7 @@ public static class SeoResolver
             // WebViewTest.LoadWebView(url, "@@@@@@@@");
             string courseName = market != null ? market.title : "Course";
 
+            WebViewTest.SetCourseContext(courseId, _seo, courseName);
             WebViewTest.LoadWebView(url, courseName);
 
             yield break;

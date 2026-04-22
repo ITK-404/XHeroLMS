@@ -50,11 +50,12 @@ public class MinimapCourseDisplayUI : MonoBehaviour
                 token = token.Substring("Bearer ".Length).Trim();
 
             string url =
-                SecurityConfig.UrlWeb+"/en/thanh-toan/" +
+                SecurityConfig.UrlWeb + "/en/thanh-toan/" +
                 "?course=" + UnityWebRequest.EscapeURL(course_id) +
                 "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
             // Application.OpenURL(url);
+            WebViewTest.SetCourseContext(course_id, seo_url, course_title);
             WebViewTest.LoadWebView(url,course_title);
             BookHandler.CanSelectBook = true;
             return;
