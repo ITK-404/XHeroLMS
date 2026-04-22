@@ -28,7 +28,12 @@ public class PaymentWebViewFlowManager : MonoBehaviour
     private Coroutine pollingCoroutine;
     private bool isChecking;
     private bool isFinalState;
+    private bool isPaymentSuccess;
+
     private string currentCheckingOrderId = "";
+    private string currentCourseId = "";
+    private string currentCourseSeo = "";
+    private string currentCourseName = "";
 
     private string BaseUrl => SecurityConfig.GetBaseUrl();
 
@@ -47,34 +52,48 @@ public class PaymentWebViewFlowManager : MonoBehaviour
             return;
 
         Debug.Log("[PaymentWebViewFlowManager] StartPaymentCheckFlow");
-        StartPaymentCheckFlow(WebViewTest.CurrentOrderId, TokenStore.AccessToken);
+        StartPaymentCheckFlow(
+            WebViewTest.CurrentOrderId,
+            TokenStore.AccessToken,
+            WebViewTest.CurrentCourseId,
+            WebViewTest.CurrentCourseSeo,
+            WebViewTest.CurrentCourseName
+        );
     }
 
-    public void StartPaymentCheckFlow(string orderId, string accessToken)
+private string currentPaymentUrl = "";
+
+public void StartPaymentCheckFlow(string orderId, string accessToken, string courseId, string courseSeo, string courseName = "", string paymentUrl = "")
+{
+    if (string.IsNullOrWhiteSpace(orderId))
     {
-        if (string.IsNullOrWhiteSpace(orderId))
-        {
-            Debug.LogWarning("[PaymentWebViewFlowManager] orderId is empty.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            Debug.LogWarning("[PaymentWebViewFlowManager] accessToken is empty.");
-            return;
-        }
-
-        currentCheckingOrderId = orderId;
-        isFinalState = false;
-
-        CreatePopupIfNeeded();
-        SetLoadingUI();
-
-        if (pollingCoroutine != null)
-            StopCoroutine(pollingCoroutine);
-
-        pollingCoroutine = StartCoroutine(PollOrderRoutine(orderId, accessToken));
+        Debug.LogWarning("[PaymentWebViewFlowManager] orderId is empty.");
+        return;
     }
+
+    if (string.IsNullOrWhiteSpace(accessToken))
+    {
+        Debug.LogWarning("[PaymentWebViewFlowManager] accessToken is empty.");
+        return;
+    }
+
+    currentCheckingOrderId = orderId;
+    currentCourseId = courseId;
+    currentCourseSeo = courseSeo;
+    currentCourseName = courseName;
+    currentPaymentUrl = paymentUrl;
+
+    isFinalState = false;
+    isPaymentSuccess = false;
+
+    CreatePopupIfNeeded();
+    SetLoadingUI();
+
+    if (pollingCoroutine != null)
+        StopCoroutine(pollingCoroutine);
+
+    pollingCoroutine = StartCoroutine(PollOrderRoutine(orderId, accessToken));
+}
 
     private void CreatePopupIfNeeded()
     {
@@ -201,6 +220,8 @@ public class PaymentWebViewFlowManager : MonoBehaviour
             if (orderStatus == "finished")
             {
                 isFinalState = true;
+                isPaymentSuccess = true;
+
                 currentPopup.ShowPayment(true, priceText);
                 SetStateText("Thanh toán thành công");
                 yield break;
@@ -209,12 +230,16 @@ public class PaymentWebViewFlowManager : MonoBehaviour
             if (orderStatus == "cancel")
             {
                 isFinalState = true;
+                isPaymentSuccess = false;
+
                 currentPopup.ShowPayment(false, priceText);
                 SetStateText("Thanh toán thất bại / đã hủy");
                 yield break;
             }
 
             isFinalState = false;
+            isPaymentSuccess = false;
+
             currentPopup.ShowPayment(false, priceText);
             SetStateText("Trạng thái hiện tại: " + orderStatus);
         }
@@ -231,6 +256,7 @@ public class PaymentWebViewFlowManager : MonoBehaviour
     private void ShowFail(string message)
     {
         isFinalState = true;
+        isPaymentSuccess = false;
 
         if (currentPopup != null)
             currentPopup.ShowPayment(false, "--");
@@ -249,9 +275,33 @@ public class PaymentWebViewFlowManager : MonoBehaviour
         ClosePopupAndReset();
     }
 
-    private void OnActionClicked()
+private void OnActionClicked()
+{
+    if (isPaymentSuccess)
     {
-        ManualRecheck();
+        EnterOwnedCourse();
+        return;
+    }
+
+    ReopenPaymentPage();
+}
+    private void EnterOwnedCourse()
+    {
+        if (string.IsNullOrWhiteSpace(currentCourseId))
+        {
+            Debug.LogWarning("[PaymentWebViewFlowManager] currentCourseId is empty.");
+            return;
+        }
+
+        SeoResolver.lastResolvedCourseId = currentCourseId;
+        SeoResolver.seoCourse = currentCourseSeo;
+
+        Debug.Log($"[PaymentWebViewFlowManager] EnterOwnedCourse -> courseId={currentCourseId}, seo={currentCourseSeo}, name={currentCourseName}");
+
+        ClosePopupAndReset();
+
+        AudioManager.Instance.Resume();
+        LoadingTransition.Load_Scene("dai_dao_chi_gian_2");
     }
 
     public void ManualRecheck()
@@ -272,6 +322,7 @@ public class PaymentWebViewFlowManager : MonoBehaviour
         }
 
         isFinalState = false;
+        isPaymentSuccess = false;
 
         if (pollingCoroutine != null)
             StopCoroutine(pollingCoroutine);
@@ -291,7 +342,12 @@ public class PaymentWebViewFlowManager : MonoBehaviour
 
         isChecking = false;
         isFinalState = false;
+        isPaymentSuccess = false;
+
         currentCheckingOrderId = "";
+        currentCourseId = "";
+        currentCourseSeo = "";
+        currentCourseName = "";
 
         if (currentReturnBtn != null)
             currentReturnBtn.onClick.RemoveListener(OnReturnClicked);
@@ -335,5 +391,21 @@ public class PaymentWebViewFlowManager : MonoBehaviour
         public string _id;
         public string status;
         public double totalPrice;
+    }
+    private void ReopenPaymentPage()
+    {
+        if (string.IsNullOrWhiteSpace(currentPaymentUrl))
+        {
+            Debug.LogWarning("[PaymentWebViewFlowManager] currentPaymentUrl is empty. Fallback to recheck.");
+            ManualRecheck();
+            return;
+        }
+
+        Debug.Log("[PaymentWebViewFlowManager] Reopen payment page: " + currentPaymentUrl);
+
+        WebViewTest.SetCourseContext(currentCourseId, currentCourseSeo, currentCourseName);
+        WebViewTest.LoadWebView(currentPaymentUrl, currentCourseName);
+
+        ClosePopupAndReset();
     }
 }

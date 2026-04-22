@@ -21,9 +21,17 @@ public class WebViewTest : MonoBehaviour
     private static string currentOrderId = "";
     private static bool isPaymentFinished = false;
 
+    private static string currentCourseId = "";
+    private static string currentCourseSeo = "";
+    private static string currentCourseName = "";
+
     public static string CurrentOrderId => currentOrderId;
     public static bool IsPaymentFinished => isPaymentFinished;
     public static string StoreTitleCourse => storeTitleCourse;
+
+    public static string CurrentCourseId => currentCourseId;
+    public static string CurrentCourseSeo => currentCourseSeo;
+    public static string CurrentCourseName => currentCourseName;
 
     private const string PlayerPrefsOrderIdKey = "PAYMENT_ORDER_ID";
     private const string PlayerPrefsFinishedKey = "PAYMENT_FINISHED";
@@ -716,7 +724,7 @@ public class WebViewTest : MonoBehaviour
     {
         pendingUrl = "";
         storeTitleCourse = "";
-        ResetPaymentState();
+        ResetPaymentState(true);
 
         if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
         {
@@ -728,18 +736,32 @@ public class WebViewTest : MonoBehaviour
     {
         pendingUrl = url;
         storeTitleCourse = title;
-        ResetPaymentState();
+        ResetPaymentState(false);
 
         if (!SceneManager.GetSceneByName("WebView_Mobile").isLoaded)
         {
             SceneManager.LoadScene("WebView_Mobile", LoadSceneMode.Additive);
         }
     }
+    public static void SetCourseContext(string courseId, string courseSeo, string courseName = "")
+    {
+        currentCourseId = courseId ?? "";
+        currentCourseSeo = courseSeo ?? "";
+        currentCourseName = courseName ?? "";
+    }
 
-    private static void ResetPaymentState()
+    private static void ResetPaymentState(bool clearCourseContext = false)
     {
         currentOrderId = "";
         isPaymentFinished = false;
+
+        if (clearCourseContext)
+        {
+            currentCourseId = "";
+            currentCourseSeo = "";
+            currentCourseName = "";
+            storeTitleCourse = "";
+        }
 
         PlayerPrefs.DeleteKey(PlayerPrefsOrderIdKey);
         PlayerPrefs.DeleteKey(PlayerPrefsFinishedKey);
@@ -775,6 +797,10 @@ public class WebViewTest : MonoBehaviour
         storeTitleCourse = "";
         currentOrderId = "";
         isPaymentFinished = false;
+
+        currentCourseId = "";
+        currentCourseSeo = "";
+        currentCourseName = "";
 
         PlayerPrefs.DeleteKey(PlayerPrefsOrderIdKey);
         PlayerPrefs.DeleteKey(PlayerPrefsFinishedKey);

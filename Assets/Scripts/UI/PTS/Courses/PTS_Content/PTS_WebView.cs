@@ -116,6 +116,7 @@ public class PTS_WebView : MonoBehaviour
             "&accessToken=" + UnityWebRequest.EscapeURL(token);
 
         Debug.Log("[PTS_WebView] Open payment webview: " + url);
+        WebViewTest.SetCourseContext(courseId, course.seo?.url, course.title);
         WebViewTest.LoadWebView(url,course.title);
     }
 
