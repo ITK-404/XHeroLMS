@@ -70,7 +70,8 @@ public class PTS_CourseDetailManager : PTS_CourseSectionBase
         // ShowPanel(0);
         ActiveList(true);
         toggles[0].isOn = true;
-        
+        ShowPanel(0);
+
         // call to show button group
     }
 
