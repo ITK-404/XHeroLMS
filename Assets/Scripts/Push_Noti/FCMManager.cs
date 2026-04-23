@@ -195,6 +195,7 @@ public class FCMManager : MonoBehaviour
 
     private void ShowIOSLocalNotification(string title, string body)
     {
+        Debug.Log("[FCM] Trigger right here");
         if (string.IsNullOrWhiteSpace(title))
             title = "Thông báo mới";
 
@@ -219,6 +220,8 @@ public class FCMManager : MonoBehaviour
         };
 
         iOSNotificationCenter.ScheduleNotification(notification);
+        iOSNotificationCenter.RemoveAllDeliveredNotifications();
+
         Debug.Log("[FCM] iOS local notification scheduled.");
     }
 #endif
@@ -314,7 +317,7 @@ public class FCMManager : MonoBehaviour
     private void RegisterFirebaseEvents()
     {
         if (_eventsRegistered) return;
-
+        Debug.Log($"[FCM] RegisterFirebaseEvents");
         FirebaseMessaging.TokenReceived += OnTokenReceived;
         FirebaseMessaging.MessageReceived += OnMessageReceived;
         _eventsRegistered = true;
@@ -323,7 +326,7 @@ public class FCMManager : MonoBehaviour
     private void UnregisterFirebaseEvents()
     {
         if (!_eventsRegistered) return;
-
+        Debug.Log($"[FCM] UnregisterFirebaseEvents");
         FirebaseMessaging.TokenReceived -= OnTokenReceived;
         FirebaseMessaging.MessageReceived -= OnMessageReceived;
         _eventsRegistered = false;
@@ -356,7 +359,13 @@ public class FCMManager : MonoBehaviour
 
     private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
     {
-        if (e == null || e.Message == null)
+        Debug.Log("[FCM] OnMessageReceived called | messageId=" + e?.Message?.MessageId); // thêm dòng này
+        if (string.IsNullOrWhiteSpace(e.Message.MessageId))
+        {
+            Debug.Log("[FCM] message id is null and empty");
+            return;
+        }
+        if (e.Message == null)
         {
             Debug.LogWarning("[FCM] MessageReceived args/message is null.");
             return;
