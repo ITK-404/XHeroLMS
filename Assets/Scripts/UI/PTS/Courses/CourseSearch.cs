@@ -403,7 +403,7 @@ public class CourseSearch : MonoBehaviour
 
             var opts = new List<TMP_Dropdown.OptionData>
             {
-                new TMP_Dropdown.OptionData("Tất cả", null, Color.white),
+                new TMP_Dropdown.OptionData("Đánh giá", null, Color.white),
                 new TMP_Dropdown.OptionData("5.0", ratingStarSprite, Color.white),
                 new TMP_Dropdown.OptionData("4.0", ratingStarSprite, Color.white),
                 new TMP_Dropdown.OptionData("3.0", ratingStarSprite, Color.white),
@@ -421,7 +421,7 @@ public class CourseSearch : MonoBehaviour
             dropdownSort.ClearOptions();
             dropdownSort.AddOptions(new List<string>
             {
-                "Tất cả","Mới nhất","Cũ nhất","Giá: Cao → Thấp","Giá: Thấp → Cao"
+                "Sắp xếp","Mới nhất","Cũ nhất","Giá: Cao → Thấp","Giá: Thấp → Cao"
             });
             dropdownSort.SetValueWithoutNotify(0);
             dropdownSort.RefreshShownValue();
