@@ -7,7 +7,6 @@ using UnityEngine.UI;
 public class PTS_DropdownSearch : TMP_Dropdown
 {
     [SerializeField] private Transform arrow;
-
     protected override void Awake()
     {
         base.Awake();
