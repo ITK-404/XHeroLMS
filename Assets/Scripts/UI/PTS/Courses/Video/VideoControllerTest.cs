@@ -27,7 +27,7 @@ public class VideoControllerTest : MonoBehaviour
         
         string newCourseId = CourseDetailStaticStore.CurrentCourseId;
         
-        CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
+        // CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
     }
 
     private void OnDisable()
@@ -37,7 +37,7 @@ public class VideoControllerTest : MonoBehaviour
 
     private void OnDestroy()
     {
-        CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
+        // CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
 
     }
 
