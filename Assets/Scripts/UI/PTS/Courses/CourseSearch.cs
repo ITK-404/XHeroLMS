@@ -32,7 +32,7 @@ public class CourseSearch : MonoBehaviour
     [SerializeField] private float debounceSeconds = 0.15f;
 
     public event Action<List<CourseListItemData>> OnResultsChanged;
-
+    
     public IReadOnlyList<CourseListItemData> LastResults => _lastResults;
     private readonly List<CourseListItemData> _lastResults = new();
 
@@ -99,12 +99,12 @@ public class CourseSearch : MonoBehaviour
 
     private void OnEnable()
     {
-        if (resetToDefaultOnFirstEnableOnly && !_didFirstEnableReset)
+        // if (resetToDefaultOnFirstEnableOnly && !_didFirstEnableReset)
+        if (resetToDefaultOnFirstEnableOnly)
         {
             ResetToDefaults();
             ResetQueryCache();
             _lastResults.Clear();
-            _didFirstEnableReset = true;
         }
 
         RefreshRightIconUI();
@@ -228,7 +228,7 @@ public class CourseSearch : MonoBehaviour
         OnResultsChanged?.Invoke(_lastResults);
     }
 
-    private void ResetToDefaults()
+    public void ResetToDefaults()
     {
         if (inputKeyword != null)
             inputKeyword.SetTextWithoutNotify(string.Empty);
@@ -241,14 +241,17 @@ public class CourseSearch : MonoBehaviour
 
         if (dropdownRating != null)
         {
+            Debug.Log("CourseSearch change");
             dropdownRating.SetValueWithoutNotify(0);
             dropdownRating.RefreshShownValue();
+            dropdownRating.captionText.text = "Đánh giá";
         }
 
         if (dropdownSort != null)
         {
             dropdownSort.SetValueWithoutNotify(0);
             dropdownSort.RefreshShownValue();
+            dropdownSort.captionText.text = "Sắp xếp";
         }
 
         RefreshRightIconUI();
@@ -403,7 +406,8 @@ public class CourseSearch : MonoBehaviour
 
             var opts = new List<TMP_Dropdown.OptionData>
             {
-                new TMP_Dropdown.OptionData("Đánh giá", null, Color.white),
+                // new TMP_Dropdown.OptionData("Đánh giá", null, Color.white),
+                new TMP_Dropdown.OptionData("Tất cả", null, Color.white),
                 new TMP_Dropdown.OptionData("5.0", ratingStarSprite, Color.white),
                 new TMP_Dropdown.OptionData("4.0", ratingStarSprite, Color.white),
                 new TMP_Dropdown.OptionData("3.0", ratingStarSprite, Color.white),
@@ -421,7 +425,12 @@ public class CourseSearch : MonoBehaviour
             dropdownSort.ClearOptions();
             dropdownSort.AddOptions(new List<string>
             {
-                "Sắp xếp","Mới nhất","Cũ nhất","Giá: Cao → Thấp","Giá: Thấp → Cao"
+                // "Sắp xếp",
+                "Mặc định",
+                "Mới nhất",
+                "Cũ nhất",
+                "Giá: Cao → Thấp",
+                "Giá: Thấp → Cao"
             });
             dropdownSort.SetValueWithoutNotify(0);
             dropdownSort.RefreshShownValue();
