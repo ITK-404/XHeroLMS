@@ -34,33 +34,33 @@ public class APICourseLoaderService : MonoBehaviour
 
         yield return new WaitForSeconds(1);
 
-        while (!isDone && t < timeout)
-        {
-            bool detailDone = IsCourseDetailLoaded(courseId);
-            bool reviewDone = IsCourseReviewLoaded(courseId);
+        // while (!isDone && t < timeout)
+        // {
+        //     bool detailDone = IsCourseDetailLoaded(courseId);
+        //     bool reviewDone = IsCourseReviewLoaded(courseId);
 
-            bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
-            bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
+        //     bool detailError = !string.IsNullOrEmpty(CourseDetailStaticStore.LastError);
+        //     bool reviewError = !string.IsNullOrEmpty(CourseReviewStaticStore.LastError);
 
-            // Case 1: Detail fail -> fail luôn
-            if (detailError)
-            {
-                isDone = true;
-                isSuccess = false;
-                break;
-            }
+        //     // Case 1: Detail fail -> fail luôn
+        //     if (detailError)
+        //     {
+        //         isDone = true;
+        //         isSuccess = false;
+        //         break;
+        //     }
 
-            // Case 2: đủ điều kiện show
-            if (detailDone && (reviewDone || reviewError))
-            {
-                isDone = true;
-                isSuccess = true;
-                break;
-            }
+        //     // Case 2: đủ điều kiện show
+        //     if (detailDone && (reviewDone || reviewError))
+        //     {
+        //         isDone = true;
+        //         isSuccess = true;
+        //         break;
+        //     }
 
-            t += Time.unscaledDeltaTime;
-            yield return null;
-        }
+        //     t += Time.unscaledDeltaTime;
+        //     yield return null;
+        // }
 
         // Timeout handling
         if (!isDone)
