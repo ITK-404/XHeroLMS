@@ -92,12 +92,26 @@ public class CourseProductListBuilder : MonoBehaviour
 
             CourseProductItemUI item = Instantiate(itemPrefab, contentParent);
             item.gameObject.SetActive(true);
+            
+string productId = !string.IsNullOrWhiteSpace(product.productId)
+    ? product.productId
+    : !string.IsNullOrWhiteSpace(product._id)
+        ? product._id
+        : product.id;
 
-            item.Setup(
-                product.productName,
-                product.image,
-                product.externalUrl
-            );
+string variantId = !string.IsNullOrWhiteSpace(product.variantId)
+    ? product.variantId
+    : !string.IsNullOrWhiteSpace(product.variant)
+        ? product.variant
+        : product.defaultVariantId;
+
+item.Setup(
+    productId,
+    variantId,
+    product.productName,
+    product.image,
+    product.externalUrl
+);
 
             _spawnedItems.Add(item);
         }
