@@ -220,13 +220,22 @@ public static class CourseModels
         public string description;
     }
 
-    [Serializable]
-    public class CourseProduct
-    {
-        public string productName;
-        public string image;
-        public string externalUrl;
-    }
+[Serializable]
+public class CourseProduct
+{
+    public string productName;
+    public string image;
+    public string externalUrl;
+
+    public string productId;
+    public string variantId;
+
+    // Nếu API trả về dạng khác thì giữ thêm các field này để bắt được data
+    public string _id;
+    public string id;
+    public string variant;
+    public string defaultVariantId;
+}
     [Serializable]
     public class CourseRelated
     {
