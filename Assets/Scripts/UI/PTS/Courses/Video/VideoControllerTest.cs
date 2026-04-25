@@ -31,8 +31,7 @@ private void Start()
 
     private void OnDestroy()
     {
-        // CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
-
+        CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
     }
 
 private void CourseDetailStaticStoreOnOnChanged()
