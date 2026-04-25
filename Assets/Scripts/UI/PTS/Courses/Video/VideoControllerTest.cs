@@ -11,24 +11,18 @@ public class VideoControllerTest : MonoBehaviour
 
     private LocalProxyAutoBoot _proxy;
     
-    private void Start()
-    {
-        _proxy = FindFirstObjectByType<LocalProxyAutoBoot>();
-        
-        // Truyền Core vào từng View — chỉ cần làm 1 lần
-        viewA.SetCore(core);
-        viewB.SetCore(core);
+private void Start()
+{
+    _proxy = FindFirstObjectByType<LocalProxyAutoBoot>();
 
-        // core.LoadAndPlay(testUrl, bannerUrl: testUrl);
+    viewA.SetCore(core);
+    viewB.SetCore(core);
 
-        // Lúc đầu chỉ bật ViewA
-        // viewA.gameObject.SetActive(false);
-        // viewB.gameObject.SetActive(false);
-        
-        string newCourseId = CourseDetailStaticStore.CurrentCourseId;
-        
-        // CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
-    }
+    CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
+
+    // Nếu store đã có data trước khi script này subscribe
+    CourseDetailStaticStoreOnOnChanged();
+}
 
     private void OnDisable()
     {
@@ -41,13 +35,28 @@ public class VideoControllerTest : MonoBehaviour
 
     }
 
-    private void CourseDetailStaticStoreOnOnChanged()
+private void CourseDetailStaticStoreOnOnChanged()
+{
+    if (!CourseDetailStaticStore.HasData ||
+        CourseDetailStaticStore.IsLoading ||
+        string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourseId) ||
+        CourseDetailStaticStore.CurrentDetail == null)
     {
-        // Debug.Log($"Video Intro: "+CourseDetailStaticStore.VideoIntro);
-        // Debug.Log($"Video Intro: "+CourseDetailStaticStore.CurrentCourseId);
-        string videoUrl = CourseDetailStaticStore.VideoIntro;
-        core.LoadAndPlay(_proxy.GetPlayableUrl(videoUrl), CourseDetailStaticStore.GetFirstBanner());
+        Debug.Log("[VideoIntro] Store chưa sẵn sàng, bỏ qua OnChanged.");
+        return;
     }
+
+    string videoUrl = CourseDetailStaticStore.VideoIntro;
+
+    if (string.IsNullOrEmpty(videoUrl))
+    {
+        Debug.Log("[VideoIntro] Không có video intro.");
+        return;
+    }
+
+    string playableUrl = _proxy != null ? _proxy.GetPlayableUrl(videoUrl) : videoUrl;
+    core.LoadAndPlay(playableUrl, CourseDetailStaticStore.GetFirstBanner());
+}
 
     public void ShowViewA()
     {
