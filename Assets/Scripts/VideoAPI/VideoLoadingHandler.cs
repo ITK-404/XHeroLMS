@@ -110,6 +110,7 @@ public class VideoLoadingHandler : MonoBehaviour
 
         if (shouldShow)
         {
+            Debug.Log("Disable", gameObject);
             LoadingUI.Show(60f,
                 "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc\n thử lại sau.",
                 "Lỗi Mạng"
