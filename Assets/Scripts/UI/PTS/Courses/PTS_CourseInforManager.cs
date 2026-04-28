@@ -7,6 +7,7 @@ public class PTS_CourseInforManager : PTS_CourseSectionBase
     {
         ActiveList(true);
         videoControllerTest.ShowViewA();
+        videoControllerTest.ShowVideoIntro();
     }
 
     public override void Hide()
