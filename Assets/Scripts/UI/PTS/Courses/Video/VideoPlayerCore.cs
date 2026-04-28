@@ -27,7 +27,7 @@ public class VideoPlayerCore : MonoBehaviour
     // Internal
     [SerializeField] private VideoPlayer _videoPlayer;
     [SerializeField] private RenderTexture _renderTexture;
-    private VideoPlayerModel _model = new VideoPlayerModel();
+    [SerializeField] private VideoPlayerModel _model = new VideoPlayerModel();
 
     private bool _didSetup;
     private bool _isPreparing;
@@ -87,7 +87,7 @@ public class VideoPlayerCore : MonoBehaviour
         _model.IsPlaying = false;
         OnStateChanged?.Invoke(_model);
     }
-
+    [ContextMenu("Resume")]
     public void Resume()
     {
         if (_videoPlayer != null && _videoPlayer.isPrepared)
