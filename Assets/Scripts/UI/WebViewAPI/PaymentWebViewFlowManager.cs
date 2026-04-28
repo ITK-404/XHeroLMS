@@ -224,6 +224,10 @@ public void StartPaymentCheckFlow(string orderId, string accessToken, string cou
 
                 currentPopup.ShowPayment(true, priceText);
                 SetStateText("Thanh toán thành công");
+
+                Debug.Log("[PaymentWebViewFlowManager] Payment SUCCESS -> request CourseNotifyUI check");
+                CourseNotifyUI.RequestPaymentSuccessCheck();
+
                 yield break;
             }
 

@@ -52,8 +52,8 @@ public class UniWebViewPostBuildProcessorIOS
         // Thêm capability Push Notifications
         capabilityManager.AddPushNotifications(development: false);
         capabilityManager.AddBackgroundModes(BackgroundModesOptions.RemoteNotifications);
-        // development: true  → dùng APNs Sandbox (Debug build)
-        // development: false → dùng APNs Production (Release build)
+        // development: true  -> dùng APNs Sandbox (Debug build)
+        // development: false -> dùng APNs Production (Release build)
 
         capabilityManager.WriteToFile();
 

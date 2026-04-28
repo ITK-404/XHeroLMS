@@ -429,8 +429,8 @@ public class CourseSearch : MonoBehaviour
                 "Mặc định",
                 "Mới nhất",
                 "Cũ nhất",
-                "Giá: Cao → Thấp",
-                "Giá: Thấp → Cao"
+                "Giá: Cao -> Thấp",
+                "Giá: Thấp -> Cao"
             });
             dropdownSort.SetValueWithoutNotify(0);
             dropdownSort.RefreshShownValue();
