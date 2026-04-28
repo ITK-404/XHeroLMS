@@ -144,7 +144,7 @@
                 if (metSample.r < 0.99)
                     metallic = metSample.r * _MetallicMult;
 
-                // Roughness → Smoothness
+                // Roughness -> Smoothness
                 half roughness = 1.0;
                 half4 roughSample = SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, i.uv);
                 if (roughSample.r < 0.99)
