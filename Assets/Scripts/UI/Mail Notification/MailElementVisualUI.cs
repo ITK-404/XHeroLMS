@@ -47,13 +47,13 @@ public class MailElementVisualUI : MonoBehaviour
     public void BindData(string title, string description, string readStateText)
     {
         if (titleTmp != null)
-            titleTmp.text = title ?? "";
+            titleTmp.text = TMPMailTextFormatter.Format(title) ?? "";
 
         if (descriptionTmp != null)
-            descriptionTmp.text = description ?? "";
+            descriptionTmp.text = TMPMailTextFormatter.Format(description) ?? "";
 
         if (mailReadStateTmp != null)
-            mailReadStateTmp.text = readStateText ?? "";
+            mailReadStateTmp.text = TMPMailTextFormatter.Format(readStateText) ?? "";
     }
 
     public void SetReadStateText(string readStateText)
