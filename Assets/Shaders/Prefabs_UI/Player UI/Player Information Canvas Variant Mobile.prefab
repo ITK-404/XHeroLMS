@@ -629,6 +629,14 @@ PrefabInstance:
       propertyPath: blockingSelectFunction
       value: 
       objectReference: {fileID: 6622323205476702545}
+    - target: {fileID: 1178680549228878740, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_text
+      value: "Vi\u1EC7c \u0111\u0103ng xu\u1EA5t s\u1EBD t\u1EA1m d\u1EEBng phi\xEAn
+        h\u1ECDc hi\u1EC7n t\u1EA1i. Qu\xFD h\u1ECDc vi\xEAn c\xF3 th\u1EC3 \u0111\u0103ng
+        nh\u1EADp l\u1EA1i b\u1EA5t c\u1EE9 l\xFAc n\xE0o \u0111\u1EC3 ti\u1EBFp
+        t\u1EE5c h\u1ECDc.\nQu\xFD h\u1ECDc vi\xEAn c\xF3 ch\u1EAFc ch\u1EAFn mu\u1ED1n
+        \u0111\u0103ng xu\u1EA5t kh\xF4ng?"
+      objectReference: {fileID: 0}
     - target: {fileID: 1248528586641998971, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -965,6 +973,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4134245692385828581, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 16791a03080c5437f9c80d16d026f739, type: 3}
     - target: {fileID: 4134245692385828581, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_PreserveAspect
       value: 1
@@ -1793,8 +1805,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2928d64129334d57bdd708a8b43dcd0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LetterButtonUI
+  notifySource: 2
   isHaveNotify: 1
-  _shakeNotification: {fileID: 9104669054461796420}
+  shakeNotification: {fileID: 0}
   dotNotify: {fileID: 7976478803003597983}
 --- !u!1 &6632816785627994777 stripped
 GameObject:
