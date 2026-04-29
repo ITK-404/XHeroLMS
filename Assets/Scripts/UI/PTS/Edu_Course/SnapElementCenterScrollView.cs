@@ -9,6 +9,9 @@ public partial class SnapElementCenterScrollView : MonoBehaviour
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private int centerIndex;
     [SerializeField] private float snapDuration = 0.25f;
+
+    public ScrollRect ScrollRect => scrollRect;
+    
     private Tween dragTween;
     public Action<int> OnUpdateCenterIndexEvent;
     private void OnValidate()
@@ -57,6 +60,17 @@ public partial class SnapElementCenterScrollView : MonoBehaviour
         OnUpdateCenterIndexEvent?.Invoke(shortestIndex);
     }
 
+    private void LateUpdate()
+    {
+        float scrollHorizontalNormalize = scrollRect.horizontalNormalizedPosition;
+        bool isExpandToLimit = scrollHorizontalNormalize > 1.02f ||
+                               scrollHorizontalNormalize < - 0.02f;
+        if (isExpandToLimit)
+        {
+            scrollRect.horizontalNormalizedPosition =
+                Mathf.Clamp(scrollHorizontalNormalize, -0.02f, 1.02f);
+        }
+    }
 
     public float GetMagnitude() => scrollRect.velocity.magnitude;
 }
