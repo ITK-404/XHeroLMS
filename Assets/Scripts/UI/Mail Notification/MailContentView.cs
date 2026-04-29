@@ -92,10 +92,10 @@ public class MailContentView : MonoBehaviour
         allowApplyDetail = true;
 
         if (titleTmp != null)
-            titleTmp.text = data.title ?? "";
+            titleTmp.text = TMPMailTextFormatter.Format(data.title) ?? "";
 
         if (contentTmp != null)
-            contentTmp.text = data.text ?? "";
+            contentTmp.text = TMPMailTextFormatter.Format(data.text) ?? "";
 
         if (courseNameTmp != null)
             courseNameTmp.text = "";
@@ -114,10 +114,10 @@ public class MailContentView : MonoBehaviour
         isShowingPreview = false;
 
         if (titleTmp != null)
-            titleTmp.text = data.title ?? "";
+            titleTmp.text = TMPMailTextFormatter.Format(data.title) ?? "";
 
         if (contentTmp != null)
-            contentTmp.text = data.text ?? "";
+            contentTmp.text = TMPMailTextFormatter.Format(data.text) ?? "";
 
         if (courseNameTmp != null)
             courseNameTmp.text = "";
