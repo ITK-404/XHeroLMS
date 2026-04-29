@@ -25,9 +25,13 @@ public class SnapElementCenterScrollViewBehaviour : MonoBehaviour, IEndDragHandl
             return;
         }
 
-        if (customScrollView.GetMagnitude() < stopVelocity && isAlign == false)
+        bool canStop = customScrollView.GetMagnitude() < stopVelocity;
+        Debug.Log($"Horizontal normalize position: ");
+        
+        if (canStop && isAlign == false)
         {
             customScrollView.AlignCenterOfElement();
+            
             isAlign = true;
         }
     }
