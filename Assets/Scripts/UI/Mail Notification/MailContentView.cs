@@ -29,8 +29,19 @@ public class MailContentView : MonoBehaviour
         }
 
         Instance = this;
+
+        ApplyTmp(titleTmp);
+        ApplyTmp(contentTmp);
+        ApplyTmp(courseNameTmp);
+
         NotificationsDetailStaticStore.OnChanged += RefreshView;
         InitializeOnce();
+    }
+
+    private void ApplyTmp(TextMeshProUGUI tmp)
+    {
+        if (tmp == null) return;
+        tmp.richText = true;
     }
 
     private void OnDestroy()

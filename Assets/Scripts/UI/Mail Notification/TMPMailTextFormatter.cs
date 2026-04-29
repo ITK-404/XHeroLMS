@@ -7,65 +7,65 @@ public static class TMPMailTextFormatter
     private static readonly Dictionary<string, string> IconMap = new()
     {
         // Backend tags
-        ["[red_dot]"] = "red_dot",
-        ["[red_circle]"] = "red_dot",
-        ["[red_triangle]"] = "red_triangle",
-        ["[heart]"] = "heart",
-        ["[clock]"] = "clock",
-        ["[trash]"] = "trash",
-        ["[check]"] = "check",
-        ["[fail]"] = "fail",
-        ["[warning]"] = "warning",
-        ["[gift]"] = "gift",
-        ["[star]"] = "star",
-        ["[fire]"] = "fire",
-        ["[coin]"] = "coin",
-        ["[video]"] = "video",
-        ["[mail]"] = "mail",
-        ["[link]"] = "link",
+        ["[red_dot]"] = "<color=#E00000>●</color>",
+        ["[red_circle]"] = "<color=#E00000>●</color>",
+        ["[red_triangle]"] = "<color=#E00000>▼</color>",
+        ["[heart]"] = "<color=#E00000>♥</color>",
+        ["[clock]"] = "◷",
+        ["[trash]"] = "⌫",
+        ["[check]"] = "<color=#00A651>✓</color>",
+        ["[fail]"] = "<color=#E00000>✕</color>",
+        ["[warning]"] = "<color=#F2A900>⚠</color>",
+        ["[gift]"] = "▣",
+        ["[star]"] = "<color=#F2C200>★</color>",
+        ["[fire]"] = "<color=#FF5A00>▲</color>",
+        ["[coin]"] = "<color=#F2C200>●</color>",
+        ["[video]"] = "▻",
+        ["[mail]"] = "✉",
+        ["[link]"] = "🔗",
 
-        // Emoji / symbols
-        ["🔴"] = "red_dot",
-        ["●"] = "red_dot",
+        // Emoji / symbols từ API
+        ["🔴"] = "<color=#E00000>●</color>",
+        ["●"] = "<color=#E00000>●</color>",
 
-        ["🔻"] = "red_triangle",
-        ["▼"] = "red_triangle",
-        ["▾"] = "red_triangle",
+        ["🔻"] = "<color=#E00000>▼</color>",
+        ["▼"] = "<color=#E00000>▼</color>",
+        ["▾"] = "<color=#E00000>▼</color>",
 
-        ["❤️"] = "heart",
-        ["❤"] = "heart",
-        ["♥"] = "heart",
+        ["❤️"] = "<color=#E00000>♥</color>",
+        ["❤"] = "<color=#E00000>♥</color>",
+        ["♥"] = "<color=#E00000>♥</color>",
 
-        ["⏰"] = "clock",
-        ["🕒"] = "clock",
-        ["🕐"] = "clock",
-        ["⌚"] = "clock",
+        ["⏰"] = "◷",
+        ["🕒"] = "◷",
+        ["🕐"] = "◷",
+        ["⌚"] = "◷",
 
-        ["✅"] = "check",
-        ["✔"] = "check",
-        ["☑"] = "check",
+        ["✅"] = "<color=#00A651>✓</color>",
+        ["✔"] = "<color=#00A651>✓</color>",
+        ["☑"] = "<color=#00A651>✓</color>",
 
-        ["❌"] = "fail",
-        ["✖"] = "fail",
+        ["❌"] = "<color=#E00000>✕</color>",
+        ["✖"] = "<color=#E00000>✕</color>",
 
-        ["⚠"] = "warning",
+        ["⚠"] = "<color=#F2A900>⚠</color>",
 
-        ["🎁"] = "gift",
-        ["⭐"] = "star",
-        ["🌟"] = "star",
-        ["🔥"] = "fire",
-        ["💰"] = "coin",
-        ["🪙"] = "coin",
-        ["🎥"] = "video",
-        ["🎬"] = "video",
-        ["📌"] = "pin",
-        ["📍"] = "pin",
-        ["📢"] = "announce",
-        ["🔔"] = "bell",
-        ["📩"] = "mail",
-        ["✉"] = "mail",
-        ["🔗"] = "link",
-        ["🗑"] = "trash"
+        ["🎁"] = "▣",
+        ["⭐"] = "<color=#F2C200>★</color>",
+        ["🌟"] = "<color=#F2C200>★</color>",
+        ["🔥"] = "<color=#FF5A00>▲</color>",
+        ["💰"] = "<color=#F2C200>●</color>",
+        ["🪙"] = "<color=#F2C200>●</color>",
+        ["🎥"] = "▻",
+        ["🎬"] = "▻",
+        ["📌"] = "<color=#E00000>◆</color>",
+        ["📍"] = "<color=#E00000>◆</color>",
+        ["📢"] = "!",
+        ["🔔"] = "!",
+        ["📩"] = "✉",
+        ["✉"] = "✉",
+        ["🔗"] = "↗",
+        ["🗑"] = "⌫"
     };
 
     public static string Format(string raw)
@@ -74,21 +74,14 @@ public static class TMPMailTextFormatter
             return "";
 
         string text = WebUtility.HtmlDecode(raw);
-
-        // Chuẩn hóa emoji có variation selector.
         text = RemoveVariationSelectors(text);
 
         foreach (var pair in IconMap)
         {
-            text = text.Replace(pair.Key, ToSprite(pair.Value));
+            text = text.Replace(pair.Key, pair.Value);
         }
 
         return text;
-    }
-
-    private static string ToSprite(string spriteName)
-    {
-        return $"<sprite name=\"{spriteName}\">";
     }
 
     private static string RemoveVariationSelectors(string input)
@@ -100,8 +93,6 @@ public static class TMPMailTextFormatter
 
         foreach (char c in input)
         {
-            // FE0E = text style variation selector
-            // FE0F = emoji style variation selector
             if (c == '\uFE0E' || c == '\uFE0F')
                 continue;
 

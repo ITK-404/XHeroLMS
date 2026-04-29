@@ -18,6 +18,18 @@ public class MailElementVisualUI : MonoBehaviour
     [SerializeField] private Image stateImg;
     [SerializeField] private Image bgImg;
 
+    private void Awake()
+    {
+        ApplyTmp(titleTmp);
+        ApplyTmp(descriptionTmp);
+        ApplyTmp(mailReadStateTmp);
+    }
+    private void ApplyTmp(TextMeshProUGUI tmp)
+    {
+        if (tmp == null) return;
+        tmp.richText = true;
+    }
+    
     private void OnDrawGizmosSelected()
     {
         if (isPreview && currentConfig != null)
