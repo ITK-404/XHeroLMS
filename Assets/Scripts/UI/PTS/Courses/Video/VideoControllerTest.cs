@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class VideoControllerTest : MonoBehaviour
@@ -21,20 +22,27 @@ public class VideoControllerTest : MonoBehaviour
         viewB.SetCore(core);
 
         CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
-
+        
+        SceneManager.sceneLoaded += SceneManagerOnsceneLoaded;
+        
         // Nếu store đã có data trước khi script này subscribe
         CourseDetailStaticStoreOnOnChanged();
     }
-    
-    
-    private void OnDisable()
-    {
-        core.Stop();
-    }
 
+    private void SceneManagerOnsceneLoaded(Scene newScene, LoadSceneMode loadSceneMode)
+    {
+        core.Pause();
+    }
+    
     private void OnDestroy()
     {
         CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
+        SceneManager.sceneLoaded -= SceneManagerOnsceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        core.Stop();
     }
 
     private void CourseDetailStaticStoreOnOnChanged()
