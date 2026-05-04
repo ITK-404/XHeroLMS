@@ -25,6 +25,7 @@ public class LoadRoomTrigger : MonoBehaviour
     [FormerlySerializedAs("savePlayerPosition")]
     public bool loadByCourse = false;
 
+    public bool isUsingReviewMode = false;
     public enum LoadType
     {
         Lock = 0,
@@ -50,6 +51,12 @@ public class LoadRoomTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        #if UNITY_EDITOR || PLATFORM_IOS
+        if (AppDataGlobal.isInReviewMode && isUsingReviewMode)
+        {
+            return;
+        }
+        #endif
         if (isEnter) return;
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;

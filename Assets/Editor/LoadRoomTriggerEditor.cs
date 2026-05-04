@@ -12,6 +12,7 @@ public class LoadRoomTriggerEditor : Editor
         var loadTypeProp = serializedObject.FindProperty("loadType");
         var scenenameProp = serializedObject.FindProperty("sceneName");
         var courseIdProp  = serializedObject.FindProperty("courseId");
+        var isUsingReviewModeProp = serializedObject.FindProperty("isUsingReviewMode");
         // ... vẽ fields ở đây
         var style = new GUIStyle(EditorStyles.helpBox);
         style.wordWrap = true;
@@ -31,7 +32,8 @@ public class LoadRoomTriggerEditor : Editor
                 EditorGUILayout.HelpBox("Sẽ load scene trước đó", MessageType.Info);
                 break;
         }
-        
+
+        EditorGUILayout.PropertyField(isUsingReviewModeProp, new GUIContent("isUsingReviewModeProp"));
         serializedObject.ApplyModifiedProperties(); // Lưu thay đổi + hỗ trợ Undo
     }
 }

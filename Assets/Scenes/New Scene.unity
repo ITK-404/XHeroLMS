@@ -44863,10 +44863,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FCMManager
   permissionRequester: {fileID: 1499187983}
   showLocalNotificationWhenAppIsOpen: 1
-  androidChannelId: fcm_default_channel
-  androidChannelName: General Notifications
-  androidChannelDescription: Notifications from Firebase
-  androidSmallIcon: default
+  requestIOSAuthorizationOnStart: 1
 --- !u!4 &1499187985
 Transform:
   m_ObjectHideFlags: 0
@@ -49358,6 +49355,10 @@ PrefabInstance:
     - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: sceneName
       value: phong_tuyen_sinh
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: isUsingReviewMode
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2512272161527576744, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_IsActive
@@ -61897,7 +61898,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 3e4b2492a67e44336b4a4b23b57ea7ad, type: 3}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00002670288
+      value: 0.00007247925
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x
