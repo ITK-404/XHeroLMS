@@ -30,33 +30,39 @@ public class CourseProductItemUI : MonoBehaviour
     /// <summary>
     /// Dùng setup này nếu bạn đã có productId và variantId.
     /// </summary>
-    public void Setup(string productId, string variantId, string productName, string imageUrl, string externalUrl = "")
+public void Setup(string productId, string variantId, string productName, string imageUrl, string externalUrl = "")
+{
+    _productId = productId;
+    _variantId = string.IsNullOrWhiteSpace(variantId) ? fallbackVariantId : variantId;
+    _externalUrl = externalUrl;
+
+    if (nameText != null)
+        nameText.text = productName ?? string.Empty;
+
+    // Nếu không có externalUrl -> ẩn button
+    if (actionButton != null)
     {
-        _productId = productId;
-        _variantId = string.IsNullOrWhiteSpace(variantId) ? fallbackVariantId : variantId;
-        _externalUrl = externalUrl;
+        bool hasUrl = !string.IsNullOrWhiteSpace(_externalUrl);
 
-        if (nameText != null)
-            nameText.text = productName ?? string.Empty;
+        actionButton.gameObject.SetActive(hasUrl);
 
-        if (actionButton != null)
+        if (hasUrl)
         {
             actionButton.onClick.RemoveAllListeners();
             actionButton.onClick.AddListener(OnClickButton);
-
-            // Chỉ cần có productId là cho bấm
-            actionButton.interactable = !string.IsNullOrWhiteSpace(_productId);
         }
-
-        if (_loadImageRoutine != null)
-            StopCoroutine(_loadImageRoutine);
-
-        if (iconImage != null)
-            iconImage.sprite = defaultIcon;
-
-        if (!string.IsNullOrWhiteSpace(imageUrl))
-            _loadImageRoutine = StartCoroutine(LoadImageFromUrl(imageUrl));
     }
+
+    // Load image giữ nguyên
+    if (_loadImageRoutine != null)
+        StopCoroutine(_loadImageRoutine);
+
+    if (iconImage != null)
+        iconImage.sprite = defaultIcon;
+
+    if (!string.IsNullOrWhiteSpace(imageUrl))
+        _loadImageRoutine = StartCoroutine(LoadImageFromUrl(imageUrl));
+}
 
     /// <summary>
     /// Giữ tương thích nếu code cũ của bạn vẫn đang gọi setup kiểu cũ.
@@ -90,58 +96,59 @@ public class CourseProductItemUI : MonoBehaviour
             _loadImageRoutine = StartCoroutine(LoadImageFromUrl(imageUrl));
     }
 
-    private void OnClickButton()
+private void OnClickButton()
+{
+    string token = TokenStore.AccessToken;
+
+    if (string.IsNullOrWhiteSpace(token))
     {
-        string token = TokenStore.AccessToken;
-
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để tiếp tục thanh toán.",
-                "Thông báo"
-            );
-            return;
-        }
-
-        token = token.Trim();
-        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            token = token.Substring("Bearer ".Length).Trim();
-
-        if (!string.IsNullOrWhiteSpace(_productId))
-        {
-            if (string.IsNullOrWhiteSpace(_variantId))
-            {
-                Debug.LogWarning("[CourseProductItemUI] Missing variantId.");
-                LoadingUI.ShowErrorPopup(
-                    "Không xác định được biến thể sản phẩm để thanh toán.",
-                    "Thông báo"
-                );
-                return;
-            }
-
-            string url =
-                "https://phongthuydainam.vn/vi/thanh-toan" +
-                "?productId=" + UnityWebRequest.EscapeURL(_productId) +
-                "&variant=" + UnityWebRequest.EscapeURL(_variantId) +
-                "&qty=" + defaultQty +
-                "&accessToken=" + UnityWebRequest.EscapeURL(token);
-
-            Debug.Log("[CourseProductItemUI] Open payment webview: " + url);
-            Debug.LogError("[CourseProductItemUI] null title " + url);
-            WebViewTest.LoadWebView(url,nameText.text);
-            return;
-        }
-
-        // fallback nếu item không có productId mà chỉ có externalUrl
-        if (!string.IsNullOrWhiteSpace(_externalUrl))
-        {
-            // WebViewTest.LoadWebView(_externalUrl,"@@@@@@@");
-            WebViewTest.LoadWebView(_externalUrl,nameText.text);
-            return;
-        }
-
-        Debug.LogWarning("[CourseProductItemUI] productId and externalUrl are both empty.");
+        LoadingUI.ShowErrorPopup(
+            "Bạn cần đăng nhập để tiếp tục.",
+            "Thông báo"
+        );
+        return;
     }
+
+    token = token.Trim();
+    if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        token = token.Substring("Bearer ".Length).Trim();
+
+    if (!string.IsNullOrWhiteSpace(_externalUrl))
+    {
+        string url = NormalizeProductUrl(_externalUrl);
+
+        string separator = url.Contains("?") ? "&" : "?";
+        url += separator + "accessToken=" + UnityWebRequest.EscapeURL(token);
+
+        Debug.Log("[CourseProductItemUI] Open product detail webview: " + url);
+        WebViewTest.LoadWebView(url, nameText != null ? nameText.text : "");
+        return;
+    }
+
+    Debug.LogWarning("[CourseProductItemUI] externalUrl is empty. Cannot open product detail page.");
+
+    LoadingUI.ShowErrorPopup(
+        "Sản phẩm này chưa có đường dẫn chi tiết.",
+        "Thông báo"
+    );
+}
+
+private string NormalizeProductUrl(string url)
+{
+    if (string.IsNullOrWhiteSpace(url))
+        return "";
+
+    url = url.Trim();
+
+    // API đang trả: https://phongthuydainam.vn/products/...
+    // Web bạn muốn có thể là: https://phongthuydainam.vn/vi/san-phams/...
+    url = url.Replace(
+        "https://phongthuydainam.vn/products/",
+        "https://phongthuydainam.vn/vi/san-phams/"
+    );
+
+    return url;
+}
 
     private IEnumerator LoadImageFromUrl(string url)
     {
