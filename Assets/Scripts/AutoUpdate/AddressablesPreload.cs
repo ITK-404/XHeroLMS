@@ -13,6 +13,13 @@ using UnityEngine.Networking;
 
 /// <summary>
 /// Đặt trong BootstrapScene hoặc auto-create bởi BootFlow.
+/// Preload Addressables remote content từ GCS.
+/// Bản update:
+/// - Không kẹt vô hạn ở DownloadDependenciesAsync.
+/// - Detect download bị đứng progress.
+/// - Retry rõ ràng.
+/// - Dùng GetDownloadStatus để lấy byte thật.
+/// - Expose HasFailed/LastError để Loading UI xử lý.
 /// </summary>
 [DefaultExecutionOrder(-15000)]
 public class AddressablesPreload : MonoBehaviour
@@ -21,7 +28,18 @@ public class AddressablesPreload : MonoBehaviour
 
     public enum PreloadStage
     {
-        None, Probe, ClearCache, Initialize, ForceLoadCatalog, CheckCatalog, UpdateCatalog, GetSize, Download, Verify, Done, Failed
+        None,
+        Probe,
+        ClearCache,
+        Initialize,
+        ForceLoadCatalog,
+        CheckCatalog,
+        UpdateCatalog,
+        GetSize,
+        Download,
+        Verify,
+        Done,
+        Failed
     }
 
     [Header("State (Read-only)")]
@@ -32,6 +50,7 @@ public class AddressablesPreload : MonoBehaviour
     public string LastError { get; private set; } = "";
     public float DownloadPercent01 { get; private set; }
     public long BytesToDownload { get; private set; }
+    public long BytesDownloadedApprox { get; private set; }
     public bool IsCloudFullyDownloaded { get; private set; }
 
 #if ADDRESSABLES
@@ -40,39 +59,62 @@ public class AddressablesPreload : MonoBehaviour
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxRetries = 3;
+
+    // Timeout cho các step nhỏ như Initialize, CheckCatalog, GetSize, Verify.
     [SerializeField] private float stepTimeoutSeconds = 25f;
+
+    // Timeout tổng cho mỗi label download.
     [SerializeField] private float downloadTimeoutSeconds = 300f;
+
+    // Nếu download không tăng byte/progress trong thời gian này thì coi như bị đứng và retry.
+    [SerializeField] private float downloadStallTimeoutSeconds = 45f;
+
+    // Delay giữa các lần retry.
+    [SerializeField] private float retryDelaySeconds = 1.5f;
 
     [Header("Verify downloaded (important)")]
     [SerializeField] private bool verifyAfterDownload = true;
+
+    // Nếu verify còn lại <= ngưỡng này thì vẫn coi là pass. Nên để 0 nếu muốn chặt.
     [SerializeField] private long verifySizeThresholdBytes = 0;
 
     [Header("Probe remote catalog (optional)")]
     [SerializeField] private bool enableProbeRemoteCatalog = true;
     [SerializeField] private int probeReadBytes = 64;
 
-    private string remoteCatalogHashUrl = "";
-    private string remoteCatalogJsonUrl = "";
-
     [Header("Force latest catalog (Recommended)")]
-    [Tooltip("Nếu bật: sau Initialize sẽ LoadContentCatalogAsync(remoteCatalogJsonUrl) để ép runtime dùng catalog latest.")]
+    // Nếu bật: sau Initialize sẽ LoadContentCatalogAsync(remoteCatalogJsonUrl) để ép runtime dùng catalog latest.
     [SerializeField] private bool forceLoadRemoteCatalog = true;
 
     [Header("Cache")]
+    // Retry lần 2 trở đi sẽ clear cache catalog Addressables.
     [SerializeField] private bool clearCatalogCacheOnRetryOnly = true;
+
+    // Nếu download fail/stall thì clear catalog cache trước attempt sau.
+    [SerializeField] private bool clearCatalogCacheAfterDownloadFail = true;
 
     [Header("Debug")]
     [SerializeField] private bool enableAddressablesRequestLog = true;
+    [SerializeField] private bool verboseProgressLog = true;
+    [SerializeField] private float progressLogInterval = 2f;
+
+    private string remoteCatalogHashUrl = "";
+    private string remoteCatalogJsonUrl = "";
 
     private Coroutine _running;
     private bool _retryRequested;
+    private bool _lastAttemptFailedDuringDownload;
 #endif
 
     public void RequestRetry()
     {
 #if ADDRESSABLES
+        Debug.Log("[Preload] Retry requested by UI/user.");
+
         _retryRequested = true;
-        Debug.Log("[Preload] Retry requested");
+
+        if (_running == null)
+            _running = StartCoroutine(RunPreloadFlow());
 #endif
     }
 
@@ -83,6 +125,7 @@ public class AddressablesPreload : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
@@ -93,8 +136,20 @@ public class AddressablesPreload : MonoBehaviour
         {
             Addressables.WebRequestOverride = (req) =>
             {
-                if (req.url.Contains("catalog") || req.url.EndsWith(".hash") || req.url.EndsWith(".json") || req.url.Contains(".bundle"))
+                if (req == null || string.IsNullOrEmpty(req.url))
+                    return;
+
+                if (req.url.Contains("catalog") ||
+                    req.url.EndsWith(".hash") ||
+                    req.url.EndsWith(".json") ||
+                    req.url.Contains(".bundle"))
+                {
                     Debug.Log($"[ADDR REQ] {req.method} {req.url}");
+                }
+
+                // Không set req.timeout ở đây cho bundle lớn,
+                // vì một số bundle tải lâu có thể bị cắt ngang sai.
+                // Stall timeout được xử lý bằng coroutine bên dưới.
             };
         }
 
@@ -146,22 +201,40 @@ public class AddressablesPreload : MonoBehaviour
 
             ResetStateForAttempt();
 
+            Debug.Log($"[Preload] ===== Attempt {attempt}/{maxRetries} started =====");
+
             yield return CoPreloadOnce(attempt);
 
             if (IsReady && !HasFailed)
             {
                 Stage = PreloadStage.Done;
+                DownloadPercent01 = 1f;
+                IsCloudFullyDownloaded = true;
                 _running = null;
+
+                Debug.Log("[Preload] DONE. Cloud content is ready.");
                 yield break;
             }
 
             if (_retryRequested)
             {
+                Debug.Log("[Preload] Manual retry requested. Reset attempt counter.");
                 _retryRequested = false;
                 attempt = 0;
             }
 
-            yield return new WaitForSecondsRealtime(1f);
+            if (attempt < maxRetries)
+            {
+                Debug.LogWarning($"[Preload] Attempt failed. Retry after {retryDelaySeconds}s. LastError={LastError}");
+
+                if (clearCatalogCacheAfterDownloadFail && _lastAttemptFailedDuringDownload)
+                {
+                    Debug.LogWarning("[Preload] Last attempt failed during download. Clearing Addressables catalog cache before retry.");
+                    ClearAddressablesCatalogCache();
+                }
+
+                yield return new WaitForSecondsRealtime(retryDelaySeconds);
+            }
         }
 
         Fail("[Preload] Max retries reached. Giving up.");
@@ -175,8 +248,10 @@ public class AddressablesPreload : MonoBehaviour
         LastError = "";
         DownloadPercent01 = 0f;
         BytesToDownload = 0;
+        BytesDownloadedApprox = 0;
         IsCloudFullyDownloaded = false;
         Stage = PreloadStage.None;
+        _lastAttemptFailedDuringDownload = false;
     }
 
     private IEnumerator CoPreloadOnce(int attempt)
@@ -187,7 +262,6 @@ public class AddressablesPreload : MonoBehaviour
             yield break;
         }
 
-        // Báo lỗi sớm
         if (enableProbeRemoteCatalog)
         {
             Stage = PreloadStage.Probe;
@@ -200,7 +274,6 @@ public class AddressablesPreload : MonoBehaviour
             if (HasFailed) yield break;
         }
 
-        // Clear cache on retry
         if (clearCatalogCacheOnRetryOnly && attempt >= 2)
         {
             Stage = PreloadStage.ClearCache;
@@ -208,19 +281,24 @@ public class AddressablesPreload : MonoBehaviour
             ClearAddressablesCatalogCache();
         }
 
-        // Initialize
         Stage = PreloadStage.Initialize;
         SetStageProgress(0.05f);
 
         var init = Addressables.InitializeAsync();
         yield return WaitWithTimeout(init, stepTimeoutSeconds, $"InitializeAsync timeout (attempt {attempt})");
-        if (HasFailed) { SafeRelease(init); yield break; }
+
+        if (HasFailed)
+        {
+            SafeRelease(init);
+            yield break;
+        }
 
         if (!init.IsValid())
         {
             Fail("[Preload] InitializeAsync handle invalid.");
             yield break;
         }
+
         if (init.Status != AsyncOperationStatus.Succeeded)
         {
             Fail("[Preload] Addressables init failed: " +
@@ -231,7 +309,6 @@ public class AddressablesPreload : MonoBehaviour
 
         SafeRelease(init);
 
-        // Force latest catalog
         if (forceLoadRemoteCatalog)
         {
             Stage = PreloadStage.ForceLoadCatalog;
@@ -239,7 +316,12 @@ public class AddressablesPreload : MonoBehaviour
 
             var loadCat = Addressables.LoadContentCatalogAsync(remoteCatalogJsonUrl, true);
             yield return WaitWithTimeout(loadCat, stepTimeoutSeconds, $"LoadContentCatalogAsync timeout (attempt {attempt})");
-            if (HasFailed) { SafeRelease(loadCat); yield break; }
+
+            if (HasFailed)
+            {
+                SafeRelease(loadCat);
+                yield break;
+            }
 
             if (!loadCat.IsValid() || loadCat.Status != AsyncOperationStatus.Succeeded)
             {
@@ -248,22 +330,28 @@ public class AddressablesPreload : MonoBehaviour
                 SafeRelease(loadCat);
                 yield break;
             }
+
             SafeRelease(loadCat);
         }
 
-        // Check catalog updates
         Stage = PreloadStage.CheckCatalog;
         SetStageProgress(0.10f);
 
         var check = Addressables.CheckForCatalogUpdates(false);
         yield return WaitWithTimeout(check, stepTimeoutSeconds, $"CheckForCatalogUpdates timeout (attempt {attempt})");
-        if (HasFailed) { SafeRelease(check); yield break; }
+
+        if (HasFailed)
+        {
+            SafeRelease(check);
+            yield break;
+        }
 
         if (!check.IsValid())
         {
             Fail("[Preload] CheckForCatalogUpdates handle invalid.");
             yield break;
         }
+
         if (check.Status != AsyncOperationStatus.Succeeded)
         {
             Fail("[Preload] CheckForCatalogUpdates failed: " +
@@ -275,21 +363,28 @@ public class AddressablesPreload : MonoBehaviour
         IList<string> catalogs = check.Result;
         SafeRelease(check);
 
-        // Update catalogs
         if (catalogs != null && catalogs.Count > 0)
         {
             Stage = PreloadStage.UpdateCatalog;
             SetStageProgress(0.20f);
 
+            Debug.Log($"[Preload] Catalog updates found: {catalogs.Count}");
+
             var update = Addressables.UpdateCatalogs(catalogs, false);
             yield return WaitWithTimeout(update, stepTimeoutSeconds, $"UpdateCatalogs timeout (attempt {attempt})");
-            if (HasFailed) { SafeRelease(update); yield break; }
+
+            if (HasFailed)
+            {
+                SafeRelease(update);
+                yield break;
+            }
 
             if (!update.IsValid())
             {
                 Fail("[Preload] UpdateCatalogs handle invalid.");
                 yield break;
             }
+
             if (update.Status != AsyncOperationStatus.Succeeded)
             {
                 Fail("[Preload] UpdateCatalogs failed: " +
@@ -297,31 +392,18 @@ public class AddressablesPreload : MonoBehaviour
                 SafeRelease(update);
                 yield break;
             }
+
             SafeRelease(update);
         }
-
-        // --- sanitize labels ---
-        if (preloadLabels == null || preloadLabels.Count == 0)
+        else
         {
-            Fail("[Preload] preloadLabels is empty. Please set at least 1 label (e.g. 'cloud').");
+            Debug.Log("[Preload] No catalog updates.");
+        }
+
+        List<string> labels = BuildValidLabelList();
+        if (labels == null || labels.Count == 0)
             yield break;
-        }
 
-        List<string> labels = new List<string>();
-        for (int i = 0; i < preloadLabels.Count; i++)
-        {
-            string lb = preloadLabels[i];
-            if (string.IsNullOrWhiteSpace(lb)) continue;
-            if (!labels.Contains(lb)) labels.Add(lb);
-        }
-
-        if (labels.Count == 0)
-        {
-            Fail("[Preload] preloadLabels has no valid label strings.");
-            yield break;
-        }
-
-        // SUM all labels
         Stage = PreloadStage.GetSize;
         SetStageProgress(0.30f);
 
@@ -334,13 +416,19 @@ public class AddressablesPreload : MonoBehaviour
 
             var sizeHandle = Addressables.GetDownloadSizeAsync(lb);
             yield return WaitWithTimeout(sizeHandle, stepTimeoutSeconds, $"GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
-            if (HasFailed) { SafeRelease(sizeHandle); yield break; }
+
+            if (HasFailed)
+            {
+                SafeRelease(sizeHandle);
+                yield break;
+            }
 
             if (!sizeHandle.IsValid())
             {
                 Fail($"[Preload] GetDownloadSizeAsync handle invalid (label={lb}).");
                 yield break;
             }
+
             if (sizeHandle.Status != AsyncOperationStatus.Succeeded)
             {
                 Fail($"[Preload] GetDownloadSizeAsync failed (label={lb}): " +
@@ -354,68 +442,69 @@ public class AddressablesPreload : MonoBehaviour
 
             perLabelBytes[lb] = b;
             totalBytes += b;
+
+            Debug.Log($"[Preload] Label size: '{lb}' = {FormatBytes(b)}");
         }
 
         BytesToDownload = totalBytes;
 
-        // Download deps (ALL labels)
+        Debug.Log($"[Preload] Total bytes to download = {FormatBytes(BytesToDownload)}");
+
         if (BytesToDownload > 0)
         {
             Stage = PreloadStage.Download;
             SetStageProgress(0.35f);
 
-            long downloadedBytesApprox = 0;
+            long downloadedBeforeCurrentLabel = 0;
 
             for (int i = 0; i < labels.Count; i++)
             {
                 string lb = labels[i];
+
                 long thisLabelBytes = perLabelBytes.TryGetValue(lb, out var bb) ? bb : 0;
-                if (thisLabelBytes <= 0) continue;
-
-                Debug.Log($"[Preload] Download label='{lb}' bytes={thisLabelBytes}");
-
-                var dl = Addressables.DownloadDependenciesAsync(lb, autoReleaseHandle: false);
-
-                float t = 0f;
-                while (!dl.IsDone)
+                if (thisLabelBytes <= 0)
                 {
-                    float labelProgress01 = Mathf.Clamp01(dl.PercentComplete);
-                    long labelDownloadedApprox = (long)(thisLabelBytes * labelProgress01);
-
-                    long overallDownloadedApprox = downloadedBytesApprox + labelDownloadedApprox;
-                    float overall01 = (totalBytes <= 0) ? 1f : Mathf.Clamp01((float)overallDownloadedApprox / (float)totalBytes);
-
-                    DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Lerp(0.35f, 1f, overall01));
-
-                    t += Time.unscaledDeltaTime;
-                    if (downloadTimeoutSeconds > 0f && t >= downloadTimeoutSeconds)
-                    {
-                        SafeRelease(dl);
-                        Fail($"[Preload] Download timeout (label={lb}).");
-                        yield break;
-                    }
-                    yield return null;
+                    Debug.Log($"[Preload] Skip label='{lb}' because size is 0.");
+                    continue;
                 }
 
-                if (dl.Status != AsyncOperationStatus.Succeeded)
+                Debug.Log($"[Preload] Download label='{lb}' bytes={FormatBytes(thisLabelBytes)}");
+
+                bool labelOk = false;
+
+                yield return DownloadLabelWithTimeout(
+                    label: lb,
+                    labelBytes: thisLabelBytes,
+                    downloadedBeforeCurrentLabel: downloadedBeforeCurrentLabel,
+                    totalBytes: totalBytes,
+                    onSuccess: () => labelOk = true
+                );
+
+                if (!labelOk || HasFailed)
                 {
-                    Fail($"[Preload] DownloadDependencies failed (label={lb}): " +
-                         (dl.OperationException != null ? dl.OperationException.Message : dl.Status.ToString()));
-                    SafeRelease(dl);
+                    _lastAttemptFailedDuringDownload = true;
                     yield break;
                 }
 
-                SafeRelease(dl);
+                downloadedBeforeCurrentLabel += thisLabelBytes;
+                BytesDownloadedApprox = downloadedBeforeCurrentLabel;
 
-                downloadedBytesApprox += thisLabelBytes;
+                float overall01 = totalBytes <= 0
+                    ? 1f
+                    : Mathf.Clamp01((float)downloadedBeforeCurrentLabel / totalBytes);
+
                 DownloadPercent01 = Mathf.Max(
                     DownloadPercent01,
-                    Mathf.Lerp(0.35f, 1f, (totalBytes <= 0 ? 1f : (float)downloadedBytesApprox / totalBytes))
+                    Mathf.Lerp(0.35f, 0.95f, overall01)
                 );
             }
         }
+        else
+        {
+            Debug.Log("[Preload] Nothing to download. Cache is already complete.");
+            SetStageProgress(0.95f);
+        }
 
-        // Verify (remain total == 0)
         if (verifyAfterDownload)
         {
             Stage = PreloadStage.Verify;
@@ -429,13 +518,19 @@ public class AddressablesPreload : MonoBehaviour
 
                 var verifyHandle = Addressables.GetDownloadSizeAsync(lb);
                 yield return WaitWithTimeout(verifyHandle, stepTimeoutSeconds, $"Verify GetDownloadSizeAsync timeout ({lb}) (attempt {attempt})");
-                if (HasFailed) { SafeRelease(verifyHandle); yield break; }
+
+                if (HasFailed)
+                {
+                    SafeRelease(verifyHandle);
+                    yield break;
+                }
 
                 if (!verifyHandle.IsValid())
                 {
                     Fail($"[Preload] Verify GetDownloadSizeAsync handle invalid (label={lb}).");
                     yield break;
                 }
+
                 if (verifyHandle.Status != AsyncOperationStatus.Succeeded)
                 {
                     Fail($"[Preload] Verify GetDownloadSizeAsync failed (label={lb}): " +
@@ -448,21 +543,198 @@ public class AddressablesPreload : MonoBehaviour
                 SafeRelease(verifyHandle);
 
                 remainTotal += remain;
+
+                Debug.Log($"[Preload] Verify label='{lb}' remain={FormatBytes(remain)}");
             }
 
             BytesToDownload = remainTotal;
 
             if (remainTotal > verifySizeThresholdBytes)
             {
-                Fail($"[Preload] Verify failed: labels still have {remainTotal} bytes to download. labels=({string.Join(",", labels)})");
+                Fail($"[Preload] Verify failed: labels still have {FormatBytes(remainTotal)} to download. labels=({string.Join(",", labels)})");
                 yield break;
             }
         }
 
+        BytesDownloadedApprox = BytesToDownload;
         DownloadPercent01 = 1f;
         IsCloudFullyDownloaded = true;
         IsReady = true;
+        HasFailed = false;
+        LastError = "";
         Stage = PreloadStage.Done;
+    }
+
+    private List<string> BuildValidLabelList()
+    {
+        if (preloadLabels == null || preloadLabels.Count == 0)
+        {
+            Fail("[Preload] preloadLabels is empty. Please set at least 1 label, e.g. 'cloud'.");
+            return null;
+        }
+
+        List<string> labels = new List<string>();
+
+        for (int i = 0; i < preloadLabels.Count; i++)
+        {
+            string lb = preloadLabels[i];
+
+            if (string.IsNullOrWhiteSpace(lb))
+                continue;
+
+            lb = lb.Trim();
+
+            if (!labels.Contains(lb))
+                labels.Add(lb);
+        }
+
+        if (labels.Count == 0)
+        {
+            Fail("[Preload] preloadLabels has no valid label strings.");
+            return null;
+        }
+
+        return labels;
+    }
+
+    private IEnumerator DownloadLabelWithTimeout(
+        string label,
+        long labelBytes,
+        long downloadedBeforeCurrentLabel,
+        long totalBytes,
+        Action onSuccess)
+    {
+        var dl = Addressables.DownloadDependenciesAsync(label, autoReleaseHandle: false);
+
+        float totalTimer = 0f;
+        float stallTimer = 0f;
+        float logTimer = 0f;
+
+        long lastDownloadedBytes = -1;
+        float lastProgress = -1f;
+
+        while (!dl.IsDone)
+        {
+            totalTimer += Time.unscaledDeltaTime;
+            stallTimer += Time.unscaledDeltaTime;
+            logTimer += Time.unscaledDeltaTime;
+
+            DownloadStatus status = default;
+            bool hasStatus = false;
+
+            try
+            {
+                status = dl.GetDownloadStatus();
+                hasStatus = true;
+            }
+            catch
+            {
+                hasStatus = false;
+            }
+
+            long currentLabelDownloaded;
+            long currentLabelTotal;
+
+            if (hasStatus && status.TotalBytes > 0)
+            {
+                currentLabelDownloaded = status.DownloadedBytes;
+                currentLabelTotal = status.TotalBytes;
+            }
+            else
+            {
+                float p = Mathf.Clamp01(dl.PercentComplete);
+                currentLabelDownloaded = (long)(labelBytes * p);
+                currentLabelTotal = labelBytes;
+            }
+
+            // currentLabelDownloaded = Mathf.Clamp((float)currentLabelDownloaded, 0f, currentLabelTotal);
+            currentLabelDownloaded = (long)Mathf.Clamp(
+                currentLabelDownloaded,
+                0,
+                currentLabelTotal
+            );
+            long overallDownloaded = downloadedBeforeCurrentLabel + currentLabelDownloaded;
+
+            BytesDownloadedApprox = overallDownloaded;
+
+            float labelProgress01 = currentLabelTotal > 0
+                ? Mathf.Clamp01((float)currentLabelDownloaded / currentLabelTotal)
+                : Mathf.Clamp01(dl.PercentComplete);
+
+            float overall01 = totalBytes > 0
+                ? Mathf.Clamp01((float)overallDownloaded / totalBytes)
+                : labelProgress01;
+
+            DownloadPercent01 = Mathf.Max(
+                DownloadPercent01,
+                Mathf.Lerp(0.35f, 0.95f, overall01)
+            );
+
+            bool progressedByBytes = currentLabelDownloaded > lastDownloadedBytes;
+            bool progressedByPercent = labelProgress01 > lastProgress + 0.0005f;
+
+            if (progressedByBytes || progressedByPercent)
+            {
+                stallTimer = 0f;
+                lastDownloadedBytes = currentLabelDownloaded;
+                lastProgress = labelProgress01;
+            }
+
+            if (verboseProgressLog && logTimer >= progressLogInterval)
+            {
+                logTimer = 0f;
+
+                Debug.Log(
+                    $"[Preload] Downloading '{label}' " +
+                    $"label={labelProgress01:P1} " +
+                    $"overall={overall01:P1} " +
+                    $"bytes={FormatBytes(currentLabelDownloaded)}/{FormatBytes(currentLabelTotal)} " +
+                    $"ui={DownloadPercent01:P1}"
+                );
+            }
+
+            if (downloadTimeoutSeconds > 0f && totalTimer >= downloadTimeoutSeconds)
+            {
+                SafeRelease(dl);
+                Fail($"[Preload] Download timeout. label={label}, timeout={downloadTimeoutSeconds}s");
+                yield break;
+            }
+
+            if (downloadStallTimeoutSeconds > 0f && stallTimer >= downloadStallTimeoutSeconds)
+            {
+                SafeRelease(dl);
+                Fail(
+                    $"[Preload] Download stalled. label={label}, " +
+                    $"no progress for {downloadStallTimeoutSeconds}s, " +
+                    $"last={FormatBytes(lastDownloadedBytes)}/{FormatBytes(labelBytes)}"
+                );
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        if (!dl.IsValid())
+        {
+            Fail($"[Preload] DownloadDependencies handle invalid. label={label}");
+            yield break;
+        }
+
+        if (dl.Status != AsyncOperationStatus.Succeeded)
+        {
+            string err = dl.OperationException != null
+                ? dl.OperationException.Message
+                : dl.Status.ToString();
+
+            SafeRelease(dl);
+            Fail($"[Preload] DownloadDependencies failed. label={label}, error={err}");
+            yield break;
+        }
+
+        SafeRelease(dl);
+
+        Debug.Log($"[Preload] Download label DONE: '{label}'");
+        onSuccess?.Invoke();
     }
 
     private IEnumerator HttpProbeGet(string url, int readBytes)
@@ -471,15 +743,23 @@ public class AddressablesPreload : MonoBehaviour
         {
             req.timeout = 15;
             req.downloadHandler = new DownloadHandlerBuffer();
-            if (readBytes > 0) req.SetRequestHeader("Range", $"bytes=0-{readBytes - 1}");
+
+            if (readBytes > 0)
+                req.SetRequestHeader("Range", $"bytes=0-{readBytes - 1}");
 
             yield return req.SendWebRequest();
 
-            bool ok = (req.result == UnityWebRequest.Result.Success) &&
-                      (req.responseCode == 200 || req.responseCode == 206);
+            bool ok =
+                req.result == UnityWebRequest.Result.Success &&
+                (req.responseCode == 200 || req.responseCode == 206);
 
             if (!ok)
+            {
                 Fail($"[HTTP PROBE GET FAILED] url={url} code={req.responseCode} err={req.error}");
+                yield break;
+            }
+
+            Debug.Log($"[Preload] HTTP probe OK: {url}, code={req.responseCode}");
         }
     }
 
@@ -488,9 +768,21 @@ public class AddressablesPreload : MonoBehaviour
         try
         {
             string dir = Path.Combine(Application.persistentDataPath, "com.unity.addressables");
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, true);
+                Debug.Log($"[Preload] Deleted Addressables catalog cache: {dir}");
+            }
+            else
+            {
+                Debug.Log($"[Preload] Addressables catalog cache not found: {dir}");
+            }
         }
-        catch { }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[Preload] ClearAddressablesCatalogCache failed: {e.Message}");
+        }
     }
 
     private void SetStageProgress(float p01)
@@ -498,9 +790,6 @@ public class AddressablesPreload : MonoBehaviour
         DownloadPercent01 = Mathf.Max(DownloadPercent01, Mathf.Clamp01(p01));
     }
 
-    /// <summary>
-    /// Timeout thật. Nếu timeout -> Fail và yield break.
-    /// </summary>
     private IEnumerator WaitWithTimeout(AsyncOperationHandle handle, float timeoutSeconds, string timeoutMsg)
     {
         float t = 0f;
@@ -510,12 +799,14 @@ public class AddressablesPreload : MonoBehaviour
             if (timeoutSeconds > 0f)
             {
                 t += Time.unscaledDeltaTime;
+
                 if (t >= timeoutSeconds)
                 {
                     Fail($"[Preload] {timeoutMsg} (timeout after {timeoutSeconds}s)");
                     yield break;
                 }
             }
+
             yield return null;
         }
     }
@@ -527,7 +818,27 @@ public class AddressablesPreload : MonoBehaviour
             if (handle.IsValid())
                 Addressables.Release(handle);
         }
-        catch { }
+        catch
+        {
+            // Ignore release exception.
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024L)
+            return $"{bytes} B";
+
+        double kb = bytes / 1024.0;
+        if (kb < 1024.0)
+            return $"{kb:0.##} KB";
+
+        double mb = kb / 1024.0;
+        if (mb < 1024.0)
+            return $"{mb:0.##} MB";
+
+        double gb = mb / 1024.0;
+        return $"{gb:0.##} GB";
     }
 
 #endif
@@ -539,6 +850,7 @@ public class AddressablesPreload : MonoBehaviour
         IsCloudFullyDownloaded = false;
         LastError = msg;
         Stage = PreloadStage.Failed;
+
         Debug.LogError(msg);
     }
 }
