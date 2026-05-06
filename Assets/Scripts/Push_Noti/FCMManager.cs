@@ -33,6 +33,10 @@ public class FCMManager : MonoBehaviour
 #if UNITY_IOS
     [Header("iOS Local Notification")]
     [SerializeField] private bool requestIOSAuthorizationOnStart = true;
+
+    [Header("iOS APNS Wait Settings")]
+    [SerializeField] private float apnsWaitTimeoutSeconds = 20f;
+    [SerializeField] private float apnsRetryIntervalSeconds = 2f;
 #endif
 
     private static FCMManager _instance;
@@ -124,6 +128,10 @@ public class FCMManager : MonoBehaviour
         UnregisterFirebaseEvents();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // ANDROID
+    // ─────────────────────────────────────────────────────────────
+
 #if UNITY_ANDROID
     private void RegisterAndroidNotificationChannel()
     {
@@ -168,6 +176,10 @@ public class FCMManager : MonoBehaviour
         OnOpenedFromNotification?.Invoke();
     }
 #endif
+
+    // ─────────────────────────────────────────────────────────────
+    // iOS
+    // ─────────────────────────────────────────────────────────────
 
 #if UNITY_IOS
     private void RegisterIOSNotificationHooks()
@@ -224,7 +236,70 @@ public class FCMManager : MonoBehaviour
 
         Debug.Log("[FCM] iOS local notification scheduled.");
     }
+
+    /// <summary>
+    /// Polls Firebase GetTokenAsync until a valid FCM token is returned (meaning APNS is ready),
+    /// or until timeout. On iOS, FCM token depends on APNS token — calling GetTokenAsync too early
+    /// returns empty/error. This coroutine retries until APNS is available.
+    /// </summary>
+    private IEnumerator WaitForAPNSTokenThenRequestFCM()
+    {
+        float start = Time.realtimeSinceStartup;
+        Debug.Log("[FCM] iOS: waiting for APNS token before requesting FCM token...");
+
+        while (Time.realtimeSinceStartup - start < apnsWaitTimeoutSeconds)
+        {
+            bool taskDone = false;
+            bool tokenReceived = false;
+            string receivedToken = null;
+
+            FirebaseMessaging.GetTokenAsync().ContinueWithOnMainThread(t =>
+            {
+                taskDone = true;
+                if (!t.IsFaulted && !t.IsCanceled && !string.IsNullOrWhiteSpace(t.Result))
+                {
+                    tokenReceived = true;
+                    receivedToken = t.Result;
+                }
+                else if (t.IsFaulted)
+                {
+                    Debug.LogWarning("[FCM] GetTokenAsync faulted (APNS may not be ready yet): " + t.Exception?.GetBaseException()?.Message);
+                }
+            });
+
+            // Wait for the async task to complete (up to 3 seconds per attempt)
+            float waitStart = Time.realtimeSinceStartup;
+            while (!taskDone && Time.realtimeSinceStartup - waitStart < 3f)
+                yield return null;
+
+            if (tokenReceived && !string.IsNullOrWhiteSpace(receivedToken))
+            {
+                Debug.Log("[FCM] iOS: APNS ready — FCM token acquired.");
+                SaveFcmToken(receivedToken, "WaitForAPNS");
+                yield break;
+            }
+
+            Debug.Log($"[FCM] iOS: APNS not ready yet, retrying in {apnsRetryIntervalSeconds}s...");
+            yield return new WaitForSeconds(apnsRetryIntervalSeconds);
+        }
+
+        // Timeout — try one last time with whatever is cached
+        string fallback = GetBestKnownFcmToken();
+        if (!string.IsNullOrWhiteSpace(fallback))
+        {
+            Debug.LogWarning("[FCM] iOS: APNS wait timed out but found cached token.");
+            SaveFcmToken(fallback, "WaitForAPNS_Fallback");
+        }
+        else
+        {
+            Debug.LogWarning("[FCM] iOS: APNS wait timed out. FCM token unavailable. User may have denied permission.");
+        }
+    }
 #endif
+
+    // ─────────────────────────────────────────────────────────────
+    // FIREBASE INIT
+    // ─────────────────────────────────────────────────────────────
 
     private void InitializeFirebase()
     {
@@ -260,8 +335,19 @@ public class FCMManager : MonoBehaviour
             if (permissionRequester != null)
                 permissionRequester.RequestPermissionIfNeeded();
 
+            // iOS: must wait for APNS before FCM token is available
+            // Android/other: request directly
+#if UNITY_IOS
+            StartCoroutine(WaitForAPNSTokenThenRequestFCM());
+#else
+            RequestCurrentToken("InitializeFirebase");
+#endif
         });
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // TOKEN MANAGEMENT
+    // ─────────────────────────────────────────────────────────────
 
     public void RequestCurrentToken(string source = "ManualRequest")
     {
@@ -295,8 +381,12 @@ public class FCMManager : MonoBehaviour
     {
         float start = Time.realtimeSinceStartup;
 
+        // On non-iOS platforms, kick off a token request immediately.
+        // On iOS, WaitForAPNSTokenThenRequestFCM (started during InitializeFirebase) handles it.
+#if !UNITY_IOS
         if (_instance != null && _instance._initialized)
             _instance.RequestCurrentToken("WaitForReadyToken");
+#endif
 
         while (Time.realtimeSinceStartup - start < timeoutSeconds)
         {
@@ -314,10 +404,14 @@ public class FCMManager : MonoBehaviour
         onDone?.Invoke(fallback);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // FIREBASE EVENTS
+    // ─────────────────────────────────────────────────────────────
+
     private void RegisterFirebaseEvents()
     {
         if (_eventsRegistered) return;
-        Debug.Log($"[FCM] RegisterFirebaseEvents");
+        Debug.Log("[FCM] RegisterFirebaseEvents");
         FirebaseMessaging.TokenReceived += OnTokenReceived;
         FirebaseMessaging.MessageReceived += OnMessageReceived;
         _eventsRegistered = true;
@@ -326,7 +420,7 @@ public class FCMManager : MonoBehaviour
     private void UnregisterFirebaseEvents()
     {
         if (!_eventsRegistered) return;
-        Debug.Log($"[FCM] UnregisterFirebaseEvents");
+        Debug.Log("[FCM] UnregisterFirebaseEvents");
         FirebaseMessaging.TokenReceived -= OnTokenReceived;
         FirebaseMessaging.MessageReceived -= OnMessageReceived;
         _eventsRegistered = false;
@@ -334,8 +428,10 @@ public class FCMManager : MonoBehaviour
 
     private void OnTokenReceived(object sender, TokenReceivedEventArgs tokenArgs)
     {
-        string token = tokenArgs != null ? tokenArgs.Token : string.Empty;
-        RequestCurrentToken("InitializeFirebase");
+        // Firebase fired a token event — fetch the real token via GetTokenAsync
+        // to ensure we always store the canonical value.
+        string source = tokenArgs?.Token != null ? "OnTokenReceived" : "OnTokenReceived_Empty";
+        RequestCurrentToken(source);
     }
 
     private void SaveFcmToken(string token, string source)
@@ -357,17 +453,23 @@ public class FCMManager : MonoBehaviour
         OnFcmTokenReady?.Invoke(token);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // MESSAGE HANDLING
+    // ─────────────────────────────────────────────────────────────
+
     private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
     {
-        Debug.Log("[FCM] OnMessageReceived called | messageId=" + e?.Message?.MessageId); // thêm dòng này
-        if (string.IsNullOrWhiteSpace(e.Message.MessageId))
-        {
-            Debug.Log("[FCM] message id is null and empty");
-            return;
-        }
-        if (e.Message == null)
+        Debug.Log("[FCM] OnMessageReceived called | messageId=" + e?.Message?.MessageId);
+
+        if (e?.Message == null)
         {
             Debug.LogWarning("[FCM] MessageReceived args/message is null.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(e.Message.MessageId))
+        {
+            Debug.Log("[FCM] message id is null/empty.");
             return;
         }
 
@@ -406,9 +508,7 @@ public class FCMManager : MonoBehaviour
         Debug.Log(BuildMessageLog(msg, title, body));
 
         if (_appInForeground && showLocalNotificationWhenAppIsOpen)
-        {
             ShowForegroundLocalNotification(title, body);
-        }
 
         OnPushNotificationReceived?.Invoke();
     }
@@ -452,6 +552,10 @@ public class FCMManager : MonoBehaviour
 #endif
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────
+
     private bool IsDuplicateMessage(string messageId)
     {
         if (string.IsNullOrWhiteSpace(messageId))
@@ -459,9 +563,7 @@ public class FCMManager : MonoBehaviour
 
         if (_lastHandledMessageId == messageId &&
             Time.realtimeSinceStartup - _lastHandledRealtime < 5f)
-        {
             return true;
-        }
 
         _lastHandledMessageId = messageId;
         _lastHandledRealtime = Time.realtimeSinceStartup;
