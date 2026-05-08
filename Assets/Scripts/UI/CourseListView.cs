@@ -133,7 +133,8 @@ public class CourseListView : MonoBehaviour
                     {
                         // lưu link gốc cho Next (không phải proxy url)
                         if (videoPlayerControllerPro) videoPlayerControllerPro.SetCurrentUrl(url);
-                        PlayVideo(url);
+                        // PlayVideo(url);
+                        PlayLesson(lessonUI);
                     };
 
                     lessonUI.progressTime = lesson.progressTime;
@@ -418,19 +419,21 @@ private void PlayVideo(string url)
         }
         
         LessonProgressTracker.Instance.UpdateLesson(null);
-
         // Clear selection cũ
         if (_currentLesson != null && _currentLesson != lesson)
         {
+            Debug.Log($"[CourseListView] Clear selection lesson cũ");
             _currentLesson.SetActive(false);
 
             if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
             {
+                Debug.Log($"[CourseListView] Clear chapter lesson cũ");
                 _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
                 _currentLesson.chapterUI.ResetLessonState();
             }
         }
 
+        Debug.Log($"[CourseListView] Cập nhật lesson mới");
         _currentLesson = lesson;
         _currentLesson.chapterUI.SelectThisChapter();
         _currentLesson.chapterUI.SelectLesson(_currentLesson);
