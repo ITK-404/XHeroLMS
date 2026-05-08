@@ -58,12 +58,8 @@ Shader "Custom/URPBlurBackground"
             {
                 float2 uv = IN.screenPos.xy / IN.screenPos.w;
                 
-                #if UNITY_UV_STARTS_AT_TOP
-                // DirectX, Metal: không cần flip
-                #else
-                    // OpenGL ES (Android): flip Y
+                 if (_ProjectionParams.x < 0)
                     uv.y = 1.0 - uv.y;
-                #endif
                 
                 float2 texel = _CameraOpaqueTexture_TexelSize.xy * _Size;
 
