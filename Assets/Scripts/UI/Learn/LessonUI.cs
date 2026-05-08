@@ -45,7 +45,9 @@ public class LessonUI : MonoBehaviour
 
     private void OnClickBtn()
     {
-        chapterUI.SelectLesson(this);
+        // remove previous state
+        // chapterUI.SelectLesson(this);
+        // CourseListView.in
         OnSelected?.Invoke(this);
         OnClickPlayVideo?.Invoke(linkVideo2);
     }
