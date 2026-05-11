@@ -8237,13 +8237,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1272934469}
     m_Modifications:
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: loadType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: sceneName
+      value: phong_ky_mon
+      objectReference: {fileID: 0}
     - target: {fileID: 2512272161527576744, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5139930555961755734, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_Name
-      value: Nha_T1
+      value: Nha_T1_ky_mon
       objectReference: {fileID: 0}
     - target: {fileID: 7252951541728430324, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_LocalPosition.x
@@ -12865,6 +12873,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1272934469}
     m_Modifications:
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: loadType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: sceneName
+      value: phong_ky_mon
+      objectReference: {fileID: 0}
     - target: {fileID: 2512272161527576744, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -26147,6 +26163,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1272934469}
     m_Modifications:
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: loadType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: sceneName
+      value: phong_ky_mon
+      objectReference: {fileID: 0}
     - target: {fileID: 2512272161527576744, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -29767,13 +29791,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1272934469}
     m_Modifications:
+    - target: {fileID: 243650745706797764, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: sceneNameToLoad
+      value: phong_ky_mon
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: loadType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 870282300015226883, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
+      propertyPath: sceneName
+      value: phong_ky_mon
+      objectReference: {fileID: 0}
     - target: {fileID: 2512272161527576744, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5139930555961755734, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_Name
-      value: Nha_T1
+      value: Nha_T1_ky_mon
       objectReference: {fileID: 0}
     - target: {fileID: 7252951541728430324, guid: f57cf70e4a6644bafa87c947982552dc, type: 3}
       propertyPath: m_LocalPosition.x
@@ -45226,6 +45262,8 @@ MonoBehaviour:
   permissionRequester: {fileID: 1499187983}
   showLocalNotificationWhenAppIsOpen: 1
   requestIOSAuthorizationOnStart: 1
+  apnsWaitTimeoutSeconds: 20
+  apnsRetryIntervalSeconds: 2
 --- !u!4 &1499187985
 Transform:
   m_ObjectHideFlags: 0
