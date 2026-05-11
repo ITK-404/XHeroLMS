@@ -2,13 +2,13 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
-using UnityEngine.UIElements;
 
 
 public class LoadRoomTrigger : MonoBehaviour
 {
     [Header("Scene đích")] [SceneDropdown] public string sceneName;
 
+    // this is seo id
     [SceneSeoDropdown] public string courseId;
 
     [Header("Điểm dịch chuyển khi QUAY LẠI scene này")]
@@ -26,6 +26,7 @@ public class LoadRoomTrigger : MonoBehaviour
     public bool loadByCourse = false;
 
     public bool isUsingReviewMode = false;
+
     public enum LoadType
     {
         Lock = 0,
@@ -51,12 +52,12 @@ public class LoadRoomTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        #if UNITY_EDITOR || PLATFORM_IOS
+#if UNITY_EDITOR || PLATFORM_IOS
         if (AppDataGlobal.isInReviewMode && isUsingReviewMode)
         {
             return;
         }
-        #endif
+#endif
         if (isEnter) return;
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;
@@ -66,6 +67,7 @@ public class LoadRoomTrigger : MonoBehaviour
             return;
         }
 
+        Debug.Log($"[LoadRoomTrigger] Đi vào cửa, trigger logic");
         isEnter = true;
         LoadByType(loadType);
     }
@@ -75,17 +77,21 @@ public class LoadRoomTrigger : MonoBehaviour
         switch (currentType)
         {
             case LoadType.Lock:
+                Debug.Log($"[LoadRoomTrigger] Cửa bị khoá, không sử dụng được");
                 break;
             case LoadType.Course:
                 SavePositionToLoad();
                 StartCoroutine(TryEnterCourse());
+                Debug.Log($"[LoadRoomTrigger] Load dựa trên data khoá học trong file course.json trong resources");
                 break;
             case LoadType.Scene:
                 SavePositionToLoad();
                 LoadingTransition.Load_Scene(sceneName);
+                Debug.Log($"[LoadRoomTrigger] Load dựa trên scene name {sceneName}");
                 break;
             case LoadType.Previous:
                 LoadingTransition.LoadPreviousSceneOrDefault();
+                Debug.Log($"[LoadRoomTrigger] Load scene trước đó {sceneName}");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -109,7 +115,8 @@ public class LoadRoomTrigger : MonoBehaviour
             timeoutMessage: "Không thể tải nội dung.\nVui lòng kiểm tra kết nối mạng hoặc thử lại.",
             timeoutHeader: "Lỗi Mạng"
         );
-        SeoResolver.SetSeoCourse(sceneName);
+        // SeoResolver.SetSeoCourseByScene(sceneName);
+        SeoResolver.SetSeoCourse(courseId);
         yield return new WaitForSecondsRealtime(1);
         yield return SeoResolver.LoadPrivateAndFillData();
 
@@ -117,10 +124,15 @@ public class LoadRoomTrigger : MonoBehaviour
 
         if (SeoResolver.IsContainData())
         {
-            Debug.Log("Đã tìm thấy seo URL để load");
+            Debug.Log("[LoadRoomTrigger] Đã tìm thấy seo URL để load");
             // LoadingTransition.Load(sceneName);
             SavePositionToLoad();
-            LoadingTransition.Load_Scene(sceneName);
+            // TODO: Cần 1 cách để lấy scene name ra -> không dùng scene name của object này
+            if (SeoResolver.TryGetSceneNameBySeoID(courseId, out var customSceneName))
+            {
+                Debug.Log("[LoadRoomTrigger] Đã tìm thấy scene để load");
+                LoadingTransition.Load_Scene(customSceneName);
+            }
         }
         else
         {
@@ -129,4 +141,14 @@ public class LoadRoomTrigger : MonoBehaviour
 
         isLoading = false;
     }
+
+    [ContextMenu("TestSCeneTest")]
+    private void TestSCeneTest()
+    {
+        if (SeoResolver.TryGetSceneNameBySeoID(courseId,out var customSCeneName))
+        {
+            Debug.Log($"CustomScene name: {customSCeneName}");
+        }
+    }
+    
 }
