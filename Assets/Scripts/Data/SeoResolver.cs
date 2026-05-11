@@ -6,7 +6,10 @@ using UnityEngine.Networking;
 
 public static class SeoResolver
 {
+    private const string resourceJsonName = "courses";
+    
     public const string DefaultScene = "dai_dao_chi_gian_1";
+    private const string NOT_DEFINE_SCENE = "<scene_01>";
 
     public static string seoCourse;
     private static TextAsset textAsset;
@@ -23,12 +26,17 @@ public static class SeoResolver
     // để UI biết có nên có private hay không
     public static bool shouldHavePrivate { get; private set; } = false;
 
-    public static void SetSeoCourse(string scene)
+    public static void SetSeoCourseByScene(string scene)
     {
         seoCourse = GetSeoCourseByScene(scene);
     }
 
-    public static string GetSeoCourseByScene(string scene, string resourceJsonName = "courses")
+    public static void SetSeoCourse(string _seoCourse)
+    {
+        seoCourse = _seoCourse;
+    }
+
+    public static string GetSeoCourseByScene(string scene)
     {
         if (string.IsNullOrEmpty(scene))
         {
@@ -84,6 +92,47 @@ public static class SeoResolver
 
         return item.seo;
     }
+
+    public static bool TryGetSceneNameBySeoID(string seoID, out string sceneName)
+    {
+        sceneName = "";
+        if (string.IsNullOrEmpty(seoID))
+        {
+            Debug.Log($"[SeoResolver] seoId bị trống");
+            return false;
+        }
+
+        var txt = Resources.Load<TextAsset>(resourceJsonName);
+        var wrapped = "{\"items\":" + txt.text + "}";
+        SceneSeoList map = null;
+
+        try
+        {
+            map = JsonUtility.FromJson<SceneSeoList>(wrapped);
+            foreach (var item in map.items)
+            {
+                
+                if (item.seo == seoID)
+                {
+                    if (item.sceneName == NOT_DEFINE_SCENE)
+                    {
+                        Debug.Log($"[SeoResolver] seo này chưa được định nghĩa scene {seoID}");
+                        return false;
+                    }
+                    Debug.Log($"[SeoResolver] đã tìm thấy scene name {item.sceneName}");
+                    sceneName = item.sceneName.Trim('<', '>');
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[SeoResolver] Failed parsing {resourceJsonName}: {ex}");
+            return false;
+        }
+        return true;
+    }
+
 
     /// <summary>
     /// Flow mới:
