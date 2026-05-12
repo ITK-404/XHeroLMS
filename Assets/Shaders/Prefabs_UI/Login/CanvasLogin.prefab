@@ -14650,11 +14650,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dbac9aba02df19468279a4a0ebc3937, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpenClosePanel
-  buttonOpen: {fileID: 0}
   buttonClose: {fileID: 4523702202601084997}
   targetImage: {fileID: 7165490593655577323}
   targetPanel: {fileID: 2518810218876088319}
-  warningPopup: {fileID: 0}
   showWhenLoggedIn: []
   showWhenLoggedOut: []
   reloadSceneOnLogout: 1
@@ -14684,6 +14682,8 @@ MonoBehaviour:
   iconHide: {fileID: 21300000, guid: 87367e10a017d034ba77ec6d19a1a638, type: 3}
   autoFocusUsername: 1
   showSuccessPopup: 0
+  waitForFcmTokenTimeout: 8
+  allowLoginIfTokenStillEmptyAfterTimeout: 1
 --- !u!114 &1398922974649150710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15016,7 +15016,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6531063588248528658}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 04b3a13f1ec3cba49a0aeeca04835226, type: 3}
   m_Name: 
