@@ -384,9 +384,50 @@ WriteRuntimeBuildEnv(env, apiEnv);
         if (!RunCmd(GsutilExePath, $"-m rsync -r \"{localSrc}\" \"{dstBuild}\"", dumpLogFile: "gsutil_rsync_builds.txt"))
             return;
 
-        UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Syncing (latest) {dstBuild} -> {dstLatest}");
-        if (!RunCmd(GsutilExePath, $"-m rsync -r \"{dstBuild}\" \"{dstLatest}\"", dumpLogFile: "gsutil_rsync_latest.txt"))
-            return;
+UnityEngine.Debug.Log($"[AddressablesCloudAutoSetup] Syncing latest content first, excluding catalogs: {dstBuild} -> {dstLatest}");
+
+// 1. Sync toàn bộ bundle/data trước, KHÔNG sync catalog.
+// Catalog là tín hiệu cho client biết bản mới đã sẵn sàng,
+// nên catalog phải được upload sau cùng.
+if (!RunCmd(
+        GsutilExePath,
+        $"-m rsync -r -x \".*catalog.*\\.(json|hash)$\" \"{dstBuild}\" \"{dstLatest}\"",
+        dumpLogFile: "gsutil_rsync_latest_without_catalog.txt"))
+{
+    return;
+}
+
+// 2. Copy versioned catalog nếu muốn giữ catalog_xxx.json/hash trên latest.
+RunCmd(
+    GsutilExePath,
+    $"-m cp \"{dstBuild}catalog_*.json\" \"{dstLatest}\"",
+    dumpLogFile: "gsutil_cp_latest_versioned_catalog_json.txt");
+
+RunCmd(
+    GsutilExePath,
+    $"-m cp \"{dstBuild}catalog_*.hash\" \"{dstLatest}\"",
+    dumpLogFile: "gsutil_cp_latest_versioned_catalog_hash.txt");
+
+// 3. Copy catalog.json gần cuối.
+if (!RunCmd(
+        GsutilExePath,
+        $"cp \"{dstBuild}catalog.json\" \"{dstLatest}catalog.json\"",
+        dumpLogFile: "gsutil_cp_latest_catalog_json.txt"))
+{
+    return;
+}
+
+// 4. Copy catalog.hash cuối cùng.
+// App đang probe/load catalog.hash, nên hash nên là tín hiệu cuối.
+if (!RunCmd(
+        GsutilExePath,
+        $"cp \"{dstBuild}catalog.hash\" \"{dstLatest}catalog.hash\"",
+        dumpLogFile: "gsutil_cp_latest_catalog_hash.txt"))
+{
+    return;
+}
+
+UnityEngine.Debug.Log("[AddressablesCloudAutoSetup] Latest catalog/hash uploaded LAST successfully.");
 
         if (RemoveVersionedCatalogsOnLatest)
         {

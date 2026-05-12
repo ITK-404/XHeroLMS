@@ -58,12 +58,28 @@ public static class CourseModels
         public List<CourseLesson> lessons;
     }
 
-    [Serializable]
-    public class CourseLesson
-    {
-        public string _id;
-        public string title;
-    }
+[Serializable]
+public class CourseLesson
+{
+    public string _id;
+    public string title;
+
+    public string type;
+    public string courseId;
+    public string chapterId;
+
+    public int duration;
+    public string videoLink;
+    public string videoLink2;
+
+    public List<DocAttach> docAttach;
+}
+
+[Serializable]
+public class DocAttach
+{
+    public string uri;
+}
 
     [Serializable]
     public class CourseStartDateItem

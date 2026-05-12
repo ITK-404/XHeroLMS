@@ -311,15 +311,18 @@ MonoBehaviour:
   maxRetries: 3
   stepTimeoutSeconds: 25
   downloadTimeoutSeconds: 300
+  downloadStallTimeoutSeconds: 90
+  retryDelaySeconds: 2
   verifyAfterDownload: 1
   verifySizeThresholdBytes: 0
   enableProbeRemoteCatalog: 1
   probeReadBytes: 64
-  remoteCatalogHashUrl: https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.hash
-  remoteCatalogJsonUrl: https://storage.googleapis.com/dlc-lms/addressables/releases/android/latest/catalog.json
   forceLoadRemoteCatalog: 1
   clearCatalogCacheOnRetryOnly: 1
+  clearCatalogCacheAfterDownloadFail: 1
   enableAddressablesRequestLog: 1
+  verboseProgressLog: 1
+  progressLogInterval: 2
 --- !u!114 &820501527
 MonoBehaviour:
   m_ObjectHideFlags: 0
