@@ -397,26 +397,23 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         return string.IsNullOrEmpty(xheroHost) ? "xhero.deeplink" : xheroHost;
     }
 
-    private string BuildXHeroDeepLinkUrl(string code, string timestamp)
-    {
-        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-        string tsEnc = UnityWebRequest.EscapeURL(timestamp ?? "");
-        string fnEnc = UnityWebRequest.EscapeURL(functionValue ?? "");
+private string BuildXHeroDeepLinkUrl(string code, string timestamp)
+{
+    string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
+    string tsEnc = UnityWebRequest.EscapeURL(timestamp ?? "");
+    string fnEnc = UnityWebRequest.EscapeURL(functionValue ?? "");
 
-        string host = GetXHeroHostForPlatform();
+    // Giữ giống bản cũ: luôn dùng xhero.deeplink
+    string host = string.IsNullOrEmpty(xheroHost) ? "xhero.deeplink" : xheroHost;
 
-        string normalizedPath = xheroPath ?? "";
-        if (!string.IsNullOrEmpty(normalizedPath) && !normalizedPath.StartsWith("/"))
-            normalizedPath = "/" + normalizedPath;
+    string deepLinkUrl =
+        $"{xheroScheme}://{host}" +
+        $"?{codeParamName}={codeEnc}" +
+        $"&{timestampParamName}={tsEnc}" +
+        $"&{functionParamName}={fnEnc}";
 
-        string url =
-            $"{xheroScheme}://{host}{normalizedPath}" +
-            $"?{codeParamName}={codeEnc}" +
-            $"&{timestampParamName}={tsEnc}" +
-            $"&{functionParamName}={fnEnc}";
-
-        return url;
-    }
+    return deepLinkUrl;
+}
 
     private bool OpenXHeroDeepLink(string code, string timestamp)
     {
