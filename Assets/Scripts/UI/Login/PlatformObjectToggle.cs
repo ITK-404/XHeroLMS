@@ -10,7 +10,7 @@ public class PlatformObjectToggle : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
         SetActiveAll(true);
 #elif UNITY_IOS && !UNITY_EDITOR
-        SetActiveAll(false);
+        SetActiveAll(true);
 #else
         SetActiveAll(true);
 #endif
