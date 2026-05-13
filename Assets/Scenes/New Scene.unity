@@ -45261,9 +45261,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FCMManager
   permissionRequester: {fileID: 1499187983}
   showLocalNotificationWhenAppIsOpen: 1
-  requestIOSAuthorizationOnStart: 1
-  apnsWaitTimeoutSeconds: 20
-  apnsRetryIntervalSeconds: 2
+  androidChannelId: fcm_default_channel
+  androidChannelName: General Notifications
+  androidChannelDescription: Notifications from Firebase
+  androidSmallIcon: default
 --- !u!4 &1499187985
 Transform:
   m_ObjectHideFlags: 0
@@ -62364,7 +62365,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 3e4b2492a67e44336b4a4b23b57ea7ad, type: 3}
     - target: {fileID: 1025953786086512082, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000049591064
+      value: 0.000030517578
       objectReference: {fileID: 0}
     - target: {fileID: 1254777415282937266, guid: cdedde495a10b4f69afec92edf4ca3a6, type: 3}
       propertyPath: m_AnchorMax.x
@@ -66594,6 +66595,30 @@ PrefabInstance:
     - target: {fileID: 1603635343364897431, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: xheroPath
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: xheroIosHost
+      value: xhero.deeplink
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: iosAppStoreId
+      value: 6504331040
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: iosStoreWebUrl
+      value: https://apps.apple.com/vn/app/xhero/id6504331040?l=vi
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: xheroAndroidHost
+      value: xhero.deeplink
+      objectReference: {fileID: 0}
+    - target: {fileID: 1632365846098568490, guid: de865cb949872194985d7246ad512811, type: 3}
+      propertyPath: iosStoreUrlOverride
+      value: itms-apps://itunes.apple.com/app/id6504331040
       objectReference: {fileID: 0}
     - target: {fileID: 2042333984701007199, guid: de865cb949872194985d7246ad512811, type: 3}
       propertyPath: buttonOpen
