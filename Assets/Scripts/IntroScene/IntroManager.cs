@@ -113,14 +113,25 @@ public class IntroManager : MonoBehaviour
         // hook (optional)
     }
 
-    public void ForceProgress(float t01)
-    {
-        t01 = Mathf.Clamp01(t01);
-        monotonicTarget01 = t01;
-        currentVisual = t01;
-        targetVisual = t01;
-        SetProgressInstant(t01);
-    }
+public void ForceProgress(float t01)
+{
+    t01 = Mathf.Clamp01(t01);
+
+    // Không cho progress tụt xuống.
+    if (t01 < monotonicTarget01)
+        t01 = monotonicTarget01;
+
+    monotonicTarget01 = t01;
+    currentVisual = Mathf.Max(currentVisual, t01);
+    targetVisual = Mathf.Max(targetVisual, t01);
+
+    SetProgressInstant(currentVisual);
+}
+
+public void ForceProgressNoDecrease(float t01)
+{
+    ForceProgress(t01);
+}
 
     public void ShowFatalFail(string msg)
     {
@@ -458,6 +469,18 @@ public class IntroManager : MonoBehaviour
             videoPlayer.errorReceived -= OnVideoError;
             videoPlayer.prepareCompleted -= OnVideoPrepared;
             videoPlayer.loopPointReached -= OnVideoEndReached;
+        }
+    }
+    public bool CanEnterMain
+    {
+        get
+        {
+            bool minTimePassed = GetIntroTime01() >= 1f;
+
+            if (videoFailed && skipVideoIfFail)
+                return minTimePassed;
+
+            return videoEnded && minTimePassed;
         }
     }
 }

@@ -495,7 +495,7 @@ public class AddressablesPreload : MonoBehaviour
 
                 DownloadPercent01 = Mathf.Max(
                     DownloadPercent01,
-                    Mathf.Lerp(0.35f, 0.95f, overall01)
+                    overall01
                 );
             }
         }
@@ -508,7 +508,7 @@ public class AddressablesPreload : MonoBehaviour
         if (verifyAfterDownload)
         {
             Stage = PreloadStage.Verify;
-            SetStageProgress(0.98f);
+            // SetStageProgress(0.98f);
 
             long remainTotal = 0;
 
@@ -667,7 +667,7 @@ public class AddressablesPreload : MonoBehaviour
 
             DownloadPercent01 = Mathf.Max(
                 DownloadPercent01,
-                Mathf.Lerp(0.35f, 0.95f, overall01)
+                overall01
             );
 
             bool progressedByBytes = currentLabelDownloaded > lastDownloadedBytes;
