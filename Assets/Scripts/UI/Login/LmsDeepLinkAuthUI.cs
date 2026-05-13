@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Events;
-//xhero://xhero.deeplink?authLMSCode=1&timestamp=123
+
 public class LmsDeepLinkAuthUI : MonoBehaviour
 {
     [Header("API config")]
@@ -14,30 +14,54 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     [Header("XHero deeplink")]
     public string xheroScheme = "xhero";
 
-    [Tooltip("ANDROID host (as in AndroidManifest intent-filter host)")]
-    public string xheroAndroidHost = "com.xhero_app";
+    [Tooltip("ANDROID host. Must match XHero Android deeplink parser.")]
+    public string xheroAndroidHost = "xhero.deeplink";
+
+    [Tooltip("ANDROID package name of XHero app.")]
     public string xheroAndroidPackageName = "com.xhero_app";
 
-    [Tooltip("iOS host (as in iOS URLTypes / associated host config if they use host)")]
-    public string xheroIosHost = "com.xhero.app";
+    [Tooltip("iOS host. Must match XHero iOS deeplink parser.")]
+    public string xheroIosHost = "xhero.deeplink";
 
-    [Tooltip("Deep link path. Example: '/', '/auth', ...")]
-    public string xheroPath = "/";
+    [Tooltip("Fallback host if platform host is empty.")]
+    public string xheroHost = "xhero.deeplink";
+
+    [Tooltip("Deep link path. Usually empty. Leave empty if XHero parses query from host root.")]
+    public string xheroPath = "";
 
     public string codeParamName = "authLMSCode";
     public string timestampParamName = "timestamp";
 
-    [Header("Extra param (required by XHero)")]
+    [Header("Extra param required by XHero")]
     public string functionParamName = "function";
     public string functionValue = "auth-for-lms";
-    [Header("XHero deeplink host")]
-    public string xheroHost = "xhero.deeplink";
+
+    [Header("Store fallback")]
+    [Tooltip("Android Play Store package id. Usually same as xheroAndroidPackageName.")]
+    public string androidStorePackageName = "com.xhero_app";
+
+    [Tooltip("Optional Android store url override. If empty, market://details?id=... will be used.")]
+    public string androidStoreUrlOverride = "";
+
+    [Tooltip("Optional Android web fallback url.")]
+    public string androidStoreWebUrl = "https://play.google.com/store/apps/details?id=com.xhero_app";
+
+    [Tooltip("iOS App Store app id.")]
+    public string iosAppStoreId = "6504331040";
+
+    [Tooltip("Optional iOS store url override. If empty, itms-apps://itunes.apple.com/app/id... will be used.")]
+    public string iosStoreUrlOverride = "itms-apps://itunes.apple.com/app/id6504331040";
+
+    [Tooltip("Optional iOS web fallback url.")]
+    public string iosStoreWebUrl = "https://apps.apple.com/vn/app/xhero/id6504331040?l=vi";
 
     [Header("Flow")]
     public float waitTokenTimeoutSeconds = 25f;
     public float antiSpamSeconds = 3f;
 
-    [Serializable] public class StringEvent : UnityEvent<string> { }
+    [Serializable]
+    public class StringEvent : UnityEvent<string> { }
+
     public StringEvent onLoginSuccess;
 
     private bool _subscribedFirebase = false;
@@ -49,11 +73,19 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     private string _currentCode;
     private string _currentTimestamp;
 
-    private void OnEnable() => TrySubscribeFirebase();
+    private void OnEnable()
+    {
+        TrySubscribeFirebase();
+    }
 
     private void OnDisable()
     {
-        if (_isRunning && !_loggedIn) return;
+        if (_isRunning && !_loggedIn)
+        {
+            Debug.Log("[LmsDeepLinkAuthUI] OnDisable ignored because login flow is running.");
+            return;
+        }
+
         StopFlow();
         UnsubscribeFirebase();
     }
@@ -64,7 +96,38 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             TrySubscribeFirebase();
     }
 
+    private void OnApplicationPause(bool pause)
+    {
+        Debug.Log("[LmsDeepLinkAuthUI] OnApplicationPause: " + pause);
+
+        if (!pause)
+        {
+            TrySubscribeFirebase();
+
+            if (_isRunning && !_loggedIn && !string.IsNullOrEmpty(_currentCode))
+            {
+                Debug.Log("[LmsDeepLinkAuthUI] App resumed while waiting token. code=" + _currentCode);
+            }
+        }
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        Debug.Log("[LmsDeepLinkAuthUI] OnApplicationFocus: " + hasFocus);
+
+        if (hasFocus)
+        {
+            TrySubscribeFirebase();
+
+            if (_isRunning && !_loggedIn && !string.IsNullOrEmpty(_currentCode))
+            {
+                Debug.Log("[LmsDeepLinkAuthUI] App focused while waiting token. code=" + _currentCode);
+            }
+        }
+    }
+
     // ===================== PUBLIC =====================
+
     public void StartDeepLinkLogin()
     {
         if (Time.unscaledTime < _antiSpamUntil)
@@ -73,9 +136,14 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             LoginController.ShowWarning("Bạn thao tác quá nhanh. Vui lòng thử lại sau.");
             return;
         }
+
         _antiSpamUntil = Time.unscaledTime + antiSpamSeconds;
 
-        if (_isRunning) return;
+        if (_isRunning)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Login flow already running.");
+            return;
+        }
 
         _loggedIn = false;
         _currentCode = null;
@@ -87,9 +155,17 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         _flowCo = StartCoroutine(CoLoginFlow());
     }
 
+    public void OpenXHeroStoreManually()
+    {
+        OpenXHeroStore();
+    }
+
+    // ===================== FLOW CONTROL =====================
+
     private void StopFlow()
     {
         _isRunning = false;
+
         if (_flowCo != null)
         {
             StopCoroutine(_flowCo);
@@ -97,12 +173,31 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         }
     }
 
+    private void StopFirebaseListenSafe(string reason)
+    {
+        try
+        {
+            if (FirebaseLoginQrPerCode.Instance != null)
+            {
+                FirebaseLoginQrPerCode.Instance.StopListen();
+                Debug.Log("[LmsDeepLinkAuthUI] Firebase StopListen. reason=" + reason);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] StopListen failed. reason=" + reason + " | " + e);
+        }
+    }
+
     // ===================== SUBSCRIBE FIREBASE =====================
+
     private void TrySubscribeFirebase()
     {
-        if (_subscribedFirebase) return;
+        if (_subscribedFirebase)
+            return;
 
         var fb = EnsureFirebase();
+
         fb.OnAccessTokenReceived -= OnFirebaseAccessToken;
         fb.OnAccessTokenReceived += OnFirebaseAccessToken;
 
@@ -112,7 +207,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
 
     private void UnsubscribeFirebase()
     {
-        if (!_subscribedFirebase) return;
+        if (!_subscribedFirebase)
+            return;
 
         if (FirebaseLoginQrPerCode.Instance != null)
             FirebaseLoginQrPerCode.Instance.OnAccessTokenReceived -= OnFirebaseAccessToken;
@@ -122,12 +218,22 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     }
 
     // ===================== FIREBASE CALLBACK =====================
+
     private void OnFirebaseAccessToken(string accessToken)
     {
         Debug.Log("[LmsDeepLinkAuthUI] OnFirebaseAccessToken: " + accessToken);
 
-        if (string.IsNullOrEmpty(accessToken)) return;
-        if (_loggedIn) return;
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Access token is null or empty.");
+            return;
+        }
+
+        if (_loggedIn)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Already logged in. Ignore duplicated token.");
+            return;
+        }
 
         _loggedIn = true;
         _isRunning = false;
@@ -140,10 +246,12 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         if (LmsStore.Instance != null)
             LmsStore.Instance.ClearQrLoginCache();
 
+        StopFirebaseListenSafe("login_success");
         StopFlow();
     }
 
     // ===================== MAIN FLOW =====================
+
     private IEnumerator CoLoginFlow()
     {
         _isRunning = true;
@@ -152,23 +260,24 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         {
             _isRunning = false;
             LoadingUI.Hide();
+
+            Debug.LogError("[LmsDeepLinkAuthUI] Missing LmsStore/baseUrl.");
             LoginController.ShowWarning("Thiếu cấu hình baseUrl. Vui lòng kiểm tra LmsStore.");
             yield break;
         }
 
-        // step=1: request code
-        string url = $"{LmsStore.Instance.baseUrl}{path}?step=1&platform={platform}";
+        string url = $"{LmsStore.Instance.baseUrl}{path}?step=1&platform={UnityWebRequest.EscapeURL(platform)}";
         Debug.Log("[LmsDeepLinkAuthUI] step=1 URL = " + url);
 
         using (var req = UnityWebRequest.Get(url))
         {
-            req.timeout = (int)requestTimeout;
+            req.timeout = Mathf.Max(1, Mathf.RoundToInt(requestTimeout));
+
+            yield return req.SendWebRequest();
 
 #if UNITY_2020_2_OR_NEWER
-            yield return req.SendWebRequest();
             bool hasError = req.result != UnityWebRequest.Result.Success;
 #else
-            yield return req.SendWebRequest();
             bool hasError = req.isNetworkError || req.isHttpError;
 #endif
 
@@ -176,18 +285,28 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             {
                 _isRunning = false;
                 LoadingUI.Hide();
-                Debug.LogError("[LmsDeepLinkAuthUI] step=1 Request error: " + req.error +
-                               " | body=" + (req.downloadHandler != null ? req.downloadHandler.text : "<null>"));
+
+                Debug.LogError(
+                    "[LmsDeepLinkAuthUI] step=1 Request error: " + req.error +
+                    " | responseCode=" + req.responseCode +
+                    " | body=" + (req.downloadHandler != null ? req.downloadHandler.text : "<null>")
+                );
+
                 LoginController.ShowWarning("Không thể tạo mã đăng nhập. Vui lòng kiểm tra mạng và thử lại.");
                 yield break;
             }
 
             LmsAuthResponse resp;
-            try { resp = JsonUtility.FromJson<LmsAuthResponse>(req.downloadHandler.text); }
+
+            try
+            {
+                resp = JsonUtility.FromJson<LmsAuthResponse>(req.downloadHandler.text);
+            }
             catch (Exception e)
             {
                 _isRunning = false;
                 LoadingUI.Hide();
+
                 Debug.LogError("[LmsDeepLinkAuthUI] Parse JSON fail: " + e + " | raw=" + req.downloadHandler.text);
                 LoginController.ShowWarning("Dữ liệu trả về không hợp lệ.");
                 yield break;
@@ -197,6 +316,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             {
                 _isRunning = false;
                 LoadingUI.Hide();
+
                 Debug.LogError("[LmsDeepLinkAuthUI] Missing data.code | raw=" + req.downloadHandler.text);
                 LoginController.ShowWarning("Không lấy được mã đăng nhập.");
                 yield break;
@@ -214,20 +334,34 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             }
         }
 
-if (!OpenXHeroDeepLink(_currentCode, _currentTimestamp))
-    yield break;
+        /*
+         * iOS important:
+         * Firebase must listen BEFORE Application.OpenURL.
+         * If OpenURL sends Unity to background first, code after OpenURL may not run reliably.
+         */
+        try
+        {
+            EnsureFirebase().StartListen(_currentCode);
+            Debug.Log("[LmsDeepLinkAuthUI] Firebase StartListen OK BEFORE open deeplink. code=" + _currentCode);
+        }
+        catch (Exception e)
+        {
+            _isRunning = false;
+            LoadingUI.Hide();
 
-try
-{
-    EnsureFirebase().StartListen(_currentCode);
-}
-catch (Exception e)
-{
-    Debug.LogError("[LmsDeepLinkAuthUI] Firebase StartListen failed: " + e);
-}
+            Debug.LogError("[LmsDeepLinkAuthUI] Firebase StartListen failed BEFORE open deeplink: " + e);
+            LoginController.ShowWarning("Không thể bắt đầu lắng nghe đăng nhập. Vui lòng thử lại.");
+            yield break;
+        }
 
-        // wait token
+        if (!OpenXHeroDeepLink(_currentCode, _currentTimestamp))
+        {
+            StopFirebaseListenSafe("open_xhero_failed");
+            yield break;
+        }
+
         float t = waitTokenTimeoutSeconds;
+
         while (t > 0f && !_loggedIn)
         {
             t -= Time.unscaledDeltaTime;
@@ -238,6 +372,9 @@ catch (Exception e)
         {
             _isRunning = false;
             LoadingUI.Hide();
+
+            StopFirebaseListenSafe("wait_token_timeout");
+
             LoginController.ShowWarning(
                 "Chưa nhận được token từ XHero.\n" +
                 "Hãy mở XHero và xác nhận đăng nhập."
@@ -245,15 +382,40 @@ catch (Exception e)
         }
     }
 
-    // ===================== OPEN XHERO =====================
+    // ===================== DEEPLINK =====================
+
     private string GetXHeroHostForPlatform()
     {
 #if UNITY_IOS
-        return string.IsNullOrEmpty(xheroIosHost) ? xheroAndroidHost : xheroIosHost;
-#else
-        // default Android + Editor
-        return xheroAndroidHost;
+        if (!string.IsNullOrEmpty(xheroIosHost))
+            return xheroIosHost;
+#elif UNITY_ANDROID
+        if (!string.IsNullOrEmpty(xheroAndroidHost))
+            return xheroAndroidHost;
 #endif
+
+        return string.IsNullOrEmpty(xheroHost) ? "xhero.deeplink" : xheroHost;
+    }
+
+    private string BuildXHeroDeepLinkUrl(string code, string timestamp)
+    {
+        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
+        string tsEnc = UnityWebRequest.EscapeURL(timestamp ?? "");
+        string fnEnc = UnityWebRequest.EscapeURL(functionValue ?? "");
+
+        string host = GetXHeroHostForPlatform();
+
+        string normalizedPath = xheroPath ?? "";
+        if (!string.IsNullOrEmpty(normalizedPath) && !normalizedPath.StartsWith("/"))
+            normalizedPath = "/" + normalizedPath;
+
+        string url =
+            $"{xheroScheme}://{host}{normalizedPath}" +
+            $"?{codeParamName}={codeEnc}" +
+            $"&{timestampParamName}={tsEnc}" +
+            $"&{functionParamName}={fnEnc}";
+
+        return url;
     }
 
     private bool OpenXHeroDeepLink(string code, string timestamp)
@@ -263,87 +425,150 @@ catch (Exception e)
             _isRunning = false;
             _loggedIn = false;
 
-            // stop listen firebase nếu đang nghe
-            try
-            {
-                if (FirebaseLoginQrPerCode.Instance != null)
-                    FirebaseLoginQrPerCode.Instance.StopListen();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[LmsDeepLinkAuthUI] StopListen failed: " + e);
-            }
-
             LoadingUI.Hide();
+
             LoadingUI.ShowErrorPopup(
-                "Thiết bị của bạn chưa có ứng dụng XHero để đăng nhập,\nVui lòng tải ứng dụng và thử lại",
+                "Thiết bị của bạn chưa có ứng dụng XHero để đăng nhập,\nỨng dụng sẽ chuyển bạn đến cửa hàng để tải XHero.",
                 "Thông báo"
             );
+
+            OpenXHeroStore();
 
             StopFlow();
             return false;
         }
 
-        string codeEnc = UnityWebRequest.EscapeURL(code ?? "");
-        string tsEnc   = UnityWebRequest.EscapeURL(timestamp ?? "");
-        string fnEnc   = UnityWebRequest.EscapeURL(functionValue ?? "");
-
-        string host = "xhero.deeplink"; // hoặc xheroHost / GetXHeroHostForPlatform()
-
-        string deepLinkUrl =
-            $"{xheroScheme}://{host}" +
-            $"?{codeParamName}={codeEnc}" +
-            $"&{timestampParamName}={tsEnc}" +
-            $"&{functionParamName}={fnEnc}";
+        string deepLinkUrl = BuildXHeroDeepLinkUrl(code, timestamp);
 
         Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
+
         Application.OpenURL(deepLinkUrl);
         return true;
     }
+
     private bool CanOpenXHeroApp()
     {
 #if UNITY_EDITOR
         return true;
 
 #elif UNITY_ANDROID
-    try
-    {
-        using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-        using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-        using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
+        try
         {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var pm = activity.Call<AndroidJavaObject>("getPackageManager"))
             using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.VIEW"))
             using (var uriClass = new AndroidJavaClass("android.net.Uri"))
             {
-                string testUrl = $"{xheroScheme}://{xheroHost}";
+                string testUrl = $"{xheroScheme}://{GetXHeroHostForPlatform()}";
+
                 using (var uri = uriClass.CallStatic<AndroidJavaObject>("parse", testUrl))
                 {
                     intent.Call<AndroidJavaObject>("setData", uri);
 
-                    // resolve app nào có thể mở deeplink
                     var resolved = pm.Call<AndroidJavaObject>("resolveActivity", intent, 0);
-                    return resolved != null;
+                    bool canOpen = resolved != null;
+
+                    Debug.Log("[LmsDeepLinkAuthUI] Android CanOpenXHeroApp: " + canOpen + " | testUrl=" + testUrl);
+
+                    return canOpen;
                 }
             }
         }
-    }
-    catch (Exception e)
-    {
-        Debug.LogWarning("[LmsDeepLinkAuthUI] Android deeplink resolve check failed: " + e);
-        return true; // fail-safe
-    }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Android deeplink resolve check failed: " + e);
+
+            /*
+             * Fail-safe:
+             * Do not block login if resolveActivity fails unexpectedly.
+             * Application.OpenURL may still work.
+             */
+            return true;
+        }
 
 #elif UNITY_IOS
-    return IOSUrlChecker.CanOpen($"{xheroScheme}://");
+        string testUrl = $"{xheroScheme}://";
+
+        bool canOpen = IOSUrlChecker.CanOpen(testUrl);
+
+        Debug.Log("[LmsDeepLinkAuthUI] iOS CanOpenXHeroApp: " + canOpen + " | testUrl=" + testUrl);
+
+        return canOpen;
 
 #else
-    return true;
+        return true;
+#endif
+    }
+
+    // ===================== STORE FALLBACK =====================
+
+    private void OpenXHeroStore()
+    {
+        string storeUrl = GetXHeroStoreUrl();
+
+        if (string.IsNullOrEmpty(storeUrl))
+        {
+            Debug.LogError("[LmsDeepLinkAuthUI] Store URL is empty. Please set Android package name or iOS App Store ID.");
+            return;
+        }
+
+        Debug.Log("[LmsDeepLinkAuthUI] Open XHero store: " + storeUrl);
+        Application.OpenURL(storeUrl);
+    }
+
+    private string GetXHeroStoreUrl()
+    {
+#if UNITY_ANDROID
+        if (!string.IsNullOrEmpty(androidStoreUrlOverride))
+            return androidStoreUrlOverride;
+
+        string pkg = !string.IsNullOrEmpty(androidStorePackageName)
+            ? androidStorePackageName
+            : xheroAndroidPackageName;
+
+        if (!string.IsNullOrEmpty(pkg))
+            return "market://details?id=" + pkg;
+
+        if (!string.IsNullOrEmpty(androidStoreWebUrl))
+            return androidStoreWebUrl;
+
+        return "";
+
+#elif UNITY_IOS
+        if (!string.IsNullOrEmpty(iosStoreUrlOverride))
+            return iosStoreUrlOverride;
+
+        if (!string.IsNullOrEmpty(iosAppStoreId))
+            return "itms-apps://itunes.apple.com/app/id" + iosAppStoreId;
+
+        if (!string.IsNullOrEmpty(iosStoreWebUrl))
+            return iosStoreWebUrl;
+
+        return "";
+
+#else
+        return "";
 #endif
     }
 
     // ===================== JSON =====================
-    [Serializable] private class LmsAuthResponse { public bool status; public LmsAuthData data; }
-    [Serializable] private class LmsAuthData { public string code; public string timestamp; }
+
+    [Serializable]
+    private class LmsAuthResponse
+    {
+        public bool status;
+        public LmsAuthData data;
+    }
+
+    [Serializable]
+    private class LmsAuthData
+    {
+        public string code;
+        public string timestamp;
+    }
+
+    // ===================== FIREBASE INSTANCE =====================
 
     private FirebaseLoginQrPerCode EnsureFirebase()
     {
@@ -351,12 +576,16 @@ catch (Exception e)
             return FirebaseLoginQrPerCode.Instance;
 
         var found = FindAnyObjectByType<FirebaseLoginQrPerCode>();
-        if (found != null) return found;
+        if (found != null)
+            return found;
 
         var go = new GameObject(nameof(FirebaseLoginQrPerCode));
         var inst = go.AddComponent<FirebaseLoginQrPerCode>();
+
         DontDestroyOnLoad(go);
+
         Debug.LogWarning("[LmsDeepLinkAuthUI] Created FirebaseLoginQrPerCode runtime.");
+
         return inst;
     }
 }
