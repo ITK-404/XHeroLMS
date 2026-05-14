@@ -15,6 +15,15 @@ public class IntroManager : MonoBehaviour
     public float videoStartTimeout = 6f;
     public bool skipVideoIfFail = true;
 
+    public bool forceRefreshPersistentVideo = true;
+
+    //Nếu file persistent nhỏ hơn ngưỡng này thì coi như lỗi và copy lại.
+    public long minValidVideoBytes = 1024 * 50; // 50KB
+
+    public RawImage videoRawImage;
+
+    public RenderTexture videoRenderTexture;
+
     [Header("UI References")]
     public Image progressRing;
     public Slider sliderUI;
@@ -49,8 +58,8 @@ public class IntroManager : MonoBehaviour
     private bool hasFatalFail;
     private Coroutine progressRoutine;
 
-    private float monotonicTarget01;   // mục tiêu UI chỉ tăng
-    private bool sawAnyFailure;        // đã từng fail trong phiên này (giữ lại nếu bạn muốn dùng)
+    private float monotonicTarget01;
+    private bool sawAnyFailure;
 
     // Sync
     private float introStartRealtime;
@@ -81,21 +90,21 @@ public class IntroManager : MonoBehaviour
 
     private void Start()
     {
-        if (_preload == null) _preload = AddressablesPreload.Instance;
+        if (_preload == null)
+            _preload = AddressablesPreload.Instance;
 
         introStartRealtime = Time.realtimeSinceStartup;
         videoEnded = false;
 
-        // Video
         if (videoPlayer == null)
         {
             Debug.LogWarning("[Intro] VideoPlayer not assigned -> skip video.");
             videoFailed = true;
-            videoEnded = true; // coi như xong để UX không bị giữ
+            videoEnded = true;
         }
         else
         {
-            SetupVideoPlayerForFreezeLastFrame(videoPlayer);
+            SetupVideoPlayer(videoPlayer);
 
             videoPlayer.errorReceived += OnVideoError;
             videoPlayer.prepareCompleted += OnVideoPrepared;
@@ -110,28 +119,28 @@ public class IntroManager : MonoBehaviour
 
     public void OnAboutToEnterMain()
     {
-        // hook (optional)
+        // hook optional
     }
 
-public void ForceProgress(float t01)
-{
-    t01 = Mathf.Clamp01(t01);
+    public void ForceProgress(float t01)
+    {
+        t01 = Mathf.Clamp01(t01);
 
-    // Không cho progress tụt xuống.
-    if (t01 < monotonicTarget01)
-        t01 = monotonicTarget01;
+        // Không cho progress tụt xuống.
+        if (t01 < monotonicTarget01)
+            t01 = monotonicTarget01;
 
-    monotonicTarget01 = t01;
-    currentVisual = Mathf.Max(currentVisual, t01);
-    targetVisual = Mathf.Max(targetVisual, t01);
+        monotonicTarget01 = t01;
+        currentVisual = Mathf.Max(currentVisual, t01);
+        targetVisual = Mathf.Max(targetVisual, t01);
 
-    SetProgressInstant(currentVisual);
-}
+        SetProgressInstant(currentVisual);
+    }
 
-public void ForceProgressNoDecrease(float t01)
-{
-    ForceProgress(t01);
-}
+    public void ForceProgressNoDecrease(float t01)
+    {
+        ForceProgress(t01);
+    }
 
     public void ShowFatalFail(string msg)
     {
@@ -180,10 +189,13 @@ public void ForceProgressNoDecrease(float t01)
         if (_preload != null)
             _preload.RequestRetry();
 
-        // reset sync/progress
         introStartRealtime = Time.realtimeSinceStartup;
         videoEnded = false;
         sawAnyFailure = false;
+
+        monotonicTarget01 = 0f;
+        currentVisual = 0f;
+        targetVisual = 0f;
         ForceProgress(0f);
 
         videoStarted = false;
@@ -192,7 +204,12 @@ public void ForceProgressNoDecrease(float t01)
 
         if (videoPlayer != null)
         {
-            try { videoPlayer.Stop(); } catch { }
+            try
+            {
+                videoPlayer.Stop();
+            }
+            catch { }
+
             StartCoroutine(CoPrepareAndPlayVideo_Robust());
             StartCoroutine(CoVideoStartTimeoutCheck());
         }
@@ -200,41 +217,111 @@ public void ForceProgressNoDecrease(float t01)
 
     // ========================= VIDEO =========================
 
-    private void SetupVideoPlayerForFreezeLastFrame(VideoPlayer vp)
+    private void SetupVideoPlayer(VideoPlayer vp)
     {
         vp.playOnAwake = false;
         vp.isLooping = false;
         vp.waitForFirstFrame = true;
         vp.skipOnDrop = true;
-        vp.sendFrameReadyEvents = true;
+        vp.sendFrameReadyEvents = false;
+
+        // Nếu bạn dùng RawImage + RenderTexture thì code tự gán.
+        if (videoRenderTexture != null)
+        {
+            vp.renderMode = VideoRenderMode.RenderTexture;
+            vp.targetTexture = videoRenderTexture;
+
+            if (videoRawImage != null)
+            {
+                videoRawImage.texture = videoRenderTexture;
+                videoRawImage.enabled = true;
+            }
+
+            Debug.Log("[Intro] Video display mode = RenderTexture");
+        }
+        else if (videoRawImage != null)
+        {
+            Debug.LogWarning("[Intro] videoRawImage assigned but videoRenderTexture is null. RawImage sẽ không hiện video nếu VideoPlayer chưa có targetTexture.");
+        }
     }
 
     private IEnumerator CoPrepareAndPlayVideo_Robust()
     {
+        if (videoPlayer == null)
+            yield break;
+
+        videoStarted = false;
+        videoFailed = false;
+        videoEnded = false;
+        videoFailReason = "";
+
         string persistentPath = Path.Combine(Application.persistentDataPath, streamingAssetsVideoName);
 
-        bool needCopy = true;
-        try
+        Debug.Log("[Intro] persistent video path = " + persistentPath);
+
+        bool needCopy = forceRefreshPersistentVideo;
+
+        if (!needCopy)
         {
-            if (File.Exists(persistentPath))
+            try
             {
-                var fi = new FileInfo(persistentPath);
-                needCopy = fi.Length <= 0;
+                if (!File.Exists(persistentPath))
+                {
+                    needCopy = true;
+                    Debug.Log("[Intro] Persistent video not found -> copy needed.");
+                }
+                else
+                {
+                    FileInfo fi = new FileInfo(persistentPath);
+
+                    if (fi.Length < minValidVideoBytes)
+                    {
+                        needCopy = true;
+                        Debug.LogWarning($"[Intro] Persistent video too small ({fi.Length} bytes) -> copy needed.");
+                    }
+                    else
+                    {
+                        needCopy = false;
+                        Debug.Log($"[Intro] Persistent video exists ({fi.Length} bytes) -> reuse.");
+                    }
+                }
+            }
+            catch (System.Exception e)
+            {
+                needCopy = true;
+                Debug.LogWarning("[Intro] Check persistent video failed -> copy needed. " + e);
             }
         }
-        catch { needCopy = true; }
 
         if (needCopy)
         {
+            try
+            {
+                if (File.Exists(persistentPath))
+                {
+                    File.Delete(persistentPath);
+                    Debug.Log("[Intro] Deleted old persistent video.");
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[Intro] Delete old persistent video failed: " + e);
+            }
+
             string src = Path.Combine(Application.streamingAssetsPath, streamingAssetsVideoName);
             bool srcLooksLikeUrl = src.Contains("://") || src.Contains("jar:");
 
+            Debug.Log("[Intro] StreamingAssets video src = " + src);
+
             if (!srcLooksLikeUrl && File.Exists(src))
             {
-                // iOS/Editor/Standalone
+                // Editor / Standalone / iOS có thể đọc trực tiếp file path.
                 try
                 {
                     File.Copy(src, persistentPath, true);
+
+                    FileInfo copied = new FileInfo(persistentPath);
+                    Debug.Log($"[Intro] Copied video to persistent. Size={copied.Length} bytes");
                 }
                 catch (System.Exception e)
                 {
@@ -244,22 +331,41 @@ public void ForceProgressNoDecrease(float t01)
             }
             else
             {
-                // Android jar hoặc src là URL
+                // Android StreamingAssets nằm trong jar nên phải đọc qua UnityWebRequest.
                 string srcUrl = src;
+
                 if (!srcUrl.Contains("://") && !srcUrl.Contains("jar:"))
-                    srcUrl = new System.Uri(srcUrl).AbsoluteUri; // file://...
+                    srcUrl = new System.Uri(srcUrl).AbsoluteUri;
+
+                Debug.Log("[Intro] Read video via UnityWebRequest: " + srcUrl);
 
                 using (UnityWebRequest req = UnityWebRequest.Get(srcUrl))
                 {
                     yield return req.SendWebRequest();
+
                     bool ok = req.result == UnityWebRequest.Result.Success;
+
                     if (!ok)
                     {
-                        FailVideo($"[Intro] Cannot read video from StreamingAssets.\n{req.error}\nURL={srcUrl}");
+                        FailVideo($"[Intro] Cannot read video from StreamingAssets.\nError={req.error}\nURL={srcUrl}");
                         yield break;
                     }
 
-                    try { File.WriteAllBytes(persistentPath, req.downloadHandler.data); }
+                    byte[] data = req.downloadHandler.data;
+
+                    if (data == null || data.Length < minValidVideoBytes)
+                    {
+                        FailVideo($"[Intro] Loaded video data invalid. Bytes={(data == null ? 0 : data.Length)} URL={srcUrl}");
+                        yield break;
+                    }
+
+                    try
+                    {
+                        File.WriteAllBytes(persistentPath, data);
+
+                        FileInfo copied = new FileInfo(persistentPath);
+                        Debug.Log($"[Intro] Wrote persistent video. Size={copied.Length} bytes");
+                    }
                     catch (System.Exception e)
                     {
                         FailVideo("[Intro] Write persistent video failed: " + e);
@@ -269,23 +375,75 @@ public void ForceProgressNoDecrease(float t01)
             }
         }
 
+        if (!File.Exists(persistentPath))
+        {
+            FailVideo("[Intro] Persistent video missing after copy: " + persistentPath);
+            yield break;
+        }
+
+        try
+        {
+            FileInfo fi = new FileInfo(persistentPath);
+
+            if (fi.Length < minValidVideoBytes)
+            {
+                FailVideo($"[Intro] Persistent video invalid after copy. Size={fi.Length} bytes");
+                yield break;
+            }
+        }
+        catch (System.Exception e)
+        {
+            FailVideo("[Intro] Validate persistent video failed: " + e);
+            yield break;
+        }
+
         string url = new System.Uri(persistentPath).AbsoluteUri;
         Debug.Log($"[Intro] Video url = {url}");
 
+        videoPlayer.Stop();
         videoPlayer.source = VideoSource.Url;
         videoPlayer.url = url;
 
         videoPlayer.Prepare();
-        yield return null;
+
+        float prepareTimeout = Mathf.Max(1f, videoStartTimeout);
+        float elapsed = 0f;
+
+        while (!videoPlayer.isPrepared && !videoFailed && elapsed < prepareTimeout)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (videoFailed)
+            yield break;
+
+        if (!videoPlayer.isPrepared)
+        {
+            FailVideo($"[Intro] Video prepare timeout ({prepareTimeout:0.##}s). URL={url}");
+            yield break;
+        }
+
+        // Phòng khi prepareCompleted event không bắn đúng trên một số device.
+        OnVideoPrepared(videoPlayer);
     }
 
     private void OnVideoPrepared(VideoPlayer vp)
     {
-        if (videoFailed) return;
+        if (videoFailed || videoStarted)
+            return;
 
-        Debug.Log("[Intro] Video prepared -> Play()");
-        videoPlayer.Play();
-        videoStarted = true;
+        Debug.Log($"[Intro] Video prepared -> Play(). length={vp.length:0.###}, frameCount={vp.frameCount}, width={vp.width}, height={vp.height}");
+
+        try
+        {
+            vp.Play();
+            videoStarted = true;
+        }
+        catch (System.Exception e)
+        {
+            FailVideo("[Intro] Video Play failed: " + e);
+        }
     }
 
     private void OnVideoEndReached(VideoPlayer vp)
@@ -300,8 +458,10 @@ public void ForceProgressNoDecrease(float t01)
         try
         {
             vp.Pause();
+
             long last = (vp.frameCount > 0) ? (long)vp.frameCount - 1 : vp.frame;
             if (last < 0) last = 0;
+
             vp.frame = last;
             vp.StepForward();
         }
@@ -319,6 +479,7 @@ public void ForceProgressNoDecrease(float t01)
     private IEnumerator CoVideoStartTimeoutCheck()
     {
         float t = 0f;
+
         while (t < videoStartTimeout && !videoStarted && !videoFailed)
         {
             t += Time.unscaledDeltaTime;
@@ -326,17 +487,24 @@ public void ForceProgressNoDecrease(float t01)
         }
 
         if (!videoStarted && !videoFailed)
-            FailVideo($"[Intro] Video start timeout ({videoStartTimeout:0.##}s). isPrepared={videoPlayer != null && videoPlayer.isPrepared}");
+        {
+            bool isPrepared = videoPlayer != null && videoPlayer.isPrepared;
+            string url = videoPlayer != null ? videoPlayer.url : "NULL";
+            FailVideo($"[Intro] Video start timeout ({videoStartTimeout:0.##}s). isPrepared={isPrepared}, url={url}");
+        }
     }
 
     private void FailVideo(string reason)
     {
         Debug.LogWarning(reason);
+
         videoFailed = true;
+        sawAnyFailure = true;
         videoFailReason = reason;
 
-        // nếu fail video mà vẫn cho qua, coi như video ended để flow không bị giữ
-        if (skipVideoIfFail) videoEnded = true;
+        // Nếu fail video mà vẫn cho qua, coi như video ended để flow không bị giữ.
+        if (skipVideoIfFail)
+            videoEnded = true;
 
         if (!skipVideoIfFail)
             ShowFatalFail(reason);
@@ -363,7 +531,7 @@ public void ForceProgressNoDecrease(float t01)
     {
         float time01 = GetIntroTime01();
 
-        // no preload -> chạy theo time cho mượt
+        // Không có preload -> chạy theo thời gian cho mượt.
         if (_preload == null)
         {
             SetTargetMonotonic(Mathf.Max(warmupMinProgress, time01));
@@ -387,36 +555,30 @@ public void ForceProgressNoDecrease(float t01)
             return;
         }
 
-        if (!ready)
+        float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
+        if (data01 <= 0f && warmupMinProgress > 0f)
+            data01 = warmupMinProgress;
+
+        if (time01 < 1f && !videoEnded)
         {
-            float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
-            if (data01 <= 0f && warmupMinProgress > 0f) data01 = warmupMinProgress;
-
-            if (time01 < 1f && !videoEnded)
-            {
-                // 6s đầu: chạy theo time nhưng không vượt cap
-                float videoDriven = Mathf.Min(time01 * capWhenVideoDoneButNotReady, capWhenVideoDoneButNotReady);
-                SetTargetMonotonic(Mathf.Max(data01, videoDriven));
-            }
-            else
-            {
-                // sau 6s: map data 0..1 -> cap..1
-                float mapped = Mathf.Lerp(capWhenVideoDoneButNotReady, 1f, data01);
-                SetTargetMonotonic(mapped);
-            }
-
-            ApplyVisual();
-            return;
+            // Trong introDurationSec đầu: chạy theo time nhưng không vượt cap.
+            float videoDriven = Mathf.Min(time01 * capWhenVideoDoneButNotReady, capWhenVideoDoneButNotReady);
+            SetTargetMonotonic(Mathf.Max(data01, videoDriven));
+        }
+        else
+        {
+            // Sau introDurationSec: map data 0..1 -> cap..1.
+            float mapped = Mathf.Lerp(capWhenVideoDoneButNotReady, 1f, data01);
+            SetTargetMonotonic(mapped);
         }
 
-        // Ready + (hết 6s hoặc video ended) -> 100%
-        SetTargetMonotonic(1f);
         ApplyVisual();
     }
 
     private void SetTargetMonotonic(float newTarget01)
     {
         newTarget01 = Mathf.Clamp01(newTarget01);
+
         if (newTarget01 > monotonicTarget01)
             monotonicTarget01 = newTarget01;
     }
@@ -431,7 +593,7 @@ public void ForceProgressNoDecrease(float t01)
             1f - Mathf.Exp(-visualLerpSpeed * Time.unscaledDeltaTime)
         );
 
-        // không tụt
+        // Không tụt.
         if (currentVisual < monotonicTarget01)
             currentVisual = monotonicTarget01;
 
@@ -440,11 +602,9 @@ public void ForceProgressNoDecrease(float t01)
 
     private string GetStageText(float t01)
     {
-        // Chỉ hiện "Hoàn tất" khi đủ điều kiện: preload ready và đã hết intro 6s (hoặc video ended)
         if (_preload != null && _preload.IsReady && (GetIntroTime01() >= 1f || videoEnded))
             return "Hoàn tất";
 
-        // Luôn hiển thị đang tải + %
         return $"Đang tải tài nguyên ({Mathf.FloorToInt(t01 * 100f)}%)";
     }
 
@@ -455,8 +615,11 @@ public void ForceProgressNoDecrease(float t01)
         if (textLoading != null)
             textLoading.text = GetStageText(t01);
 
-        if (progressRing != null) progressRing.fillAmount = t01;
-        if (sliderUI != null) sliderUI.value = t01;
+        if (progressRing != null)
+            progressRing.fillAmount = t01;
+
+        if (sliderUI != null)
+            sliderUI.value = t01;
     }
 
     private void OnDestroy()
@@ -471,6 +634,7 @@ public void ForceProgressNoDecrease(float t01)
             videoPlayer.loopPointReached -= OnVideoEndReached;
         }
     }
+
     public bool CanEnterMain
     {
         get
