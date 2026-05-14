@@ -162,22 +162,39 @@ public class RegistrationController : MonoBehaviour
         }
 
         // Payload đơn giản – BE sẽ gửi OTP theo phone
-        var payload = new RegisterPayload
-        {
-            username          = username84,
-            isUsernameEmail   = false,
-            isApp             = false,
-            password          = pass1,
-            retypePassword    = pass1,
-            otpBy             = otpBy,          // "phone"
-            registerPlatform  = "web",
-            isFromGame        = false,
+var payload = new RegisterPayload
+{
+    countryCode = null,
 
-            fullName          = phoneDigits,
-            email             = "",
-            province          = "",
-            gender            = "male"
-        };
+    username = username84,
+    isApp = false,
+
+    birthYear = "",
+
+    password = pass1,
+    retypePassword = pass1,
+
+    referralCode = referralCodeField ? referralCodeField.text.Trim() : "",
+
+    fullName = phoneDigits,
+    email = "",
+    birthDay = "",
+    province = "",
+    gender = "male",
+
+    device = "string",
+    deviceToken = "string",
+
+    otpBy = otpBy, // "phone"
+    registerPlatform = "web",
+    isFromGame = false,
+
+    interestingTopics = new List<string>(),
+
+    isUsernameEmail = false,
+
+    lms3dDeviceToken = "string"
+};
 
         StartCoroutine(RegisterRoutine(payload, username84));
 
@@ -185,78 +202,91 @@ public class RegistrationController : MonoBehaviour
 
     }
 
-    private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
+private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
+{
+    btnRegister.interactable = false;
+    if (errorText) errorText.text = "";
+
+    string url = baseUrl.TrimEnd('/') + RegisterPath;
+    string json = JsonUtility.ToJson(payload);
+
+    Debug.Log($"[Register F] baseUrl={baseUrl}");
+    Debug.Log($"[Register F] RegisterPath={RegisterPath}");
+    Debug.Log($"[Register F] FINAL URL={url}");
+    Debug.Log($"[Register F] BODY={json}");
+
+    using (var req = new UnityWebRequest(url, "POST"))
     {
-        btnRegister.interactable = false;
-        if (errorText) errorText.text = "";
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+        req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        req.downloadHandler = new DownloadHandlerBuffer();
 
-        string url  = baseUrl.TrimEnd('/') + RegisterPath;
-        string json = JsonUtility.ToJson(payload);
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.SetRequestHeader("Accept", "application/json");
 
-        using (var req = new UnityWebRequest(url, "POST"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-            req.uploadHandler   = new UploadHandlerRaw(bodyRaw);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 15;
 
-            yield return req.SendWebRequest();
+        yield return req.SendWebRequest();
+
+        string raw = req.downloadHandler != null ? req.downloadHandler.text : "";
 
 #if UNITY_2020_2_OR_NEWER
-            bool ok = req.result == UnityWebRequest.Result.Success ||
-                      (req.responseCode >= 200 && req.responseCode < 300);
+        Debug.Log($"[Register F] END POST result={req.result}, code={req.responseCode}, error={req.error}, body={raw}");
+
+        bool ok = req.result == UnityWebRequest.Result.Success &&
+                  req.responseCode >= 200 &&
+                  req.responseCode < 300;
 #else
-            bool ok = !req.isNetworkError && !req.isHttpError &&
-                      (req.responseCode >= 200 && req.responseCode < 300);
+        Debug.Log($"[Register F] END POST isNetworkError={req.isNetworkError}, isHttpError={req.isHttpError}, code={req.responseCode}, error={req.error}, body={raw}");
+
+        bool ok = !req.isNetworkError &&
+                  !req.isHttpError &&
+                  req.responseCode >= 200 &&
+                  req.responseCode < 300;
 #endif
 
-            if (ok)
+        if (ok)
+        {
+            Debug.Log("Register OK: " + raw);
+
+            PlayerPrefs.SetString(PREF_USERNAME84, username84);
+            PlayerPrefs.Save();
+            AuthFlowSession.LastRegUsername84 = username84;
+
+            if (currentPanel) currentPanel.SetActive(false);
+            if (otpPanel) otpPanel.SetActive(true);
+
+            OtpVerificationController targetOtp = otpController;
+            if (targetOtp == null && otpPanel != null)
+                targetOtp = otpPanel.GetComponentsInChildren<OtpVerificationController>(true).FirstOrDefault();
+
+            if (targetOtp == null)
+                targetOtp = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
+
+            if (targetOtp != null)
             {
-                Debug.Log("Register OK: " + req.downloadHandler.text);
-
-                // Lưu lại username 84 để dùng sau
-                PlayerPrefs.SetString(PREF_USERNAME84, username84);
-                PlayerPrefs.Save();
-                AuthFlowSession.LastRegUsername84 = username84;
-
-                if (currentPanel) currentPanel.SetActive(false);
-                if (otpPanel)     otpPanel.SetActive(true);
-
-                OtpVerificationController targetOtp = otpController;
-                if (targetOtp == null && otpPanel != null)
-                    targetOtp = otpPanel.GetComponentsInChildren<OtpVerificationController>(true).FirstOrDefault();
-                if (targetOtp == null)
-                    targetOtp = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
-
-                if (targetOtp != null)
-                {
-                    // Luôn dùng phone
-                    string contact = username84;
-                    targetOtp.SetContact(contact, "phone", "register");
-                    targetOtp.BeginCountdown();
-                }
-
-                AuthFlowSession.LastOtpIdentifier = username84;
-                AuthFlowSession.LastOtpBy         = "phone";
-                AuthFlowSession.LastOtpPurpose    = "register";
+                string contact = username84;
+                targetOtp.SetContact(contact, "phone", "register");
+                targetOtp.BeginCountdown();
             }
-            else
-            {
-                string raw    = req.downloadHandler.text;
-                string msgLog = $"Register FAIL ({req.responseCode}): {req.error}\n{raw}";
-                Debug.LogWarning(msgLog);
 
-                string friendly = BuildFriendlyErrorMessage(req, raw);
-
-                if (errorText) errorText.text = friendly;
-                ShowWarningPopup(friendly);
-            }
+            AuthFlowSession.LastOtpIdentifier = username84;
+            AuthFlowSession.LastOtpBy = "phone";
+            AuthFlowSession.LastOtpPurpose = "register";
         }
+        else
+        {
+            Debug.LogWarning($"Register FAIL ({req.responseCode}): {req.error}\n{raw}");
 
-        btnRegister.interactable = true;
-        Debug.Log($"[Register F] POST {url} body={json}");
+            string friendly = BuildFriendlyErrorMessage(req, raw);
 
+            if (errorText) errorText.text = friendly;
+            ShowWarningPopup(friendly);
+        }
     }
+
+    btnRegister.interactable = true;
+}
 
     private void ResetForm()
     {
@@ -319,24 +349,40 @@ string core = @"(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])";
     }
 
     // ---------- Payload ----------
-    [Serializable]
-    private class RegisterPayload
-    {
-        public string username;
-        public bool isApp;
-        public string password;
-        public string retypePassword;
-        public string otpBy;               // "phone"
-        public string registerPlatform;
-        public bool isFromGame;
-        public bool isUsernameEmail;
+[Serializable]
+private class RegisterPayload
+{
+    public string countryCode;
 
-        // Optional fields cho BE
-        public string fullName;
-        public string email;
-        public string province;
-        public string gender;
-    }
+    public string username;
+    public bool isApp;
+
+    public string birthYear;
+
+    public string password;
+    public string retypePassword;
+
+    public string referralCode;
+
+    public string fullName;
+    public string email;
+    public string birthDay;
+    public string province;
+    public string gender;
+
+    public string device;
+    public string deviceToken;
+
+    public string otpBy;
+    public string registerPlatform;
+    public bool isFromGame;
+
+    public List<string> interestingTopics;
+
+    public bool isUsernameEmail;
+
+    public string lms3dDeviceToken;
+}
 
     [Serializable]
     private class ErrorResponse
