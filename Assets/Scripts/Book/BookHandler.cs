@@ -185,10 +185,10 @@ public class BookHandler : MonoBehaviour
         if (isFree || isCoHoc1)
             return SceneRoom1;
         // IMPORTANT: 11/05/2026 -> chỉ có định nghĩa phòng cho các khoá kì môn, còn lại đều qua cổ học 2
-        if (SeoResolver.TryGetSceneNameBySeoID(book_seo, out var customScene))
-        {
-            return customScene;
-        }
+        // if (SeoResolver.TryGetSceneNameBySeoID(book_seo, out var customScene))
+        // {
+        //     return customScene;
+        // }
         // Khóa đã sở hữu vào phòng 2
         if (isJoined)
             return SceneRoom2;
