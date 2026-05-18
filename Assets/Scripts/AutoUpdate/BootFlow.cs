@@ -9,18 +9,6 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 #endif
 
-/// <summary>
-/// Attach vào 1 GameObject trong BootstrapScene.
-/// Script này là "cửa duy nhất" để vào Main.
-/// 
-/// Bản update:
-/// - Giữ allowEnterMainWhenPreloadFailed = true để BootFlow tiếp tục cứu flow.
-/// - BootFlow vẫn được phép tải scene dependencies.
-/// - Thêm retry cho scene dependency download.
-/// - Nếu fail kiểu UnityCache Temp/Shared thì clear UnityCache/Temp rồi retry.
-/// - Verify lại GetDownloadSizeAsync(sceneKey) sau download.
-/// - Nếu retry hết vẫn fail, có thể thử LoadSceneAsync trực tiếp lần cuối.
-/// </summary>
 [DefaultExecutionOrder(-20000)]
 public class BootFlow : MonoBehaviour
 {
@@ -33,8 +21,8 @@ public class BootFlow : MonoBehaviour
     [Header("Main Scene")]
     public bool mainSceneIsAddressable = true;
 
-    [Tooltip("Nếu mainSceneIsAddressable=true -> key scene Addressables")]
-    public string mainAddressableSceneKey = "NewScene";
+    // Nếu mainSceneIsAddressable=true -> key scene Addressables mặc định khi không có saved session
+    string mainAddressableSceneKey = "New Scene";
 
     [Tooltip("Nếu mainSceneIsAddressable=false -> build index của Scene main")]
     public int mainSceneBuildIndex = 1;
@@ -42,6 +30,12 @@ public class BootFlow : MonoBehaviour
     [Header("Behavior")]
     public bool allowEnterMainWhenPreloadFailed = true;
     public float minHoldBeforeEnterMain = 0.05f;
+
+    // Nếu chưa có UserID nhưng chỉ có 1 save hợp lệ trên máy, cho phép load thẳng save đó.
+    bool allowSingleSaveFallbackWhenNoUserID = true;
+
+    private bool _loadingMain;
+    private string _resolvedMainSceneKey;
 
 #if ADDRESSABLES
     [Header("Scene Dependency Download Recovery")]
@@ -63,8 +57,6 @@ public class BootFlow : MonoBehaviour
 
     private long sceneVerifyThresholdBytes = 0;
 #endif
-
-    private bool _loadingMain;
 
     private void Awake()
     {
@@ -96,48 +88,52 @@ public class BootFlow : MonoBehaviour
         StartCoroutine(CoBoot());
     }
 
-    private IEnumerator CoBoot()
+private IEnumerator CoBoot()
+{
+    while (preload == null)
     {
-        while (preload == null)
-        {
-            preload = AddressablesPreload.Instance;
-            yield return null;
-        }
-
-        while (!preload.IsCloudFullyDownloaded && !preload.HasFailed)
-            yield return null;
-
-        if (preload.HasFailed)
-        {
-            Debug.LogWarning("[BootFlow] Preload failed, but BootFlow will continue because allowEnterMainWhenPreloadFailed=" + allowEnterMainWhenPreloadFailed);
-            Debug.LogWarning("[BootFlow] Preload LastError: " + preload.LastError);
-        }
-
-        if (preload.HasFailed && !allowEnterMainWhenPreloadFailed)
-        {
-            if (intro != null)
-                intro.ShowFatalFail(preload.LastError);
-
-            yield break;
-        }
-
-        // if (intro != null)
-        //     intro.ForceProgress(1f);
-        if (intro != null)
-            intro.ForceProgressNoDecrease(preload != null ? preload.DownloadPercent01 : 0f);
-
-        if (minHoldBeforeEnterMain > 0f)
-            yield return new WaitForSecondsRealtime(minHoldBeforeEnterMain);
-            
-        if (intro != null)
-        {
-            Debug.Log("[BootFlow] Waiting intro video before entering main...");
-
-            while (!intro.CanEnterMain)
-                yield return null;
-        }
-        EnterMain();
+        preload = AddressablesPreload.Instance;
+        yield return null;
     }
+
+    while (!preload.IsCloudFullyDownloaded && !preload.HasFailed)
+    {
+        if (intro != null && preload != null)
+        {
+            float p = Mathf.Clamp01(preload.DownloadPercent01);
+
+            intro.SetBootProgress01(p);
+        }
+
+        yield return null;
+    }
+
+    if (preload.HasFailed)
+    {
+        Debug.LogWarning("[BootFlow] Preload failed, but BootFlow will continue because allowEnterMainWhenPreloadFailed=" + allowEnterMainWhenPreloadFailed);
+        Debug.LogWarning("[BootFlow] Preload LastError: " + preload.LastError);
+    }
+
+    if (preload.HasFailed && !allowEnterMainWhenPreloadFailed)
+    {
+        if (intro != null)
+            intro.ShowFatalFail(preload.LastError);
+
+        yield break;
+    }
+
+    if (intro != null)
+    {
+        intro.SetBootProgress01(preload != null ? preload.DownloadPercent01 : 0f);
+    }
+
+    if (minHoldBeforeEnterMain > 0f)
+        yield return new WaitForSecondsRealtime(minHoldBeforeEnterMain);
+
+    Debug.Log("[BootFlow] Boot preload ready. Resolve saved session local, không chờ LoginComplete.");
+
+    EnterMain();
+}
 
     public void EnterMain()
     {
@@ -153,26 +149,30 @@ public class BootFlow : MonoBehaviour
         if (intro != null)
             intro.OnAboutToEnterMain();
 
+        _resolvedMainSceneKey = ResolveMainSceneKey();
+
 #if ADDRESSABLES
         if (mainSceneIsAddressable)
         {
-            if (string.IsNullOrWhiteSpace(mainAddressableSceneKey))
+            if (string.IsNullOrWhiteSpace(_resolvedMainSceneKey))
             {
-                Debug.LogError("[BootFlow] mainAddressableSceneKey is empty.");
+                Debug.LogError("[BootFlow] Resolved scene key is empty.");
+
                 if (intro != null)
                     intro.ShowFatalFail("Main scene key is empty.");
 
+                _loadingMain = false;
                 yield break;
             }
 
-            Debug.Log("[BootFlow] Main addressable scene key: " + mainAddressableSceneKey);
+            Debug.Log("[BootFlow] Resolved addressable scene key: " + _resolvedMainSceneKey);
 
             if (downloadSceneDependenciesInBootFlow)
             {
                 bool dependencyReady = false;
 
                 yield return CoEnsureSceneDependenciesReady(
-                    mainAddressableSceneKey,
+                    _resolvedMainSceneKey,
                     result => dependencyReady = result
                 );
 
@@ -183,13 +183,14 @@ public class BootFlow : MonoBehaviour
                     if (tryLoadSceneDirectlyAfterDependencyFail)
                     {
                         Debug.LogWarning("[BootFlow] Trying LoadSceneAsync directly after dependency fail...");
-                        Addressables.LoadSceneAsync(mainAddressableSceneKey, LoadSceneMode.Single, true);
+                        Addressables.LoadSceneAsync(_resolvedMainSceneKey, LoadSceneMode.Single, true);
                         yield break;
                     }
 
                     if (intro != null)
                         intro.ShowFatalFail("Scene download failed.");
 
+                    _loadingMain = false;
                     yield break;
                 }
             }
@@ -198,15 +199,154 @@ public class BootFlow : MonoBehaviour
                 Debug.LogWarning("[BootFlow] downloadSceneDependenciesInBootFlow=false. Loading scene directly.");
             }
 
-            Debug.Log("[BootFlow] Loading main scene...");
-            Addressables.LoadSceneAsync(mainAddressableSceneKey, LoadSceneMode.Single, true);
-            yield break;
+if (intro != null)
+{
+    intro.SetBootProgress01(1f, true);
+
+    while (!intro.CanEnterMain)
+        yield return null;
+}
+
+Debug.Log("[BootFlow] Loading scene once: " + _resolvedMainSceneKey);
+Addressables.LoadSceneAsync(_resolvedMainSceneKey, LoadSceneMode.Single, true);
+yield break;
         }
 #endif
 
         Debug.Log("[BootFlow] Load main by BuildIndex: " + mainSceneBuildIndex);
         SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
         yield break;
+    }
+
+    private string ResolveMainSceneKey()
+    {
+        string savedScene = TryGetSavedSessionSceneName();
+
+        if (!string.IsNullOrWhiteSpace(savedScene))
+        {
+            string sceneKey = ConvertSceneNameToAddressableKey(savedScene);
+
+            Debug.Log("[BootFlow] Có session cũ. Load thẳng scene đã lưu, không load NewScene. SavedScene="
+                      + savedScene + ", ResolvedKey=" + sceneKey);
+
+            return sceneKey;
+        }
+
+        Debug.Log("[BootFlow] Không có session cũ hoặc không xác định được account. Load scene mặc định: " + mainAddressableSceneKey);
+        return mainAddressableSceneKey;
+    }
+
+    private string TryGetSavedSessionSceneName()
+    {
+        try
+        {
+            Debug.Log("[BootFlow] Resolve saved session local. IsAuthenticated="
+                      + TokenStore.IsAuthenticated
+                      + ", UserID="
+                      + TokenStore.UserID);
+
+            SaveManager saveManager = new SaveManager();
+            var saves = saveManager.LoadAllGameSession();
+
+            if (saves == null || saves.Count == 0)
+            {
+                Debug.Log("[BootFlow] Máy này chưa có saved session.");
+                return null;
+            }
+
+            Debug.Log("[BootFlow] Tổng saved session tìm thấy: " + saves.Count);
+
+            if (!string.IsNullOrWhiteSpace(TokenStore.UserID))
+            {
+                foreach (var item in saves)
+                {
+                    if (item == null)
+                        continue;
+
+                    Debug.Log("[BootFlow] Check saved session item. SavedUserID="
+                              + item.UserID
+                              + ", CurrentUserID="
+                              + TokenStore.UserID);
+
+                    if (item.UserID != TokenStore.UserID)
+                        continue;
+
+                    if (item.SceneLocation == null)
+                    {
+                        Debug.LogWarning("[BootFlow] Saved session đúng UserID nhưng SceneLocation null.");
+                        return null;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                    {
+                        Debug.LogWarning("[BootFlow] Saved session đúng UserID nhưng SceneName rỗng.");
+                        return null;
+                    }
+
+                    Debug.Log("[BootFlow] Tìm thấy saved session đúng UserID. SceneName=" + item.SceneLocation.SceneName);
+                    return item.SceneLocation.SceneName;
+                }
+
+                Debug.Log("[BootFlow] Có UserID nhưng không tìm thấy saved session cho account hiện tại.");
+                return null;
+            }
+
+            if (!allowSingleSaveFallbackWhenNoUserID)
+            {
+                Debug.LogWarning("[BootFlow] Chưa có UserID và single-save fallback đang tắt.");
+                return null;
+            }
+
+            GameSessionData onlyValidSave = null;
+            int validCount = 0;
+
+            foreach (var item in saves)
+            {
+                if (item == null)
+                    continue;
+
+                if (item.SceneLocation == null)
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                    continue;
+
+                onlyValidSave = item;
+                validCount++;
+
+                Debug.Log("[BootFlow] Valid save candidate without UserID. SavedUserID="
+                          + item.UserID
+                          + ", SceneName="
+                          + item.SceneLocation.SceneName);
+            }
+
+            if (validCount == 1 && onlyValidSave != null)
+            {
+                Debug.LogWarning("[BootFlow] Chưa có UserID nhưng chỉ có 1 saved session hợp lệ. Load thẳng saved scene: "
+                                 + onlyValidSave.SceneLocation.SceneName);
+
+                return onlyValidSave.SceneLocation.SceneName;
+            }
+
+            Debug.LogWarning("[BootFlow] Chưa có UserID và số saved session hợp lệ = "
+                             + validCount
+                             + ". Không thể biết account nào, fallback scene mặc định.");
+
+            return null;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[BootFlow] TryGetSavedSessionSceneName failed: " + e);
+            return null;
+        }
+    }
+
+    private string ConvertSceneNameToAddressableKey(string sceneName)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName))
+            return sceneName;
+
+        return sceneName;
     }
 
 #if ADDRESSABLES
@@ -377,7 +517,7 @@ public class BootFlow : MonoBehaviour
 
             float p = Mathf.Clamp01(dl.PercentComplete);
 
-            if (intro != null)
+if (intro != null)
                 intro.ForceProgress(p);
 
             if (p > lastProgress + 0.0005f)
