@@ -17,7 +17,7 @@ public class IntroManager : MonoBehaviour
 
     public bool forceRefreshPersistentVideo = true;
 
-    //Nếu file persistent nhỏ hơn ngưỡng này thì coi như lỗi và copy lại.
+    // Nếu file persistent nhỏ hơn ngưỡng này thì coi như lỗi và copy lại.
     public long minValidVideoBytes = 1024 * 50; // 50KB
 
     public RawImage videoRawImage;
@@ -32,6 +32,13 @@ public class IntroManager : MonoBehaviour
     [Header("Progress Behavior")]
     public float visualLerpSpeed = 8f;
     public float warmupMinProgress = 0.01f;
+
+    // Khi preload đã xong, progress sẽ chạy từ vị trí hiện tại lên 100. Tăng số này nếu muốn chạy nhanh hơn.
+    float finishLerpSpeed = 2.5f;
+
+    // Khi progress gần 100% tới ngưỡng này thì snap lên 100 để tránh kẹt 99%.
+    [Range(0.95f, 0.9999f)]
+    float finishSnapThreshold = 0.995f;
 
     [Header("Intro Sync (6s default UX)")]
     [Tooltip("Thời gian tối thiểu chạy intro (thường = thời lượng video bạn muốn).")]
@@ -65,6 +72,10 @@ public class IntroManager : MonoBehaviour
     private float introStartRealtime;
     private bool videoEnded;
 
+    // Finish gate
+    private bool visualReached100;
+    private bool finishRequestedByBootFlow;
+
     public void SetExternalPreload(AddressablesPreload preload)
     {
         _preload = preload;
@@ -85,6 +96,7 @@ public class IntroManager : MonoBehaviour
             retryButton.onClick.AddListener(OnRetryClicked);
         }
 
+        visualReached100 = false;
         ForceProgress(0f);
     }
 
@@ -95,6 +107,7 @@ public class IntroManager : MonoBehaviour
 
         introStartRealtime = Time.realtimeSinceStartup;
         videoEnded = false;
+        visualReached100 = false;
 
         if (videoPlayer == null)
         {
@@ -133,6 +146,14 @@ public class IntroManager : MonoBehaviour
         monotonicTarget01 = t01;
         currentVisual = Mathf.Max(currentVisual, t01);
         targetVisual = Mathf.Max(targetVisual, t01);
+
+        if (currentVisual >= 1f)
+        {
+            currentVisual = 1f;
+            targetVisual = 1f;
+            monotonicTarget01 = 1f;
+            visualReached100 = true;
+        }
 
         SetProgressInstant(currentVisual);
     }
@@ -196,11 +217,15 @@ public class IntroManager : MonoBehaviour
         monotonicTarget01 = 0f;
         currentVisual = 0f;
         targetVisual = 0f;
+        visualReached100 = false;
+
         ForceProgress(0f);
 
         videoStarted = false;
         videoFailed = false;
         videoFailReason = "";
+
+        finishRequestedByBootFlow = false;
 
         if (videoPlayer != null)
         {
@@ -516,7 +541,8 @@ public class IntroManager : MonoBehaviour
     {
         while (!hasFatalFail)
         {
-            UpdateProgressFromPreload();
+            // UpdateProgressFromPreload();
+            ApplyVisual();
             yield return null;
         }
     }
@@ -539,23 +565,17 @@ public class IntroManager : MonoBehaviour
             return;
         }
 
-        bool ready = _preload.IsReady;
+bool ready = _preload.IsReady;
 
-        if (ready)
-        {
-            if (videoEnded)
-            {
-                SetTargetMonotonic(1f);
-                ApplyVisual();
-                return;
-            }
-
-            SetTargetMonotonic(Mathf.Max(warmupMinProgress, time01));
-            ApplyVisual();
-            return;
-        }
+if (ready || finishRequestedByBootFlow)
+{
+    SetTargetMonotonic(1f);
+    ApplyVisual();
+    return;
+}
 
         float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
+
         if (data01 <= 0f && warmupMinProgress > 0f)
             data01 = warmupMinProgress;
 
@@ -587,15 +607,23 @@ public class IntroManager : MonoBehaviour
     {
         targetVisual = monotonicTarget01;
 
+        float speed = targetVisual >= 1f ? finishLerpSpeed : visualLerpSpeed;
+
         currentVisual = Mathf.Lerp(
             currentVisual,
             targetVisual,
-            1f - Mathf.Exp(-visualLerpSpeed * Time.unscaledDeltaTime)
+            1f - Mathf.Exp(-speed * Time.unscaledDeltaTime)
         );
 
-        // Không tụt.
-        if (currentVisual < monotonicTarget01)
-            currentVisual = monotonicTarget01;
+        // Không cho lố quá 100.
+        currentVisual = Mathf.Clamp01(currentVisual);
+
+        // Khi đang finish, gần 100 thì snap để không kẹt 99%.
+        if (targetVisual >= 1f && currentVisual >= finishSnapThreshold)
+        {
+            currentVisual = 1f;
+            visualReached100 = true;
+        }
 
         SetProgressInstant(currentVisual);
     }
@@ -641,10 +669,31 @@ public class IntroManager : MonoBehaviour
         {
             bool minTimePassed = GetIntroTime01() >= 1f;
 
-            if (videoFailed && skipVideoIfFail)
-                return minTimePassed;
+            if (!minTimePassed)
+                return false;
 
-            return videoEnded && minTimePassed;
+            // Chặn vào Main cho tới khi UI progress thật sự lên 100%.
+            if (!visualReached100)
+                return false;
+
+            if (videoFailed && skipVideoIfFail)
+                return true;
+
+            return videoEnded;
         }
+    }
+    public void RequestFinishTo100()
+    {
+        finishRequestedByBootFlow = true;
+    }
+    public void SetBootProgress01(float p01, bool allowComplete = false)
+    {
+        p01 = Mathf.Clamp01(p01);
+
+        // Nếu chưa cho complete thật, không cho thanh lên 100.
+        if (!allowComplete)
+            p01 = Mathf.Min(p01, 0.99f);
+
+        SetTargetMonotonic(p01);
     }
 }
