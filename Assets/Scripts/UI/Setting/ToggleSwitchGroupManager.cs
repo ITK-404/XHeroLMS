@@ -13,6 +13,21 @@ public class ToggleSwitchGroupManager : MonoBehaviour
 
     private void Awake()
     {
+        Init();
+    }
+    
+    private void Start()
+    {
+        Setup();
+    }
+
+        
+    /// <summary>
+    /// Catched all toggle eleements
+    /// </summary>
+    /// <param name="toggleSwitch"></param>
+    public void Init()
+    {
         ToggleSwitch[] toggleSwitches = GetComponentsInChildren<ToggleSwitch>();
         foreach (var toggleSwitch in toggleSwitches)
         {
@@ -30,7 +45,10 @@ public class ToggleSwitchGroupManager : MonoBehaviour
         toggleSwitch.SetupForManager(this);
     }
 
-    private void Start()
+    /// <summary>
+    /// Toggle first element
+    /// </summary>
+    public void Setup()
     {
         bool areAllToggledOff = true;
         foreach (var button in _toggleSwitches)

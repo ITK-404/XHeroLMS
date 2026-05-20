@@ -18,8 +18,8 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
     [SerializeField] private Ease ease = Ease.InOutQuad;
 
     [Header("Events")]
-    [SerializeField] private UnityEvent onToggleOn;
-    [SerializeField] private UnityEvent onToggleOff;
+    [SerializeField] public UnityEvent onToggleOn;
+    [SerializeField] public UnityEvent onToggleOff;
 
     private ToggleSwitchGroupManager toggleSwitchGroupManager;
     protected Action transitionEffect;
