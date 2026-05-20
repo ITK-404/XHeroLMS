@@ -8,10 +8,10 @@ public class SettingTabManagerUI : MonoBehaviour
     [SerializeField] private UIView[] views;
     public event Action<int> OnTabChanged;
 
-    private int currentIndex = -1;
-    public int CurrentIndex
+    private int _currentTabIndex = -1;
+    public int CurrentTabIndex
     {
-        get => currentIndex;
+        get => _currentTabIndex;
     }
     private void Start()
     {
@@ -24,7 +24,8 @@ public class SettingTabManagerUI : MonoBehaviour
     {
         for (int i = 0; i < views.Length; i++)
         {
-            toggles[i].Init(i,this);
+            toggles[i].Init(this);
+            toggles[i].SetIndex(i);
         }
     }
 
@@ -38,7 +39,7 @@ public class SettingTabManagerUI : MonoBehaviour
 
     public void ShowTab(int index)
     {
-        if (currentIndex == index)
+        if (_currentTabIndex == index)
         {
             return;
         }
@@ -57,9 +58,9 @@ public class SettingTabManagerUI : MonoBehaviour
             }
         }
 
-        currentIndex = index;
+        _currentTabIndex = index;
         
-        OnTabChanged?.Invoke(currentIndex);
+        OnTabChanged?.Invoke(_currentTabIndex);
     }
 
 }
