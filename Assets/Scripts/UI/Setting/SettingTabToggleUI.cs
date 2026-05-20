@@ -39,25 +39,31 @@ public class SettingTabToggleUI : MonoBehaviour
     private void OnSelectTab()
     {
         Debug.Log($"Select Tab Index: {tabIndex}");
-        manager.ShowTab(tabIndex);
+        if (manager)
+        {
+            manager.ShowTab(tabIndex);
+        }
     }
-
 
     private void UpdateVisualTab(bool isSelect)
     {
         backgroundImg.sprite = isSelect ? activeSprite : deActiveSprite;
         iconImg.sprite = isSelect ? activeIcSprite : deActiveIcSprite;
     }
-
-    public void Init(int index, SettingTabManagerUI _manager)
+    
+    public void Init(SettingTabManagerUI _manager)
     {
-        tabIndex = index;
         manager = _manager;
-        
         if (manager)
         {
             manager.OnTabChanged += OnCurrentTabChange;
         }
+    }
+
+    public void SetIndex(int index)
+    {
+        tabIndex = index;
+        UpdateVisualTab(this.manager.CurrentTabIndex == tabIndex);
     }
     
     private void OnCurrentTabChange(int tabSelectIndex)
