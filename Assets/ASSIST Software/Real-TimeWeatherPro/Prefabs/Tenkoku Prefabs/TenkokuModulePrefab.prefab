@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1016716185936556
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4510005891289146}
+  - component: {fileID: 114903014314947386}
+  m_Layer: 0
+  m_Name: TenkokuModulePrefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4510005891289146
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1016716185936556}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &114903014314947386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1016716185936556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 263ad942b2c0b8c448dce684b94a97c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _weatherDataProfile: {fileID: 11400000, guid: 0e4ed850e5253df46b057d984fc22ca0,
+    type: 2}
+  _clearWeatherDataProfile: {fileID: 11400000, guid: 0e4ed850e5253df46b057d984fc22ca0,
+    type: 2}
+  _fairWeatherDataProfile: {fileID: 11400000, guid: 9d1ba727b0215e344a2a8c5f7d59ff79,
+    type: 2}
+  _cloudyWeatherDataProfile: {fileID: 11400000, guid: 4adddf936967d734cb9d394a5ddb2a47,
+    type: 2}
+  _partlyCloudyWeatherDataProfile: {fileID: 11400000, guid: 815668f96bfa8a5418fec2fbeec97b31,
+    type: 2}
+  _rainWeatherDataProfile: {fileID: 11400000, guid: 08ec2b9ef8d574a42abb6b692104caae,
+    type: 2}
+  _stormWeatherDataProfile: {fileID: 11400000, guid: 8296becbfbe23ed4393ca1566f80ca85,
+    type: 2}
+  _sunnyWeatherDataProfile: {fileID: 11400000, guid: 21033455ae6558440863ce41217a1158,
+    type: 2}

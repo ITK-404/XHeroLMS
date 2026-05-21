@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1354210107302298
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4114703727772436}
+  - component: {fileID: 114613404491833326}
+  m_Layer: 0
+  m_Name: EnviroModulePrefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4114703727772436
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354210107302298}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &114613404491833326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354210107302298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06c196cbb8c741543968ab46e9619d6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _enviroPresetManager: {fileID: 114504335726014244, guid: 215e345611037434084f70f164d35ef0,
+    type: 3}
+  _clearSkyData: {fileID: 11400000, guid: 7b1a7e4bc6f15124183f62ecfe5bf920, type: 2}
+  _cloudy1Data: {fileID: 11400000, guid: 907e852f835c5bd4e86465c4365d54b6, type: 2}
+  _cloudy2Data: {fileID: 11400000, guid: e9723720654f60048ade62760ec7b95c, type: 2}
+  _cloudy3Data: {fileID: 11400000, guid: 41dfffca22391404d9e93d1927290b85, type: 2}
+  _cloudy4Data: {fileID: 11400000, guid: 085b95248ae674049ae91023d7e36a4c, type: 2}
+  _foggyData: {fileID: 11400000, guid: 0950d13da95b5df47831cb8264fe407d, type: 2}
+  _lightRainData: {fileID: 11400000, guid: 9b5c91f21a2de80419371694611373df, type: 2}
+  _heavyRainData: {fileID: 11400000, guid: 75cf7814645ed884a806b96f3e1d4c0b, type: 2}
+  _lightSnowData: {fileID: 11400000, guid: 32fcbbd111fc652479b89e8dd1b6c866, type: 2}
+  _heavySnowData: {fileID: 11400000, guid: dea444b9c1de8f241b6b57a259ddf57e, type: 2}
+  _stormData: {fileID: 11400000, guid: b130f03100fda744b8fbdba3f5df9c24, type: 2}
+  _rainAndSnowData: {fileID: 11400000, guid: 9eaacc8924f22d74e9784f6b1a8c86f5, type: 2}
