@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class SettingTabManagerUI : MonoBehaviour
 {
+    [Header("Buttons")]
+
+    [Header("Toggles")]
     [SerializeField] private SettingTabToggleUI[] toggles;
     [SerializeField] private UIView[] views;
     public event Action<int> OnTabChanged;
@@ -22,7 +25,7 @@ public class SettingTabManagerUI : MonoBehaviour
 
     private void SetupTabs()
     {
-        for (int i = 0; i < views.Length; i++)
+        for (int i = 0; i < toggles.Length; i++)
         {
             toggles[i].Init(this);
             toggles[i].SetIndex(i);
