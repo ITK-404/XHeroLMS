@@ -45261,10 +45261,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FCMManager
   permissionRequester: {fileID: 1499187983}
   showLocalNotificationWhenAppIsOpen: 1
-  androidChannelId: fcm_default_channel
-  androidChannelName: General Notifications
-  androidChannelDescription: Notifications from Firebase
-  androidSmallIcon: default
+  requestIOSAuthorizationOnStart: 1
+  apnsWaitTimeoutSeconds: 20
+  apnsRetryIntervalSeconds: 2
 --- !u!4 &1499187985
 Transform:
   m_ObjectHideFlags: 0
@@ -67190,17 +67189,41 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6994248576716414613, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7124806956369957554, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMin.x
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7540910596032517877, guid: 305391b0afd11ce4496ccbd9d78eb8f4, type: 3}
       propertyPath: m_AnchorMax.y
