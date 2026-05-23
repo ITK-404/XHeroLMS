@@ -73,7 +73,6 @@ public class TutorialHandler : MonoBehaviour
     [SerializeField] private Transform newParent;
     [SerializeField] private Camera mainCamera;
     [SerializeField] private RectTransform followWorldItem;
-    private bool isPlayAllStep = false;
 
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
@@ -82,7 +81,6 @@ public class TutorialHandler : MonoBehaviour
         // Debug.Log("Save key");
         PlayerPrefs.SetInt(key, 1);
         isPlayedBefore = true;
-        isPlayAllStep = true;
         
         backgroundImg.DOFade(0, 2f).OnComplete(() =>
         {
@@ -132,10 +130,16 @@ public class TutorialHandler : MonoBehaviour
         LoadSave();
         // isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
 
-        CreateHandList();
         // if player is played tutorial before
-        if (isPlayedBefore)
+
+        
+        
+        CreateHandList();
+        bool isContainCourse = SeoResolver.IsContainData();
+        
+        if (isPlayedBefore || isContainCourse == false)
         {
+            HideAllTutorialHand();
             return;
         }
         
@@ -275,8 +279,6 @@ public class TutorialHandler : MonoBehaviour
     
     private void FocusCorrectItem(TutorialStepType type)
     {
-        if (isPlayAllStep) return;
-        
         foreach (var item in _tutorialUIObjects)
         {
             if (item.type == type)
