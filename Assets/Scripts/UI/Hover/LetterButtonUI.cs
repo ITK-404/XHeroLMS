@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class LetterButtonUI : MonoBehaviour
@@ -24,7 +25,8 @@ public class LetterButtonUI : MonoBehaviour
 
     private void Awake()
     {
-        ApplyNotifyState(force: true);
+        // refresh state
+        UpdateNotifyCheck();
     }
 
     private void OnEnable()
@@ -40,6 +42,7 @@ public class LetterButtonUI : MonoBehaviour
 
     private void HandleNotificationsChanged()
     {
+        Debug.Log($"Letter Button UI: Changed");
         RefreshNotifyState(forceApply: false);
     }
 
@@ -52,36 +55,57 @@ public class LetterButtonUI : MonoBehaviour
 
         isHaveNotify = newHaveNotify;
         ApplyNotifyState(forceApply);
+        UpdateNotifyCheck();
     }
 
     private bool HasUnreadNotificationsFromApi()
+{
+    // Ưu tiên unread count từ API
+    string unreadValue = GetUnreadValueBySource();
+    Debug.Log($"[LetterButtonUI] unreadValue from GetUnreadValueBySource: '{unreadValue}'");
+
+    if (TryParseUnreadCount(unreadValue, out int unreadCount))
     {
-        // Ưu tiên unread count từ API
-        string unreadValue = GetUnreadValueBySource();
+        Debug.Log($"[LetterButtonUI] Parsed unreadCount: {unreadCount}, HasUnread: {unreadCount > 0}");
+        return unreadCount > 0;
+    }
 
-        if (TryParseUnreadCount(unreadValue, out int unreadCount))
-            return unreadCount > 0;
+    Debug.Log("[LetterButtonUI] TryParseUnreadCount failed, fallback to item loop");
 
-        // Fallback: nếu unread count parse không được thì duyệt item từ API
-        var items = NotificationsStaticStore.Items;
-        if (items == null || items.Count == 0)
-            return false;
+    // Fallback: nếu unread count parse không được thì duyệt item từ API
+    var items = NotificationsStaticStore.Items;
+    Debug.Log($"[LetterButtonUI] Items count: {(items == null ? "NULL" : items.Count.ToString())}");
 
-        for (int i = 0; i < items.Count; i++)
+    if (items == null || items.Count == 0)
+        return false;
+
+    for (int i = 0; i < items.Count; i++)
+    {
+        var item = items[i];
+        if (item == null)
         {
-            var item = items[i];
-            if (item == null)
-                continue;
-
-            if (!MatchSource(item))
-                continue;
-
-            if (!item.isRead)
-                return true;
+            Debug.Log($"[LetterButtonUI] Item[{i}] is null, skip");
+            continue;
         }
 
-        return false;
+        if (!MatchSource(item))
+        {
+            Debug.Log($"[LetterButtonUI] Item[{i}] MatchSource=false, skip");
+            continue;
+        }
+
+        Debug.Log($"[LetterButtonUI] Item[{i}] MatchSource=true, isRead={item.isRead}");
+
+        if (!item.isRead)
+        {
+            Debug.Log($"[LetterButtonUI] Found unread item at index {i}, return true");
+            return true;
+        }
     }
+
+    Debug.Log("[LetterButtonUI] No unread item found, return false");
+    return false;
+}
 
     private string GetUnreadValueBySource()
     {
@@ -157,9 +181,12 @@ public class LetterButtonUI : MonoBehaviour
                 shakeNotification.StopShake();
         }
 
+        previousNotify = isHaveNotify;
+    }
+
+    private void UpdateNotifyCheck()
+    {
         if (dotNotify != null)
             dotNotify.SetActive(isHaveNotify);
-
-        previousNotify = isHaveNotify;
     }
 }
