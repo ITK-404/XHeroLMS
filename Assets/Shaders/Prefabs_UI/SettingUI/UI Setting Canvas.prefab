@@ -16,7 +16,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1712481024661958199
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10994,8 +10994,40 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1454377961894844276, guid: 560e76945ab274b06ab14f0fa743b476, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 824707009059093200}
   m_SourcePrefab: {fileID: 100100000, guid: 560e76945ab274b06ab14f0fa743b476, type: 3}
+--- !u!1 &3296015934303322021 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1454377961894844276, guid: 560e76945ab274b06ab14f0fa743b476, type: 3}
+  m_PrefabInstance: {fileID: 4148712507718707409}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &824707009059093200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3296015934303322021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5796e1292264a0fa7c7bd2d7b2976e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitchAudioHandle
+  toggleSwitch: {fileID: 7878378845486039582}
+--- !u!114 &7878378845486039582 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6108763295595817679, guid: 560e76945ab274b06ab14f0fa743b476, type: 3}
+  m_PrefabInstance: {fileID: 4148712507718707409}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3296015934303322021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c086d13a05841ecb081c40b15a12d54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColorToggleSwitch
 --- !u!224 &8828045186424452334 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4832560696462285887, guid: 560e76945ab274b06ab14f0fa743b476, type: 3}
