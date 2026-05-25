@@ -133,13 +133,20 @@ public class TutorialHandler : MonoBehaviour
         // if player is played tutorial before
 
         
-        
         CreateHandList();
         bool isContainCourse = SeoResolver.IsContainData();
         
         if (isPlayedBefore || isContainCourse == false)
         {
+            isPlayedBefore = true;
             HideAllTutorialHand();
+            
+            foreach (var item in _tutorialUIObjects)
+            {
+                item.HideTutorial();
+            }
+
+            Debug.Log($"TutorialHandler hide all tutorial");
             return;
         }
         
