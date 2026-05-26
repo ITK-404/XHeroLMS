@@ -3423,6 +3423,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitchGroupManager
   initialToggleSwitch: {fileID: 1499058246635104075}
   allCanBeToggledOff: 0
+  autoToggleElement: 1
 --- !u!1 &3344252706233063532
 GameObject:
   m_ObjectHideFlags: 0
@@ -4855,6 +4856,7 @@ GameObject:
   - component: {fileID: 452446127368192186}
   - component: {fileID: 3522166847366760961}
   - component: {fileID: 2145036089252310119}
+  - component: {fileID: 1500131683418096644}
   m_Layer: 5
   m_Name: Bottom Layout
   m_TagString: Untagged
@@ -4951,8 +4953,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 298b9b2f17fd432d8d8b4f2a08cb0939, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitchGroupManager
-  initialToggleSwitch: {fileID: 679309233354371987}
+  initialToggleSwitch: {fileID: 0}
   allCanBeToggledOff: 0
+  autoToggleElement: 0
+--- !u!114 &1500131683418096644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4818437146847192038}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb6555020f784d46b535f79897673a39, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GraphicsSettingHandlerUI
+  toggleManager: {fileID: 2145036089252310119}
+  isEnable: 0
+  parent: {fileID: 3642595088067631548}
 --- !u!1 &4896134667085575161
 GameObject:
   m_ObjectHideFlags: 0
@@ -8254,6 +8272,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitchGroupManager
   initialToggleSwitch: {fileID: 2161007917558405785}
   allCanBeToggledOff: 0
+  autoToggleElement: 1
 --- !u!1 &8722063558919189072
 GameObject:
   m_ObjectHideFlags: 0
@@ -8866,6 +8885,38 @@ PrefabInstance:
       propertyPath: m_Name
       value: GraphicsSettingElementUI (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1500131683418096644}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnSelectToggle
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GraphicsSettingHandlerUI, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_IntArgument
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -9271,6 +9322,34 @@ PrefabInstance:
       propertyPath: m_Name
       value: GraphicsSettingElementUI
       objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1500131683418096644}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnSelectToggle
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GraphicsSettingHandlerUI, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -9356,17 +9435,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
---- !u!114 &679309233354371987 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
-  m_PrefabInstance: {fileID: 1845725982426646791}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e68ee3f60b54114ad3c6ffba25ff548, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitch
 --- !u!224 &5573608303631147153 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
@@ -11533,6 +11601,38 @@ PrefabInstance:
     - target: {fileID: 474131444658488148, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Name
       value: GraphicsSettingElementUI (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1500131683418096644}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnSelectToggle
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GraphicsSettingHandlerUI, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_IntArgument
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Pivot.x
@@ -13713,6 +13813,38 @@ PrefabInstance:
     - target: {fileID: 474131444658488148, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Name
       value: GraphicsSettingElementUI (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1500131683418096644}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnSelectToggle
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GraphicsSettingHandlerUI, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_IntArgument
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+      propertyPath: onToggleOn.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
       propertyPath: m_Pivot.x

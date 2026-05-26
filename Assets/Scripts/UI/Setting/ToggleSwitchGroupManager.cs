@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public class ToggleSwitchGroupManager : MonoBehaviour
@@ -8,9 +10,10 @@ public class ToggleSwitchGroupManager : MonoBehaviour
 
     [Header("Toggle Options")]
     [SerializeField] private bool allCanBeToggledOff;
-        
-    private List<ToggleSwitch> _toggleSwitches = new List<ToggleSwitch>();
 
+    [SerializeField] private bool autoToggleElement = true;
+    private List<ToggleSwitch> _toggleSwitches = new List<ToggleSwitch>();
+    public List<ToggleSwitch> ToggleSwitches => _toggleSwitches;
     private void Awake()
     {
         Init();
@@ -62,7 +65,9 @@ public class ToggleSwitchGroupManager : MonoBehaviour
 
         if (!areAllToggledOff || allCanBeToggledOff) 
             return;
-            
+
+        if (autoToggleElement == false) return;
+        
         if (initialToggleSwitch != null)
             initialToggleSwitch.ToggleByGroupManager(true);
         else

@@ -62,7 +62,7 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
 
     public void ToggleByGroupManager(bool value) => SetState(value);
 
-    public void SetState(bool state)
+    private void SetState(bool state)
     {
         bool previous = CurrentValue;
         CurrentValue = state;

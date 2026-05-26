@@ -57,14 +57,22 @@ public class GameInitializer : MonoBehaviour
 
     public SceneLocationHandler SceneLocationHandle => sceneLocationHandle;
 
+    private GraphicsSettingsManager graphicsSettingsManager;
+    
+
     private async UniTaskVoid InitTask(CancellationToken ct)
     {
         await Addressables.InitializeAsync().WithCancellation(ct);
          var runner = this;
-        
+        // GAME OBJECT LOADING
+        // TODO: UPDATE TO ADDRESSABLE BEFORE
         sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
         sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
-
+        
+        // ADDRESSABLE LOADING
+        
+        graphicsSettingsManager = await LoadAddressable<GraphicsSettingsManager>("GraphicsSettingsManager",true,ct);
+        
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
     }
@@ -100,5 +108,19 @@ public class GameInitializer : MonoBehaviour
         }
 
         return go;
+    }
+
+    private async UniTask<T> LoadAddressable<T>(
+        string address,
+        bool dontDestroyOnLoad = false,
+        CancellationToken ct = default) where T : Component
+    {
+        var prefab = await Addressables.LoadAssetAsync<GameObject>(address).WithCancellation(ct);
+        var instance = Instantiate(prefab).GetComponent<T>();
+    
+        if (dontDestroyOnLoad)
+            DontDestroyOnLoad(instance.gameObject);
+    
+        return instance;
     }
 }
