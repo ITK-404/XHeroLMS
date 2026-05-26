@@ -21,6 +21,7 @@ public class PlayerPanelUI : MonoBehaviour
     public GameObject defaultContainer;
     public PlayerInformationUI playerInformation;
 
+
     public LogoutPopupUI logoutPopupUI;
     public DeleteAccountPopup deleteAccountPopup;
     public GameObject selectFunctionGroup;

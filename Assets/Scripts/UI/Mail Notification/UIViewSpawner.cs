@@ -2,33 +2,13 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.UI;
 
 public class UIViewSpawner : MonoBehaviour
 {
     [SerializeField] private AssetReferenceGameObject prefab;
-    [SerializeField] private Button btn;
+
     UIView canvas;
 
-    private void Awake()
-    {
-        if (btn)
-        {
-            btn.onClick.AddListener(OnShowMail);
-        }
-    }
-    
-    private void OnDestroy()
-    {
-        if(canvas)
-            Addressables.ReleaseInstance(canvas.gameObject);
-
-        if (btn)
-        {
-            btn.onClick.RemoveListener(OnShowMail);
-        }
-    }
-    
     public void OnShowMail()
     {
         Debug.Log("On Clicked");
@@ -42,7 +22,11 @@ public class UIViewSpawner : MonoBehaviour
         }
     }
 
-   
+    private void OnDestroy()
+    {
+        if(canvas)
+            Addressables.ReleaseInstance(canvas.gameObject);
+    }
     private bool isSpawning;
 
     public async void Spawn()
