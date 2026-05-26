@@ -58,7 +58,8 @@ public class GameInitializer : MonoBehaviour
     public SceneLocationHandler SceneLocationHandle => sceneLocationHandle;
 
     private GraphicsSettingsManager graphicsSettingsManager;
-    
+
+    private PlayerRotationConfigHandler rotConfig;
 
     private async UniTaskVoid InitTask(CancellationToken ct)
     {
@@ -72,6 +73,7 @@ public class GameInitializer : MonoBehaviour
         // ADDRESSABLE LOADING
         
         graphicsSettingsManager = await LoadAddressable<GraphicsSettingsManager>("GraphicsSettingsManager",true,ct);
+        rotConfig = await LoadAddressable<PlayerRotationConfigHandler>("PlayerRotationConfigHandler",dontDestroyOnLoad:true,ct);
         
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();

@@ -48,7 +48,10 @@ public class PointClickSystem : MonoBehaviour
     [Header("Move VFX")] [SerializeField] private GameObject moveVfxPrefab; // drag prefab vào đây
     private GameObject moveVfxInstance;
     private BaseInput baseInput;
-    [Header("Mobile")] public float rotationTouchSpeed = 1;
+    [Header("Mobile")] 
+    [SerializeField] private PlayerRotationConfig config;
+    public float rotationTouchSpeed = 1;
+
     private float cameraPitch = 0f;
     public float minPitch = -40f;
     public float maxPitch = 60f;
@@ -155,7 +158,8 @@ public class PointClickSystem : MonoBehaviour
         bool isRotationActive = delta.magnitude > 0.1f;
         if (delta != Vector2.zero)
         {
-            float horizontalRotation = delta.x * rotationTouchSpeed * Time.deltaTime;
+            float multiplier = config != null ? 1 : config.rotationMultiplier;
+            float horizontalRotation = delta.x * rotationTouchSpeed * Time.deltaTime * multiplier;
             transform.Rotate(0, horizontalRotation, 0);
 
             if (playerCamera != null && playerCamera.playerCinemachineCamera != null)

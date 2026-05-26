@@ -95,7 +95,7 @@ Transform:
   m_GameObject: {fileID: 686075605066708800}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.00000011920929, z: 0}
+  m_LocalPosition: {x: 18.043919, y: 1.2542858, z: -123.05233}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -133,7 +133,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.1
-  far clip plane: 1000
+  far clip plane: 2000
   field of view: 60.000004
   orthographic: 0
   orthographic size: 5
@@ -934,6 +934,7 @@ MonoBehaviour:
   gravity: -9.81
   gravityMultiplier: 1
   moveVfxPrefab: {fileID: 4052651536205214080, guid: 9fcfed600e4484f4597ef6a8e46b193c, type: 3}
+  config: {fileID: 11400000, guid: ff8e007b1ca9f4edfb7953cf9d3ed31d, type: 2}
   rotationTouchSpeed: 1
   minPitch: -40
   maxPitch: 60
@@ -1036,9 +1037,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EntityFootstep
   controller: {fileID: 7128575461211472301}
   audioSource: {fileID: 274734691997097077}
-  footstepClips:
-  - {fileID: 8300000, guid: 7a824aa1599eaea4db501e33c50c289a, type: 3}
-  stepDistance: 2
+  maxVolume: 1
 --- !u!82 &274734691997097077
 AudioSource:
   m_ObjectHideFlags: 0

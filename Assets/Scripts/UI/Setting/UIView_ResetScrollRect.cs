@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,6 +6,7 @@ public class UIView_ResetScrollRect : MonoBehaviour
 {
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private UIView uiView;
+
     private void OnValidate()
     {
         if (scrollRect == null)
@@ -12,21 +14,21 @@ public class UIView_ResetScrollRect : MonoBehaviour
             scrollRect = GetComponent<ScrollRect>();
         }
     }
-    
+
     private void Awake()
     {
         if (uiView != null)
         {
             uiView.OnViewClosed += ResetOnClose;
-        }   
+        }
     }
-    
+
     private void OnDestroy()
     {
         if (uiView != null)
         {
             uiView.OnViewClosed -= ResetOnClose;
-        }   
+        }
     }
 
     private void ResetOnClose()

@@ -14,13 +14,19 @@ public static class GraphicsApplier
         // Render Scale (URP)
         var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
         if (urpAsset != null)
+        {
             urpAsset.renderScale = config.renderScale;
+            urpAsset.msaaSampleCount = config.msaaSampleCount;
+            urpAsset.supportsHDR = config.hdrEnabled;
+        }
 
         // Shadow
         if (config.shadowEnabled)
         {
             QualitySettings.shadows = ShadowQuality.All;
             QualitySettings.shadowDistance = config.shadowDistance;
+            QualitySettings.shadowResolution = config.shadowResolution;
+            QualitySettings.shadowCascades = config.shadowCascades;
         }
         else
         {
@@ -29,5 +35,10 @@ public static class GraphicsApplier
 
         // Texture
         QualitySettings.globalTextureMipmapLimit = config.textureMipmapLimit;
+        QualitySettings.anisotropicFiltering = config.anisotropicFiltering;
+
+        // LOD
+        QualitySettings.lodBias = config.lodBias;
+        QualitySettings.maximumLODLevel = config.maxLODLevel;
     }
 }
