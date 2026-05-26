@@ -55,6 +55,6 @@ public class ToggleSwitchAudioHandle : MonoBehaviour
             return;
         }
         bool isOn = AudioManager.Instance.settings.MusicVolume >= 0.5f;
-        toggleSwitch.SetState(isOn);
+        toggleSwitch.ToggleByGroupManager(isOn);
     }
 }
