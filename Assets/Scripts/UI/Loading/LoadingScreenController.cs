@@ -21,58 +21,62 @@ public class LoadingScreenController : MonoBehaviour
     public Slider sliderUI;
 
     [Header("Loading Text Animation")]
-    public float dotSpeed = 0.5f;
-    string baseText = "Đang tải";
-    float imageSwitchInterval = 1f;
+    public float dotSpeed = 0.35f;
+    public string baseText = "Đang tải";
 
-    [Header("Display Timing")]
-    // Thời gian hiển thị loading tối thiểu (giây).
-    public float minDisplaySeconds = 3f;
+    [Header("Fast Loading Settings")]
+    [Tooltip("Tổng thời gian loading UI từ 0 đến 100 nếu scene đã preload xong.")]
+    public float maxLoadingSeconds = 2f;
 
-    [Header("Visual Progress Settings")]
-    // Cho phép % hiển thị đi trước tiến trình thật một chút để đỡ đứng hình.
-    public float headroom = 0.06f; // 6%
+    [Tooltip("Nếu scene chưa ready, thanh loading giữ tối đa ở mức này thay vì lên 100 giả.")]
+    [Range(0.9f, 0.999f)]
+    public float waitCapProgress = 0.99f;
 
-    // Danh sách mốc phần trăm trước khi vào 90% (0..1).
-    public float[] milestonePercents = new float[] { 0.30f, 0.50f, 0.60f, 0.70f, 0.80f, 0.90f };
+    [Tooltip("Thời gian tối thiểu để người dùng thấy loading screen, tránh chớp màn quá nhanh.")]
+    public float minVisibleSeconds = 0.25f;
 
-    // Thời gian cho từng mốc ở trên (giây). Nếu để trống hoặc khác độ dài sẽ dùng giá trị mặc định.
-    public float[] milestoneDurations = new float[] { 0.35f, 0.45f, 0.30f, 0.30f, 0.35f, 0.50f };
+    [Tooltip("Có unload unused assets sau khi activate scene không. Bật cái này sẽ sạch RAM hơn nhưng có thể chậm thêm.")]
+    public bool unloadUnusedAssetsAfterLoad = false;
 
-    public float fakeFillDuration = 3f;
+    [Header("Image Cycle")]
+    public float imageSwitchInterval = 1f;
 
-    // --- private ---
-    private AsyncOperation _async;
     private bool _isLoading;
     private float _dotTimer;
     private int _dotCount;
-    private float _currentProgress; // lưu giá trị hiện tại
+    private float _currentProgress;
+    private float _displayStartTime;
+    private string _targetSceneName;
+
     private readonly List<Image> _images = new();
     private int _currentImageIndex = -1;
 
-    // post-activate syncing
-    private bool _sceneLoadedFired = false;
-    private string _targetSceneName;
-    private float _displayStartTime;
+#if ADDRESSABLES
+    private static readonly Dictionary<string, AsyncOperationHandle<SceneInstance>> _preloadedScenes = new();
+    private static AsyncOperationHandle<SceneInstance>? _lastActivatedAddressableSceneHandle;
+#endif
 
     void Awake()
     {
-        if (imageScene1) _images.Add(imageScene1);
+        if (imageScene1)
+            _images.Add(imageScene1);
+
         foreach (var img in _images)
-            if (img) img.gameObject.SetActive(false);
-        // Bật đỡ lên để tránh không có background
-        imageScene1.gameObject.SetActive(true);
-
-        if (progressRing) progressRing.fillAmount = 0f;
-        if (sliderUI) sliderUI.value = 0f;
-
-        // bảo vệ độ dài mảng mốc/thời gian
-        if (milestoneDurations == null || milestoneDurations.Length != milestonePercents.Length)
         {
-            milestoneDurations = new float[milestonePercents.Length];
-            for (int i = 0; i < milestoneDurations.Length; i++)
-                milestoneDurations[i] = 0.35f;
+            if (img)
+                img.gameObject.SetActive(false);
         }
+
+        if (imageScene1)
+            imageScene1.gameObject.SetActive(true);
+
+        if (progressRing)
+            progressRing.fillAmount = 0f;
+
+        if (sliderUI)
+            sliderUI.value = 0f;
+
+        SetProgress(0f);
     }
 
     void Start()
@@ -82,270 +86,393 @@ public class LoadingScreenController : MonoBehaviour
             _targetSceneName = LoadingTransition.TargetSceneName;
             StartCoroutine(LoadByNameRoutine(_targetSceneName));
         }
+        else
+        {
+            Debug.LogError("[LoadingScreenController] TargetSceneName is empty.");
+        }
     }
+
+    // ============================================================
+    // PUBLIC PRELOAD API
+    // Gọi hàm này từ scene hiện tại TRƯỚC KHI chuyển sang loading scene.
+    // Ví dụ:
+    // StartCoroutine(LoadingScreenController.PreloadAddressableSceneRoutine("Scene_KyMon"));
+    // ============================================================
+
+#if ADDRESSABLES
+    public static IEnumerator PreloadAddressableSceneRoutine(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[LoadingScreenController] Preload failed: sceneName is empty.");
+            yield break;
+        }
+
+        if (_preloadedScenes.TryGetValue(sceneName, out var existingHandle))
+        {
+            if (existingHandle.IsValid())
+            {
+                if (!existingHandle.IsDone)
+                {
+                    Debug.Log($"[LoadingScreenController] Waiting existing preload: {sceneName}");
+
+                    while (!existingHandle.IsDone)
+                        yield return null;
+                }
+
+                Debug.Log($"[LoadingScreenController] Already preloaded: {sceneName}");
+                yield break;
+            }
+
+            _preloadedScenes.Remove(sceneName);
+        }
+
+        Debug.Log($"[LoadingScreenController] Start preload addressable scene: {sceneName}");
+
+        var handle = Addressables.LoadSceneAsync(
+            sceneName,
+            LoadSceneMode.Single,
+            activateOnLoad: false
+        );
+
+        _preloadedScenes[sceneName] = handle;
+
+        while (!handle.IsDone)
+            yield return null;
+
+        if (handle.Status == AsyncOperationStatus.Succeeded)
+        {
+            Debug.Log($"[LoadingScreenController] Preload completed: {sceneName}");
+        }
+        else
+        {
+            Debug.LogError($"[LoadingScreenController] Preload failed: {sceneName}");
+            _preloadedScenes.Remove(sceneName);
+        }
+    }
+
+    public static bool IsAddressableScenePreloaded(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return false;
+
+        if (!_preloadedScenes.TryGetValue(sceneName, out var handle))
+            return false;
+
+        return handle.IsValid()
+               && handle.IsDone
+               && handle.Status == AsyncOperationStatus.Succeeded;
+    }
+#endif
 
     IEnumerator LoadByNameRoutine(string sceneName)
     {
         _isLoading = true;
-        _sceneLoadedFired = false;
         _displayStartTime = Time.unscaledTime;
+
+        float startTime = Time.realtimeSinceStartup;
+        float visualStartTime = Time.unscaledTime;
 
         SetProgress(0f);
 
-        // Unload scene cũ (nếu unload fail vẫn cứ tiếp tục)
-        var opUnLoad = SceneManager.UnloadSceneAsync(LoadingTransition.PreviousSceneName);
-        if (opUnLoad != null)
-        {
-            while (!opUnLoad.isDone) yield return null;
-        }
+        if (loadingParticle && !loadingParticle.isPlaying)
+            loadingParticle.Play();
 
-        // bắt đầu đổi ảnh
         StartCoroutine(CycleRandomImages());
 
-        // ======= LOAD THẬT (build vs addressables) =======
-        bool useAddr = LoadingTransition.UseAddressables;
+        bool useAddressables = LoadingTransition.UseAddressables;
 
-        AsyncOperation op = null;
+        Debug.Log($"[LoadingScreenController] Load start. Scene={sceneName}, UseAddressables={useAddressables}");
 
-#if ADDRESSABLES
-        AsyncOperationHandle<SceneInstance> addrHandle = default;
-#endif
-
-        float visual = 0f;
-
-        if (!useAddr)
+        if (useAddressables)
         {
-            // BUILD scene
-            op = SceneManager.LoadSceneAsync(sceneName);
-            op.allowSceneActivation = false;
-            _async = op;
+#if ADDRESSABLES
+            yield return LoadAddressableSceneFast(sceneName, startTime, visualStartTime);
+#else
+            Debug.LogError("[LoadingScreenController] ADDRESSABLES define is OFF but UseAddressables=true.");
+            yield break;
+#endif
         }
         else
         {
-#if ADDRESSABLES
-            // ADDRESSABLE scene
-            // addrHandle = Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, activateOnLoad: false);
-            addrHandle = Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, activateOnLoad: true);
-#else
-        Debug.LogError("[LoadingScreenController] ADDRESSABLES define OFF but UseAddressables=true");
-        _isLoading = false;
-        yield break;
-#endif
+            yield return LoadBuildSceneFast(sceneName, startTime, visualStartTime);
         }
 
-        // === Phase 0 -> ~90% ===
-        for (int i = 0; i < milestonePercents.Length; i++)
+        if (unloadUnusedAssetsAfterLoad)
         {
-            float target = Mathf.Clamp01(milestonePercents[i]);
-            float dur = Mathf.Max(0.05f, milestoneDurations[i]);
+            Debug.Log("[LoadingScreenController] UnloadUnusedAssets started.");
 
-            float t = 0f;
-            float start = visual;
-            while (t < dur)
-            {
-                t += Time.unscaledDeltaTime;
-                float planned = Mathf.Lerp(start, target, t / dur);
-
-                float realCap;
-                if (!useAddr)
-                    realCap = (op != null ? op.progress : planned);
-                else
-                {
-#if ADDRESSABLES
-                    realCap = addrHandle.PercentComplete; // 0..1
-#else
-                realCap = planned;
-#endif
-                }
-
-                float allowed = Mathf.Min(planned, realCap + headroom);
-                visual = Mathf.Clamp01(allowed);
-                SetProgress(visual);
-
+            var unloadOp = Resources.UnloadUnusedAssets();
+            while (!unloadOp.isDone)
                 yield return null;
-            }
 
-            visual = target;
+            Debug.Log("[LoadingScreenController] UnloadUnusedAssets completed.");
+        }
+
+        float visibleTime = Time.unscaledTime - _displayStartTime;
+        if (visibleTime < minVisibleSeconds)
+            yield return new WaitForSecondsRealtime(minVisibleSeconds - visibleTime);
+
+        SetProgress(1f);
+
+        _isLoading = false;
+
+        if (loadingParticle && loadingParticle.isPlaying)
+            loadingParticle.Stop();
+
+        Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
+
+        Destroy(gameObject);
+    }
+
+#if ADDRESSABLES
+    IEnumerator LoadAddressableSceneFast(string sceneName, float startTime, float visualStartTime)
+    {
+        AsyncOperationHandle<SceneInstance> handle;
+        bool usedPreloadedHandle = false;
+
+        if (_preloadedScenes.TryGetValue(sceneName, out var preloadedHandle) && preloadedHandle.IsValid())
+        {
+            handle = preloadedHandle;
+            usedPreloadedHandle = true;
+
+            Debug.Log($"[LoadingScreenController] Use preloaded addressable scene: {sceneName}");
+        }
+        else
+        {
+            Debug.LogWarning($"[LoadingScreenController] Scene was NOT preloaded. Loading now: {sceneName}");
+
+            handle = Addressables.LoadSceneAsync(
+                sceneName,
+                LoadSceneMode.Single,
+                activateOnLoad: false
+            );
+
+            _preloadedScenes[sceneName] = handle;
+        }
+
+        // Phase 1: chờ preload/load scene package xong.
+        while (!handle.IsDone)
+        {
+            float elapsed = Time.unscaledTime - visualStartTime;
+            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
+
+            float realProgress = Mathf.Clamp01(handle.PercentComplete);
+            float visual = Mathf.Min(waitCapProgress, Mathf.Max(time01 * 0.85f, realProgress * 0.85f));
+
             SetProgress(visual);
 
-            // break sớm nếu load đã gần xong
-            if (!useAddr)
+            if (elapsed > maxLoadingSeconds && !usedPreloadedHandle)
             {
-                if (op != null && op.progress >= 0.9f) break;
+                Debug.LogWarning(
+                    $"[LoadingScreenController] Loading exceeded {maxLoadingSeconds:0.00}s because scene was not preloaded yet. " +
+                    $"Scene={sceneName}, Percent={handle.PercentComplete:0.00}"
+                );
             }
-            else
-            {
-#if ADDRESSABLES
-                if (addrHandle.PercentComplete >= 0.9f) break;
-#endif
-            }
-        }
-
-        // đẩy lên gần 90% cho đến khi “ready-to-activate”
-        if (!useAddr)
-        {
-            while (op != null && op.progress < 0.9f)
-            {
-                float allowed = Mathf.Min(0.90f, op.progress + headroom);
-                visual = Mathf.Max(visual, allowed);
-                SetProgress(visual);
-                yield return null;
-            }
-        }
-        else
-        {
-#if ADDRESSABLES
-while (!addrHandle.IsDone)
-{
-    float allowed = Mathf.Min(0.90f, addrHandle.PercentComplete + headroom);
-    visual = Mathf.Max(visual, allowed);
-    SetProgress(visual);
-    yield return null;
-}
-#endif
-        }
-
-        visual = Mathf.Max(visual, 0.90f);
-        SetProgress(visual);
-
-        // Bắt sự kiện sceneLoaded chỉ cần cho build scene; addressables ta tự check handle
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        DontDestroyOnLoad(gameObject);
-
-        float fakeStartTime = Time.unscaledTime;
-        float targetVisualBeforeDone = 0.98f;
-
-        // ACTIVATE
-        if (!useAddr)
-        {
-            op.allowSceneActivation = true;
-        }
-        else
-        {
-#if ADDRESSABLES
-            // addrHandle.ActivateAsync();
-            // addrHandle.Result.Activate();
-#endif
-        }
-
-        while (true)
-        {
-            float fakeElapsed = Time.unscaledTime - fakeStartTime;
-            float t01 = Mathf.Clamp01(fakeElapsed / fakeFillDuration);
-            float planned = Mathf.Lerp(visual, targetVisualBeforeDone, t01);
-            SetProgress(planned);
-
-            bool done;
-            if (!useAddr)
-            {
-                done = _sceneLoadedFired; // build scene bắn event
-            }
-            else
-            {
-#if ADDRESSABLES
-                done = addrHandle.IsDone && addrHandle.Status == AsyncOperationStatus.Succeeded;
-#else
-            done = false;
-#endif
-            }
-
-            if (done && fakeElapsed >= fakeFillDuration)
-                break;
 
             yield return null;
         }
 
-        // 98% -> 100%
-        float endLerpTime = 0.3f;
-        float endElapsed = 0f;
-        float startValue = _currentProgress;
-
-        while (endElapsed < endLerpTime)
+        if (handle.Status != AsyncOperationStatus.Succeeded)
         {
-            endElapsed += Time.unscaledDeltaTime;
-            float s = Mathf.Clamp01(endElapsed / endLerpTime);
-            float planned = Mathf.Lerp(startValue, 1f, s);
-            SetProgress(planned);
+            Debug.LogError($"[LoadingScreenController] Addressables LoadSceneAsync failed: {sceneName}");
+            yield break;
+        }
+
+        Debug.Log($"[LoadingScreenController] Scene package ready at {Time.realtimeSinceStartup - startTime:0.00}s");
+
+        // Nếu scene đã preload xong từ trước, đến đây gần như tức thì.
+        SetProgress(Mathf.Max(_currentProgress, 0.88f));
+
+        // Phase 2: activate scene.
+        Debug.Log($"[LoadingScreenController] Activate scene started: {sceneName}");
+
+        var activateOp = handle.Result.ActivateAsync();
+
+        while (!activateOp.isDone)
+        {
+            float elapsed = Time.unscaledTime - visualStartTime;
+            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
+
+            float activateProgress = Mathf.Clamp01(activateOp.progress);
+            float visual = Mathf.Lerp(0.88f, waitCapProgress, Mathf.Max(time01, activateProgress));
+
+            SetProgress(visual);
+
+            if (elapsed > maxLoadingSeconds)
+            {
+                Debug.LogWarning(
+                    $"[LoadingScreenController] Scene activation exceeded {maxLoadingSeconds:0.00}s. " +
+                    $"This is usually caused by heavy Awake/OnEnable/Start/shader/lighting in scene: {sceneName}"
+                );
+            }
+
+            yield return null;
+        }
+
+        Debug.Log($"[LoadingScreenController] Scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
+
+        _lastActivatedAddressableSceneHandle = handle;
+        _preloadedScenes.Remove(sceneName);
+
+        // Phase 3: fill 100 trong phần thời gian còn lại, không cố giữ loading lâu.
+        yield return FillToCompleteWithinLimit(visualStartTime);
+    }
+#endif
+
+    IEnumerator LoadBuildSceneFast(string sceneName, float startTime, float visualStartTime)
+    {
+        Debug.Log($"[LoadingScreenController] Build scene load started: {sceneName}");
+
+        AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+
+        if (op == null)
+        {
+            Debug.LogError($"[LoadingScreenController] LoadSceneAsync returned null: {sceneName}");
+            yield break;
+        }
+
+        op.allowSceneActivation = false;
+
+        while (op.progress < 0.9f)
+        {
+            float elapsed = Time.unscaledTime - visualStartTime;
+            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
+
+            float realProgress = Mathf.Clamp01(op.progress / 0.9f);
+            float visual = Mathf.Min(waitCapProgress, Mathf.Max(time01 * 0.85f, realProgress * 0.85f));
+
+            SetProgress(visual);
+
+            if (elapsed > maxLoadingSeconds)
+            {
+                Debug.LogWarning(
+                    $"[LoadingScreenController] Build scene loading exceeded {maxLoadingSeconds:0.00}s. " +
+                    $"Scene={sceneName}, Progress={op.progress:0.00}"
+                );
+            }
+
+            yield return null;
+        }
+
+        Debug.Log($"[LoadingScreenController] Build scene ready at {Time.realtimeSinceStartup - startTime:0.00}s");
+
+        SetProgress(Mathf.Max(_currentProgress, 0.9f));
+
+        op.allowSceneActivation = true;
+
+        while (!op.isDone)
+        {
+            float elapsed = Time.unscaledTime - visualStartTime;
+            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
+
+            float visual = Mathf.Lerp(0.9f, waitCapProgress, time01);
+            SetProgress(visual);
+
+            if (elapsed > maxLoadingSeconds)
+            {
+                Debug.LogWarning(
+                    $"[LoadingScreenController] Build scene activation exceeded {maxLoadingSeconds:0.00}s. " +
+                    $"Check Awake/Start/shader/lighting in scene: {sceneName}"
+                );
+            }
+
+            yield return null;
+        }
+
+        Debug.Log($"[LoadingScreenController] Build scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
+
+        yield return FillToCompleteWithinLimit(visualStartTime);
+    }
+
+    IEnumerator FillToCompleteWithinLimit(float visualStartTime)
+    {
+        float elapsed = Time.unscaledTime - visualStartTime;
+        float remaining = Mathf.Max(0.05f, maxLoadingSeconds - elapsed);
+
+        float start = _currentProgress;
+        float duration = Mathf.Min(0.18f, remaining);
+
+        if (elapsed >= maxLoadingSeconds)
+            duration = 0.05f;
+
+        float t = 0f;
+
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            float s = Mathf.Clamp01(t / duration);
+            SetProgress(Mathf.Lerp(start, 1f, s));
             yield return null;
         }
 
         SetProgress(1f);
-
-        // min display
-        float totalDisplayTime = Time.unscaledTime - _displayStartTime;
-        float remain = Mathf.Max(0f, minDisplaySeconds - totalDisplayTime);
-        if (remain > 0f)
-            yield return new WaitForSecondsRealtime(remain);
-
-        _isLoading = false;
-
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-        Destroy(gameObject);
-    }
-
-    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        if (string.IsNullOrEmpty(_targetSceneName) || scene.name == _targetSceneName)
-        {
-            _sceneLoadedFired = true;
-        }
     }
 
     void SetProgress(float t)
     {
         _currentProgress = Mathf.Clamp01(t);
+
         int percent = Mathf.RoundToInt(_currentProgress * 100f);
 
-        // hiển thị Loading + phần trăm + dấu chấm
         if (textLoading)
             textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
 
-        // BỎ lerp - gán trực tiếp để đồng bộ với text
         if (progressRing)
-        {
             progressRing.fillAmount = _currentProgress;
-            if (sliderUI) sliderUI.value = _currentProgress;
-        }
-        else if (sliderUI)
-        {
+
+        if (sliderUI)
             sliderUI.value = _currentProgress;
-        }
     }
 
     IEnumerator CycleRandomImages()
     {
-        if (_images.Count == 0) yield break;
+        if (_images.Count == 0)
+            yield break;
 
         while (_isLoading)
         {
             if (_currentImageIndex >= 0 && _currentImageIndex < _images.Count)
-                _images[_currentImageIndex].gameObject.SetActive(false);
+            {
+                if (_images[_currentImageIndex])
+                    _images[_currentImageIndex].gameObject.SetActive(false);
+            }
 
             int nextIndex;
-            do { nextIndex = Random.Range(0, _images.Count); }
+
+            do
+            {
+                nextIndex = Random.Range(0, _images.Count);
+            }
             while (nextIndex == _currentImageIndex && _images.Count > 1);
 
             _currentImageIndex = nextIndex;
-            _images[_currentImageIndex].gameObject.SetActive(true);
+
+            if (_images[_currentImageIndex])
+                _images[_currentImageIndex].gameObject.SetActive(true);
 
             yield return new WaitForSecondsRealtime(imageSwitchInterval);
         }
 
         foreach (var img in _images)
-            if (img) img.gameObject.SetActive(false);
+        {
+            if (img)
+                img.gameObject.SetActive(false);
+        }
     }
 
     void Update()
     {
-        if (!_isLoading) return;
+        if (!_isLoading)
+            return;
 
         _dotTimer += Time.unscaledDeltaTime;
+
         if (_dotTimer >= dotSpeed)
         {
             _dotTimer = 0f;
             _dotCount = (_dotCount + 1) % 4;
 
-            // cập nhật lại text mỗi khi chấm đổi
             SetProgress(_currentProgress);
         }
     }
