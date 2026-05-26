@@ -3454,6 +3454,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FPSUIHandler
   toggle30: {fileID: 1499058246635104075}
   toggle60: {fileID: 3462942370956444408}
+  parent: {fileID: 3642595088067631548}
 --- !u!1 &3344252706233063532
 GameObject:
   m_ObjectHideFlags: 0
@@ -12313,8 +12314,41 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6327339163612177706, guid: 6801fe6ca8b5a480fb9c6d5834910cdf, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7356708220897349741}
   m_SourcePrefab: {fileID: 100100000, guid: 6801fe6ca8b5a480fb9c6d5834910cdf, type: 3}
+--- !u!1 &1395907943982600717 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6327339163612177706, guid: 6801fe6ca8b5a480fb9c6d5834910cdf, type: 3}
+  m_PrefabInstance: {fileID: 4940584662528423719}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7356708220897349741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1395907943982600717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7a1045da1ca40dab616ab4cbed76488, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BatteryWarningUIHandler
+  batteryWarningHandler: {fileID: 0}
+  toggle: {fileID: 6032308058140602294}
+--- !u!114 &6032308058140602294 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1668420542934128785, guid: 6801fe6ca8b5a480fb9c6d5834910cdf, type: 3}
+  m_PrefabInstance: {fileID: 4940584662528423719}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1395907943982600717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c086d13a05841ecb081c40b15a12d54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColorToggleSwitch
 --- !u!224 &6157609582348147917 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1289228894953073642, guid: 6801fe6ca8b5a480fb9c6d5834910cdf, type: 3}

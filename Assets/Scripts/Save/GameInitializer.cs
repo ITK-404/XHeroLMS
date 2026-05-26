@@ -74,6 +74,7 @@ public class GameInitializer : MonoBehaviour
         // TODO: UPDATE TO ADDRESSABLE BEFORE
         sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
         sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
+        batteryWarningHandler = CreateGameObject<BatteryWarningHandler>(donDestroyOnLoad: true);
         
         // ADDRESSABLE LOADING
         
@@ -106,6 +107,10 @@ public class GameInitializer : MonoBehaviour
     {
         get => gameSessionHandle;
     }
+
+    private BatteryWarningHandler batteryWarningHandler;
+    public BatteryWarningHandler BatteryWarningHandler => batteryWarningHandler;
+
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
     {
         var go = new GameObject(typeof(T).Name).AddComponent<T>();
