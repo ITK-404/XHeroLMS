@@ -9,7 +9,7 @@ public static class GraphicsApplier
     {
         // FPS
         QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = config.targetFPS;
+        // Application.targetFrameRate = config.targetFPS;
 
         // Render Scale (URP)
         var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
@@ -40,5 +40,10 @@ public static class GraphicsApplier
         // LOD
         QualitySettings.lodBias = config.lodBias;
         QualitySettings.maximumLODLevel = config.maxLODLevel;
+    }
+
+    public static void ApplyFps(int fps)
+    {
+        Application.targetFrameRate = fps;
     }
 }

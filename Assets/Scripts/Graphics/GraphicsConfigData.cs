@@ -4,9 +4,9 @@ using UnityEngine;
 [System.Serializable]
 public class GraphicsConfigData
 {
-    [Header("FPS")]
-    [Tooltip("Target frame rate. Common values: 30 (battery saver), 60 (balanced), 120 (smooth)")]
-    public int targetFPS = 60;
+    // [Header("FPS")]
+    // [Tooltip("Target frame rate. Common values: 30 (battery saver), 60 (balanced), 120 (smooth)")]
+    // public int targetFPS = 60;
 
     [Header("Render")]
     [Tooltip("Resolution scale relative to screen size. 0.75 = performance, 1.0 = native")]

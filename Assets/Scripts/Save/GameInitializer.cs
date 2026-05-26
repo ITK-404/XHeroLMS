@@ -27,11 +27,16 @@ public class GameInitializer : MonoBehaviour
     {
         var ct = this.GetCancellationTokenOnDestroy();
         InitTask(ct).Forget();
+        
+        FPSHandler.Load();
+        FPSHandler.ApplyFPS();
     }
 
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= LoginComplete;
+        
+        FPSHandler.Save();
     }
 
     private float _lastLoginCompleteTime = -999f;

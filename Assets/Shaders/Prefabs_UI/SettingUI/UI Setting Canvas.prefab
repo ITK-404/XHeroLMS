@@ -3367,6 +3367,7 @@ GameObject:
   - component: {fileID: 2694335696970872834}
   - component: {fileID: 5012777782016499735}
   - component: {fileID: 9210088953511867019}
+  - component: {fileID: 1347905067688654684}
   m_Layer: 5
   m_Name: Image (1)
   m_TagString: Untagged
@@ -3439,6 +3440,20 @@ MonoBehaviour:
   initialToggleSwitch: {fileID: 1499058246635104075}
   allCanBeToggledOff: 0
   autoToggleElement: 1
+--- !u!114 &1347905067688654684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3056406497179596988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4762d3b82ea46cfad467bc23d925d47, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FPSUIHandler
+  toggle30: {fileID: 1499058246635104075}
+  toggle60: {fileID: 3462942370956444408}
 --- !u!1 &3344252706233063532
 GameObject:
   m_ObjectHideFlags: 0
@@ -10199,6 +10214,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+--- !u!114 &3462942370956444408 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1220530639779216020, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
+  m_PrefabInstance: {fileID: 2377590108775200876}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e68ee3f60b54114ad3c6ffba25ff548, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ToggleSwitch
 --- !u!224 &8375249053698675194 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6108069910257461654, guid: c289ce48eb0b54cb0846da2705a8609c, type: 3}
