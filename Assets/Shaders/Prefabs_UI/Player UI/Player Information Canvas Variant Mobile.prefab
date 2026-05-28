@@ -886,6 +886,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1903885185711896877, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
+      propertyPath: m_Name
+      value: Warning Logout Popup Core
+      objectReference: {fileID: 0}
+    - target: {fileID: 1903885185711896877, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
@@ -2016,9 +2020,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LetterButtonUI
   notifySource: 1
+  useApiUnreadFallback: 0
+  restartShakeOnEveryFcm: 1
   isHaveNotify: 1
   shakeNotification: {fileID: 9104669054461796420}
   dotNotify: {fileID: 7976478803003597983}
+  targetButton: {fileID: 0}
 --- !u!1 &6632816785627994777 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5449927998312001519, guid: fbec6e2eae7f2bb498b893df34aae98c, type: 3}
