@@ -79,6 +79,7 @@ public class AuthView : MonoBehaviour
 
     public void HideAll()
     {
+        // GetComponent<UIView>().Hide();
         logoutPopupUI?.Hide();
     }
 

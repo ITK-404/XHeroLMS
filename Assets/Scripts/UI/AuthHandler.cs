@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Handles authentication logic: logout and delete account.
@@ -111,7 +113,7 @@ public class AuthHandler
         }
 
         // Lưu session trước khi logout
-        yield return GameInitializer.Instance.GameSessionHandler.SaveSession();
+        yield return GameInitializer.Instance.GameSessionHandler.SaveSession().ToCoroutine();
 
         string url = $"{_baseUrl}{_logoutPath}?fromPlatform={UnityWebRequest.EscapeURL(_fromPlatform)}";
 
