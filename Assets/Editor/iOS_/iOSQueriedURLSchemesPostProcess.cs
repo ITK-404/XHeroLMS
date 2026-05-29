@@ -12,6 +12,7 @@ public static class iOSQueriedURLSchemesPostProcess
     private static readonly string[] QueriedSchemes =
     {
         "xhero",
+        "tel"
         // Thêm scheme khác vào đây
         // "facebook",
         // "instagram",

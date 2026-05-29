@@ -47,7 +47,7 @@ public static class XcodePostProcess_InfoPlistPrivacy
 
         // Photo Library
         root.SetString("NSPhotoLibraryUsageDescription", PhotoLibraryUsage);
-
+        root.SetString("NSPhoneUsageDescription", "Ứng dụng cần quyền truy cập để thực hiện cuộc gọi điện thoại.");
         // Photo Library (Add Only)
         root.SetString("NSPhotoLibraryAddUsageDescription", PhotoLibraryAddUsage);
         

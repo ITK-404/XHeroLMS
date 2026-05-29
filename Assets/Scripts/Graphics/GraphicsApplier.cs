@@ -8,7 +8,6 @@ public static class GraphicsApplier
     public static void Apply(GraphicsConfigData config)
     {
         // FPS
-        QualitySettings.vSyncCount = 0;
         // Application.targetFrameRate = config.targetFPS;
 
         // Render Scale (URP)
@@ -17,7 +16,7 @@ public static class GraphicsApplier
         {
             urpAsset.renderScale = config.renderScale;
             urpAsset.msaaSampleCount = config.msaaSampleCount;
-            urpAsset.supportsHDR = config.hdrEnabled;
+            // urpAsset.supportsHDR = config.hdrEnabled;
         }
 
         // Shadow
@@ -44,6 +43,7 @@ public static class GraphicsApplier
 
     public static void ApplyFps(int fps)
     {
-        Application.targetFrameRate = fps;
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 30;
     }
 }
