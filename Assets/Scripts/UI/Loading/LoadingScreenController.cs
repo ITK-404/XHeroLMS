@@ -181,9 +181,15 @@ public class LoadingScreenController : MonoBehaviour
         StartCoroutine(CycleRandomImages());
 
         bool useAddressables = LoadingTransition.UseAddressables;
-
+        
         Debug.Log($"[LoadingScreenController] Load start. Scene={sceneName}, UseAddressables={useAddressables}");
 
+        var previousScene = LoadingTransition.PreviousSceneName;
+
+        yield return SceneManager.UnloadSceneAsync(previousScene);
+        
+        // yield return new WaitForSecondsRealtime(5f);
+        
         if (useAddressables)
         {
 #if ADDRESSABLES

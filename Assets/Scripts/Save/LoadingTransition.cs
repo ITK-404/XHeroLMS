@@ -62,29 +62,34 @@ public static class LoadingTransition
     public static IEnumerator LoadScene(string targetScene)
     {
         bool isCloud = false;
+        Debug.Log("[LoadingTransition] Start to check cloud scene");
         yield return CoCheckIsCloudScene(targetScene, r => isCloud = r);
 
         if (isCloud)
             LoadAssetBundle(targetScene);
         else
             Load(targetScene);
+     
+        Debug.Log("[LoadingTransition] Loading to loading scene");
     }
 
     public static void Load_Scene(string targetScene, bool isSaveHistory = true)
     {
         if (_coroutine != null)
         {
-            Debug.Log("Stop Coroutine loading");
+            Debug.Log($"[LoadingTransition] Stop Coroutine loading");
             runner.StopCoroutine(_coroutine);
         }
 
         _coroutine = runner.StartCoroutine(LoadScene(targetScene));
+        Debug.Log("LoadingTransition target scene "+targetScene);
         OnLoadSceneEvent?.Invoke();
 
         var currentScene = SceneManager.GetActiveScene().name;
 
         if (isSaveHistory)
         {
+            Debug.Log("[LoadingTransition] Save scene to history");
             sceneHistory.Record(currentScene);
         }
     }
