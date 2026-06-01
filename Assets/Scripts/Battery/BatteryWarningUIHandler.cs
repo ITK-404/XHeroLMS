@@ -15,6 +15,7 @@ public class BatteryWarningUIHandler : MonoBehaviour
         toggle.onToggleOn.AddListener(OnToggleOn);
         toggle.onToggleOff.AddListener(OnToggleOff);
 
+        batteryWarningHandler.OnEnableChanged += SyncToggle;
         SyncToggleUI();
     }
 
@@ -22,6 +23,8 @@ public class BatteryWarningUIHandler : MonoBehaviour
     {
         toggle.onToggleOn.RemoveListener(OnToggleOn);
         toggle.onToggleOff.RemoveListener(OnToggleOff);
+        
+        batteryWarningHandler.OnEnableChanged -= SyncToggle;
     }
 
     public void OnToggleOn() => batteryWarningHandler.SetEnabled(true);
@@ -31,4 +34,10 @@ public class BatteryWarningUIHandler : MonoBehaviour
     {
         toggle?.ToggleByGroupManager(batteryWarningHandler.IsEnabled);
     }
+
+    private void SyncToggle(bool newState)
+    {
+        toggle?.ToggleByGroupManager(newState);
+    }
+    
 }

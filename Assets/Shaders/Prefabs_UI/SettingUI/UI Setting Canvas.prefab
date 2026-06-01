@@ -1291,10 +1291,10 @@ GameObject:
   - component: {fileID: 658510356527814065}
   - component: {fileID: 3783255386222972560}
   - component: {fileID: 4371740685106343108}
-  - component: {fileID: 3118153681816662134}
   - component: {fileID: 6185429588994741308}
   - component: {fileID: 3715376473412536756}
   - component: {fileID: 6828203272749028671}
+  - component: {fileID: 6870563566886337518}
   m_Layer: 5
   m_Name: UI Setting Canvas
   m_TagString: Untagged
@@ -1386,23 +1386,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &3118153681816662134
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 824171275076942098}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 034f885bd110432282a3bc39b84ccd21, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIView
-  root: {fileID: 5874097422026739523}
-  canvasGroup: {fileID: 109706734815235541}
-  fadeDuration: 0.2
-  useFade: 1
-  targetID: 
 --- !u!114 &6185429588994741308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1447,6 +1430,24 @@ MonoBehaviour:
   deleteUserPath: /users
   logoutPath: /users/logout
   fromPlatform: lms3d
+--- !u!114 &6870563566886337518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 824171275076942098}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b58a2958bc3487fb4970052cd2a20f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SettingViewUI
+  root: {fileID: 5874097422026739523}
+  canvasGroup: {fileID: 109706734815235541}
+  fadeDuration: 0.2
+  useFade: 1
+  targetID: 
+  settingView: {fileID: 3642595088067631548}
 --- !u!1 &877833038870481085
 GameObject:
   m_ObjectHideFlags: 0
@@ -1557,7 +1558,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 1.194397, y: -12.253387}
+  m_AnchoredPosition: {x: 1.194397, y: -12.253418}
   m_SizeDelta: {x: -40.7322, y: -77.2292}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &2011593225322464910
@@ -5263,7 +5264,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -4.0706177, y: -28.668488}
+  m_AnchoredPosition: {x: -4.0706177, y: -28.668457}
   m_SizeDelta: {x: -65.1047, y: -57.3369}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6938484615097435691
@@ -7892,7 +7893,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.6000061, y: -4.299988}
+  m_AnchoredPosition: {x: 0.5999756, y: -4.299988}
   m_SizeDelta: {x: 95.1594, y: 89.916}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1879621903031208219
@@ -7977,8 +7978,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3118153681816662134}
-        m_TargetAssemblyTypeName: UIView, Assembly-CSharp
+      - m_Target: {fileID: 6870563566886337518}
+        m_TargetAssemblyTypeName: SettingViewUI, Assembly-CSharp
         m_MethodName: Hide
         m_Mode: 1
         m_Arguments:
@@ -8288,7 +8289,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 1.194397, y: -12.253387}
+  m_AnchoredPosition: {x: 1.194397, y: -12.253418}
   m_SizeDelta: {x: -40.7322, y: -77.2292}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &8549406730958954190

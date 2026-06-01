@@ -16,7 +16,8 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
             parent.OnViewOpened += OnViewOpened;
             parent.OnViewClosed += OnViewClosed;
         }
-      
+
+        GraphicsSettingsManager.Instance.OnSettingIndexChanged += ReloadVisual;
         ReloadVisual();
     }
 
@@ -27,6 +28,7 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
             parent.OnViewOpened -= OnViewOpened;
             parent.OnViewClosed -= OnViewClosed;
         }
+        GraphicsSettingsManager.Instance.OnSettingIndexChanged -= ReloadVisual;
 
     }
 
@@ -60,6 +62,7 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
         GraphicsSettingsManager.Instance.ApplyPresetIndex(index);
     }
 
+
     [ContextMenu("Reload Visual")]
     private void ReloadVisual()
     {
@@ -67,8 +70,10 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
         
         var activeIndex = GraphicsSettingsManager.Instance.GetActiveIndex();
         var toggleSwitches = toggleManager.ToggleSwitches;
+        
         Debug.Log($"[ToggleGroupManager] Active Index :{activeIndex}");
+
         toggleSwitches[activeIndex].ToggleByGroupManager(true);
-        Debug.Log($"ToggleGroupManager: ",toggleSwitches[activeIndex].gameObject);
+        // Debug.Log($"ToggleGroupManager: ",toggleSwitches[activeIndex].gameObject);
     }
 }

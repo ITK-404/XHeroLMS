@@ -50,8 +50,16 @@ public class FPSUIHandler : MonoBehaviour
         SyncToggleUI();
     }
 
-    public void OnToggle30() => FPSHandler.SetFPS(30);
-    public void OnToggle60() => FPSHandler.SetFPS(60);
+    public void OnToggle30()
+    {
+        FPSHandler.SetFPS(30);
+        GameInitializer.Instance.BatteryWarningHandler.DisableByUser();
+    }
+    public void OnToggle60()
+    {
+        FPSHandler.SetFPS(60);
+        GameInitializer.Instance.BatteryWarningHandler.DisableByUser();
+    }
 
     private void SyncToggleUI()
     {
