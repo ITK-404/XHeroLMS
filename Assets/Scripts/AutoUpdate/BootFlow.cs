@@ -96,17 +96,16 @@ private IEnumerator CoBoot()
         yield return null;
     }
 
-    while (!preload.IsCloudFullyDownloaded && !preload.HasFailed)
+while (!preload.IsReady && !preload.HasFailed)
+{
+    if (intro != null && preload != null)
     {
-        if (intro != null && preload != null)
-        {
-            float p = Mathf.Clamp01(preload.DownloadPercent01);
-
-            intro.SetBootProgress01(p);
-        }
-
-        yield return null;
+        float p = Mathf.Clamp01(preload.DownloadPercent01);
+        intro.SetBootProgress01(p);
     }
+
+    yield return null;
+}
 
     if (preload.HasFailed)
     {
