@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class CourseProgressAPI : MonoBehaviour
 {
     [Header("Debug Only")]
-    public string baseUrl;   // chỉ để xem log, không set trong Inspector nữa
+    string baseUrl;   // chỉ để xem log, không set trong Inspector nữa
 
     [Header("Course Info")]
     public string courseID;

@@ -58,6 +58,20 @@ public class CourseListView : MonoBehaviour
 
 
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
+    [Header("Android Local Proxy Buffer")]
+[SerializeField] private bool useProxyPreloadOnAndroid = true;
+
+[Tooltip("Số MB cần cache trước rồi mới Prepare video.")]
+[SerializeField] private int preloadBeforePrepareMB = 20;
+
+[Tooltip("Thời gian chờ cache tối đa trước khi vẫn cho video chạy.")]
+[SerializeField] private float preloadTimeoutSeconds = 10f;
+
+[Tooltip("Bật log đo cache/preload.")]
+[SerializeField] private bool debugProxyPreload = true;
+
+private Coroutine _playVideoRoutine;
+private int _playVideoToken;
     void Awake()
     {
         proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
@@ -191,22 +205,40 @@ public class CourseListView : MonoBehaviour
 
     public const string FinalExamType = "FINAL_EXAM";
     public Action<LessonUI> OnClickFinalExamEvt;
-
 private void PlayVideo(string url)
 {
-    if (string.IsNullOrEmpty(url) || !videoPlayer) return;
-    if (!proxyBoot) proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+    if (_playVideoRoutine != null)
+    {
+        StopCoroutine(_playVideoRoutine);
+        _playVideoRoutine = null;
+    }
 
-    var finalUrl = proxyBoot ? proxyBoot.GetPlayableUrl(url) : url;
+    _playVideoToken++;
+    _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
+}
 
-    // ===== [testvideo] mốc bắt đầu =====
+private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
+{
+    if (string.IsNullOrEmpty(originUrl) || !videoPlayer)
+        yield break;
+
+    if (!proxyBoot)
+        proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+    string finalUrl = originUrl;
+
     _videoStartRealtime = Time.realtimeSinceStartup;
-    _videoStartUrl = finalUrl;
+    _videoStartUrl = originUrl;
     _loggedFirstFrame = false;
 
-    Debug.Log($"[testvideo][1] Got URL -> start loading. t={_videoStartRealtime:F3}s | url={finalUrl}");
+    Debug.Log($"[testvideo][1] Got origin URL. t={_videoStartRealtime:F3}s | url={originUrl}");
 
-    // avoid duplicate events
+    try
+    {
+        videoPlayer.Stop();
+    }
+    catch { }
+
     videoPlayer.errorReceived -= OnVideoError;
     videoPlayer.errorReceived += OnVideoError;
 
@@ -217,15 +249,97 @@ private void PlayVideo(string url)
     videoPlayer.frameReady += OnVideoFrameReady;
     videoPlayer.sendFrameReadyEvents = true;
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+    if (useProxyPreloadOnAndroid && proxyBoot && proxyBoot.enableProxyOnAndroid)
+    {
+        bool started = proxyBoot.EnsureStarted();
+
+        if (started)
+        {
+            long minBufferBytes = Mathf.Max(1, preloadBeforePrepareMB) * 1024L * 1024L;
+
+            proxyBoot.Preload(originUrl, 0);
+
+            float waitStart = Time.realtimeSinceStartup;
+            long cachedUntil = -1;
+            long totalBytes = -1;
+
+            while (Time.realtimeSinceStartup - waitStart < preloadTimeoutSeconds)
+            {
+                if (token != _playVideoToken)
+                    yield break;
+
+                cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+                totalBytes = proxyBoot.GetTotalBytes(originUrl);
+
+                if (debugProxyPreload)
+                {
+                    Debug.Log(
+                        $"[LocalProxy][Preload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / need={FormatBytes(minBufferBytes)}"
+                    );
+                }
+
+                if (cachedUntil >= minBufferBytes)
+                    break;
+
+                yield return null;
+            }
+
+            finalUrl = proxyBoot.GetPlayableUrl(originUrl);
+
+            if (debugProxyPreload)
+            {
+                float waited = Time.realtimeSinceStartup - waitStart;
+
+                Debug.Log(
+                    $"[LocalProxy][Preload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
+                );
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[LocalProxy] Proxy start failed. Fallback to origin URL.");
+        }
+    }
+#endif
+
+    if (token != _playVideoToken)
+        yield break;
+
+    _videoStartUrl = finalUrl;
+
+    Debug.Log($"[testvideo][1.5] Prepare video. t={Time.realtimeSinceStartup:F3}s | url={finalUrl}");
+
     videoPlayer.source = VideoSource.Url;
     videoPlayer.url = finalUrl;
-
-    // prepare then play
     videoPlayer.Prepare();
 
-    learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+    if (learnUI && learnUI.toggleLessonScrollView != null)
+    {
+        learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+    }
 }
 
+private static string FormatBytes(long bytes)
+{
+    if (bytes < 0)
+        return "<unknown>";
+
+    const long KB = 1024;
+    const long MB = KB * 1024;
+    const long GB = MB * 1024;
+
+    if (bytes >= GB)
+        return $"{bytes / (float)GB:F2}GB";
+
+    if (bytes >= MB)
+        return $"{bytes / (float)MB:F2}MB";
+
+    if (bytes >= KB)
+        return $"{bytes / (float)KB:F2}KB";
+
+    return $"{bytes}B";
+}
     private void OnVideoError(VideoPlayer vp, string msg)
     {
         Debug.LogError("[VideoPlayer] error: " + msg);
@@ -446,18 +560,20 @@ private void PlayVideo(string url)
         vp.Play();
     }
 
-    private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
-    {
-        if (_loggedFirstFrame) return;
-        _loggedFirstFrame = true;
+private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
+{
+    if (_loggedFirstFrame)
+        return;
 
-        float now = Time.realtimeSinceStartup;
-        float delta = now - _videoStartRealtime;
+    _loggedFirstFrame = true;
 
-        Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+    float now = Time.realtimeSinceStartup;
+    float delta = now - _videoStartRealtime;
 
-        // optional: bỏ event để nhẹ hơn
-        vp.frameReady -= OnVideoFrameReady;
-    }
+    Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+
+    vp.frameReady -= OnVideoFrameReady;
+    vp.sendFrameReadyEvents = false;
+}
 
 }

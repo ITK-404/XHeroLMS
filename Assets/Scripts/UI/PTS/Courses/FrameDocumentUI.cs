@@ -48,49 +48,51 @@ public class FrameDocumentUI : PanelBaseUI
         ShowDocument(docUrl);
     }
 
-    public void ShowDocument(string pageUrl)
+public void ShowDocument(string pageUrl)
+{
+    base.Show();
+
+    bool hasUrl = !string.IsNullOrWhiteSpace(pageUrl);
+
+    if (emptyUI != null)
+        emptyUI.gameObject.SetActive(!hasUrl);
+
+    if (!hasUrl)
     {
-        bool hasUrl = !string.IsNullOrWhiteSpace(pageUrl);
+        if (page != null)
+            page.Hide();
 
-        if (emptyUI != null)
-            emptyUI.gameObject.SetActive(!hasUrl);
-
-        if (!hasUrl)
-        {
-            if (page != null)
-                page.Hide();
-
-            currentLoadedUrl = null;
-            return;
-        }
-
-        string finalUrl = ConvertToViewableUrl(pageUrl);
-
-        if (page == null)
-        {
-            page = Instantiate(uniWebViewPrefab, transform);
-            page.gameObject.SetActive(true);
-
-            page.OnPageErrorReceived += (view, errorCode, errorMessage) =>
-            {
-                Debug.LogWarning($"[FrameDocumentUI] WebView load error: {errorCode} - {errorMessage}");
-            };
-
-            page.OnLoadingErrorReceived += (view, errorCode, errorMessage, payload) =>
-            {
-                Debug.LogWarning($"[FrameDocumentUI] WebView loading error: {errorCode} - {errorMessage}");
-            };
-        }
-
-        if (currentLoadedUrl != finalUrl)
-        {
-            currentLoadedUrl = finalUrl;
-            Debug.Log($"[FrameDocumentUI] Load document: {finalUrl}");
-            page.Load(finalUrl);
-        }
-
-        page.Show();
+        currentLoadedUrl = null;
+        return;
     }
+
+    string finalUrl = ConvertToViewableUrl(pageUrl);
+
+    if (page == null)
+    {
+        page = Instantiate(uniWebViewPrefab, transform);
+        page.gameObject.SetActive(true);
+
+        page.OnPageErrorReceived += (view, errorCode, errorMessage) =>
+        {
+            Debug.LogWarning($"[FrameDocumentUI] WebView load error: {errorCode} - {errorMessage}");
+        };
+
+        page.OnLoadingErrorReceived += (view, errorCode, errorMessage, payload) =>
+        {
+            Debug.LogWarning($"[FrameDocumentUI] WebView loading error: {errorCode} - {errorMessage}");
+        };
+    }
+
+    if (currentLoadedUrl != finalUrl)
+    {
+        currentLoadedUrl = finalUrl;
+        Debug.Log($"[FrameDocumentUI] Load document: {finalUrl}");
+        page.Load(finalUrl);
+    }
+
+    page.Show();
+}
 
     private string ConvertToViewableUrl(string rawUrl)
     {

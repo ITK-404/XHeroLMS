@@ -677,6 +677,16 @@ public class LmsPrivateLesson
     public string duration;
     public int progressTime = -1;
     public CompletionCondition completionCondition;
+
+    public List<LmsDocAttach> docAttach;
+}
+[Serializable]
+public class LmsDocAttach
+{
+    public string uri;
+    public string name;
+    public string type;
+    public string mimeType;
 }
 [Serializable]
 public class LmsRelatedCourse
