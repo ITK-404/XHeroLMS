@@ -15,7 +15,8 @@ public class IntroManager : MonoBehaviour
     public float videoStartTimeout = 6f;
     public bool skipVideoIfFail = true;
 
-    public bool forceRefreshPersistentVideo = true;
+    // public bool forceRefreshPersistentVideo = true;
+    public bool forceRefreshPersistentVideo = false;
 
     // Nếu file persistent nhỏ hơn ngưỡng này thì coi như lỗi và copy lại.
     public long minValidVideoBytes = 1024 * 50; // 50KB
@@ -76,29 +77,34 @@ public class IntroManager : MonoBehaviour
     private bool visualReached100;
     private bool finishRequestedByBootFlow;
 
+    private int lastPreloadPhaseId = -1;
+
     public void SetExternalPreload(AddressablesPreload preload)
     {
         _preload = preload;
     }
 
-    private void Awake()
+private void Awake()
+{
+    if (videoRawImage != null)
+        videoRawImage.enabled = false;
+
+    if (failCanvasGroup != null)
     {
-        if (failCanvasGroup != null)
-        {
-            failCanvasGroup.alpha = 0f;
-            failCanvasGroup.blocksRaycasts = false;
-            failCanvasGroup.interactable = false;
-        }
-
-        if (retryButton != null)
-        {
-            retryButton.onClick.RemoveAllListeners();
-            retryButton.onClick.AddListener(OnRetryClicked);
-        }
-
-        visualReached100 = false;
-        ForceProgress(0f);
+        failCanvasGroup.alpha = 0f;
+        failCanvasGroup.blocksRaycasts = false;
+        failCanvasGroup.interactable = false;
     }
+
+    if (retryButton != null)
+    {
+        retryButton.onClick.RemoveAllListeners();
+        retryButton.onClick.AddListener(OnRetryClicked);
+    }
+
+    visualReached100 = false;
+    ForceProgress(0f);
+}
 
     private void Start()
     {
@@ -251,19 +257,23 @@ public class IntroManager : MonoBehaviour
         vp.sendFrameReadyEvents = false;
 
         // Nếu bạn dùng RawImage + RenderTexture thì code tự gán.
-        if (videoRenderTexture != null)
-        {
-            vp.renderMode = VideoRenderMode.RenderTexture;
-            vp.targetTexture = videoRenderTexture;
+if (videoRenderTexture != null)
+{
+    vp.renderMode = VideoRenderMode.RenderTexture;
+    vp.targetTexture = videoRenderTexture;
 
-            if (videoRawImage != null)
-            {
-                videoRawImage.texture = videoRenderTexture;
-                videoRawImage.enabled = true;
-            }
+    if (videoRawImage != null)
+    {
+        videoRawImage.texture = videoRenderTexture;
 
-            Debug.Log("[Intro] Video display mode = RenderTexture");
-        }
+        // Quan trọng:
+        // Không hiện RawImage khi video chưa có frame đầu.
+        // Nếu bật sớm, lần đầu app dễ thấy màn hình trắng.
+        videoRawImage.enabled = false;
+    }
+
+    Debug.Log("[Intro] Video display mode = RenderTexture");
+}
         else if (videoRawImage != null)
         {
             Debug.LogWarning("[Intro] videoRawImage assigned but videoRenderTexture is null. RawImage sẽ không hiện video nếu VideoPlayer chưa có targetTexture.");
@@ -453,23 +463,29 @@ public class IntroManager : MonoBehaviour
         OnVideoPrepared(videoPlayer);
     }
 
-    private void OnVideoPrepared(VideoPlayer vp)
+private void OnVideoPrepared(VideoPlayer vp)
+{
+    if (videoFailed || videoStarted)
+        return;
+
+    Debug.Log($"[Intro] Video prepared -> Play(). length={vp.length:0.###}, frameCount={vp.frameCount}, width={vp.width}, height={vp.height}");
+
+    try
     {
-        if (videoFailed || videoStarted)
-            return;
-
-        Debug.Log($"[Intro] Video prepared -> Play(). length={vp.length:0.###}, frameCount={vp.frameCount}, width={vp.width}, height={vp.height}");
-
-        try
+        if (videoRawImage != null)
         {
-            vp.Play();
-            videoStarted = true;
+            videoRawImage.texture = videoRenderTexture;
+            videoRawImage.enabled = true;
         }
-        catch (System.Exception e)
-        {
-            FailVideo("[Intro] Video Play failed: " + e);
-        }
+
+        vp.Play();
+        videoStarted = true;
     }
+    catch (System.Exception e)
+    {
+        FailVideo("[Intro] Video Play failed: " + e);
+    }
+}
 
     private void OnVideoEndReached(VideoPlayer vp)
     {
@@ -537,15 +553,15 @@ public class IntroManager : MonoBehaviour
 
     // ========================= PROGRESS =========================
 
-    private IEnumerator CoUpdateProgressUI()
+private IEnumerator CoUpdateProgressUI()
+{
+    while (!hasFatalFail)
     {
-        while (!hasFatalFail)
-        {
-            // UpdateProgressFromPreload();
-            ApplyVisual();
-            yield return null;
-        }
+        UpdateProgressFromPreload();
+        ApplyVisual();
+        yield return null;
     }
+}
 
     private float GetIntroTime01()
     {
@@ -553,47 +569,39 @@ public class IntroManager : MonoBehaviour
         return Mathf.Clamp01(t / Mathf.Max(0.01f, introDurationSec));
     }
 
-    private void UpdateProgressFromPreload()
+private void UpdateProgressFromPreload()
+{
+    if (_preload == null)
     {
         float time01 = GetIntroTime01();
-
-        // Không có preload -> chạy theo thời gian cho mượt.
-        if (_preload == null)
-        {
-            SetTargetMonotonic(Mathf.Max(warmupMinProgress, time01));
-            ApplyVisual();
-            return;
-        }
-
-bool ready = _preload.IsReady;
-
-if (ready || finishRequestedByBootFlow)
-{
-    SetTargetMonotonic(1f);
-    ApplyVisual();
-    return;
-}
-
-        float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
-
-        if (data01 <= 0f && warmupMinProgress > 0f)
-            data01 = warmupMinProgress;
-
-        if (time01 < 1f && !videoEnded)
-        {
-            // Trong introDurationSec đầu: chạy theo time nhưng không vượt cap.
-            float videoDriven = Mathf.Min(time01 * capWhenVideoDoneButNotReady, capWhenVideoDoneButNotReady);
-            SetTargetMonotonic(Mathf.Max(data01, videoDriven));
-        }
-        else
-        {
-            // Sau introDurationSec: map data 0..1 -> cap..1.
-            float mapped = Mathf.Lerp(capWhenVideoDoneButNotReady, 1f, data01);
-            SetTargetMonotonic(mapped);
-        }
-
+        SetTargetMonotonic(Mathf.Max(warmupMinProgress, time01));
         ApplyVisual();
+        return;
     }
+
+    if (_preload.LoadingPhaseId != lastPreloadPhaseId)
+    {
+        lastPreloadPhaseId = _preload.LoadingPhaseId;
+        ResetVisualProgressForNewPhase(Mathf.Max(warmupMinProgress, _preload.DownloadPercent01));
+    }
+
+    if (_preload.IsReady)
+    {
+        SetTargetMonotonic(1f);
+        ApplyVisual();
+        return;
+    }
+
+    float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
+
+    if (data01 <= 0f && warmupMinProgress > 0f)
+        data01 = warmupMinProgress;
+
+    // Không map theo video/time nữa.
+    // Thanh progress phải đồng bộ với % thật của phase hiện tại.
+    SetTargetMonotonic(data01);
+    ApplyVisual();
+}
 
     private void SetTargetMonotonic(float newTarget01)
     {
@@ -628,13 +636,13 @@ if (ready || finishRequestedByBootFlow)
         SetProgressInstant(currentVisual);
     }
 
-    private string GetStageText(float t01)
-    {
-        if (_preload != null && _preload.IsReady && (GetIntroTime01() >= 1f || videoEnded))
-            return "Hoàn tất";
+private string GetStageText(float t01)
+{
+    if (_preload != null && !string.IsNullOrEmpty(_preload.LoadingText))
+        return _preload.LoadingText;
 
-        return $"Đang tải tài nguyên ({Mathf.FloorToInt(t01 * 100f)}%)";
-    }
+    return $"Đang tải tài nguyên ({Mathf.FloorToInt(t01 * 100f)}%)";
+}
 
     private void SetProgressInstant(float t01)
     {
@@ -663,29 +671,38 @@ if (ready || finishRequestedByBootFlow)
         }
     }
 
-    public bool CanEnterMain
+public bool CanEnterMain
+{
+    get
     {
-        get
-        {
-            bool minTimePassed = GetIntroTime01() >= 1f;
+        bool minTimePassed = GetIntroTime01() >= 1f;
 
-            if (!minTimePassed)
-                return false;
+        if (!minTimePassed)
+            return false;
 
-            // Chặn vào Main cho tới khi UI progress thật sự lên 100%.
-            if (!visualReached100)
-                return false;
+        // Quan trọng:
+        // Không cho vào Main nếu AddressablesPreload chưa download + giải nén xong.
+        if (_preload != null && !_preload.IsReady)
+            return false;
 
-            if (videoFailed && skipVideoIfFail)
-                return true;
+        // Chặn vào Main cho tới khi UI progress thật sự lên 100%.
+        if (!visualReached100)
+            return false;
 
-            return videoEnded;
-        }
+        if (videoFailed && skipVideoIfFail)
+            return true;
+
+        return videoEnded;
     }
-    public void RequestFinishTo100()
-    {
-        finishRequestedByBootFlow = true;
-    }
+}
+public void RequestFinishTo100()
+{
+    // Chỉ cho finish khi preload thật sự xong.
+    if (_preload != null && !_preload.IsReady)
+        return;
+
+    finishRequestedByBootFlow = true;
+}
     public void SetBootProgress01(float p01, bool allowComplete = false)
     {
         p01 = Mathf.Clamp01(p01);
@@ -696,4 +713,15 @@ if (ready || finishRequestedByBootFlow)
 
         SetTargetMonotonic(p01);
     }
+private void ResetVisualProgressForNewPhase(float start01)
+{
+    start01 = Mathf.Clamp01(start01);
+
+    monotonicTarget01 = start01;
+    currentVisual = start01;
+    targetVisual = start01;
+    visualReached100 = false;
+
+    SetProgressInstant(start01);
+}
 }
