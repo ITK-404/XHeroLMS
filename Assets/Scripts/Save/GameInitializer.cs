@@ -25,6 +25,8 @@ public class GameInitializer : MonoBehaviour
 
     private void Start()
     {
+        LoginController.OnLoginComplete += LoginComplete;
+        
         var ct = this.GetCancellationTokenOnDestroy();
         InitTask(ct).Forget();
     }
@@ -99,7 +101,6 @@ public class GameInitializer : MonoBehaviour
     private void BindEvent()
     {
         // đảm bảo gọi sau khi các object khác init
-        LoginController.OnLoginComplete += LoginComplete;
         
         batteryWarningHandler.onBatteryLow.AddListener(HandleLowBattery);
     }

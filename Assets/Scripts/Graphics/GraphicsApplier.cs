@@ -15,7 +15,7 @@ public static class GraphicsApplier
         if (urpAsset != null)
         {
             urpAsset.renderScale = config.renderScale;
-            urpAsset.msaaSampleCount = config.msaaSampleCount;
+            // urpAsset.msaaSampleCount = config.msaaSampleCount;
             // urpAsset.supportsHDR = config.hdrEnabled;
         }
 
