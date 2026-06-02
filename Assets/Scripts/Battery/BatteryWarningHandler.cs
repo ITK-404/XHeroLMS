@@ -59,7 +59,7 @@ public class BatteryWarningHandler : MonoBehaviour
 
     public void DisableByUser()
     {
-        if (IsBatteryLowEnough())
+        if (IsBatteryLowEnough() && IsEnabled)
         {
             Debug.Log($"BatteryWarningHandler disable by user");
             isWarned = false;

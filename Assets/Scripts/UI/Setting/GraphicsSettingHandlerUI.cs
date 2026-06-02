@@ -70,7 +70,7 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
     private void DisableBatteryCheck(int checkIndex)
     {
         var batteryWarn = GameInitializer.Instance.BatteryWarningHandler; 
-        if (batteryWarn.IsBatteryLowEnough() && batteryWarn.IsEnabled && checkIndex > 0)
+        if (batteryWarn.IsBatteryLowEnough() && checkIndex > 0)
         { 
             batteryWarn.DisableByUser();
         }
