@@ -17,8 +17,8 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
             parent.OnViewClosed += OnViewClosed;
         }
 
-        GraphicsSettingsManager.Instance.OnSettingIndexChanged += ReloadVisual;
-        ReloadVisual();
+        GraphicsSettingsManager.Instance.OnSettingIndexChanged += UpdateVisual;
+        UpdateVisual();
     }
 
     private void OnDestroy()
@@ -28,13 +28,13 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
             parent.OnViewOpened -= OnViewOpened;
             parent.OnViewClosed -= OnViewClosed;
         }
-        GraphicsSettingsManager.Instance.OnSettingIndexChanged -= ReloadVisual;
+        GraphicsSettingsManager.Instance.OnSettingIndexChanged -= UpdateVisual;
 
     }
 
     private void OnViewOpened()
     {
-        ReloadVisual();
+        UpdateVisual();
         isEnable = true;
     }
     
@@ -58,22 +58,40 @@ public class GraphicsSettingHandlerUI : MonoBehaviour
     
     public void OnSelectToggle(int index)
     {
+        // this treat like user input ?
         // if (isEnable == false) return;
+        Debug.Log($"GraphicsSettingHandlerUI: On Toggle Setting active by user");
         GraphicsSettingsManager.Instance.ApplyPresetIndex(index);
+
+        DisableBatteryCheck(index);
+        // GameInitializer.Instance.BatteryWarningHandler.DisableByUser();
     }
 
-
-    [ContextMenu("Reload Visual")]
-    private void ReloadVisual()
+    private void DisableBatteryCheck(int checkIndex)
     {
-        if (toggleManager == null) return;
-        
-        var activeIndex = GraphicsSettingsManager.Instance.GetActiveIndex();
-        var toggleSwitches = toggleManager.ToggleSwitches;
-        
-        Debug.Log($"[ToggleGroupManager] Active Index :{activeIndex}");
-
-        toggleSwitches[activeIndex].ToggleByGroupManager(true);
-        // Debug.Log($"ToggleGroupManager: ",toggleSwitches[activeIndex].gameObject);
+        var batteryWarn = GameInitializer.Instance.BatteryWarningHandler; 
+        if (batteryWarn.IsBatteryLowEnough() && batteryWarn.IsEnabled && checkIndex > 0)
+        { 
+            batteryWarn.DisableByUser();
+        }
     }
+    
+    
+    private void Toggle(int index)
+    {
+        var toggleSwitches = toggleManager.ToggleSwitches;
+        toggleManager.ToggleGroup(toggleSwitches[index]); 
+    }
+
+    private void UpdateVisual()
+    {
+        var index = GraphicsSettingsManager.Instance.GetActiveIndex();
+        var toggleSwitches = toggleManager.ToggleSwitches;
+        // toggleManager.ToggleGroup(toggleSwitches[index]); 
+
+        Debug.Log($"GraphicsSettingHandlerUI Update Visual with active index {index}");
+
+        Toggle(index);
+    }
+    
 }

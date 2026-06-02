@@ -67,7 +67,7 @@ public class GraphicsSettingsManager : MonoBehaviour
     public void ApplyLowestPreset()
     {
         // lowest index
-        ApplyPresetIndexWiout(0);
+        ApplyPresetIndex(0);
     }
 
     public int GetActiveIndex()
@@ -81,16 +81,6 @@ public class GraphicsSettingsManager : MonoBehaviour
         currentIndex = index;
         ApplyPreset((GraphicsPreset)index);
         OnSettingIndexChanged?.Invoke();
-        GameInitializer.Instance.BatteryWarningHandler.DisableByUser();
-        
-    }
-    
-    public void ApplyPresetIndexWiout(int index)
-    {
-        Debug.Log($"[GraphicsSettingsManager] Apply graphics index {index}");
-        currentIndex = index;
-        OnSettingIndexChanged?.Invoke();
-        ApplyPreset((GraphicsPreset)index);
     }
 
     private void ApplyPreset(GraphicsPreset preset)
@@ -98,6 +88,4 @@ public class GraphicsSettingsManager : MonoBehaviour
         var currentConfig = presets[(int)preset].config;
         GraphicsApplier.Apply(currentConfig);
     }
-
-   
 }

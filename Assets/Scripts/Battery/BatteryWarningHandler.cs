@@ -59,15 +59,20 @@ public class BatteryWarningHandler : MonoBehaviour
 
     public void DisableByUser()
     {
-        var batteryLevel = batteryProvider.BatteryLevel;
-        var batteryStatus = batteryProvider.BatteryStatus;
-        
-        if (batteryLevel < WARNING_THRESHOLD && batteryStatus != BatteryStatus.Charging)
+        if (IsBatteryLowEnough())
         {
             Debug.Log($"BatteryWarningHandler disable by user");
             isWarned = false;
             SetEnabled(false);
         }
+    }
+
+    public bool IsBatteryLowEnough()
+    {
+        var batteryLevel = batteryProvider.BatteryLevel;
+        var batteryStatus = batteryProvider.BatteryStatus;
+
+        return batteryLevel < WARNING_THRESHOLD && batteryStatus != BatteryStatus.Charging;
     }
 
     private void Save()
