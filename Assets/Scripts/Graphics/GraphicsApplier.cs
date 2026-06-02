@@ -22,7 +22,7 @@ public static class GraphicsApplier
         // Shadow
         if (config.shadowEnabled)
         {
-            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadows = ShadowQuality.HardOnly;
             QualitySettings.shadowDistance = config.shadowDistance;
             QualitySettings.shadowResolution = config.shadowResolution;
             QualitySettings.shadowCascades = config.shadowCascades;
@@ -33,9 +33,9 @@ public static class GraphicsApplier
         }
 
         // Texture
-        QualitySettings.globalTextureMipmapLimit = config.textureMipmapLimit;
-        QualitySettings.anisotropicFiltering = config.anisotropicFiltering;
-
+        // QualitySettings.globalTextureMipmapLimit = config.textureMipmapLimit;
+        // QualitySettings.anisotropicFiltering = config.anisotropicFiltering;
+        QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
         // LOD
         QualitySettings.lodBias = config.lodBias;
         QualitySettings.maximumLODLevel = config.maxLODLevel;
