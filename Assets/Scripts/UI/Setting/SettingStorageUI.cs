@@ -1,71 +1,49 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
+ 
 public class SettingStorageUI : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI totalStorageText;
     [SerializeField] private TextMeshProUGUI usedStorageText;
     [SerializeField] private TextMeshProUGUI unusedStorageText;
     [SerializeField] private Slider storageUsedSlider;
-
-    private StorageData data;
-
+ 
+    private IStorageService storageService;
+ 
     private void Awake()
     {
-        StorageData mockData = new StorageData
-        {
-            TotalStorage = 4096f,   // 2 GB
-            UsedStorage  = 1300f,   // 1.3 GB
-            UnusedStorage = 748f,   // 748 MB
-        };
-
-        BindData(mockData);
-        UpdateUI(this.data);
+        storageService = StorageServiceFactory.Create();
+        Refresh();
     }
-
-    private void BindData(StorageData data)
-    {
-        this.data = data;
-    }
-
+ 
     private void OnEnable()
     {
-        if (data != null)
-        {
-            UpdateUI(data);
-        }
+        Refresh();
     }
 
-    public void UpdateUI(StorageData data)
+    public void Refresh()
     {
-        if (data == null)
+        if (storageService == null || !storageService.IsAvailable())
         {
-            Debug.LogWarning("[SettingStorageUI] StorageData is null");
+            Debug.LogWarning("[SettingStorageUI] StorageService không khả dụng.");
             return;
         }
 
-        totalStorageText.text = $"{FormatStorage(data.UsedStorage)} / {FormatStorage(data.TotalStorage)}";
-        usedStorageText.text = "Đã sử dụng " + FormatStorage(data.UsedStorage);
-        unusedStorageText.text = "Còn trống " + FormatStorage(data.UnusedStorage);
-
-        storageUsedSlider.value = data.TotalStorage > 0
-            ? data.UsedStorage / data.TotalStorage
-            : 0f;
+        Debug.Log($"Setting Storage UI: Update refresh");
+        
+        StorageInfo info = storageService.GetStorageInfo();
+        UpdateUI(info);
     }
-
-    private string FormatStorage(float valueInMB)
+ 
+    private void UpdateUI(StorageInfo info)
     {
-        if (valueInMB >= 1024f)
-            return $"{valueInMB / 1024f:F1} GB";
-
-        return $"{valueInMB:F1} MB";
+        totalStorageText.text   = $"{Format(info.UsedMB)} / {Format(info.TotalMB)}";
+        usedStorageText.text    = "Đã sử dụng " + Format(info.UsedMB);
+        unusedStorageText.text  = "Còn trống "  + Format(info.FreeMB);
+        storageUsedSlider.value = info.UsedPercent / 100f;
     }
-
-    public class StorageData
-    {
-        public float TotalStorage;
-        public float UsedStorage;
-        public float UnusedStorage;
-    }
+ 
+    private static string Format(float mb)
+        => mb >= 1024f ? $"{mb / 1024f:F1} GB" : $"{mb:F1} MB";
 }

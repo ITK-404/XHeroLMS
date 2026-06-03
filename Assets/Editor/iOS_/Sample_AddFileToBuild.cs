@@ -8,6 +8,7 @@ public static class Sample_AddFileToBuild
 {
     private const string CanOpenPath = "Libraries/Plugins/iOS/CanOpenURL.mm";
     private const string HardwareMachinePath = "Libraries/Plugins/iOS/HWMachine.mm";
+    private const string StoragePluginPath = "Libraries/Plugins/iOS/StoragePlugin.mm";
 
     [PostProcessBuild(9999)]
     public static void OnPostProcessBuild(BuildTarget target, string pathToBuiltProject)
@@ -17,6 +18,7 @@ public static class Sample_AddFileToBuild
         // 0) Verify file exists in built Xcode folder
         LoadFile(pathToBuiltProject, CanOpenPath);
         LoadFile(pathToBuiltProject, HardwareMachinePath);
+        LoadFile(pathToBuiltProject, StoragePluginPath);
     }
 
     private static void LoadFile(string pathToBuiltProject,string RelPath)
