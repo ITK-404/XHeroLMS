@@ -19,24 +19,23 @@ public class GameInitializer : MonoBehaviour
     {
         Instance = this;
         Debug.Log("[GameInitializer] Load các tác vụ ngầm");
-        LoginController.OnLoginComplete += LoginComplete;
     }
 
+    private FPSSceneHandle fpsSceneHandle;
 
     private void Start()
     {
+        LoginController.OnLoginComplete += LoginComplete;
+        
         var ct = this.GetCancellationTokenOnDestroy();
         InitTask(ct).Forget();
-        
-        FPSHandler.Load();
-        FPSHandler.ApplyFPS();
     }
+
 
     private void OnDestroy()
     {
-        LoginController.OnLoginComplete -= LoginComplete;
         
-        FPSHandler.Save();
+        UnbindEvent();
     }
 
     private float _lastLoginCompleteTime = -999f;
@@ -63,6 +62,15 @@ public class GameInitializer : MonoBehaviour
     public SceneLocationHandler SceneLocationHandle => sceneLocationHandle;
 
     private GraphicsSettingsManager graphicsSettingsManager;
+    
+    private GameSessionHandler gameSessionHandle;
+    public GameSessionHandler GameSessionHandler
+    {
+        get => gameSessionHandle;
+    }
+
+    private BatteryWarningHandler batteryWarningHandler;
+    public BatteryWarningHandler BatteryWarningHandler => batteryWarningHandler;
 
     private PlayerRotationConfigHandler rotConfig;
 
@@ -70,19 +78,58 @@ public class GameInitializer : MonoBehaviour
     {
         await Addressables.InitializeAsync().WithCancellation(ct);
          var runner = this;
+
+         FPSInit();
+         
         // GAME OBJECT LOADING
         // TODO: UPDATE TO ADDRESSABLE BEFORE
         sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
         sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
-        batteryWarningHandler = CreateGameObject<BatteryWarningHandler>(donDestroyOnLoad: true);
         
         // ADDRESSABLE LOADING
         
         graphicsSettingsManager = await LoadAddressable<GraphicsSettingsManager>("GraphicsSettingsManager",true,ct);
         rotConfig = await LoadAddressable<PlayerRotationConfigHandler>("PlayerRotationConfigHandler",dontDestroyOnLoad:true,ct);
+        batteryWarningHandler = await LoadAddressable<BatteryWarningHandler>("BatteryWarningHandler",dontDestroyOnLoad: true,ct);
         
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
+
+        BindEvent();
+    }
+
+    private void BindEvent()
+    {
+        // đảm bảo gọi sau khi các object khác init
+        
+        batteryWarningHandler.onBatteryLow.AddListener(HandleLowBattery);
+    }
+
+    private void UnbindEvent()
+    {
+        LoginController.OnLoginComplete -= LoginComplete;
+        
+        batteryWarningHandler.onBatteryLow.RemoveListener(HandleLowBattery);
+        
+        FPSHandler.Save();
+        fpsSceneHandle.Dispose();
+    }
+
+    private void FPSInit()
+    {
+        // INIT
+        // load save
+        FPSHandler.Load();
+        FPSHandler.ApplyFPS();
+        // setup handle logic
+        fpsSceneHandle = new FPSSceneHandle();
+        fpsSceneHandle.Init();
+    }
+    
+    private void HandleLowBattery()
+    {
+        graphicsSettingsManager.ApplyLowestPreset();
+        FPSHandler.SetLowestFrameRate();
     }
 
     private async UniTaskVoid PlaySession()
@@ -102,14 +149,7 @@ public class GameInitializer : MonoBehaviour
             gameSessionHandle.StartSession().Forget();
     }
 
-    private GameSessionHandler gameSessionHandle;
-    public GameSessionHandler GameSessionHandler
-    {
-        get => gameSessionHandle;
-    }
-
-    private BatteryWarningHandler batteryWarningHandler;
-    public BatteryWarningHandler BatteryWarningHandler => batteryWarningHandler;
+    
 
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
     {

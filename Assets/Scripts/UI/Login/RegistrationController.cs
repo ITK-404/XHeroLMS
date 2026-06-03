@@ -150,7 +150,7 @@ public class RegistrationController : MonoBehaviour
         if (!phoneOk)
             message = "Số điện thoại không hợp lệ.";
         else if (!passOk)
-            message = "Mật khẩu không hợp lệ.";
+            message = "Mật khẩu không hợp lệ. Mật khẩu phải gồm chữ cái, số và ký tự đặc biệt.";
         else if (!termsAgreed)
             message = "Hãy đồng ý điều khoản để tiếp tục.";
 

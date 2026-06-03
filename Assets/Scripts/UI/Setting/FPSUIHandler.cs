@@ -19,7 +19,8 @@ public class FPSUIHandler : MonoBehaviour
     private void OnDestroy()
     {
         toggle30.onToggleOn.RemoveListener(OnToggle30);
-        toggle60.onToggleOn.RemoveListener(OnToggle60);    }
+        toggle60.onToggleOn.RemoveListener(OnToggle60);
+    }
 
     private void OnValidate()
     {
@@ -50,8 +51,15 @@ public class FPSUIHandler : MonoBehaviour
         SyncToggleUI();
     }
 
-    public void OnToggle30() => FPSHandler.SetFPS(30);
-    public void OnToggle60() => FPSHandler.SetFPS(60);
+    public void OnToggle30() => SetFps(30);
+
+    public void OnToggle60() => SetFps(60);
+
+    private void SetFps(int fps)
+    {
+        FPSHandler.SetFPS(fps);
+        GameInitializer.Instance.BatteryWarningHandler.DisableByUser();
+    }
 
     private void SyncToggleUI()
     {

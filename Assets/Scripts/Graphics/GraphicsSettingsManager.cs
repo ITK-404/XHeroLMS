@@ -7,10 +7,13 @@ public class GraphicsSettingsManager : MonoBehaviour
     [SerializeField] private GraphicsPresetSO[] presets; // 0=Low, 1=Medium, 2=High, 3=Ultra
     private int currentIndex = 1;
 
+
+    public Action OnSettingIndexChanged;
     // LOAD SAVE
 
     private const string GRAPHICS_SAVE_KEY = "graphics_preset_select";
 
+    
     private void Awake()
     {
         Instance = this;
@@ -60,23 +63,29 @@ public class GraphicsSettingsManager : MonoBehaviour
 
         currentIndex = (int)preset;
     }
+    
+    public void ApplyLowestPreset()
+    {
+        // lowest index
+        ApplyPresetIndex(0);
+    }
 
+    public int GetActiveIndex()
+    {
+        return currentIndex;
+    }
 
     public void ApplyPresetIndex(int index)
     {
         Debug.Log($"[GraphicsSettingsManager] Apply graphics index {index}");
         currentIndex = index;
         ApplyPreset((GraphicsPreset)index);
+        OnSettingIndexChanged?.Invoke();
     }
 
-    public void ApplyPreset(GraphicsPreset preset)
+    private void ApplyPreset(GraphicsPreset preset)
     {
         var currentConfig = presets[(int)preset].config;
         GraphicsApplier.Apply(currentConfig);
-    }
-
-    public int GetActiveIndex()
-    {
-        return currentIndex;
     }
 }

@@ -100,6 +100,7 @@ public class LoadRoomTrigger : MonoBehaviour
 
     private void SavePositionToLoad()
     {
+        if (returnPoint == null) return;
         Vector3 spawnPosition = returnPoint.transform.position + extraOffset;
         Quaternion rotation = returnPoint.transform.rotation;
         LoadingTransition.SavePosition(spawnPosition, rotation);

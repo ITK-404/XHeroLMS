@@ -21,7 +21,7 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
     [SerializeField] public UnityEvent onToggleOn;
     [SerializeField] public UnityEvent onToggleOff;
 
-    private ToggleSwitchGroupManager toggleSwitchGroupManager;
+    [SerializeField] private ToggleSwitchGroupManager toggleSwitchGroupManager;
     protected Action transitionEffect;
 
     protected virtual void OnValidate()
@@ -73,7 +73,12 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
         AnimateSlider();
     }
 
-    private void AnimateSlider()
+    public void ForceSetState(bool newState)
+    {
+        CurrentValue = newState;
+    }
+
+    public void AnimateSlider()
     {
         float target = CurrentValue ? 1f : 0f;
 
