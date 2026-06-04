@@ -17,8 +17,8 @@ public class CourseListView : MonoBehaviour
     public VideoPlayer videoPlayer;
 
     [Header("Exam Camera & Panel")]
-    [SerializeField] private Transform examCamera;      // gán Main Camera (hoặc camera bạn dùng)
-    [SerializeField] private GameObject examPanelRoot;  // panel bài kiểm tra (ẩn sẵn)
+    [SerializeField] private Transform examCamera;
+    [SerializeField] private GameObject examPanelRoot;
     [SerializeField] private float examMoveDuration = 1.5f;
     private Coroutine examCamRoutine;
     private Vector3 defaultCameraPosition;
@@ -59,19 +59,27 @@ public class CourseListView : MonoBehaviour
 
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
     [Header("Android Local Proxy Buffer")]
-[SerializeField] private bool useProxyPreloadOnAndroid = true;
+    [SerializeField] private bool useProxyPreloadOnAndroid = true;
 
-[Tooltip("Số MB cần cache trước rồi mới Prepare video.")]
-[SerializeField] private int preloadBeforePrepareMB = 20;
+    [Tooltip("Số MB cần cache trước rồi mới Prepare video.")]
+    [SerializeField] private int preloadBeforePrepareMB = 20;
 
-[Tooltip("Thời gian chờ cache tối đa trước khi vẫn cho video chạy.")]
-[SerializeField] private float preloadTimeoutSeconds = 10f;
+    [Tooltip("Thời gian chờ cache tối đa trước khi vẫn cho video chạy.")]
+    [SerializeField] private float preloadTimeoutSeconds = 10f;
 
-[Tooltip("Bật log đo cache/preload.")]
-[SerializeField] private bool debugProxyPreload = true;
+    [Tooltip("Bật log đo cache/preload.")]
+    [SerializeField] private bool debugProxyPreload = true;
 
-private Coroutine _playVideoRoutine;
-private int _playVideoToken;
+    private Coroutine _playVideoRoutine;
+    private int _playVideoToken;
+
+    public const string FinalExamType = "FINAL_EXAM";
+    public Action<LessonUI> OnClickFinalExamEvt;
+
+    [SerializeField] private bool debugFinalExam = true;
+
+    private static readonly string[] FinalExamIdKeys = { "examId", "_id", "id" };
+
     void Awake()
     {
         proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
@@ -103,68 +111,80 @@ private int _playVideoToken;
             foreach (var ch in p.chapters)
             {
                 if (ch == null) continue;
-                if (ch.chapterTitle == "Tài liệu khóa học")
-                {
-                    continue;
-                }
 
-                // Header CHAPTER (nếu có tên)
+                if (ch.chapterTitle == "Tài liệu khóa học")
+                    continue;
+
                 string chapTitle = string.IsNullOrEmpty(ch.chapterTitle) ? "" : ch.chapterTitle.Trim();
                 ChapterUI headerChapter = null;
+
                 if (!string.IsNullOrEmpty(chapTitle))
                 {
                     headerChapter = Instantiate(headerPrefab, content);
                     headerChapter.titleName.text = $"{chapTitle}";
                     headerChapter.chapterID = ch._id;
+                    ChapterUIManager.Instance.AddToList(headerChapter);
                 }
 
-                ChapterUIManager.Instance.AddToList(headerChapter);
+                if (headerChapter == null)
+                    continue;
 
-                // Các bài học trong chapter
                 if (ch.lessons == null) continue;
+
                 foreach (var lesson in ch.lessons)
                 {
                     if (lesson == null) continue;
 
                     string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
-                    if (string.IsNullOrEmpty(lessonTitle)) continue; // ẩn bài không tên
+                    if (string.IsNullOrEmpty(lessonTitle)) continue;
 
-                    string link2 = !string.IsNullOrEmpty(lesson.videoLink2)
-                        ? lesson.videoLink2
-                        : (!string.IsNullOrEmpty(lesson.videoLink) ? lesson.videoLink : "");
+                    // Quan trọng:
+                    // - Video: ưu tiên videoLink2/videoLink.
+                    // - Tài liệu/PDF/Text: ưu tiên docAttach[0].uri.
+                    string link2 = ResolveLessonPlayableUrl(lesson);
+
+                    Debug.Log($"[Lesson Link Map] title={lesson.title} | type={lesson.type} | finalLink={link2}");
 
                     var lessonUI = Instantiate(itemPrefab, headerChapter.lessonContainer.transform);
                     lessonUI.titleTMP.text = $"{lessonTitle}";
                     lessonUI.linkVideo2 = link2;
                     lessonUI.lessonID = lesson._id;
                     lessonUI.type = lesson.type;
-
                     lessonUI.chapterUI = headerChapter;
 
-                    lessonUI.percent = lesson.completionCondition.percent;
-                    // lessonUI.OnClickPlayVideo = PlayVideo;
-                    lessonUI.OnClickPlayVideo = (url) =>
+                    if (lesson.completionCondition != null)
+                        lessonUI.percent = lesson.completionCondition.percent;
+
+                    lessonUI.OnClickPlayVideo = (_) =>
                     {
-                        // lưu link gốc cho Next (không phải proxy url)
-                        if (videoPlayerControllerPro) videoPlayerControllerPro.SetCurrentUrl(url);
-                        // PlayVideo(url);
                         PlayLesson(lessonUI);
                     };
 
                     lessonUI.progressTime = lesson.progressTime;
 
-
-                    // parse duration 
                     int.TryParse(lesson.duration, out var duration);
                     lessonUI.duration = duration;
-                    // update progress time
-                    // int.TryParse(lesson.progressTime, out int progressTime);
-                    if (lessonUI.type != "FINAL_EXAM" && !string.IsNullOrEmpty(lessonUI.linkVideo2))
+
+                    // Chỉ đưa video thật vào danh sách Next.
+                    // Tài liệu/PDF không được đưa vào pipeline video/proxy.
+                    if (!string.IsNullOrEmpty(lessonUI.linkVideo2) && IsVideoLesson(lessonUI))
+                    {
                         _videoLessons.Add(lessonUI);
+                    }
 
                     lessonUI.SetActive(false);
-                    Debug.Log(
-                        $"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}");
+
+                    if (lesson.completionCondition != null)
+                    {
+                        Debug.Log(
+                            $"Title {lesson.title} Condition {lesson.completionCondition.condition} Percent {lesson.completionCondition.percent}"
+                        );
+                    }
+                    else
+                    {
+                        Debug.Log($"Title {lesson.title} Condition <null>");
+                    }
+
                     headerChapter.AddToList(lessonUI);
                 }
             }
@@ -176,170 +196,313 @@ private int _playVideoToken;
         {
             var headerFinal = Instantiate(headerPrefab, content);
             headerFinal.titleName.text = finalExamSectionTitle;
-            headerFinal.chapterID = null; // không cần id chương
+            headerFinal.chapterID = null;
             headerFinal.SetFinalExam();
+
             ChapterUIManager.Instance.AddToList(headerFinal);
             ChapterUIManager.Instance.finalExamChapter = headerFinal;
+
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
             finalItem.titleTMP.text = finalExamItemTitle;
-            finalItem.linkVideo2 = ""; // không dùng video
-            finalItem.lessonID = finalExamId; // giữ examId để xử lý sau
-            finalItem.type = FinalExamType; // đánh dấu loại
+            finalItem.linkVideo2 = "";
+            finalItem.lessonID = finalExamId;
+            finalItem.type = FinalExamType;
             finalItem.chapterUI = headerFinal;
-            headerFinal.AddToList(finalItem);
-
-            // Click = chuyển sang scene thi (lưu prefs)
-            // finalItem.OnClickPlayVideo = (_) => OnClickFinalExam(finalItem);
             finalItem.OnClickPlayVideo = (_) => OnClickFinalExamEvt?.Invoke(finalItem);
             finalItem.SetActive(false);
-            ChapterUIManager.Instance.AddToList(headerFinal);
+
+            headerFinal.AddToList(finalItem);
         }
 
-        // Rebuild layout để tính lại vị trí/chiều cao
         ChapterUIManager.Instance.UpdateLessonProgress();
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)content);
 
-        if (scrollRect) scrollRect.verticalNormalizedPosition = 1f;
+        if (scrollRect)
+            scrollRect.verticalNormalizedPosition = 1f;
     }
 
-    public const string FinalExamType = "FINAL_EXAM";
-    public Action<LessonUI> OnClickFinalExamEvt;
-private void PlayVideo(string url)
-{
-    if (_playVideoRoutine != null)
+    private static string ResolveLessonPlayableUrl(object lesson)
     {
-        StopCoroutine(_playVideoRoutine);
-        _playVideoRoutine = null;
+        if (lesson == null) return "";
+
+        string type = GetStringMember(lesson, "type")?.Trim().ToUpperInvariant();
+
+        bool isDocumentType =
+            type == "TEXT" ||
+            type == "DOCUMENT" ||
+            type == "DOC" ||
+            type == "PDF" ||
+            type == "FILE" ||
+            type == "HTML";
+
+        // Với tài liệu/text/pdf: ưu tiên docAttach[].uri trước.
+        if (isDocumentType)
+        {
+            string docUrl = GetFirstDocAttachUri(lesson);
+            if (!string.IsNullOrWhiteSpace(docUrl))
+                return docUrl.Trim();
+        }
+
+        // Với video: ưu tiên videoLink2 rồi videoLink.
+        string video2 = GetStringMember(lesson, "videoLink2");
+        if (!string.IsNullOrWhiteSpace(video2))
+            return video2.Trim();
+
+        string video1 = GetStringMember(lesson, "videoLink");
+        if (!string.IsNullOrWhiteSpace(video1))
+            return video1.Trim();
+
+        // Nếu API trả tài liệu bằng field trực tiếp.
+        string direct =
+            GetStringMember(lesson, "url") ??
+            GetStringMember(lesson, "link") ??
+            GetStringMember(lesson, "content") ??
+            GetStringMember(lesson, "text") ??
+            GetStringMember(lesson, "html") ??
+            GetStringMember(lesson, "documentUrl") ??
+            GetStringMember(lesson, "documentLink") ??
+            GetStringMember(lesson, "fileUrl") ??
+            GetStringMember(lesson, "fileLink");
+
+        if (!string.IsNullOrWhiteSpace(direct))
+            return direct.Trim();
+
+        // Fallback cuối: vẫn thử đọc docAttach để tránh API type thiếu/chưa chuẩn.
+        string fallbackDoc = GetFirstDocAttachUri(lesson);
+        return string.IsNullOrWhiteSpace(fallbackDoc) ? "" : fallbackDoc.Trim();
     }
 
-    _playVideoToken++;
-    _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
-}
-
-private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
-{
-    if (string.IsNullOrEmpty(originUrl) || !videoPlayer)
-        yield break;
-
-    if (!proxyBoot)
-        proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
-
-    string finalUrl = originUrl;
-
-    _videoStartRealtime = Time.realtimeSinceStartup;
-    _videoStartUrl = originUrl;
-    _loggedFirstFrame = false;
-
-    Debug.Log($"[testvideo][1] Got origin URL. t={_videoStartRealtime:F3}s | url={originUrl}");
-
-    try
+    private static string GetFirstDocAttachUri(object lesson)
     {
-        videoPlayer.Stop();
+        object docAttach =
+            GetMemberValue(lesson, "docAttach") ??
+            GetMemberValue(lesson, "docAttachments") ??
+            GetMemberValue(lesson, "documents") ??
+            GetMemberValue(lesson, "files");
+
+        if (docAttach == null) return null;
+
+        // Trường hợp docAttach là string trực tiếp.
+        if (docAttach is string s)
+            return string.IsNullOrWhiteSpace(s) ? null : s;
+
+        if (!(docAttach is IEnumerable enumerable))
+            return null;
+
+        foreach (var item in enumerable)
+        {
+            if (item == null) continue;
+
+            string uri =
+                GetStringMember(item, "uri") ??
+                GetStringMember(item, "url") ??
+                GetStringMember(item, "link") ??
+                GetStringMember(item, "fileUrl") ??
+                GetStringMember(item, "fileLink");
+
+            if (!string.IsNullOrWhiteSpace(uri))
+                return uri;
+        }
+
+        return null;
     }
-    catch { }
 
-    videoPlayer.errorReceived -= OnVideoError;
-    videoPlayer.errorReceived += OnVideoError;
+    private void PlayVideo(LessonUI lesson)
+    {
+        if (lesson == null) return;
 
-    videoPlayer.prepareCompleted -= OnVideoPrepared;
-    videoPlayer.prepareCompleted += OnVideoPrepared;
+        string url = lesson.linkVideo2;
 
-    videoPlayer.frameReady -= OnVideoFrameReady;
-    videoPlayer.frameReady += OnVideoFrameReady;
-    videoPlayer.sendFrameReadyEvents = true;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            Debug.LogWarning("[CourseListView] Empty video url.");
+            return;
+        }
+
+        if (!IsVideoLesson(lesson))
+        {
+            Debug.LogWarning($"[CourseListView] Block non-video lesson from PlayVideo. type={lesson.type}, url={url}");
+            return;
+        }
+
+        // Dừng VideoPlayer/coroutine cũ trước khi mở URL mới để socket cũ đóng hẳn.
+        StopVideoPipeline();
+
+        _playVideoToken++;
+        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
+    }
+
+    private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
+    {
+        if (string.IsNullOrEmpty(originUrl) || !videoPlayer)
+            yield break;
+
+        if (!proxyBoot)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        string finalUrl = originUrl;
+
+        _videoStartRealtime = Time.realtimeSinceStartup;
+        _videoStartUrl = originUrl;
+        _loggedFirstFrame = false;
+
+        Debug.Log($"[testvideo][1] Got origin URL. t={_videoStartRealtime:F3}s | url={originUrl}");
+
+        PrepareVideoPlayerForNewUrl();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-    if (useProxyPreloadOnAndroid && proxyBoot && proxyBoot.enableProxyOnAndroid)
-    {
-        bool started = proxyBoot.EnsureStarted();
-
-        if (started)
+        if (useProxyPreloadOnAndroid && proxyBoot && proxyBoot.enableProxyOnAndroid)
         {
-            long minBufferBytes = Mathf.Max(1, preloadBeforePrepareMB) * 1024L * 1024L;
+            bool started = proxyBoot.EnsureStarted();
 
-            proxyBoot.Preload(originUrl, 0);
-
-            float waitStart = Time.realtimeSinceStartup;
-            long cachedUntil = -1;
-            long totalBytes = -1;
-
-            while (Time.realtimeSinceStartup - waitStart < preloadTimeoutSeconds)
+            if (started)
             {
-                if (token != _playVideoToken)
-                    yield break;
+                long minBufferBytes = Mathf.Max(1, preloadBeforePrepareMB) * 1024L * 1024L;
 
-                cachedUntil = proxyBoot.GetCachedUntil(originUrl);
-                totalBytes = proxyBoot.GetTotalBytes(originUrl);
+                proxyBoot.Preload(originUrl, 0);
+
+                float waitStart = Time.realtimeSinceStartup;
+                long cachedUntil = -1;
+                long totalBytes = -1;
+
+                while (Time.realtimeSinceStartup - waitStart < preloadTimeoutSeconds)
+                {
+                    if (token != _playVideoToken)
+                        yield break;
+
+                    cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+                    totalBytes = proxyBoot.GetTotalBytes(originUrl);
+
+                    if (debugProxyPreload)
+                    {
+                        Debug.Log(
+                            $"[LocalProxy][Preload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / need={FormatBytes(minBufferBytes)}"
+                        );
+                    }
+
+                    if (cachedUntil >= minBufferBytes)
+                        break;
+
+                    yield return null;
+                }
+
+                finalUrl = proxyBoot.GetPlayableUrl(originUrl);
 
                 if (debugProxyPreload)
                 {
+                    float waited = Time.realtimeSinceStartup - waitStart;
+
                     Debug.Log(
-                        $"[LocalProxy][Preload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / need={FormatBytes(minBufferBytes)}"
+                        $"[LocalProxy][Preload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
                     );
                 }
-
-                if (cachedUntil >= minBufferBytes)
-                    break;
-
-                yield return null;
             }
-
-            finalUrl = proxyBoot.GetPlayableUrl(originUrl);
-
-            if (debugProxyPreload)
+            else
             {
-                float waited = Time.realtimeSinceStartup - waitStart;
-
-                Debug.Log(
-                    $"[LocalProxy][Preload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
-                );
+                Debug.LogWarning("[LocalProxy] Proxy start failed. Fallback to origin URL.");
             }
         }
-        else
-        {
-            Debug.LogWarning("[LocalProxy] Proxy start failed. Fallback to origin URL.");
-        }
-    }
 #endif
 
-    if (token != _playVideoToken)
-        yield break;
+        if (token != _playVideoToken)
+            yield break;
 
-    _videoStartUrl = finalUrl;
+        _videoStartUrl = finalUrl;
 
-    Debug.Log($"[testvideo][1.5] Prepare video. t={Time.realtimeSinceStartup:F3}s | url={finalUrl}");
+        Debug.Log($"[testvideo][1.5] Prepare video. t={Time.realtimeSinceStartup:F3}s | url={finalUrl}");
 
-    videoPlayer.source = VideoSource.Url;
-    videoPlayer.url = finalUrl;
-    videoPlayer.Prepare();
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = finalUrl;
+        videoPlayer.Prepare();
 
-    if (learnUI && learnUI.toggleLessonScrollView != null)
-    {
-        learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        if (learnUI && learnUI.toggleLessonScrollView != null)
+        {
+            learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        }
     }
-}
 
-private static string FormatBytes(long bytes)
-{
-    if (bytes < 0)
-        return "<unknown>";
+    private void PrepareVideoPlayerForNewUrl()
+    {
+        if (!videoPlayer) return;
 
-    const long KB = 1024;
-    const long MB = KB * 1024;
-    const long GB = MB * 1024;
+        videoPlayer.errorReceived -= OnVideoError;
+        videoPlayer.prepareCompleted -= OnVideoPrepared;
+        videoPlayer.frameReady -= OnVideoFrameReady;
 
-    if (bytes >= GB)
-        return $"{bytes / (float)GB:F2}GB";
+        videoPlayer.errorReceived += OnVideoError;
+        videoPlayer.prepareCompleted += OnVideoPrepared;
+        videoPlayer.frameReady += OnVideoFrameReady;
+        videoPlayer.sendFrameReadyEvents = true;
 
-    if (bytes >= MB)
-        return $"{bytes / (float)MB:F2}MB";
+        videoPlayer.playOnAwake = false;
+        videoPlayer.waitForFirstFrame = true;
+        videoPlayer.skipOnDrop = true;
 
-    if (bytes >= KB)
-        return $"{bytes / (float)KB:F2}KB";
+        try
+        {
+            videoPlayer.Stop();
+        }
+        catch { }
 
-    return $"{bytes}B";
-}
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = string.Empty;
+        videoPlayer.clip = null;
+    }
+
+    private void StopVideoPipeline()
+    {
+        if (_playVideoRoutine != null)
+        {
+            StopCoroutine(_playVideoRoutine);
+            _playVideoRoutine = null;
+        }
+
+        // Tăng token để mọi coroutine video cũ tự hủy.
+        _playVideoToken++;
+
+        if (videoPlayer)
+        {
+            videoPlayer.errorReceived -= OnVideoError;
+            videoPlayer.prepareCompleted -= OnVideoPrepared;
+            videoPlayer.frameReady -= OnVideoFrameReady;
+            videoPlayer.sendFrameReadyEvents = false;
+
+            try
+            {
+                videoPlayer.Stop();
+            }
+            catch { }
+
+            videoPlayer.url = string.Empty;
+            videoPlayer.clip = null;
+        }
+
+        _videoStartUrl = null;
+        _loggedFirstFrame = false;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 0)
+            return "<unknown>";
+
+        const long KB = 1024;
+        const long MB = KB * 1024;
+        const long GB = MB * 1024;
+
+        if (bytes >= GB)
+            return $"{bytes / (float)GB:F2}GB";
+
+        if (bytes >= MB)
+            return $"{bytes / (float)MB:F2}MB";
+
+        if (bytes >= KB)
+            return $"{bytes / (float)KB:F2}KB";
+
+        return $"{bytes}B";
+    }
+
     private void OnVideoError(VideoPlayer vp, string msg)
     {
         Debug.LogError("[VideoPlayer] error: " + msg);
@@ -371,27 +534,36 @@ private static string FormatBytes(long bytes)
         obj.SetActive(!string.IsNullOrEmpty(trimmed));
     }
 
-    static object GetMemberValue(object obj, string name)
+    private static object GetMemberValue(object obj, string name)
     {
         if (obj == null) return null;
         var t = obj.GetType();
 
-        var fi = t.GetField(name,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Instance);
+        var fi = t.GetField(
+            name,
+            System.Reflection.BindingFlags.Public |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance
+        );
+
         if (fi != null) return fi.GetValue(obj);
 
-        var pi = t.GetProperty(name,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Instance);
+        var pi = t.GetProperty(
+            name,
+            System.Reflection.BindingFlags.Public |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance
+        );
+
         if (pi != null) return pi.GetValue(obj, null);
 
         return null;
     }
 
-    static string GetStringMember(object obj, params string[] names)
+    private static string GetStringMember(object obj, params string[] names)
     {
         if (obj == null || names == null) return null;
+
         foreach (var n in names)
         {
             var v = GetMemberValue(obj, n) as string;
@@ -401,24 +573,23 @@ private static string FormatBytes(long bytes)
         return null;
     }
 
-    // ====== Tìm ID chỉ trong finalExam ======
-    static readonly string[] FinalExamIdKeys = { "examId", "_id", "id" };
-
     // ID hợp lệ (Mongo 24 hex)
-    static bool IsLikelyId(string s)
+    private static bool IsLikelyId(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return false;
+
         var t = s.Trim();
         return System.Text.RegularExpressions.Regex.IsMatch(t, "^[a-fA-F0-9]{24}$");
     }
 
     // Chỉ quét trong object finalExam, KHÔNG fallback sang settings/course
-    static string FindIdInObjectOnly(object obj)
+    private static string FindIdInObjectOnly(object obj)
     {
         if (obj == null) return null;
 
         // string trực tiếp
-        if (obj is string s && IsLikelyId(s)) return s.Trim();
+        if (obj is string s && IsLikelyId(s))
+            return s.Trim();
 
         // dictionary
         if (obj is System.Collections.IDictionary dict)
@@ -430,7 +601,7 @@ private static string FormatBytes(long bytes)
 
                 foreach (var k in FinalExamIdKeys)
                 {
-                    if (string.Equals(ks, k, System.StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(ks, k, StringComparison.OrdinalIgnoreCase))
                     {
                         var val = dict[key];
                         var hit = FindIdInObjectOnly(val);
@@ -443,7 +614,6 @@ private static string FormatBytes(long bytes)
         }
 
         // object thường: thử đúng các key ID
-        var t = obj.GetType();
         foreach (var k in FinalExamIdKeys)
         {
             var v = GetMemberValue(obj, k);
@@ -454,43 +624,35 @@ private static string FormatBytes(long bytes)
         return null;
     }
 
-    [SerializeField] bool debugFinalExam = true;
-
     // Chỉ trả ID khi THẬT SỰ có settings.finalExam
     public static string TryGetFinalExamId(object courseLike)
     {
-        // Một số API trả { course: {...} }, số khác trả thẳng {...}
         var course = GetMemberValue(courseLike, "course") ?? courseLike;
 
-        // Tìm settings ở các tên phổ biến
         var settings = GetMemberValue(course, "settings")
                        ?? GetMemberValue(course, "courseSettings");
 
-        // finalExam có thể nằm trong settings hoặc (ít gặp) ngay trên course
         var finalExam = GetMemberValue(settings, "finalExam")
                         ?? GetMemberValue(course, "finalExam");
 
-        // Không có finalExam => không có bài thi
         if (finalExam == null)
-        {
-            // if (debugFinalExam) Debug.Log("[CourseListView] finalExam: null -> no exam.");
             return null;
-        }
 
-        // Nếu là string/id hoặc object chứa id
         string id = FindIdInObjectOnly(finalExam);
 
-        // if (debugFinalExam)
-        {
-            var tFinal = finalExam.GetType().FullName;
-            Debug.Log($"[CourseListView] finalExam type={tFinal}, parsedId={(id ?? "<null>")}");
-        }
+        var tFinal = finalExam.GetType().FullName;
+        Debug.Log($"[CourseListView] finalExam type={tFinal}, parsedId={(id ?? "<null>")}");
 
         return IsLikelyId(id) ? id : null;
     }
+
     public LessonUI PlayNextFromUrl(string currentUrl)
     {
         if (_videoLessons == null || _videoLessons.Count == 0) return null;
+
+        // Nếu currentUrl là local proxy URL thì đổi ngược về origin URL
+        // để so với lesson.linkVideo2.
+        currentUrl = NormalizeProxyUrlToOrigin(currentUrl);
 
         int startIndex = -1;
 
@@ -514,14 +676,49 @@ private static string FormatBytes(long bytes)
         return _videoLessons[nextIndex];
     }
 
+    private string NormalizeProxyUrlToOrigin(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+
+        int uIndex = url.IndexOf("?u=", StringComparison.OrdinalIgnoreCase);
+        if (uIndex < 0)
+            uIndex = url.IndexOf("&u=", StringComparison.OrdinalIgnoreCase);
+
+        if (uIndex < 0)
+            return url;
+
+        string encoded = url.Substring(uIndex + 3);
+        int amp = encoded.IndexOf('&');
+        if (amp >= 0)
+            encoded = encoded.Substring(0, amp);
+
+        try
+        {
+            return Uri.UnescapeDataString(encoded);
+        }
+        catch
+        {
+            return url;
+        }
+    }
+
     public void PlayLesson(LessonUI lesson)
     {
         if (lesson == null) return;
 
+        bool targetIsDocument = IsDocumentLesson(lesson);
+        bool targetIsVideo = IsVideoLesson(lesson);
+        bool targetIsFinalExam = IsFinalExamLesson(lesson);
+
+        // Không chặn tài liệu bằng rule hoàn thành video.
+        // Chỉ chặn khi đang xem video chưa xong mà muốn qua video/bài thi khác.
         if (_currentLesson != null && _currentLesson != lesson)
         {
-            // Check bài HIỆN TẠI đã done chưa
-            if (!_currentLesson.IsLessonDone())
+            bool currentIsBlockingVideo = IsVideoLesson(_currentLesson);
+            bool targetRequiresPreviousDone = targetIsVideo || targetIsFinalExam;
+
+            if (currentIsBlockingVideo && targetRequiresPreviousDone && !_currentLesson.IsLessonDone())
             {
                 LoadingUI.ShowErrorPopup(
                     message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
@@ -531,28 +728,87 @@ private static string FormatBytes(long bytes)
                 return;
             }
         }
-        
+
         LessonProgressTracker.Instance.UpdateLesson(null);
+
         // Clear selection cũ
         if (_currentLesson != null && _currentLesson != lesson)
         {
-            Debug.Log($"[CourseListView] Clear selection lesson cũ");
+            Debug.Log("[CourseListView] Clear selection lesson cũ");
             _currentLesson.SetActive(false);
 
             if (_currentLesson.chapterUI != null && _currentLesson.chapterUI != lesson.chapterUI)
             {
-                Debug.Log($"[CourseListView] Clear chapter lesson cũ");
+                Debug.Log("[CourseListView] Clear chapter lesson cũ");
                 _currentLesson.chapterUI.ChangeState(ChapterUI.ChapterState.Normal);
                 _currentLesson.chapterUI.ResetLessonState();
             }
         }
 
-        Debug.Log($"[CourseListView] Cập nhật lesson mới");
-        _currentLesson = lesson;
-        _currentLesson.chapterUI.SelectThisChapter();
-        _currentLesson.chapterUI.SelectLesson(_currentLesson);
+        Debug.Log($"[CourseListView] Cập nhật lesson mới | title={lesson.titleTMP?.text} | type={lesson.type} | url={lesson.linkVideo2}");
 
-        PlayVideo(_currentLesson.linkVideo2);
+        _currentLesson = lesson;
+
+        if (_currentLesson.chapterUI != null)
+        {
+            _currentLesson.chapterUI.SelectThisChapter();
+            _currentLesson.chapterUI.SelectLesson(_currentLesson);
+        }
+
+        // ===== FINAL EXAM =====
+        if (targetIsFinalExam)
+        {
+            StopVideoPipeline();
+            OnClickFinalExamEvt?.Invoke(_currentLesson);
+            return;
+        }
+
+        // ===== DOCUMENT/PDF/TEXT =====
+        if (targetIsDocument)
+        {
+            Debug.Log("[CourseListView] Open document, skip video/proxy: " + _currentLesson.linkVideo2);
+
+            if (string.IsNullOrWhiteSpace(_currentLesson.linkVideo2))
+            {
+                Debug.LogWarning(
+                    $"[CourseListView] Document lesson has empty URL. title={_currentLesson.titleTMP?.text}, type={_currentLesson.type}"
+                );
+                return;
+            }
+
+            StopVideoPipeline();
+
+            if (videoPlayerControllerPro != null)
+            {
+                videoPlayerControllerPro.SetCurrentUrl(null);
+                videoPlayerControllerPro.ShowDocumentInCurrentMode(_currentLesson.linkVideo2);
+            }
+            else
+            {
+                Debug.LogWarning("[CourseListView] Missing VideoPlayerControllerPro, cannot show document.");
+            }
+
+            return;
+        }
+
+        // ===== VIDEO =====
+        if (targetIsVideo)
+        {
+            Debug.Log("[CourseListView] Play video: " + _currentLesson.linkVideo2);
+
+            if (videoPlayerControllerPro != null)
+            {
+                videoPlayerControllerPro.SetCurrentUrl(_currentLesson.linkVideo2);
+                videoPlayerControllerPro.ShowVideoInCurrentMode();
+            }
+
+            PlayVideo(_currentLesson);
+            return;
+        }
+
+        Debug.LogWarning(
+            $"[CourseListView] Unsupported lesson content. type={_currentLesson.type}, url={_currentLesson.linkVideo2}"
+        );
     }
 
     private void OnVideoPrepared(VideoPlayer vp)
@@ -560,20 +816,107 @@ private static string FormatBytes(long bytes)
         vp.Play();
     }
 
-private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
-{
-    if (_loggedFirstFrame)
-        return;
+    private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
+    {
+        if (_loggedFirstFrame)
+            return;
 
-    _loggedFirstFrame = true;
+        _loggedFirstFrame = true;
 
-    float now = Time.realtimeSinceStartup;
-    float delta = now - _videoStartRealtime;
+        float now = Time.realtimeSinceStartup;
+        float delta = now - _videoStartRealtime;
 
-    Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+        Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
 
-    vp.frameReady -= OnVideoFrameReady;
-    vp.sendFrameReadyEvents = false;
-}
+        vp.frameReady -= OnVideoFrameReady;
+        vp.sendFrameReadyEvents = false;
+    }
 
+    private bool IsFinalExamLesson(LessonUI lesson)
+    {
+        return lesson != null &&
+               string.Equals(lesson.type, FinalExamType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsVideoLesson(LessonUI lesson)
+    {
+        if (lesson == null) return false;
+
+        string type = lesson.type?.Trim().ToUpperInvariant();
+
+        if (type == "VIDEO" ||
+            type == "LESSON_VIDEO" ||
+            type == "MP4" ||
+            type == "HLS")
+        {
+            return true;
+        }
+
+        if (type == "TEXT" ||
+            type == "DOCUMENT" ||
+            type == "DOC" ||
+            type == "PDF" ||
+            type == "FILE" ||
+            type == "HTML")
+        {
+            return false;
+        }
+
+        return IsVideoUrl(lesson.linkVideo2);
+    }
+
+    private bool IsDocumentLesson(LessonUI lesson)
+    {
+        if (lesson == null) return false;
+
+        string type = lesson.type?.Trim().ToUpperInvariant();
+
+        if (type == "TEXT" ||
+            type == "DOCUMENT" ||
+            type == "DOC" ||
+            type == "PDF" ||
+            type == "FILE" ||
+            type == "HTML")
+        {
+            return true;
+        }
+
+        if (type == "VIDEO" ||
+            type == "LESSON_VIDEO" ||
+            type == "MP4" ||
+            type == "HLS")
+        {
+            return false;
+        }
+
+        return IsDocumentUrl(lesson.linkVideo2);
+    }
+
+    private bool IsVideoUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+
+        string lower = url.ToLowerInvariant();
+
+        return lower.Contains(".mp4")
+               || lower.Contains(".m3u8")
+               || lower.Contains(".mov")
+               || lower.Contains(".webm")
+               || lower.Contains(".m4v");
+    }
+
+    private bool IsDocumentUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+
+        string lower = url.ToLowerInvariant();
+
+        return lower.Contains(".pdf")
+               || lower.Contains(".doc")
+               || lower.Contains(".docx")
+               || lower.Contains(".ppt")
+               || lower.Contains(".pptx")
+               || lower.Contains(".xls")
+               || lower.Contains(".xlsx");
+    }
 }
