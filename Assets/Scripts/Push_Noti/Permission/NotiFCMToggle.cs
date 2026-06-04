@@ -71,6 +71,22 @@ public class NotiFCMToggle : MonoBehaviour
 
     private void OpenAppSettings()
     {
-        Application.OpenURL("app-settings:");
+#if UNITY_IOS
+    Application.OpenURL("app-settings:");
+#elif UNITY_ANDROID
+        using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+        using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+        using (AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent",
+                   "android.settings.APPLICATION_DETAILS_SETTINGS"))
+        {
+            AndroidJavaObject uri = new AndroidJavaClass("android.net.Uri")
+                .CallStatic<AndroidJavaObject>("fromParts", "package", Application.identifier, null);
+        
+            intent.Call<AndroidJavaObject>("setData", uri);
+            intent.Call<AndroidJavaObject>("addFlags", 0x10000000); // FLAG_ACTIVITY_NEW_TASK
+            currentActivity.Call("startActivity", intent);
+        }
+#endif
     }
+    
 }
