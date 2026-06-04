@@ -5,19 +5,19 @@ using UnityEngine.Android;
 
 public class AndroidNotificationPermissionService : INotificationPermissionService
 {
-    private const string Permission =
+    private const string NotificationPermission =
         "android.permission.POST_NOTIFICATIONS";
 
     public bool HasPermission()
     {
-        return Permission.HasUserAuthorizedPermission(Permission);
+        return Permission.HasUserAuthorizedPermission(NotificationPermission);
     }
 
     public void RequestPermission()
     {
         if (!HasPermission())
         {
-            Permission.RequestUserPermission(Permission);
+            Permission.RequestUserPermission(NotificationPermission);
         }
     }
 }
