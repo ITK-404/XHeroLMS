@@ -61,21 +61,16 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
     }
 
     public void ToggleByGroupManager(bool value) => SetState(value);
-
-    private void SetState(bool state)
+    
+    public void SetState(bool state, bool notify = true)
     {
         bool previous = CurrentValue;
         CurrentValue = state;
 
-        if (previous != CurrentValue)
+        if (notify && previous != CurrentValue)
             (CurrentValue ? onToggleOn : onToggleOff)?.Invoke();
 
         AnimateSlider();
-    }
-
-    public void ForceSetState(bool newState)
-    {
-        CurrentValue = newState;
     }
 
     public void AnimateSlider()

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class NotiFCMToggle : MonoBehaviour
@@ -16,6 +17,21 @@ public class NotiFCMToggle : MonoBehaviour
         RefreshUI();
     }
 
+    private void OnEnable()
+    {
+        RefreshUI();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        RefreshUI();
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        RefreshUI();
+    }
+
     private void OnDestroy()
     {
         toggleSwitch.onToggleOn.RemoveListener(TryGetPermission);
@@ -25,9 +41,8 @@ public class NotiFCMToggle : MonoBehaviour
     private void RefreshUI()
     {
         bool hasPermission = permissionService?.HasPermission() ?? false;
-
-        toggleSwitch.ForceSetState(hasPermission);
-        toggleSwitch.AnimateSlider();
+        Debug.Log($"NotiFCMToggle: {hasPermission}");
+        toggleSwitch.SetState(hasPermission, false);
     }
 
     private void TryGetPermission()
