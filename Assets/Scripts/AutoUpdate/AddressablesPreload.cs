@@ -75,7 +75,7 @@ public class AddressablesPreload : MonoBehaviour
     /// Text cho UI loading.
     /// IntroManager nên ưu tiên lấy text này.
     /// </summary>
-    public string LoadingText { get; private set; } = "Đang chuẩn bị tài nguyên (1%)";
+    public string LoadingText { get; private set; } = "Đang chuẩn bị tài nguyên";
 
     public long NetworkSpeedBytesPerSecond { get; private set; }
 
@@ -281,7 +281,7 @@ public class AddressablesPreload : MonoBehaviour
         _lastSpeedBytes = 0;
         _lastSpeedTime = 0f;
         NetworkSpeedBytesPerSecond = 0;
-        LoadingText = "Đang chuẩn bị tài nguyên (1%)";
+        LoadingText = "Đang chuẩn bị tài nguyên";
     }
 
     private IEnumerator CoPreloadOnce(int attempt)
@@ -295,7 +295,7 @@ public class AddressablesPreload : MonoBehaviour
         {
             Stage = PreloadStage.Probe;
             SetProgressExact(0.01f);
-            LoadingText = "Đang kiểm tra tài nguyên cloud (1%)";
+            LoadingText = "Đang kiểm tra tài nguyên cloud";
 
             yield return HttpProbeGet(remoteCatalogHashUrl, probeReadBytes);
             if (HasFailed) yield break;
@@ -308,13 +308,13 @@ public class AddressablesPreload : MonoBehaviour
         {
             Stage = PreloadStage.ClearCache;
             SetProgressExact(0.01f);
-            LoadingText = "Đang làm mới cache tài nguyên (1%)";
+            LoadingText = "Đang làm mới cache tài nguyên";
             ClearAddressablesCatalogCache();
         }
 
         Stage = PreloadStage.Initialize;
         SetProgressExact(0.01f);
-        LoadingText = "Đang khởi tạo tài nguyên (1%)";
+        LoadingText = "Đang khởi tạo tài nguyên";
 
         var init = Addressables.InitializeAsync(false);
         yield return WaitWithTimeout(init, stepTimeoutSeconds, $"InitializeAsync timeout (attempt {attempt})");
@@ -342,7 +342,7 @@ public class AddressablesPreload : MonoBehaviour
         {
             Stage = PreloadStage.ForceLoadCatalog;
             SetProgressExact(0.01f);
-            LoadingText = "Đang tải catalog tài nguyên (1%)";
+            LoadingText = "Đang tải catalog tài nguyên";
 
             var loadCat = Addressables.LoadContentCatalogAsync(remoteCatalogJsonUrl, false);
             yield return WaitWithTimeout(loadCat, stepTimeoutSeconds, $"LoadContentCatalogAsync timeout (attempt {attempt})");
@@ -364,7 +364,7 @@ public class AddressablesPreload : MonoBehaviour
 
         Stage = PreloadStage.CheckCatalog;
         SetProgressExact(0.01f);
-        LoadingText = "Đang kiểm tra cập nhật tài nguyên (1%)";
+        LoadingText = "Đang kiểm tra cập nhật tài nguyên";
 
         var check = Addressables.CheckForCatalogUpdates(false);
         yield return WaitWithTimeout(check, stepTimeoutSeconds, $"CheckForCatalogUpdates timeout (attempt {attempt})");
@@ -393,7 +393,7 @@ public class AddressablesPreload : MonoBehaviour
         {
             Stage = PreloadStage.UpdateCatalog;
             SetProgressExact(0.01f);
-            LoadingText = "Đang cập nhật catalog tài nguyên (1%)";
+            LoadingText = "Đang cập nhật catalog tài nguyên";
 
             Debug.Log($"[Preload] Catalog updates found: {catalogs.Count}");
 
@@ -430,7 +430,7 @@ public class AddressablesPreload : MonoBehaviour
 
         Stage = PreloadStage.GetSize;
         SetProgressExact(0.01f);
-        LoadingText = "Đang tính dung lượng tài nguyên (1%)";
+        LoadingText = "Đang tính dung lượng tài nguyên";
 
         long totalBytes = 0;
         var perLabelBytes = new Dictionary<string, long>(labels.Count);
@@ -582,7 +582,7 @@ UpdateDownloadLoadingText(0.01f, 0, totalBytes);
 
 BeginLoadingPhase(
     PreloadStage.WarmupAllCloudData,
-    "Đang giải nén tài nguyên (1%)",
+    "Đang giải nén tài nguyên",
     0.01f
 );
 
@@ -787,7 +787,7 @@ yield return WarmupAllCloudData(labels);
 
 Stage = PreloadStage.WarmupAllCloudData;
 SetProgressExact(0.01f);
-LoadingText = "Đang giải nén tài nguyên (1%)";
+LoadingText = "Đang giải nén tài nguyên";
 
         List<IResourceLocation> allLocations = new List<IResourceLocation>();
 

@@ -116,6 +116,14 @@ public class VideoPlayerControllerPro : MonoBehaviour
     float _nextSysPollTime = 0f;
     bool _isDraggingVolume = false;
 
+public enum VideoViewMode
+{
+    Default,
+    Second,
+    FullScreen
+}
+
+[SerializeField] private VideoViewMode currentMode = VideoViewMode.Default;
     void Awake()
     {
         if (!courseListView) courseListView = FindAnyObjectByType<CourseListView>();
@@ -405,26 +413,23 @@ public class VideoPlayerControllerPro : MonoBehaviour
         OnFullscreenChanged?.Invoke(true);
     }
 
-    public void EnterDefaultMode()
-    {
-        defaultContainer.Show();
-        secondContainer.Hide();
-        fullScreenContainer.Hide();
-    }
+public void EnterDefaultMode()
+{
+    currentMode = VideoViewMode.Default;
+    ShowVideoInCurrentMode();
+}
 
-    public void EnterSecondMode()
-    {
-        defaultContainer.Hide();
-        secondContainer.Show();
-        fullScreenContainer.Hide();
-    }
+public void EnterSecondMode()
+{
+    currentMode = VideoViewMode.Second;
+    ShowVideoInCurrentMode();
+}
 
-    public void EnterFullScreenMode()
-    {
-        defaultContainer.Hide();
-        secondContainer.Hide();
-        fullScreenContainer.Show();
-    }
+public void EnterFullScreenMode()
+{
+    currentMode = VideoViewMode.FullScreen;
+    ShowVideoInCurrentMode();
+}
 
     [ContextMenu("ExitFullscreenUI")]
     public void ExitFullscreenUI()
@@ -890,6 +895,48 @@ public class VideoPlayerControllerPro : MonoBehaviour
         if (audioSource)
             audioSource.Pause();
     }
+
+private VideoContainer GetCurrentContainer()
+{
+    switch (currentMode)
+    {
+        case VideoViewMode.Second:
+            return secondContainer;
+
+        case VideoViewMode.FullScreen:
+            return fullScreenContainer;
+
+        default:
+            return defaultContainer;
+    }
+}
+
+private void HideAllVideoContainers()
+{
+    if (defaultContainer) defaultContainer.Hide();
+    if (secondContainer) secondContainer.Hide();
+    if (fullScreenContainer) fullScreenContainer.Hide();
+}
+
+public void ShowVideoInCurrentMode()
+{
+    HideAllVideoContainers();
+
+    VideoContainer target = GetCurrentContainer();
+    if (target != null)
+        target.ShowVideo();
+}
+
+public void ShowDocumentInCurrentMode(string documentUrl)
+{
+    HideAllVideoContainers();
+
+    VideoContainer target = GetCurrentContainer();
+    if (target != null)
+        target.ShowDocument(documentUrl);
+    else
+        Debug.LogWarning("[VideoPlayerControllerPro] Missing current VideoContainer");
+}
 }
 
 public class VideoContainerManager : MonoBehaviour
