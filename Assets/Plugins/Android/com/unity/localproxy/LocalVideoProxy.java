@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.security.MessageDigest;
 import java.util.Map;
@@ -27,26 +26,29 @@ public class LocalVideoProxy extends NanoHTTPD {
     private static final String TAG = "LocalVideoProxy";
 
     /*
-     * Bật true khi cần soi log.
-     * Khi test video thật nên để false, vì log Android quá nhiều sẽ làm tụt FPS.
+     * Multi-thread disk cache version.
+     * - Starter thread tải đoạn đầu nhỏ để VideoPlayer bắt đầu nhanh.
+     * - Booster threads tải các chunk phía sau xuống file cache trên disk.
+     * - Khi qua bài mới, C# gọi setActiveUrl/release để cancel bài cũ + xóa cache cũ.
      */
     private static final boolean DEBUG = false;
 
     private static final long STARTUP_WAIT_MS = 8000L;
     private static final long READ_WAIT_MS = 15000L;
-
-    /*
-     * Nếu VideoPlayer nhảy xa hơn vùng đã cache quá mức này,
-     * proxy sẽ bỏ window cũ và tải lại từ offset mới.
-     */
     private static final long FAR_SEEK_GAP = 8L * 1024L * 1024L;
 
-    private static final int IO_BUFFER_SIZE = 256 * 1024;
+    private static final int IO_BUFFER_SIZE = 128 * 1024;
+    private static final int MIN_BOOSTER_THREADS = 1;
+    private static final int MAX_BOOSTER_THREADS = 3;
 
     private static volatile LocalVideoProxy instance;
 
     private final OkHttpClient client;
     private final ConcurrentHashMap<String, StreamCache> caches = new ConcurrentHashMap<>();
+
+    private volatile long startupBytes = 2L * 1024L * 1024L;
+    private volatile long chunkBytes = 2L * 1024L * 1024L;
+    private volatile int boosterThreads = 3;
 
     private static final AtomicLong REQ_ID = new AtomicLong(0);
 
@@ -60,6 +62,10 @@ public class LocalVideoProxy extends NanoHTTPD {
 
     private static void E(String s, Throwable t) {
         Log.e(TAG, s, t);
+    }
+
+    public static String version() {
+        return "LocalVideoProxy/MultiDiskCache/2026-06-04";
     }
 
     public static synchronized boolean startProxy(int port) {
@@ -86,8 +92,9 @@ public class LocalVideoProxy extends NanoHTTPD {
     public static synchronized void stopProxy() {
         try {
             if (instance != null) {
-                instance.closeAllCaches();
+                instance.closeAllCaches(true);
                 instance.stop();
+                instance.client.connectionPool().evictAll();
                 instance = null;
                 I("Stopped");
             }
@@ -95,8 +102,125 @@ public class LocalVideoProxy extends NanoHTTPD {
         }
     }
 
-    /*
+    /**
+     * Gọi từ C# trước khi preload.
+     * startupBytes: đoạn đầu cần có để bắt đầu phát nhanh, ví dụ 1-3MB.
+     * boosterThreadCount: số luồng booster phía sau, khuyến nghị 2-3.
+     * chunkBytes: mỗi booster tải từng cục bao nhiêu byte, ví dụ 1-2MB.
+     */
+    public static boolean configure(long startupBytes, int boosterThreadCount, long chunkBytes) {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p == null) {
+                W("configure failed: proxy not started");
+                return false;
+            }
+
+            p.startupBytes = Math.max(512L * 1024L, startupBytes);
+            p.chunkBytes = Math.max(512L * 1024L, chunkBytes);
+            p.boosterThreads = clamp(boosterThreadCount, MIN_BOOSTER_THREADS, MAX_BOOSTER_THREADS);
+
+            I("configure startup=" + p.startupBytes
+                    + " chunk=" + p.chunkBytes
+                    + " boosters=" + p.boosterThreads);
+            return true;
+
+        } catch (Exception e) {
+            E("configure failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Gọi khi chuẩn bị mở bài mới.
+     * Nếu deleteOldCaches=true, mọi cache của bài khác sẽ bị cancel/close/xóa file.
+     */
+    public static boolean setActiveUrl(String originUrl, boolean deleteOldCaches) {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p == null) {
+                W("setActiveUrl failed: proxy not started");
+                return false;
+            }
+
+            p.releaseAllExceptInternal(originUrl, deleteOldCaches);
+            return true;
+
+        } catch (Exception e) {
+            E("setActiveUrl failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Gọi từ C# khi đổi bài hoặc mở PDF/bài thi để dọn bài video cũ.
+     */
+    public static boolean release(String originUrl, boolean deleteFile) {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p == null || originUrl == null || originUrl.length() == 0) {
+                return false;
+            }
+
+            return p.releaseInternal(originUrl, deleteFile);
+
+        } catch (Exception e) {
+            E("release failed", e);
+            return false;
+        }
+    }
+
+    public static int releaseAllExcept(String keepOriginUrl, boolean deleteFile) {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p == null) {
+                return 0;
+            }
+
+            return p.releaseAllExceptInternal(keepOriginUrl, deleteFile);
+
+        } catch (Exception e) {
+            E("releaseAllExcept failed", e);
+            return 0;
+        }
+    }
+
+    public static int clearDiskCache() {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p != null) {
+                p.closeAllCaches(true);
+                p.client.connectionPool().evictAll();
+            }
+
+            File dir = getProxyCacheDir();
+            int count = 0;
+            File[] files = dir.listFiles();
+
+            if (files != null) {
+                for (File f : files) {
+                    if (f != null && f.isFile() && f.delete()) {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+
+        } catch (Exception e) {
+            E("clearDiskCache failed", e);
+            return 0;
+        }
+    }
+
+    /**
      * Gọi từ C# để preload trước khi gán VideoPlayer.url.
+     * Hàm này chỉ start worker; dữ liệu được ghi xuống disk cache.
      */
     public static boolean preload(String originUrl, long start) {
         try {
@@ -119,6 +243,10 @@ public class LocalVideoProxy extends NanoHTTPD {
         }
     }
 
+    /**
+     * Trả về byte contiguous đã sẵn sàng từ windowStart.
+     * Đây là mốc an toàn để VideoPlayer đọc một mạch, không tính các chunk booster đã xong nhưng còn gap phía trước.
+     */
     public static long getCachedUntil(String originUrl) {
         try {
             LocalVideoProxy p = instance;
@@ -128,7 +256,7 @@ public class LocalVideoProxy extends NanoHTTPD {
             }
 
             StreamCache cache = p.getCache(originUrl);
-            return cache.getDownloadedUntil();
+            return cache.getContiguousUntil();
 
         } catch (Exception e) {
             return -1L;
@@ -151,6 +279,22 @@ public class LocalVideoProxy extends NanoHTTPD {
         }
     }
 
+    public static long getCacheFileBytes(String originUrl) {
+        try {
+            LocalVideoProxy p = instance;
+
+            if (p == null) {
+                return -1L;
+            }
+
+            StreamCache cache = p.getCache(originUrl);
+            return cache.getFileLength();
+
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
     private LocalVideoProxy(int port) {
         super(port);
 
@@ -160,7 +304,7 @@ public class LocalVideoProxy extends NanoHTTPD {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true)
                 .followRedirects(true)
-                .connectionPool(new ConnectionPool(8, 5, TimeUnit.MINUTES))
+                .connectionPool(new ConnectionPool(4, 30, TimeUnit.SECONDS))
                 .build();
     }
 
@@ -199,7 +343,6 @@ public class LocalVideoProxy extends NanoHTTPD {
             }
 
             String originUrl = URLDecoder.decode(enc, "UTF-8");
-
             long requestStart = 0L;
 
             if ("/warm".equals(uri)) {
@@ -246,17 +389,8 @@ public class LocalVideoProxy extends NanoHTTPD {
                     + " ua=" + headers.get("user-agent"));
 
             StreamCache cache = getCache(originUrl);
-
-            /*
-             * Quan trọng:
-             * Proxy bắt đầu tải nền từ offset VideoPlayer đang cần.
-             */
             cache.ensureWindow(requestStart);
 
-            /*
-             * Chờ lấy được total từ Content-Range upstream.
-             * Android VideoPlayer cần Content-Range/Content-Length ổn định.
-             */
             long total = cache.waitForTotal(STARTUP_WAIT_MS);
 
             if (total <= 0) {
@@ -310,7 +444,7 @@ public class LocalVideoProxy extends NanoHTTPD {
                     + " OUT from cache start=" + outStart
                     + " end=" + outEnd
                     + " len=" + outLen
-                    + " cachedUntil=" + cache.getDownloadedUntil()
+                    + " contiguousUntil=" + cache.getContiguousUntil()
                     + " total=" + total);
 
             return resp;
@@ -347,7 +481,15 @@ public class LocalVideoProxy extends NanoHTTPD {
                 File dir = getProxyCacheDir();
                 File file = new File(dir, key + ".bin");
 
-                cache = new StreamCache(client, originUrl, file);
+                cache = new StreamCache(
+                        client,
+                        originUrl,
+                        file,
+                        startupBytes,
+                        boosterThreads,
+                        chunkBytes
+                );
+
                 caches.put(key, cache);
             }
 
@@ -355,10 +497,52 @@ public class LocalVideoProxy extends NanoHTTPD {
         }
     }
 
-    private void closeAllCaches() {
+    private boolean releaseInternal(String originUrl, boolean deleteFile) {
+        String key = sha1(originUrl);
+        StreamCache cache = caches.remove(key);
+
+        if (cache == null) {
+            return false;
+        }
+
+        cache.close(deleteFile);
+        client.connectionPool().evictAll();
+
+        I("release url=" + originUrl + " deleteFile=" + deleteFile);
+        return true;
+    }
+
+    private int releaseAllExceptInternal(String keepOriginUrl, boolean deleteFile) {
+        String keepKey = keepOriginUrl == null || keepOriginUrl.length() == 0 ? null : sha1(keepOriginUrl);
+        int count = 0;
+
+        for (Map.Entry<String, StreamCache> entry : caches.entrySet()) {
+            String key = entry.getKey();
+
+            if (keepKey != null && keepKey.equals(key)) {
+                continue;
+            }
+
+            StreamCache cache = caches.remove(key);
+
+            if (cache != null) {
+                cache.close(deleteFile);
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            client.connectionPool().evictAll();
+        }
+
+        I("releaseAllExcept keep=" + keepOriginUrl + " count=" + count + " deleteFile=" + deleteFile);
+        return count;
+    }
+
+    private void closeAllCaches(boolean deleteFile) {
         try {
             for (StreamCache c : caches.values()) {
-                c.close();
+                c.close(deleteFile);
             }
 
             caches.clear();
@@ -370,16 +554,12 @@ public class LocalVideoProxy extends NanoHTTPD {
     private static File getProxyCacheDir() throws IOException {
         File base = null;
 
-        /*
-         * Dùng reflection để không cần import trực tiếp com.unity3d.player.UnityPlayer.
-         */
         try {
             Class<?> unityPlayer = Class.forName("com.unity3d.player.UnityPlayer");
             Field activityField = unityPlayer.getField("currentActivity");
             Object activity = activityField.get(null);
 
             if (activity != null) {
-                // Method getCacheDir = activity.getClass().getMethod("getCacheDir");
                 java.lang.reflect.Method getCacheDir = activity.getClass().getMethod("getCacheDir");
                 Object result = getCacheDir.invoke(activity);
 
@@ -417,48 +597,56 @@ public class LocalVideoProxy extends NanoHTTPD {
         private final File file;
         private final RandomAccessFile raf;
 
+        private final long startupBytes;
+        private final int boosterThreads;
+        private final long chunkBytes;
+
+        private final ConcurrentHashMap<Long, ChunkState> chunks = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<Long, Call> calls = new ConcurrentHashMap<>();
+
         private long windowStart = -1L;
-        private long downloadedUntil = -1L;
+        private long contiguousUntil = -1L;
+        private long nextReserve = -1L;
         private long total = -1L;
 
         private String contentType = "video/mp4";
 
-        private boolean downloading = false;
+        private boolean workersRunning = false;
+        private boolean closed = false;
         private long generation = 0L;
-
-        private Call currentCall;
-        private IOException lastError;
 
         StreamCache(
                 OkHttpClient client,
                 String url,
-                File file
+                File file,
+                long startupBytes,
+                int boosterThreads,
+                long chunkBytes
         ) throws IOException {
             this.client = client;
             this.url = url;
             this.file = file;
+            this.startupBytes = Math.max(512L * 1024L, startupBytes);
+            this.boosterThreads = clamp(boosterThreads, MIN_BOOSTER_THREADS, MAX_BOOSTER_THREADS);
+            this.chunkBytes = Math.max(512L * 1024L, chunkBytes);
             this.raf = new RandomAccessFile(file, "rw");
         }
 
         void ensureWindow(long start) throws IOException {
             synchronized (lock) {
+                if (closed) {
+                    throw new IOException("Cache already closed");
+                }
+
                 boolean empty = windowStart < 0;
                 boolean beforeWindow = !empty && start < windowStart;
-                boolean farAhead = !empty && start > downloadedUntil + FAR_SEEK_GAP;
+                boolean farAhead = !empty && start > contiguousUntil + FAR_SEEK_GAP;
 
                 if (empty || beforeWindow || farAhead) {
                     resetWindowLocked(start);
                 }
 
-                if (!downloading && (total < 0 || downloadedUntil < total)) {
-                    long from = Math.max(downloadedUntil, start);
-
-                    if (from < windowStart) {
-                        from = windowStart;
-                    }
-
-                    startDownloadLocked(from);
-                }
+                startWorkersLocked();
             }
         }
 
@@ -466,11 +654,8 @@ public class LocalVideoProxy extends NanoHTTPD {
             long deadline = System.currentTimeMillis() + timeoutMs;
 
             synchronized (lock) {
-                while (total <= 0) {
-                    if (!downloading) {
-                        long from = downloadedUntil >= 0 ? downloadedUntil : 0L;
-                        startDownloadLocked(from);
-                    }
+                while (!closed && total <= 0) {
+                    startWorkersLocked();
 
                     long wait = deadline - System.currentTimeMillis();
 
@@ -479,7 +664,7 @@ public class LocalVideoProxy extends NanoHTTPD {
                     }
 
                     try {
-                        lock.wait(Math.min(wait, 500L));
+                        lock.wait(Math.min(wait, 250L));
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new IOException("Interrupted while waiting total", e);
@@ -500,20 +685,12 @@ public class LocalVideoProxy extends NanoHTTPD {
             long deadline = System.currentTimeMillis() + timeoutMs;
 
             synchronized (lock) {
-                while (absolutePos >= downloadedUntil) {
+                while (!closed && absolutePos >= contiguousUntil) {
                     if (total > 0 && absolutePos >= total) {
                         return -1;
                     }
 
-                    if (!downloading) {
-                        long from = Math.max(downloadedUntil, absolutePos);
-
-                        if (from < windowStart) {
-                            from = windowStart;
-                        }
-
-                        startDownloadLocked(from);
-                    }
+                    startWorkersLocked();
 
                     long wait = deadline - System.currentTimeMillis();
 
@@ -521,19 +698,23 @@ public class LocalVideoProxy extends NanoHTTPD {
                         throw new IOException(
                                 "Cache wait timeout. pos="
                                         + absolutePos
-                                        + " downloadedUntil="
-                                        + downloadedUntil
+                                        + " contiguousUntil="
+                                        + contiguousUntil
                                         + " total="
                                         + total
                         );
                     }
 
                     try {
-                        lock.wait(Math.min(wait, 500L));
+                        lock.wait(Math.min(wait, 250L));
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new IOException("Interrupted while reading cache", e);
                     }
+                }
+
+                if (closed) {
+                    return -1;
                 }
 
                 if (absolutePos < windowStart) {
@@ -549,24 +730,33 @@ public class LocalVideoProxy extends NanoHTTPD {
 
                 int available = (int) Math.min(
                         (long) length,
-                        downloadedUntil - absolutePos
+                        contiguousUntil - absolutePos
                 );
 
                 raf.seek(relative);
-
                 return raf.read(buffer, offset, available);
             }
         }
 
-        long getDownloadedUntil() {
+        long getContiguousUntil() {
             synchronized (lock) {
-                return downloadedUntil;
+                return contiguousUntil;
             }
         }
 
         long getTotal() {
             synchronized (lock) {
                 return total;
+            }
+        }
+
+        long getFileLength() {
+            try {
+                synchronized (lock) {
+                    return raf.length();
+                }
+            } catch (Exception e) {
+                return -1L;
             }
         }
 
@@ -579,65 +769,107 @@ public class LocalVideoProxy extends NanoHTTPD {
         private void resetWindowLocked(long start) throws IOException {
             generation++;
 
-            if (currentCall != null) {
+            for (Call call : calls.values()) {
                 try {
-                    currentCall.cancel();
+                    call.cancel();
                 } catch (Exception ignored) {
                 }
-
-                currentCall = null;
             }
 
-            downloading = false;
-            lastError = null;
+            calls.clear();
+            chunks.clear();
+
+            workersRunning = false;
 
             windowStart = start;
-            downloadedUntil = start;
+            contiguousUntil = start;
+            nextReserve = start;
 
             raf.setLength(0);
 
             I("RESET cache window start=" + start + " file=" + file.getAbsolutePath());
-
             lock.notifyAll();
         }
 
-        private void startDownloadLocked(long from) {
-            if (downloading) {
+        private void startWorkersLocked() {
+            if (closed || workersRunning) {
                 return;
             }
 
-            downloading = true;
-            lastError = null;
-
+            workersRunning = true;
             final long myGen = generation;
-            final long startFrom = from;
 
-            Thread t = new Thread(new Runnable() {
+            Thread starter = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    downloadLoop(myGen, startFrom);
+                    workerLoop(myGen, true, 0);
                 }
-            }, "LocalVideoProxy-Downloader");
+            }, "LocalVideoProxy-Starter");
+            starter.setDaemon(true);
+            starter.start();
 
-            t.setDaemon(true);
-            t.start();
+            for (int i = 0; i < boosterThreads; i++) {
+                final int idx = i + 1;
+                Thread booster = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        workerLoop(myGen, false, idx);
+                    }
+                }, "LocalVideoProxy-Booster-" + idx);
+                booster.setDaemon(true);
+                booster.start();
+            }
         }
 
-        private void downloadLoop(long myGen, long startFrom) {
-            long pos = startFrom;
+        private void workerLoop(long myGen, boolean starter, int workerIndex) {
+            boolean useStartupChunk = starter;
+
+            while (true) {
+                ChunkState chunk;
+
+                synchronized (lock) {
+                    if (closed || myGen != generation) {
+                        return;
+                    }
+
+                    if (total > 0 && nextReserve >= total) {
+                        return;
+                    }
+
+                    long start = nextReserve;
+                    long len = useStartupChunk ? startupBytes : chunkBytes;
+                    useStartupChunk = false;
+
+                    long end = start + len - 1L;
+
+                    if (total > 0) {
+                        end = Math.min(end, total - 1L);
+                    }
+
+                    if (end < start) {
+                        return;
+                    }
+
+                    chunk = new ChunkState(start, end);
+                    chunks.put(start, chunk);
+                    nextReserve = end + 1L;
+                }
+
+                boolean ok = downloadChunk(myGen, chunk, workerIndex);
+
+                if (!ok) {
+                    return;
+                }
+            }
+        }
+
+        private boolean downloadChunk(long myGen, ChunkState chunk, int workerIndex) {
             int failCount = 0;
 
             while (true) {
                 synchronized (lock) {
-                    if (myGen != generation) {
-                        return;
-                    }
-
-                    if (total > 0 && pos >= total) {
-                        downloading = false;
-                        currentCall = null;
-                        lock.notifyAll();
-                        return;
+                    if (closed || myGen != generation) {
+                        return false;
                     }
                 }
 
@@ -649,22 +881,14 @@ public class LocalVideoProxy extends NanoHTTPD {
                     Request req = new Request.Builder()
                             .url(url)
                             .get()
-                            .header("Range", "bytes=" + pos + "-")
+                            .header("Range", "bytes=" + chunk.start + "-" + chunk.endInclusive)
                             .header("Accept", "*/*")
                             .header("Accept-Encoding", "identity")
-                            .header("User-Agent", "UnityLocalProxy/CacheAhead/1.0")
+                            .header("User-Agent", "UnityLocalProxy/MultiDiskCache/1.0")
                             .build();
 
                     call = client.newCall(req);
-
-                    synchronized (lock) {
-                        if (myGen != generation) {
-                            call.cancel();
-                            return;
-                        }
-
-                        currentCall = call;
-                    }
+                    calls.put(chunk.start, call);
 
                     resp = call.execute();
                     body = resp.body();
@@ -674,6 +898,29 @@ public class LocalVideoProxy extends NanoHTTPD {
                     }
 
                     int code = resp.code();
+
+                    if (code == 416) {
+                        String cr416 = resp.header("Content-Range");
+                        long parsedTotal = parse416Total(cr416);
+
+                        synchronized (lock) {
+                            if (closed || myGen != generation) {
+                                return false;
+                            }
+
+                            if (parsedTotal > 0) {
+                                total = parsedTotal;
+                            } else if (total <= 0) {
+                                total = chunk.start;
+                            }
+
+                            chunks.remove(chunk.start);
+                            advanceContiguousLocked();
+                            lock.notifyAll();
+                        }
+
+                        return false;
+                    }
 
                     if (code != 200 && code != 206) {
                         String err = "";
@@ -686,19 +933,18 @@ public class LocalVideoProxy extends NanoHTTPD {
                         throw new IOException("Upstream error " + code + " " + err);
                     }
 
-                    if (pos > 0 && code == 200) {
-                        throw new IOException("Upstream ignored Range at pos=" + pos);
+                    if (chunk.start > 0 && code == 200) {
+                        throw new IOException("Upstream ignored Range at pos=" + chunk.start);
                     }
 
                     String ct = safeHeader(resp, "Content-Type", "video/mp4");
                     String cr = resp.header("Content-Range");
                     long bodyLen = body.contentLength();
-
                     ContentRange parsed = ContentRange.parse(cr);
 
                     synchronized (lock) {
-                        if (myGen != generation) {
-                            return;
+                        if (closed || myGen != generation) {
+                            return false;
                         }
 
                         if (ct != null && ct.length() > 0) {
@@ -707,135 +953,146 @@ public class LocalVideoProxy extends NanoHTTPD {
 
                         if (parsed != null && parsed.total > 0) {
                             total = parsed.total;
-                        } else if (code == 200 && bodyLen > 0 && pos == 0) {
+                        } else if (code == 200 && bodyLen > 0 && chunk.start == 0) {
                             total = bodyLen;
                         }
 
                         lock.notifyAll();
                     }
 
-                    I("DOWN start pos="
-                            + pos
-                            + " code="
-                            + code
-                            + " cr="
-                            + (cr != null ? cr : "<null>")
-                            + " len="
-                            + bodyLen
-                            + " total="
-                            + getTotal());
+                    I("WORKER " + workerIndex
+                            + " DOWN chunk=" + chunk.start + "-" + chunk.endInclusive
+                            + " code=" + code
+                            + " cr=" + (cr != null ? cr : "<null>")
+                            + " len=" + bodyLen
+                            + " total=" + getTotal());
 
                     InputStream in = body.byteStream();
                     byte[] buf = new byte[IO_BUFFER_SIZE];
+                    long pos = chunk.start;
+                    long maxBytes = chunk.endInclusive - chunk.start + 1L;
+                    long written = 0L;
 
-                    int n;
+                    while (written < maxBytes) {
+                        int want = (int) Math.min((long) buf.length, maxBytes - written);
+                        int n = in.read(buf, 0, want);
 
-                    while ((n = in.read(buf)) != -1) {
+                        if (n == -1) {
+                            break;
+                        }
+
                         synchronized (lock) {
-                            if (myGen != generation) {
-                                return;
+                            if (closed || myGen != generation) {
+                                return false;
                             }
 
                             long relative = pos - windowStart;
 
                             if (relative < 0) {
-                                return;
+                                return false;
                             }
 
                             raf.seek(relative);
                             raf.write(buf, 0, n);
 
                             pos += n;
-
-                            if (pos > downloadedUntil) {
-                                downloadedUntil = pos;
-                            }
-
+                            written += n;
                             lock.notifyAll();
                         }
                     }
 
-                    failCount = 0;
-
                     synchronized (lock) {
-                        if (myGen != generation) {
-                            return;
+                        if (closed || myGen != generation) {
+                            return false;
                         }
 
-                        if (total > 0 && pos >= total) {
-                            downloading = false;
-                            currentCall = null;
-                            lock.notifyAll();
-                            return;
-                        }
-                    }
-
-                    /*
-                     * Upstream đóng sớm nhưng chưa hết file.
-                     * Đây là trường hợp server/CDN giới hạn mỗi response.
-                     * Proxy sẽ tự nối nền, VideoPlayer vẫn đọc từ cache.
-                     */
-                    sleepQuietly(80L);
-
-                } catch (Exception e) {
-                    IOException ioe;
-
-                    if (e instanceof IOException) {
-                        ioe = (IOException) e;
-                    } else {
-                        ioe = new IOException(e);
-                    }
-
-                    synchronized (lock) {
-                        if (myGen != generation) {
-                            return;
+                        if (written > 0) {
+                            chunk.endInclusive = chunk.start + written - 1L;
+                            chunk.done = true;
+                        } else {
+                            chunks.remove(chunk.start);
                         }
 
-                        lastError = ioe;
+                        if (total > 0 && chunk.endInclusive >= total) {
+                            chunk.endInclusive = total - 1L;
+                        }
+
+                        advanceContiguousLocked();
                         lock.notifyAll();
                     }
 
-                    failCount++;
+                    return true;
 
+                } catch (Exception e) {
+                    IOException ioe = e instanceof IOException ? (IOException) e : new IOException(e);
+
+                    synchronized (lock) {
+                        if (closed || myGen != generation) {
+                            return false;
+                        }
+                    }
+
+                    failCount++;
                     long delay = Math.min(2000L, 200L * failCount);
 
-                    W("DOWN error at pos="
-                            + pos
-                            + " fail="
-                            + failCount
-                            + " delay="
-                            + delay
-                            + " msg="
-                            + ioe.getMessage());
+                    W("WORKER " + workerIndex
+                            + " DOWN error chunk=" + chunk.start + "-" + chunk.endInclusive
+                            + " fail=" + failCount
+                            + " delay=" + delay
+                            + " msg=" + ioe.getMessage());
 
                     sleepQuietly(delay);
 
                 } finally {
                     closeQuietly(resp);
-
-                    synchronized (lock) {
-                        if (currentCall == call) {
-                            currentCall = null;
-                        }
-                    }
+                    calls.remove(chunk.start, call);
                 }
             }
         }
 
-        void close() {
-            synchronized (lock) {
-                generation++;
-
-                if (currentCall != null) {
-                    try {
-                        currentCall.cancel();
-                    } catch (Exception ignored) {
-                    }
-
-                    currentCall = null;
+        private void advanceContiguousLocked() {
+            while (true) {
+                if (total > 0 && contiguousUntil >= total) {
+                    contiguousUntil = total;
+                    return;
                 }
 
-                downloading = false;
+                ChunkState c = chunks.get(contiguousUntil);
+
+                if (c == null || !c.done || c.start != contiguousUntil) {
+                    return;
+                }
+
+                long next = c.endInclusive + 1L;
+                chunks.remove(c.start);
+
+                if (next <= contiguousUntil) {
+                    return;
+                }
+
+                if (total > 0) {
+                    next = Math.min(next, total);
+                }
+
+                contiguousUntil = next;
+            }
+        }
+
+        void close(boolean deleteFile) {
+            synchronized (lock) {
+                closed = true;
+                generation++;
+
+                for (Call call : calls.values()) {
+                    try {
+                        call.cancel();
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                calls.clear();
+                chunks.clear();
+                workersRunning = false;
                 lock.notifyAll();
 
                 try {
@@ -843,6 +1100,27 @@ public class LocalVideoProxy extends NanoHTTPD {
                 } catch (Exception ignored) {
                 }
             }
+
+            if (deleteFile) {
+                try {
+                    if (file.exists() && !file.delete()) {
+                        W("Cannot delete cache file: " + file.getAbsolutePath());
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private static class ChunkState {
+        final long start;
+        long endInclusive;
+        boolean done;
+
+        ChunkState(long start, long endInclusive) {
+            this.start = start;
+            this.endInclusive = endInclusive;
+            this.done = false;
         }
     }
 
@@ -954,7 +1232,6 @@ public class LocalVideoProxy extends NanoHTTPD {
 
             try {
                 RangeSpec rs = new RangeSpec();
-
                 rs.start = Long.parseLong(a);
 
                 if (b.length() > 0) {
@@ -1007,12 +1284,10 @@ public class LocalVideoProxy extends NanoHTTPD {
 
             try {
                 ContentRange r = new ContentRange();
-
                 r.start = Long.parseLong(cr.substring(sp + 1, dash).trim());
                 r.end = Long.parseLong(cr.substring(dash + 1, slash).trim());
 
                 String totalStr = cr.substring(slash + 1).trim();
-
                 r.total = totalStr.equals("*") ? -1L : Long.parseLong(totalStr);
 
                 return r;
@@ -1040,6 +1315,31 @@ public class LocalVideoProxy extends NanoHTTPD {
         }
 
         return def;
+    }
+
+    private static long parse416Total(String contentRange) {
+        if (contentRange == null) {
+            return -1L;
+        }
+
+        try {
+            int slash = contentRange.indexOf('/');
+
+            if (slash < 0) {
+                return -1L;
+            }
+
+            String totalStr = contentRange.substring(slash + 1).trim();
+
+            if (totalStr.length() == 0 || "*".equals(totalStr)) {
+                return -1L;
+            }
+
+            return Long.parseLong(totalStr);
+
+        } catch (Exception e) {
+            return -1L;
+        }
     }
 
     private static String getParam(String qs, String key) {
@@ -1088,6 +1388,12 @@ public class LocalVideoProxy extends NanoHTTPD {
         } catch (Exception e) {
             return String.valueOf(text.hashCode());
         }
+    }
+
+    private static int clamp(int v, int min, int max) {
+        if (v < min) return min;
+        if (v > max) return max;
+        return v;
     }
 
     private static void sleepQuietly(long ms) {

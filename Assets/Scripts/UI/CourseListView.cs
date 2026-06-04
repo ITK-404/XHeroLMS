@@ -58,20 +58,37 @@ public class CourseListView : MonoBehaviour
 
 
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
-    [Header("Android Local Proxy Buffer")]
+
+    [Header("Android Local Proxy Multi Thread Disk Cache")]
     [SerializeField] private bool useProxyPreloadOnAndroid = true;
 
-    [Tooltip("Số MB cần cache trước rồi mới Prepare video.")]
-    [SerializeField] private int preloadBeforePrepareMB = 20;
+    [Tooltip("Đoạn đầu cần có để bắt đầu Prepare nhanh. Khuyến nghị 1-3MB.")]
+    [SerializeField] private int startupPlayableBufferMB = 2;
 
-    [Tooltip("Thời gian chờ cache tối đa trước khi vẫn cho video chạy.")]
-    [SerializeField] private float preloadTimeoutSeconds = 10f;
+    [Tooltip("Nếu quá thời gian chờ mà đã có tối thiểu mức này thì vẫn cho play, proxy tiếp tục cache nền.")]
+    [SerializeField] private int minimumPlayableAfterTimeoutMB = 1;
+
+    [Tooltip("Số luồng booster tải cache phía sau. Khuyến nghị 2-3.")]
+    [Range(1, 3)]
+    [SerializeField] private int proxyBoosterThreads = 3;
+
+    [Tooltip("Dung lượng mỗi chunk booster tải xuống disk.")]
+    [SerializeField] private int proxyChunkMB = 2;
+
+    [Tooltip("Thời gian chờ startup buffer trước khi Prepare video.")]
+    [SerializeField] private float startupPreloadTimeoutSeconds = 6f;
+
+    [Tooltip("Khi qua bài mới, cancel downloader bài cũ và xóa file cache bài cũ.")]
+    [SerializeField] private bool deleteOldProxyCacheOnLessonChange = true;
 
     [Tooltip("Bật log đo cache/preload.")]
     [SerializeField] private bool debugProxyPreload = true;
 
+    private const string AndroidProxyClass = "com.unity.localproxy.LocalVideoProxy";
+
     private Coroutine _playVideoRoutine;
     private int _playVideoToken;
+    private string _activeVideoOriginUrl;
 
     public const string FinalExamType = "FINAL_EXAM";
     public Action<LessonUI> OnClickFinalExamEvt;
@@ -326,8 +343,29 @@ public class CourseListView : MonoBehaviour
             return;
         }
 
-        // Dừng VideoPlayer/coroutine cũ trước khi mở URL mới để socket cũ đóng hẳn.
+        string oldUrl = _activeVideoOriginUrl;
+
+        // Dừng VideoPlayer/coroutine cũ trước khi mở URL mới.
         StopVideoPipeline();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!proxyBoot)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        if (proxyBoot && proxyBoot.enableProxyOnAndroid && proxyBoot.EnsureStarted())
+        {
+            // Quan trọng: đổi bài thì dọn bài cũ ngay để không còn downloader/socket/cache cũ chạy nền.
+            if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != url)
+            {
+                ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
+            }
+
+            // Chỉ giữ bài hiện tại. Nếu còn cache bài khác trong map thì release hết.
+            ProxySetActiveUrl(url, deleteOldProxyCacheOnLessonChange);
+        }
+#endif
+
+        _activeVideoOriginUrl = url;
 
         _playVideoToken++;
         _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
@@ -358,15 +396,23 @@ public class CourseListView : MonoBehaviour
 
             if (started)
             {
-                long minBufferBytes = Mathf.Max(1, preloadBeforePrepareMB) * 1024L * 1024L;
+                long startupBytes = Mathf.Max(1, startupPlayableBufferMB) * 1024L * 1024L;
+                long minTimeoutBytes = Mathf.Max(1, minimumPlayableAfterTimeoutMB) * 1024L * 1024L;
+                long chunkBytes = Mathf.Max(1, proxyChunkMB) * 1024L * 1024L;
+                int boosters = Mathf.Clamp(proxyBoosterThreads, 1, 3);
 
+                // Java proxy sẽ chia luồng: starter tải đoạn đầu, booster tải các chunk phía sau xuống disk.
+                ProxyConfigure(startupBytes, boosters, chunkBytes);
+                ProxySetActiveUrl(originUrl, deleteOldProxyCacheOnLessonChange);
                 proxyBoot.Preload(originUrl, 0);
 
                 float waitStart = Time.realtimeSinceStartup;
                 long cachedUntil = -1;
                 long totalBytes = -1;
+                bool reachedStartupBuffer = false;
+                bool reachedMinimumAfterTimeout = false;
 
-                while (Time.realtimeSinceStartup - waitStart < preloadTimeoutSeconds)
+                while (Time.realtimeSinceStartup - waitStart < startupPreloadTimeoutSeconds)
                 {
                     if (token != _playVideoToken)
                         yield break;
@@ -374,17 +420,34 @@ public class CourseListView : MonoBehaviour
                     cachedUntil = proxyBoot.GetCachedUntil(originUrl);
                     totalBytes = proxyBoot.GetTotalBytes(originUrl);
 
+                    reachedStartupBuffer = cachedUntil >= startupBytes;
+                    reachedMinimumAfterTimeout = cachedUntil >= minTimeoutBytes;
+
                     if (debugProxyPreload)
                     {
                         Debug.Log(
-                            $"[LocalProxy][Preload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / need={FormatBytes(minBufferBytes)}"
+                            $"[LocalProxy][MultiPreload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / startupNeed={FormatBytes(startupBytes)} / min={FormatBytes(minTimeoutBytes)} / boosters={boosters}"
                         );
                     }
 
-                    if (cachedUntil >= minBufferBytes)
+                    if (reachedStartupBuffer)
                         break;
 
                     yield return null;
+                }
+
+                // Nếu chưa đủ startup buffer nhưng đã có tối thiểu 1MB sau timeout thì vẫn cho play.
+                // Booster vẫn tiếp tục cache nền trên disk.
+                cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+                totalBytes = proxyBoot.GetTotalBytes(originUrl);
+                reachedStartupBuffer = cachedUntil >= startupBytes;
+                reachedMinimumAfterTimeout = cachedUntil >= minTimeoutBytes;
+
+                if (!reachedStartupBuffer && !reachedMinimumAfterTimeout)
+                {
+                    Debug.LogWarning(
+                        $"[LocalProxy][MultiPreload] Startup buffer too small. cached={FormatBytes(cachedUntil)}, needMin={FormatBytes(minTimeoutBytes)}. Still prepare to avoid deadlock."
+                    );
                 }
 
                 finalUrl = proxyBoot.GetPlayableUrl(originUrl);
@@ -394,7 +457,7 @@ public class CourseListView : MonoBehaviour
                     float waited = Time.realtimeSinceStartup - waitStart;
 
                     Debug.Log(
-                        $"[LocalProxy][Preload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
+                        $"[LocalProxy][MultiPreload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
                     );
                 }
             }
@@ -481,6 +544,83 @@ public class CourseListView : MonoBehaviour
         _videoStartUrl = null;
         _loggedFirstFrame = false;
     }
+
+    private void StopAndReleaseActiveVideo()
+    {
+        string oldUrl = _activeVideoOriginUrl;
+
+        StopVideoPipeline();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!string.IsNullOrWhiteSpace(oldUrl))
+        {
+            ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
+        }
+#endif
+
+        _activeVideoOriginUrl = null;
+    }
+
+    private void OnDestroy()
+    {
+        StopAndReleaseActiveVideo();
+    }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private static bool ProxyConfigure(long startupBytes, int boosterThreads, long chunkBytes)
+    {
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("configure", startupBytes, boosterThreads, chunkBytes);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] configure failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxySetActiveUrl(string originUrl, bool deleteOldCaches)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return false;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("setActiveUrl", originUrl, deleteOldCaches);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] setActiveUrl failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxyRelease(string originUrl, bool deleteFile)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return false;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("release", originUrl, deleteFile);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] release failed: " + e.Message);
+            return false;
+        }
+    }
+#endif
 
     private static string FormatBytes(long bytes)
     {
@@ -758,7 +898,7 @@ public class CourseListView : MonoBehaviour
         // ===== FINAL EXAM =====
         if (targetIsFinalExam)
         {
-            StopVideoPipeline();
+            StopAndReleaseActiveVideo();
             OnClickFinalExamEvt?.Invoke(_currentLesson);
             return;
         }
@@ -776,7 +916,7 @@ public class CourseListView : MonoBehaviour
                 return;
             }
 
-            StopVideoPipeline();
+            StopAndReleaseActiveVideo();
 
             if (videoPlayerControllerPro != null)
             {
