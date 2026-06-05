@@ -15,6 +15,8 @@ public enum TutorialStepType
     ScaleVideo = 6,
     Standup = 7,
     Skip = 8,
+    ExitRoom = 9,
+    AutoForceWatchVideo = 10,
 
 }
 [Serializable]
@@ -56,6 +58,8 @@ public class TutorialHandler : MonoBehaviour
     public GameObject pauseAndResumeUI;
     public GameObject skipVideoUI;
     public GameObject scaleVideoUI;
+    // NEW 
+    public GameObject exitRoomUI;
     public static TutorialHandler Instance;
     private const string keyPlayedBefore = "TutorialPlayedBefore";
     [SerializeField] private bool isPlayedBefore = false;
