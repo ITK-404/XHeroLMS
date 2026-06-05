@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+[CreateAssetMenu(fileName = "Tutorial Config",menuName = "SO/Tutorial Sequence Config")]
 public class TutorialConfig : ScriptableObject
 {
     [SerializeField] private List<StepData> StepDatas = new();
@@ -23,4 +23,13 @@ public class TutorialConfig : ScriptableObject
         return NON_EXIT_INDEX;
     }
 
+    public List<string> GetListStep()
+    {
+        List<string> validList = new();
+        foreach (var step in StepDatas)
+        {
+            validList.Add(step.stepId);
+        }
+        return validList;
+    }
 }

@@ -43,11 +43,12 @@ public class TutorialManager : MonoBehaviour
     {
         if (button.isUI)
         {
+            Debug.Log($"Tutorial Manager is true");
             UpdateCurrentTutorialAtButton(button.GetComponent<RectTransform>());
-
         }
         else
         {
+            Debug.Log($"Tutorial Manager is false");
             ShowTutorialAtWorldPosition(button.transform.position);
         }
     }

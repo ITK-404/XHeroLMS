@@ -26,7 +26,6 @@ public class TutorialUIObject
     public Transform oldParent;
     public RectTransform currentItem;
     public Transform newParent;
-    private Vector3 oldAnchorPosition;
 
     private bool isChangedParent = false;
     public void ShowTutorial()
@@ -133,7 +132,7 @@ public class TutorialHandler : MonoBehaviour
 
         LoadSave();
         // isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
-
+        isPlayedBefore = false;
         // if player is played tutorial before
 
         
