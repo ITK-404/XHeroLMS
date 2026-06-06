@@ -170,14 +170,14 @@ while (!preload.IsReady && !preload.HasFailed)
             {
                 bool dependencyReady = false;
 
-                yield return CoEnsureSceneDependenciesReady(
+                yield return CoPrepareSceneDependenciesWithPreload(
                     _resolvedMainSceneKey,
                     result => dependencyReady = result
                 );
 
                 if (!dependencyReady)
                 {
-                    Debug.LogError("[BootFlow] Scene dependency download failed after retries.");
+                    Debug.LogError("[BootFlow] Scene dependency prepare failed.");
 
                     if (tryLoadSceneDirectlyAfterDependencyFail)
                     {
@@ -216,6 +216,39 @@ yield break;
         SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
         yield break;
     }
+
+#if ADDRESSABLES
+    private IEnumerator CoPrepareSceneDependenciesWithPreload(string sceneKey, Action<bool> onDone)
+    {
+        if (preload == null)
+        {
+            Debug.LogError("[BootFlow] Cannot prepare scene dependencies because preload is null.");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        if (!preload.IsReady)
+        {
+            Debug.LogError("[BootFlow] Cannot prepare scene dependencies because Addressables catalog is not ready.");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        Debug.Log("[BootFlow] Preparing scene dependencies via AddressablesPreload: " + sceneKey);
+
+        yield return preload.PrepareAddressableKeyRoutine(sceneKey);
+
+        if (preload.HasFailed)
+        {
+            Debug.LogError("[BootFlow] AddressablesPreload prepare failed: " + preload.LastError);
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        Debug.Log("[BootFlow] Scene dependencies prepared via AddressablesPreload: " + sceneKey);
+        onDone?.Invoke(true);
+    }
+#endif
 
     private string ResolveMainSceneKey()
     {

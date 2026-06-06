@@ -12,6 +12,8 @@ public class LessonProgressTracker : MonoBehaviour
 
     private Coroutine postCoroutine;
     private bool hasPostedCompletion;
+    private bool selectedLessonWasAlreadyComplete;
+    private float sessionPlaybackMaxTime;
 
     private WaitForSecondsRealtime wait15s;
     private string courseID;
@@ -60,13 +62,18 @@ public class LessonProgressTracker : MonoBehaviour
     {
         if (lessonUI != null)
         {
+            if (videoPlayerControllerPro == null || videoPlayerControllerPro.videoPlayer == null)
+                return;
+
             float videoProgress = (float)videoPlayerControllerPro.videoPlayer.time;
+            sessionPlaybackMaxTime = Mathf.Max(sessionPlaybackMaxTime, videoProgress);
+
             lessonUI.TryUpdateProgress(videoProgress);
 
-            // khi xem xong
             if (!hasPostedCompletion &&
+                !selectedLessonWasAlreadyComplete &&
                 lessonUI.duration > 0 &&
-                lessonUI.progressTime >= lessonUI.duration)
+                lessonUI.IsPlaybackComplete(sessionPlaybackMaxTime))
             {
                 hasPostedCompletion = true;
 
@@ -84,16 +91,26 @@ public class LessonProgressTracker : MonoBehaviour
 
             if (lessonUI != null)
             {
-                lmsVideoProgressApiClient.SendProgress(lessonUI);
+                if (!selectedLessonWasAlreadyComplete && !hasPostedCompletion)
+                    lmsVideoProgressApiClient.SendProgress(lessonUI);
             }
         }
     }
 
     public void UpdateLesson(LessonUI newLessonUI)
     {
+        if (postCoroutine != null)
+        {
+            StopCoroutine(postCoroutine);
+            postCoroutine = null;
+        }
+
         if (newLessonUI == null)
         {
-            lessonUI = newLessonUI;
+            lessonUI = null;
+            selectedLessonWasAlreadyComplete = false;
+            hasPostedCompletion = false;
+            sessionPlaybackMaxTime = 0f;
             return;
         }
 
@@ -104,23 +121,16 @@ public class LessonProgressTracker : MonoBehaviour
             return;
         }
         
-        // stop cũ
-        if (postCoroutine != null)
-        {
-            StopCoroutine(postCoroutine);
-            postCoroutine = null;
-        }
-
-        // gửi progress bài trước
-        if (lessonUI != null)
+        if (lessonUI != null && !selectedLessonWasAlreadyComplete && !hasPostedCompletion)
             lmsVideoProgressApiClient.SendProgress(lessonUI);
 
-        // gán bài mới
         lessonUI = newLessonUI;
-        hasPostedCompletion = false;
+        selectedLessonWasAlreadyComplete = lessonUI.IsLessonDone();
+        hasPostedCompletion = selectedLessonWasAlreadyComplete;
+        sessionPlaybackMaxTime = 0f;
 
-        // bắt đầu timer mới
-        postCoroutine = StartCoroutine(PostDataEvery15s());
+        if (!selectedLessonWasAlreadyComplete)
+            postCoroutine = StartCoroutine(PostDataEvery15s());
     }
 
     private void OnDisable()
@@ -128,6 +138,7 @@ public class LessonProgressTracker : MonoBehaviour
         if (postCoroutine != null)
         {
             StopCoroutine(postCoroutine);
+            postCoroutine = null;
         }
     }
 }

@@ -45,10 +45,8 @@ public class AddressablesPreload : MonoBehaviour
     public string LastError { get; private set; } = "";
 
     /// <summary>
-    /// Progress tổng cho UI.
-    /// - Chuẩn bị: 0% -> 5%
-    /// - Tải dữ liệu: 5% -> 75%
-    /// - Giải nén/warmup: 75% -> 100%
+    /// Progress thật của phase đang chạy cho UI.
+    /// - Download: DownloadedBytes / TotalBytes.
     /// </summary>
     public float DownloadPercent01 { get; private set; }
 
@@ -61,7 +59,7 @@ public class AddressablesPreload : MonoBehaviour
     /// Text thân thiện cho UI loading.
     /// Không dùng chữ catalog / bundle / Addressables ở đây.
     /// </summary>
-    public string LoadingText { get; private set; } = "Đang chuẩn bị dữ liệu: 0%";
+    public string LoadingText { get; private set; } = "Đang kiểm tra tài nguyên: 0%";
 
     public long NetworkSpeedBytesPerSecond { get; private set; }
 
@@ -100,12 +98,11 @@ public class AddressablesPreload : MonoBehaviour
     [Tooltip("Gọi Resources.UnloadUnusedAssets sau mỗi số batch warmup. 0 = tắt.")]
     [SerializeField] private int unloadUnusedAssetsEveryBatches = 8;
 
-    [Header("UI Progress Range")]
-    [Range(0.01f, 0.2f)]
-    [SerializeField] private float prepareProgressEnd = 0.05f;
+    // Chỉ dùng cho các bước chưa có số byte thật như probe/catalog/get-size.
+    private float prepareProgressEnd = 0.05f;
 
-    [Range(0.3f, 0.9f)]
-    [SerializeField] private float downloadProgressEnd = 0.75f;
+    // Khi dữ liệu đã có sẵn trong cache, vẫn chạy thanh load tối thiểu bấy nhiêu giây thay vì nhảy thẳng 100%.
+    private float cachedDataMinimumLoadSeconds = 1.2f;
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxCatalogRetries = 3;
@@ -138,6 +135,9 @@ public class AddressablesPreload : MonoBehaviour
 
     public bool IsPreparingKey { get; private set; }
     public string ActivePrepareKey { get; private set; } = "";
+    public bool LastPrepareUsedCachedData { get; private set; }
+
+    private float _prepareProgressStartRealtime;
 
 #endif
 
@@ -234,14 +234,22 @@ public class AddressablesPreload : MonoBehaviour
 
         if (alreadyPreparedInSession)
         {
+            IsPreparingKey = true;
+            ActivePrepareKey = key;
+            LastPrepareUsedCachedData = true;
+            _prepareProgressStartRealtime = Time.realtimeSinceStartup;
+
             SetStage(PreloadStage.Done);
             BytesToDownload = 0;
             BytesDownloadedApprox = 0;
             NetworkSpeedBytesPerSecond = 0;
 
+            yield return WaitCachedPrepareMinimumIfNeeded();
+
             SetProgressExact(1f);
-            LoadingText =
-                $"Đang tải dữ liệu: {CurrentOverallPercent()}% | {FormatBytes(0)}/s | {FormatBytes(0)}/{FormatBytes(0)} | Dữ liệu đã có sẵn";
+            SetCheckingResourceText();
+
+            FinishPrepareKey();
 
             Debug.Log($"[Preload] Key already prepared in this session and data is latest: {key}");
             yield break;
@@ -274,8 +282,8 @@ public class AddressablesPreload : MonoBehaviour
             if (IsReady && !HasFailed)
             {
                 SetStage(PreloadStage.CatalogReady);
-                SetProgressExact(1f);
-                LoadingText = "Sẵn sàng";
+                SetProgressExact(catalogOnlyOnBoot ? 0f : 1f);
+                SetCheckingResourceText();
                 _catalogRunning = null;
 
                 Debug.Log("[Preload] Bootstrap ready. On-demand mode enabled.");
@@ -392,8 +400,8 @@ public class AddressablesPreload : MonoBehaviour
         IsCloudFullyDownloaded = false;
 
         Stage = catalogOnlyOnBoot ? PreloadStage.CatalogReady : PreloadStage.Done;
-        SetProgressExact(1f);
-        LoadingText = "Sẵn sàng";
+        SetProgressExact(catalogOnlyOnBoot ? 0f : 1f);
+        SetCheckingResourceText();
 
         if (!catalogOnlyOnBoot)
         {
@@ -409,6 +417,8 @@ public class AddressablesPreload : MonoBehaviour
     {
         IsPreparingKey = true;
         ActivePrepareKey = key;
+        LastPrepareUsedCachedData = false;
+        _prepareProgressStartRealtime = Time.realtimeSinceStartup;
 
         HasFailed = false;
         LastError = "";
@@ -473,7 +483,7 @@ public class AddressablesPreload : MonoBehaviour
             BeginLoadingPhase(
                 PreloadStage.Download,
                 "",
-                prepareProgressEnd
+                0f
             );
 
             UpdateDownloadLoadingText(0f, 0, totalBytes);
@@ -492,12 +502,12 @@ public class AddressablesPreload : MonoBehaviour
         }
         else
         {
+            LastPrepareUsedCachedData = true;
             BytesDownloadedApprox = 0;
             NetworkSpeedBytesPerSecond = 0;
 
-            SetProgressExact(downloadProgressEnd);
-            LoadingText =
-                $"Đang tải dữ liệu: {CurrentOverallPercent()}% | {FormatBytes(0)}/s | {FormatBytes(0)}/{FormatBytes(0)} | Dữ liệu đã có sẵn";
+            SetProgressExact(0f);
+            SetCheckingResourceText();
 
             Debug.Log($"[Preload] Nothing to download. Key already cached according to current data: {key}");
         }
@@ -518,7 +528,7 @@ public class AddressablesPreload : MonoBehaviour
             BeginLoadingPhase(
                 PreloadStage.WarmupKeyData,
                 "",
-                downloadProgressEnd
+                0f
             );
 
             SetWarmupProgress(0.01f);
@@ -536,9 +546,11 @@ public class AddressablesPreload : MonoBehaviour
             SetProgressExact(1f);
         }
 
+        yield return WaitCachedPrepareMinimumIfNeeded();
+
         SetProgressExact(1f);
         BytesDownloadedApprox = BytesToDownload;
-        LoadingText = "Hoàn tất";
+        SetCheckingResourceText();
         SetStage(PreloadStage.Done);
 
         if (rememberPreparedKeysInSession)
@@ -602,9 +614,7 @@ public class AddressablesPreload : MonoBehaviour
                 ? Mathf.Clamp01((float)downloadedBytes / realTotalBytes)
                 : Mathf.Clamp01(dl.PercentComplete);
 
-            float overall01 = Mathf.Lerp(prepareProgressEnd, downloadProgressEnd, download01);
-
-            SetProgressExact(Mathf.Max(prepareProgressEnd, overall01));
+            SetProgressExact(download01);
             UpdateDownloadLoadingText(download01, downloadedBytes, realTotalBytes);
 
             bool progressedByBytes = downloadedBytes > lastDownloadedBytes;
@@ -665,10 +675,9 @@ public class AddressablesPreload : MonoBehaviour
 
         SafeRelease(dl);
 
-        SetProgressExact(downloadProgressEnd);
+        SetProgressExact(1f);
         BytesDownloadedApprox = totalBytes;
-        LoadingText =
-            $"Đang tải dữ liệu: 100% | {FormatBytes(NetworkSpeedBytesPerSecond)}/s | {FormatBytes(totalBytes)}/{FormatBytes(totalBytes)}";
+        SetCheckingResourceText();
 
         Debug.Log($"[Preload] Download key DONE: {key}");
 
@@ -1160,6 +1169,7 @@ public class AddressablesPreload : MonoBehaviour
         BytesToDownload = 0;
         BytesDownloadedApprox = 0;
         IsCloudFullyDownloaded = false;
+        LastPrepareUsedCachedData = false;
 
         SetStage(PreloadStage.None);
 
@@ -1260,12 +1270,13 @@ public class AddressablesPreload : MonoBehaviour
         BytesToDownload = 0;
         BytesDownloadedApprox = 0;
         NetworkSpeedBytesPerSecond = 0;
+        LastPrepareUsedCachedData = false;
 
         _lastSpeedBytes = 0;
         _lastSpeedTime = 0f;
 
         SetProgressExact(0.01f);
-        LoadingText = $"Đang chuẩn bị dữ liệu: {CurrentOverallPercent()}%";
+        SetCheckingResourceText();
     }
 
     private void SetStage(PreloadStage stage)
@@ -1281,9 +1292,7 @@ public class AddressablesPreload : MonoBehaviour
     {
         SetStage(stage);
         SetProgressExact(progress01);
-
-        if (!string.IsNullOrEmpty(text))
-            LoadingText = text;
+        SetCheckingResourceText();
     }
 
     private int CurrentOverallPercent()
@@ -1293,6 +1302,15 @@ public class AddressablesPreload : MonoBehaviour
 
     private void SetProgressExact(float p01)
     {
+        if (IsPreparingKey &&
+            LastPrepareUsedCachedData &&
+            cachedDataMinimumLoadSeconds > 0f)
+        {
+            float elapsed = Time.realtimeSinceStartup - _prepareProgressStartRealtime;
+            float timeCap = Mathf.Clamp01(elapsed / cachedDataMinimumLoadSeconds);
+            p01 = Mathf.Min(p01, timeCap);
+        }
+
         DownloadPercent01 = Mathf.Clamp01(p01);
     }
 
@@ -1301,25 +1319,23 @@ public class AddressablesPreload : MonoBehaviour
         float p = Mathf.Clamp01(progress01);
         SetProgressExact(Mathf.Min(prepareProgressEnd, p));
 
-        LoadingText = $"Đang chuẩn bị dữ liệu: {CurrentOverallPercent()}%";
+        SetCheckingResourceText();
     }
 
     private void SetWarmupProgress(float warmup01)
     {
         warmup01 = Mathf.Clamp01(warmup01);
 
-        float overall01 = Mathf.Lerp(downloadProgressEnd, 1f, warmup01);
-        SetProgressExact(overall01);
+        SetProgressExact(warmup01);
 
-        LoadingText = $"Đang giải nén dữ liệu: {CurrentOverallPercent()}%";
+        SetCheckingResourceText();
     }
 
     private void UpdateDownloadLoadingText(float download01, long downloadedBytes, long totalBytes)
     {
         UpdateNetworkSpeed(downloadedBytes);
 
-        LoadingText =
-            $"Đang tải dữ liệu: {CurrentOverallPercent()}% | {FormatBytes(NetworkSpeedBytesPerSecond)}/s | {FormatBytes(downloadedBytes)}/{FormatBytes(totalBytes)}";
+        SetCheckingResourceText();
     }
 
     private void UpdateNetworkSpeed(long downloadedBytes)
@@ -1354,12 +1370,31 @@ public class AddressablesPreload : MonoBehaviour
         _prepareRunning = null;
     }
 
+    private IEnumerator WaitCachedPrepareMinimumIfNeeded()
+    {
+        if (!LastPrepareUsedCachedData || cachedDataMinimumLoadSeconds <= 0f)
+            yield break;
+
+        while (Time.realtimeSinceStartup - _prepareProgressStartRealtime < cachedDataMinimumLoadSeconds)
+        {
+            SetProgressExact(1f);
+            SetCheckingResourceText();
+
+            yield return null;
+        }
+    }
+
+    private void SetCheckingResourceText()
+    {
+        LoadingText = $"Đang kiểm tra tài nguyên: {CurrentOverallPercent()}%";
+    }
+
     private void Fail(string message)
     {
         HasFailed = true;
         LastError = message;
         SetStage(PreloadStage.Failed);
-        LoadingText = "Không thể tải dữ liệu. Vui lòng kiểm tra mạng và thử lại.";
+        SetCheckingResourceText();
 
         Debug.LogError("[Preload] " + message);
     }
