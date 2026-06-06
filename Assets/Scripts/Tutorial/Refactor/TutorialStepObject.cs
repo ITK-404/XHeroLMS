@@ -4,75 +4,100 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-
 [CustomEditor(typeof(TutorialStepObject), true)]
-[CanEditMultipleObjects] 
+[CanEditMultipleObjects]
 public class TutorialStepObjectEditor : Editor
 {
     public override VisualElement CreateInspectorGUI()
     {
         var root = new VisualElement();
-        
-        var helpBox = new HelpBox("Chọn Tutorial Config trước, sau đó chọn Step từ dropdown, phải gán tutorial config để manager filer tutorial", HelpBoxMessageType.Info);
-        root.Add(helpBox);
-        
-        
-        
-        var isActiveProperty = serializedObject.FindProperty("isCustomStepId");
-        var isActiveField = new PropertyField(isActiveProperty);
-        root.Add(isActiveField);
-        
+
+        root.Add(new HelpBox(
+            "Chọn Tutorial Config trước, sau đó chọn Step từ dropdown. Phải gán Tutorial Config để manager filter tutorial.",
+            HelpBoxMessageType.Info));
+
+        var isCustomProp = serializedObject.FindProperty("isCustomStepId");
+        var isCustomField = new PropertyField(isCustomProp);
+        root.Add(isCustomField);
+
         var parentTutoProp = serializedObject.FindProperty("parentTutorial");
         var parentField = new PropertyField(parentTutoProp);
         root.Add(parentField);
-        
+
+        // stepId chỉ hiện khi isCustom = true
         var stepIdProp = serializedObject.FindProperty("stepId");
-        root.Add(new PropertyField(stepIdProp));
+        var stepIdField = new PropertyField(stepIdProp);
+        root.Add(stepIdField);
+
+        // stepGuid ẩn, lưu giá trị thật
+        var stepGuidProp = serializedObject.FindProperty("stepGuid");
 
         var dropdownContainer = new VisualElement();
         root.Add(dropdownContainer);
 
         void RebuildDropdown()
         {
-            Debug.Log($"Editor rebuild dropdown");
             dropdownContainer.Clear();
-
             serializedObject.Update();
-            if (isActiveProperty.boolValue)
+
+            bool isCustom = isCustomProp.boolValue;
+
+            // Ẩn/hiện stepId field theo isCustom
+            stepIdField.style.display = isCustom ? DisplayStyle.Flex : DisplayStyle.None;
+            dropdownContainer.style.display = isCustom ? DisplayStyle.None : DisplayStyle.Flex;
+
+            if (isCustom) return;
+            if (parentTutoProp.objectReferenceValue == null)
             {
-                stepIdProp.stringValue = string.Empty;
-                serializedObject.ApplyModifiedProperties();
+                dropdownContainer.Add(new HelpBox("Chưa assign Tutorial Config", HelpBoxMessageType.Warning));
                 return;
             }
-            if (parentTutoProp.objectReferenceValue == null) return;
-            
+
             var configData = parentTutoProp.objectReferenceValue as TutorialConfig;
             if (configData == null) return;
 
-            Debug.Log($"Editor Thử vẽ dropdown");
-            
             var options = configData.GetListStep();
+            if (options.Count == 0)
+            {
+                dropdownContainer.Add(new HelpBox("Config chưa có step nào", HelpBoxMessageType.Warning));
+                return;
+            }
 
-            var dropdown = new DropdownField("Tutorial Sequence", options, 0);
+            // Tìm index hiện tại theo guid đang lưu
+            var currentGuid = stepGuidProp.stringValue;
+            var currentIndex = configData.GetIndexOfGuid(currentGuid);
+
+            if (currentIndex < 0 && !string.IsNullOrEmpty(currentGuid))
+            {
+                dropdownContainer.Add(new HelpBox("Step đã bị xóa khỏi config, vui lòng chọn lại", HelpBoxMessageType.Error));
+            }
+
+            var dropdown = new DropdownField("Tutorial Sequence", options, Mathf.Max(currentIndex, 0));
             dropdown.RegisterValueChangedCallback(evt =>
             {
                 int selectedIndex = options.IndexOf(evt.newValue);
-                stepIdProp.stringValue = options[selectedIndex];
+                if (selectedIndex < 0) return;
+
+                // Lưu guid, không lưu stepId
+                stepGuidProp.stringValue = configData.GetGuidAtIndex(selectedIndex);
                 serializedObject.ApplyModifiedProperties();
             });
+
             dropdownContainer.Add(dropdown);
         }
+
         parentField.RegisterValueChangeCallback(_ => RebuildDropdown());
-        isActiveField.RegisterValueChangeCallback(_ => RebuildDropdown());
-        // Chạy lần đầu
+        isCustomField.RegisterValueChangeCallback(_ => RebuildDropdown());
         RebuildDropdown();
-        
+
         return root;
     }
 }
 public abstract class TutorialStepObject : MonoBehaviour
 {
     [SerializeField] private string stepId;
+    [SerializeField] private string stepGuid;
+    
     [SerializeField] private bool isCustomStepId;
     [SerializeField] private TutorialConfig parentTutorial;
     public TutorialConfig ParentTutorialConfig => parentTutorial;
@@ -92,4 +117,9 @@ public abstract class TutorialStepObject : MonoBehaviour
     public virtual void OnExit(){}
     public virtual void StartListening(Action onComplete) { }
     public virtual void StopListening() { }
+
+    public string GetStepGuidId()
+    {
+        return stepGuid;
+    }
 }
