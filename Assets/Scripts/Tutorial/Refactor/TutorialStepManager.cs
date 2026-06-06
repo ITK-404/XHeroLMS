@@ -34,7 +34,9 @@ public class TutorialStepManager : MonoBehaviour
 
     private void MappingObjects()
     {
-        var temps = FindObjectsByType<TutorialStepObject>(FindObjectsSortMode.InstanceID).ToList();
+        var originalTemps = FindObjectsByType<TutorialStepObject>(FindObjectsSortMode.InstanceID).ToList();
+        var temps = originalTemps.Where(item => item.ParentTutorialConfig == config).ToList();
+
         stepObjects = new TutorialStepObject[config.GetStepCount()];
         for (int i = 0; i < temps.Count; i++)
         {

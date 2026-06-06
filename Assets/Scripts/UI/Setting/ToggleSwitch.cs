@@ -37,7 +37,7 @@ public class ToggleSwitch : MonoBehaviour, IPointerClickHandler
         if (slider != null) return;
 
         slider = GetComponent<Slider>();
-        if (slider == null) { Debug.Log("No slider found!", this); return; }
+        // if (slider == null) { Debug.Log("No slider found!", this); return; }
 
         slider.interactable = false;
         var colors = slider.colors;

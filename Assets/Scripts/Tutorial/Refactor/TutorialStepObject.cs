@@ -6,37 +6,67 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 [CustomEditor(typeof(TutorialStepObject), true)]
+[CanEditMultipleObjects] 
 public class TutorialStepObjectEditor : Editor
 {
     public override VisualElement CreateInspectorGUI()
     {
         var root = new VisualElement();
-
+        
+        var helpBox = new HelpBox("Chọn Tutorial Config trước, sau đó chọn Step từ dropdown, phải gán tutorial config để manager filer tutorial", HelpBoxMessageType.Info);
+        root.Add(helpBox);
+        
+        
+        
         var isActiveProperty = serializedObject.FindProperty("isCustomStepId");
-        var toggle = new PropertyField(isActiveProperty);
-        root.Add(toggle);
+        var isActiveField = new PropertyField(isActiveProperty);
+        root.Add(isActiveField);
         
         var parentTutoProp = serializedObject.FindProperty("parentTutorial");
-        root.Add(new PropertyField(parentTutoProp));
+        var parentField = new PropertyField(parentTutoProp);
+        root.Add(parentField);
         
         var stepIdProp = serializedObject.FindProperty("stepId");
-
         root.Add(new PropertyField(stepIdProp));
-        if (parentTutoProp.objectReferenceValue != null)
-        {
-            var configData = parentTutoProp.objectReferenceValue as TutorialConfig;
-            if (configData != null)
-            {
-                var options = configData.GetListStep();
-                
-                var dropdown = new DropdownField(
-                    "Tutorial Sequence",
-                    options,
-                    0); // index mặc định
 
-                root.Add(dropdown);
+        var dropdownContainer = new VisualElement();
+        root.Add(dropdownContainer);
+
+        void RebuildDropdown()
+        {
+            Debug.Log($"Editor rebuild dropdown");
+            dropdownContainer.Clear();
+
+            serializedObject.Update();
+            if (isActiveProperty.boolValue)
+            {
+                stepIdProp.stringValue = string.Empty;
+                serializedObject.ApplyModifiedProperties();
+                return;
             }
+            if (parentTutoProp.objectReferenceValue == null) return;
+            
+            var configData = parentTutoProp.objectReferenceValue as TutorialConfig;
+            if (configData == null) return;
+
+            Debug.Log($"Editor Thử vẽ dropdown");
+            
+            var options = configData.GetListStep();
+
+            var dropdown = new DropdownField("Tutorial Sequence", options, 0);
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                int selectedIndex = options.IndexOf(evt.newValue);
+                stepIdProp.stringValue = options[selectedIndex];
+                serializedObject.ApplyModifiedProperties();
+            });
+            dropdownContainer.Add(dropdown);
         }
+        parentField.RegisterValueChangeCallback(_ => RebuildDropdown());
+        isActiveField.RegisterValueChangeCallback(_ => RebuildDropdown());
+        // Chạy lần đầu
+        RebuildDropdown();
+        
         return root;
     }
 }
