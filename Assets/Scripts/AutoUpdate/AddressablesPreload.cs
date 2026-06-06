@@ -44,10 +44,6 @@ public class AddressablesPreload : MonoBehaviour
     public bool HasFailed { get; private set; }
     public string LastError { get; private set; } = "";
 
-    /// <summary>
-    /// Progress thật của phase đang chạy cho UI.
-    /// - Download: DownloadedBytes / TotalBytes.
-    /// </summary>
     public float DownloadPercent01 { get; private set; }
 
     public long BytesToDownload { get; private set; }
@@ -101,11 +97,17 @@ public class AddressablesPreload : MonoBehaviour
     // Chỉ dùng cho các bước chưa có số byte thật như probe/catalog/get-size.
     private float prepareProgressEnd = 0.05f;
 
+    [Header("Progress Mapping")]
+    [SerializeField] private float progressDownloadEnd = 0.80f;
+    [SerializeField] private float progressVerifyEnd = 0.85f;
+    [SerializeField] private float progressWarmupEnd = 0.99f;
+
     // Khi dữ liệu đã có sẵn trong cache, vẫn chạy thanh load tối thiểu bấy nhiêu giây thay vì nhảy thẳng 100%.
     private float cachedDataMinimumLoadSeconds = 1.2f;
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxCatalogRetries = 3;
+    [SerializeField] private int maxDownloadRetries = 3;
     [SerializeField] private float stepTimeoutSeconds = 30f;
     [SerializeField] private float downloadTimeoutSeconds = 0f;
     [SerializeField] private float downloadStallTimeoutSeconds = 60f;
@@ -255,7 +257,7 @@ public class AddressablesPreload : MonoBehaviour
             yield break;
         }
 
-        _prepareRunning = StartCoroutine(CoPrepareAddressableKey(key, skipCatalogCheck: true));
+        _prepareRunning = StartCoroutine(CoPrepareAddressableKeySafe(key, skipCatalogCheck: true));
 
         while (_prepareRunning != null)
             yield return null;
@@ -282,8 +284,11 @@ public class AddressablesPreload : MonoBehaviour
             if (IsReady && !HasFailed)
             {
                 SetStage(PreloadStage.CatalogReady);
-                SetProgressExact(catalogOnlyOnBoot ? 0f : 1f);
+
+                // Catalog-only boot không được set về 0%.
+                SetProgressExact(catalogOnlyOnBoot ? prepareProgressEnd : 1f);
                 SetCheckingResourceText();
+
                 _catalogRunning = null;
 
                 Debug.Log("[Preload] Bootstrap ready. On-demand mode enabled.");
@@ -399,8 +404,10 @@ public class AddressablesPreload : MonoBehaviour
         LastError = "";
         IsCloudFullyDownloaded = false;
 
-        Stage = catalogOnlyOnBoot ? PreloadStage.CatalogReady : PreloadStage.Done;
-        SetProgressExact(catalogOnlyOnBoot ? 0f : 1f);
+        SetStage(catalogOnlyOnBoot ? PreloadStage.CatalogReady : PreloadStage.Done);
+
+        // Không set catalog-only về 0%, vì UI sẽ tưởng hoàn thành 0%.
+        SetProgressExact(catalogOnlyOnBoot ? prepareProgressEnd : 1f);
         SetCheckingResourceText();
 
         if (!catalogOnlyOnBoot)
@@ -412,6 +419,18 @@ public class AddressablesPreload : MonoBehaviour
     // ============================================================
     // PREPARE KEY FLOW
     // ============================================================
+
+    private IEnumerator CoPrepareAddressableKeySafe(string key, bool skipCatalogCheck = false)
+    {
+        try
+        {
+            yield return CoPrepareAddressableKey(key, skipCatalogCheck);
+        }
+        finally
+        {
+            FinishPrepareKey();
+        }
+    }
 
     private IEnumerator CoPrepareAddressableKey(string key, bool skipCatalogCheck = false)
     {
@@ -483,16 +502,40 @@ public class AddressablesPreload : MonoBehaviour
             BeginLoadingPhase(
                 PreloadStage.Download,
                 "",
-                0f
+                prepareProgressEnd
             );
 
             UpdateDownloadLoadingText(0f, 0, totalBytes);
 
-            yield return DownloadSingleKeyWithTimeout(
-                key,
-                totalBytes,
-                () => downloadOk = true
-            );
+            int retryCount = Mathf.Max(1, maxDownloadRetries);
+
+            for (int attempt = 1; attempt <= retryCount; attempt++)
+            {
+                HasFailed = false;
+                LastError = "";
+
+                Debug.Log($"[Preload] Download attempt {attempt}/{retryCount}. key={key}");
+
+                yield return DownloadSingleKeyWithTimeout(
+                    key,
+                    totalBytes,
+                    () => downloadOk = true
+                );
+
+                if (downloadOk && !HasFailed)
+                    break;
+
+                if (attempt < retryCount)
+                {
+                    Debug.LogWarning($"[Preload] Download failed. Retry after {retryDelaySeconds}s. key={key}, error={LastError}");
+
+                    NetworkSpeedBytesPerSecond = 0;
+                    _lastSpeedBytes = 0;
+                    _lastSpeedTime = 0f;
+
+                    yield return new WaitForSecondsRealtime(retryDelaySeconds);
+                }
+            }
 
             if (!downloadOk || HasFailed)
             {
@@ -506,7 +549,8 @@ public class AddressablesPreload : MonoBehaviour
             BytesDownloadedApprox = 0;
             NetworkSpeedBytesPerSecond = 0;
 
-            SetProgressExact(0f);
+            // Đã có cache thì không được kéo về 0%.
+            SetProgressExact(progressDownloadEnd);
             SetCheckingResourceText();
 
             Debug.Log($"[Preload] Nothing to download. Key already cached according to current data: {key}");
@@ -522,13 +566,18 @@ public class AddressablesPreload : MonoBehaviour
                 yield break;
             }
         }
+        else
+        {
+            SetProgressExact(progressVerifyEnd);
+            SetCheckingResourceText();
+        }
 
         if (warmupKeyDataAfterDownload)
         {
             BeginLoadingPhase(
                 PreloadStage.WarmupKeyData,
                 "",
-                0f
+                progressVerifyEnd
             );
 
             SetWarmupProgress(0.01f);
@@ -543,7 +592,7 @@ public class AddressablesPreload : MonoBehaviour
         }
         else
         {
-            SetProgressExact(1f);
+            SetProgressExact(progressWarmupEnd);
         }
 
         yield return WaitCachedPrepareMinimumIfNeeded();
@@ -614,7 +663,9 @@ public class AddressablesPreload : MonoBehaviour
                 ? Mathf.Clamp01((float)downloadedBytes / realTotalBytes)
                 : Mathf.Clamp01(dl.PercentComplete);
 
-            SetProgressExact(download01);
+            float overall01 = Map01(download01, prepareProgressEnd, progressDownloadEnd);
+            SetProgressExact(overall01);
+
             UpdateDownloadLoadingText(download01, downloadedBytes, realTotalBytes);
 
             bool progressedByBytes = downloadedBytes > lastDownloadedBytes;
@@ -633,7 +684,8 @@ public class AddressablesPreload : MonoBehaviour
 
                 Debug.Log(
                     $"[Preload] Downloading key='{key}' " +
-                    $"progress={download01:P1} " +
+                    $"download={download01:P1} " +
+                    $"ui={DownloadPercent01:P1} " +
                     $"bytes={FormatBytes(downloadedBytes)}/{FormatBytes(realTotalBytes)} " +
                     $"speed={FormatBytes(NetworkSpeedBytesPerSecond)}/s"
                 );
@@ -675,7 +727,7 @@ public class AddressablesPreload : MonoBehaviour
 
         SafeRelease(dl);
 
-        SetProgressExact(1f);
+        SetProgressExact(progressDownloadEnd);
         BytesDownloadedApprox = totalBytes;
         SetCheckingResourceText();
 
@@ -687,6 +739,9 @@ public class AddressablesPreload : MonoBehaviour
     private IEnumerator VerifyKeyDownloaded(string key)
     {
         SetStage(PreloadStage.Verify);
+
+        SetProgressExact(progressDownloadEnd);
+        SetCheckingResourceText();
 
         var verifyHandle = Addressables.GetDownloadSizeAsync(key);
 
@@ -720,6 +775,9 @@ public class AddressablesPreload : MonoBehaviour
             Fail($"Verify failed. key={key}, remain={FormatBytes(remain)}");
             yield break;
         }
+
+        SetProgressExact(progressVerifyEnd);
+        SetCheckingResourceText();
     }
 
     // ============================================================
@@ -1171,6 +1229,9 @@ public class AddressablesPreload : MonoBehaviour
         IsCloudFullyDownloaded = false;
         LastPrepareUsedCachedData = false;
 
+        // Reset thật sự cho lượt bootstrap mới.
+        DownloadPercent01 = 0f;
+
         SetStage(PreloadStage.None);
 
         _lastSpeedBytes = 0;
@@ -1275,6 +1336,9 @@ public class AddressablesPreload : MonoBehaviour
         _lastSpeedBytes = 0;
         _lastSpeedTime = 0f;
 
+        // Reset thật sự ở đầu một lượt load mới.
+        DownloadPercent01 = 0f;
+
         SetProgressExact(0.01f);
         SetCheckingResourceText();
     }
@@ -1300,8 +1364,22 @@ public class AddressablesPreload : MonoBehaviour
         return Mathf.Clamp(Mathf.FloorToInt(DownloadPercent01 * 100f), 0, 100);
     }
 
+    private float Map01(float value01, float from, float to)
+    {
+        value01 = Mathf.Clamp01(value01);
+        from = Mathf.Clamp01(from);
+        to = Mathf.Clamp01(to);
+
+        if (to < from)
+            to = from;
+
+        return Mathf.Lerp(from, to, value01);
+    }
+
     private void SetProgressExact(float p01)
     {
+        p01 = Mathf.Clamp01(p01);
+
         if (IsPreparingKey &&
             LastPrepareUsedCachedData &&
             cachedDataMinimumLoadSeconds > 0f)
@@ -1311,7 +1389,8 @@ public class AddressablesPreload : MonoBehaviour
             p01 = Mathf.Min(p01, timeCap);
         }
 
-        DownloadPercent01 = Mathf.Clamp01(p01);
+        // Không cho progress tụt lùi trong cùng một lượt load.
+        DownloadPercent01 = Mathf.Max(DownloadPercent01, p01);
     }
 
     private void SetPrepareText(float progress01)
@@ -1326,7 +1405,8 @@ public class AddressablesPreload : MonoBehaviour
     {
         warmup01 = Mathf.Clamp01(warmup01);
 
-        SetProgressExact(warmup01);
+        float overall01 = Map01(warmup01, progressVerifyEnd, progressWarmupEnd);
+        SetProgressExact(overall01);
 
         SetCheckingResourceText();
     }
