@@ -1,6 +1,15 @@
 using System;
 using UnityEngine;
 
+public struct CourseExitWayVisibilityCommand : ICommand
+{
+    public bool visibility;
+
+    public CourseExitWayVisibilityCommand(bool visibility)
+    {
+        this.visibility = visibility;
+    }
+}
 public class CourseExitWayHandler : MonoBehaviour
 {
     [Header("UI")]
@@ -14,7 +23,7 @@ public class CourseExitWayHandler : MonoBehaviour
     [SerializeField] private GameObject player;
     
     private bool isShowing = false;
-        
+
     // lay vi tri item o tren screen space
     private void LateUpdate()
     {

@@ -42,11 +42,27 @@ public class PlayerChairManager : MonoBehaviour
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         courseExitWayHandler.Show();
+        
+        SignalBus.Subscribe<ChairCheckPointVisibilityCommand>(SetShowCheckPointState);
     }
 
+    private void SetShowCheckPointState(ChairCheckPointVisibilityCommand command)
+    {
+        ShowAllCheckPoints(command.isVisible);
+    }
+    
+    private void ShowAllCheckPoints(bool isVisible)
+    {
+        foreach (var item in allCheckPoints)
+        {
+            item.Show(isVisible);
+        }
+    }
+    
     private void OnDestroy()
     {
         Instance = null;
+        SignalBus.Unsubscribe<ChairCheckPointVisibilityCommand>(SetShowCheckPointState);
     }
 
     private IEnumerator WaitForBlendDone(Action action)
@@ -72,10 +88,7 @@ public class PlayerChairManager : MonoBehaviour
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
-        foreach (var item in allCheckPoints)
-        {
-            item.Show(true);
-        }
+        ShowAllCheckPoints(true);
         // ẩn UI ngay khi bắt đầu đứng dậy
         //playerStandUI.UILearnCanvas.Hide();
         //playerStandUI.HideWatchVideoUI();
@@ -145,10 +158,8 @@ public class PlayerChairManager : MonoBehaviour
             inputCanvas.Hide();
 
             // ẩn tất cả icon của ghế
-            foreach (var item in allCheckPoints)
-            {
-                item.Show(false);
-            }
+            ShowAllCheckPoints(true);
+
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
@@ -170,6 +181,12 @@ public class PlayerChairManager : MonoBehaviour
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
                 
+            }));
+            
+            OnStandupUI_Immediate();
+            StartCoroutine(WaitForBlendDone(() =>
+            {
+                OnStandupUI_Deferred();
             }));
         }
     }
@@ -193,4 +210,33 @@ public class PlayerChairManager : MonoBehaviour
         }
     }
 
+    
+    
+    private void OnSitdownUI_Immediate()
+    {
+        inputCanvas.Hide();
+        courseExitWayHandler.Hide();
+        PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+    }
+
+    private void OnSitdownUI_Deferred()
+    {
+        playerStandUI.ShowLearningUI();
+        videoPlayerControllerPro.EnterFullscreenUI();
+        playerStandUI.returnBtn.gameObject.SetActive(false);
+    }
+
+    private void OnStandupUI_Immediate()
+    {
+        playerStandUI.HideLearningUI();
+        videoPlayerControllerPro.ExitFullscreenUI();
+    }
+
+    private void OnStandupUI_Deferred()
+    {
+        inputCanvas.Show();
+        courseExitWayHandler.Show();
+        PlayerPanelUI.Instance.ShowUnLoginContainer(true);
+        playerStandUI.returnBtn.gameObject.SetActive(true);
+    }
 }

@@ -5,7 +5,6 @@ using UnityEngine.UI;
 public class NPCInteractionUIView : UIView
 {
     [SerializeField] private Button worldSpaceBtn;
-       
     [SerializeField] private Transform worldSpaceIcon;
     [SerializeField] private Transform supportChatBox;
 
@@ -22,10 +21,7 @@ public class NPCInteractionUIView : UIView
         worldSpaceBtn.onClick.RemoveListener(ClickWorldSpace);
     }
 
-    private void ClickWorldSpace()
-    {
-        OnClickWorldSpaceEvent?.Invoke();
-    }
+    private void ClickWorldSpace() => OnClickWorldSpaceEvent?.Invoke();
 
     public void ShowWorldSpaceIcon()
     {

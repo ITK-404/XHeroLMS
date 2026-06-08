@@ -17,7 +17,10 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField] private NPCInteractionUIView interactionUIView;
     [SerializeField] private ActionChoiceViewUI actionChoiceViewUI;
     [SerializeField] private KyMon_WorldSpaceUI worldSpaceUi;
+    [SerializeField] private InputCanvas inputCanvas;
     // player
+    private PlayerStandUI playerStandUI;
+    
     private PointClickSystem pointClickSystem;
     private PlayerCamera playerCamera;
 
@@ -27,17 +30,21 @@ public class NPCInteraction : MonoBehaviour
     {
         focusCamera.gameObject.SetActive(false);
         interactionUIView.OnClickWorldSpaceEvent += ViewOnOnClickWorldSpaceEvent;
+        actionChoiceViewUI.OnClickReturnBtn += InteractionUIViewOnOnClickReturnBtn;
     }
 
+    
     private void OnDestroy()
     {
         interactionUIView.OnClickWorldSpaceEvent -= ViewOnOnClickWorldSpaceEvent;
+        actionChoiceViewUI.OnClickReturnBtn -= InteractionUIViewOnOnClickReturnBtn;
     }
 
     private void SetupWorldSpaceUI()
     {
-        worldSpaceUi.SetPlayer(pointClickSystem.transform);
+        worldSpaceUi.SetPlayer(player.transform);
         worldSpaceUi.SetTarget(target);
+        worldSpaceUi.SetCamera(playerCamera.mainCamera);
         actionChoiceViewUI.Hide();
         interactionUIView.ShowWorldSpaceIcon();
     }
@@ -45,39 +52,12 @@ public class NPCInteraction : MonoBehaviour
     private void Start()
     {
         playerCamera = PlayerCamera.Instance;
-        pointClickSystem = FindFirstObjectByType<PointClickSystem>();
+        playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
+        
         focusCamera.Priority.Value = playerCamera.playerCinemachineCamera.Priority.Value;
         SetupWorldSpaceUI();
     }
-
-    private void ViewOnOnClickWorldSpaceEvent()
-    {
-        // alway have, because this room is alway learn
-        // if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
-        // {
-        //     Debug.Log($"Return");
-        //     return;
-        // }
-        // if (pointClickSystem.IsBlendingCamera())
-        // {
-        //     Debug.Log($"Return");
-        //     return;
-        // }
-        //
-        float distance = Vector3.Distance(player.transform.position, target.transform.position);
-        Debug.Log($"Checking distance: " + distance);
-        //
-        if (distance < allowTriggerDistance)
-        {
-            FocusCamera();
-            StartCoroutine(WaitForBlending(() =>
-            {
-                interactionUIView.ShowSupportChatBox();
-                actionChoiceViewUI.Show();
-            }));
-        }
-        Debug.Log("NPC INteract, try interact with ui");
-    }
+    private bool isFocused = false;
 
     private IEnumerator WaitForBlending(Action onComplete)
     {
@@ -88,5 +68,60 @@ public class NPCInteraction : MonoBehaviour
     private void FocusCamera()
     {
         focusCamera.gameObject.SetActive(true);
+    }
+    
+    private void EnterFocusState()
+    {
+        isFocused = true;
+        inputCanvas.Hide();
+        focusCamera.gameObject.SetActive(true);
+        playerMoveSystem.enabled = false;          // tắt di chuyển
+        playerStandUI.returnBtn.gameObject.SetActive(false);
+        InputBlocker.SetBlocked(true);
+        StartCoroutine(WaitForBlending(() =>
+        {
+            interactionUIView.ShowSupportChatBox();
+            actionChoiceViewUI.Show();
+        }));
+        
+        SignalBus.Send(new ChairCheckPointVisibilityCommand(false));
+    }
+
+    private void ExitFocusState()
+    {
+        isFocused = false;
+        
+        focusCamera.gameObject.SetActive(false);
+        InputBlocker.SetBlocked(false);
+        playerMoveSystem.enabled = true;           // bật lại di chuyển
+        interactionUIView.ShowWorldSpaceIcon();
+        actionChoiceViewUI.Hide();
+        playerStandUI.returnBtn.gameObject.SetActive(true);
+        inputCanvas.Show();
+        
+        SignalBus.Send(new ChairCheckPointVisibilityCommand(true));
+    }
+
+    // ==================== TRIGGERS ====================
+    
+    private void ViewOnOnClickWorldSpaceEvent()
+    {
+        if (isFocused) return;
+        
+        float distance = Vector3.Distance(player.position, target.position);
+        if (distance < allowTriggerDistance)
+            EnterFocusState();
+    }
+    
+    private void InteractionUIViewOnOnClickReturnBtn()
+    {
+        OnReturnPressed();
+    }
+
+    // Gọi cái này từ Return Button
+    public void OnReturnPressed()
+    {
+        if (isFocused)
+            ExitFocusState();
     }
 }
