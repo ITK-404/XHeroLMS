@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -24,7 +26,6 @@ public class NPCInteraction : MonoBehaviour
     private void Awake()
     {
         focusCamera.gameObject.SetActive(false);
-        
         interactionUIView.OnClickWorldSpaceEvent += ViewOnOnClickWorldSpaceEvent;
     }
 
@@ -37,34 +38,51 @@ public class NPCInteraction : MonoBehaviour
     {
         worldSpaceUi.SetPlayer(pointClickSystem.transform);
         worldSpaceUi.SetTarget(target);
+        actionChoiceViewUI.Hide();
+        interactionUIView.ShowWorldSpaceIcon();
     }
     
     private void Start()
     {
         playerCamera = PlayerCamera.Instance;
         pointClickSystem = FindFirstObjectByType<PointClickSystem>();
-        playerCameraPriority = playerCamera.playerCinemachineCamera.Priority.Value + 1;
+        focusCamera.Priority.Value = playerCamera.playerCinemachineCamera.Priority.Value;
         SetupWorldSpaceUI();
     }
 
     private void ViewOnOnClickWorldSpaceEvent()
     {
         // alway have, because this room is alway learn
-        if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown) return;
-        if (pointClickSystem.IsBlendingCamera())
-        {
-            return;
-        }
-        
+        // if (PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
+        // {
+        //     Debug.Log($"Return");
+        //     return;
+        // }
+        // if (pointClickSystem.IsBlendingCamera())
+        // {
+        //     Debug.Log($"Return");
+        //     return;
+        // }
+        //
         float distance = Vector3.Distance(player.transform.position, target.transform.position);
-
+        Debug.Log($"Checking distance: " + distance);
+        //
         if (distance < allowTriggerDistance)
         {
-            // interactionUIView.ShowSupportChatBox();
-            // actionChoiceViewUI.Show();
             FocusCamera();
-            Debug.Log("Cho phep hien thi UI");
+            StartCoroutine(WaitForBlending(() =>
+            {
+                interactionUIView.ShowSupportChatBox();
+                actionChoiceViewUI.Show();
+            }));
         }
+        Debug.Log("NPC INteract, try interact with ui");
+    }
+
+    private IEnumerator WaitForBlending(Action onComplete)
+    {
+        yield return new WaitForSeconds(2f);
+        onComplete?.Invoke();
     }
 
     private void FocusCamera()

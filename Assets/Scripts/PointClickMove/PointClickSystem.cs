@@ -73,7 +73,7 @@ public class PointClickSystem : MonoBehaviour
             defaultSpeed = ai.maxSpeed;
     }
 
-    public bool IsBlendingCamera()
+    private bool IsBlendingCamera()
     {
         return brain != null && brain.IsBlending && BuildingCameraManager.Instance.IsFocus();
     }

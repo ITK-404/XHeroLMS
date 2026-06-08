@@ -15,6 +15,7 @@ public class KyMon_WorldSpaceUI : WorldSpaceUI
    
    protected override Vector3 GetTargetPosition()
    {
+      if (target == null) return Vector3.zero;
       return target.transform.position + offset;
    }
 
@@ -32,7 +33,7 @@ public class KyMon_WorldSpaceUI : WorldSpaceUI
       if (player == null || target == null) return;
       
       float distance = Vector3.Distance(target.transform.position, player.transform.position);
-      Debug.Log($"Taget Distance {distance}");
+      // Debug.Log($"Taget Distance {distance}");
       // t = 0 khi distance <= minDist, t = 1 khi distance >= maxDist
       float t = Mathf.InverseLerp(minDist, maxDist, distance);
 

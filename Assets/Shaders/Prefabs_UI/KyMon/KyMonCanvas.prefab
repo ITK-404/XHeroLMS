@@ -378,9 +378,9 @@ MonoBehaviour:
   fadeDuration: 0.2
   useFade: 1
   targetID: 
-  worldSpaceBtn: {fileID: 0}
-  worldSpaceIcon: {fileID: 0}
-  supportChatBox: {fileID: 0}
+  worldSpaceBtn: {fileID: 2705377905879924114}
+  worldSpaceIcon: {fileID: 6269286163329697854}
+  supportChatBox: {fileID: 7373917482146912428}
 --- !u!225 &663095626086883612
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -454,7 +454,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &3914590659477731238
 RectTransform:
   m_ObjectHideFlags: 0
@@ -488,6 +488,81 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1 &5418974504970555866
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7373917482146912428}
+  - component: {fileID: 8481301882212538765}
+  - component: {fileID: 1147909150393185699}
+  m_Layer: 5
+  m_Name: SupportBoxChat
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7373917482146912428
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5418974504970555866}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8124846039913477272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 95}
+  m_SizeDelta: {x: 573, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &8481301882212538765
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5418974504970555866}
+  m_CullTransparentMesh: 1
+--- !u!114 &1147909150393185699
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5418974504970555866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: c56fe963ccaa64fc3a5df5796e314958, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &7170274000131154510
 GameObject:
   m_ObjectHideFlags: 0
@@ -873,11 +948,11 @@ MonoBehaviour:
   isWorldSpaceUI: 0
   wrapperCamera: {fileID: 0}
   container: {fileID: 2690877710780187788}
-  minSize: 0.67
-  maxSize: 2
+  minSize: 1.08
+  maxSize: 2.6
   offset: {x: -0.11, y: 2.44, z: 0}
-  minDist: 4.48
-  maxDist: 10
+  minDist: 4.9
+  maxDist: 12.81
 --- !u!114 &2705377905879924114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1287,6 +1362,7 @@ RectTransform:
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6269286163329697854}
+  - {fileID: 7373917482146912428}
   m_Father: {fileID: 6041823696601463446}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
