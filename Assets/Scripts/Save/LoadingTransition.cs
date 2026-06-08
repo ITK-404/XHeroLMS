@@ -52,15 +52,28 @@ public static class LoadingTransition
     private static AsyncOperationHandle<RollbackConfig>? rollbackConfigHandle;
 #endif
 
+    public static void BindRuntime(
+        MonoBehaviour _runner,
+        SceneNavigationHistory _sceneHistory,
+        SceneLocationHandler _sceneLocationHandler)
+    {
+        if (_runner != null)
+            runner = _runner;
+
+        if (_sceneHistory != null)
+            sceneHistory = _sceneHistory;
+
+        if (_sceneLocationHandler != null)
+            sceneLocationHandler = _sceneLocationHandler;
+    }
+
     public static async UniTaskVoid Init(
         MonoBehaviour _runner,
         SceneNavigationHistory sceneNavigationHistory,
         SceneLocationHandler _sceneLocationHandler,
         CancellationToken token)
     {
-        runner = _runner;
-        sceneHistory = sceneNavigationHistory;
-        sceneLocationHandler = _sceneLocationHandler;
+        BindRuntime(_runner, sceneNavigationHistory, _sceneLocationHandler);
 
 #if ADDRESSABLES
         try
@@ -235,7 +248,9 @@ public static class LoadingTransition
             yield break;
         }
 
-        if (AddressablesPreload.Instance == null)
+        AddressablesPreload preload = EnsureAddressablesPreload();
+
+        if (preload == null)
         {
             MarkPrepareFailed("AddressablesPreload.Instance is null.");
             yield break;
@@ -250,11 +265,11 @@ public static class LoadingTransition
             $"scene={TargetSceneName}, key={TargetPrepareKey}"
         );
 
-        yield return AddressablesPreload.Instance.PrepareAddressableKeyRoutine(TargetPrepareKey);
+        yield return preload.PrepareAddressableKeyRoutine(TargetPrepareKey);
 
-        if (AddressablesPreload.Instance.HasFailed)
+        if (preload.HasFailed)
         {
-            MarkPrepareFailed(AddressablesPreload.Instance.LastError);
+            MarkPrepareFailed(preload.LastError);
             yield break;
         }
 
@@ -309,6 +324,21 @@ public static class LoadingTransition
         );
     }
 #endif
+
+    private static AddressablesPreload EnsureAddressablesPreload()
+    {
+        if (AddressablesPreload.Instance != null)
+            return AddressablesPreload.Instance;
+
+        GameObject go = new GameObject("[AddressablesPreload]");
+        UnityEngine.Object.DontDestroyOnLoad(go);
+
+        AddressablesPreload preload = go.AddComponent<AddressablesPreload>();
+
+        Debug.LogWarning("[LoadingTransition] AddressablesPreload.Instance was null. Created runtime fallback.");
+
+        return preload;
+    }
 
     // ============================================================
     // ADDRESSABLES CHECK
