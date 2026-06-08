@@ -18,6 +18,8 @@ public class GameInitializer : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        EnsureCoreRuntimeObjects();
+        LoadingTransition.BindRuntime(this, sceneHistory, sceneLocationHandle);
         Debug.Log("[GameInitializer] Load các tác vụ ngầm");
     }
 
@@ -83,8 +85,8 @@ public class GameInitializer : MonoBehaviour
          
         // GAME OBJECT LOADING
         // TODO: UPDATE TO ADDRESSABLE BEFORE
-        sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
-        sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
+        EnsureCoreRuntimeObjects();
+        LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
         
         // ADDRESSABLE LOADING
         
@@ -93,9 +95,17 @@ public class GameInitializer : MonoBehaviour
         batteryWarningHandler = await LoadAddressable<BatteryWarningHandler>("BatteryWarningHandler",dontDestroyOnLoad: true,ct);
         
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
-        LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
 
         BindEvent();
+    }
+
+    private void EnsureCoreRuntimeObjects()
+    {
+        if (sceneHistory == null)
+            sceneHistory = CreateGameObject<SceneNavigationHistory>(donDestroyOnLoad: true);
+
+        if (sceneLocationHandle == null)
+            sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
     }
 
     private void BindEvent()

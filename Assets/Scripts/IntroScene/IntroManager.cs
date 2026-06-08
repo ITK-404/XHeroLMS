@@ -735,6 +735,8 @@ private string GetStageText(float t01)
     {
         t01 = Mathf.Clamp01(t01);
 
+        EnsureAssignedProgressUiVisible();
+
         if (textLoading != null)
             textLoading.text = GetStageText(t01);
 
@@ -743,6 +745,43 @@ private string GetStageText(float t01)
 
         if (sliderUI != null)
             sliderUI.value = t01;
+    }
+
+    private void EnsureAssignedProgressUiVisible()
+    {
+        EnsureUiBehaviourVisible(textLoading);
+        EnsureUiBehaviourVisible(progressRing);
+        EnsureUiBehaviourVisible(sliderUI);
+    }
+
+    private void EnsureUiBehaviourVisible(Behaviour ui)
+    {
+        if (ui == null)
+            return;
+
+        ui.enabled = true;
+        EnsureParentsActive(ui.transform);
+    }
+
+    private void EnsureParentsActive(Transform target)
+    {
+        Transform current = target;
+
+        while (current != null)
+        {
+            if (!current.gameObject.activeSelf)
+                current.gameObject.SetActive(true);
+
+            CanvasGroup canvasGroup = current.GetComponent<CanvasGroup>();
+            if (canvasGroup != null && canvasGroup.alpha <= 0.001f)
+            {
+                canvasGroup.alpha = 1f;
+                canvasGroup.blocksRaycasts = true;
+                canvasGroup.interactable = true;
+            }
+
+            current = current.parent;
+        }
     }
 
     private void OnDestroy()
