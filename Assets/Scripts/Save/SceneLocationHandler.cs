@@ -45,10 +45,23 @@ public class SceneLocationHandler : MonoBehaviour
     public void LoadPlayerPosition(string sceneName)
     {
         Debug.Log($"[SceneLocationHandler] Cập nhật vị trí khi load scene");
+        var playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject == null)
+        {
+            Debug.LogWarning($"[SceneLocationHandler] Player is not ready. Keep saved position cached for scene {sceneName}");
+            return;
+        }
+
+        var player = playerObject.GetComponent<PointClickSystem>();
+        if (player == null)
+        {
+            Debug.LogWarning($"[SceneLocationHandler] Player object has no PointClickSystem. Keep saved position cached for scene {sceneName}");
+            return;
+        }
+
         if (TryExtractSceneLocation(sceneName, out Vector3 position, out Quaternion rotation))
         {
             Debug.Log("[SceneLocationHandler] Tìm thấy data của scene trong danh sách, bắt đầu cập nhật vị trí");
-            var player = GameObject.FindGameObjectWithTag("Player").GetComponent<PointClickSystem>();
             player.TeleportDelay(position);
             // TeleMapController._mapActive = true;
             // player.transform.position = position;
@@ -128,6 +141,9 @@ public class SceneLocationHandler : MonoBehaviour
 
     public void TryAddOrUpdate(SceneLocation addLocation)
     {
+        if (addLocation == null || string.IsNullOrWhiteSpace(addLocation.SceneName))
+            return;
+
         Debug.Log($"[SceneLocationHandle] Try add or update {addLocation.SceneName} {addLocation.Position} {addLocation.Rotation}");
         bool isExitData = false;
         foreach (var item in sceneLocationList)
