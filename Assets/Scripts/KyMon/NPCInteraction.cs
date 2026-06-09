@@ -95,6 +95,7 @@ public class NPCInteraction : MonoBehaviour
         focusCamera.gameObject.SetActive(false);
         
         InputBlocker.SetBlocked(false);
+        interactionUIView.Show();
         interactionUIView.ShowWorldSpaceIcon();
         actionChoiceViewUI.Hide();
      

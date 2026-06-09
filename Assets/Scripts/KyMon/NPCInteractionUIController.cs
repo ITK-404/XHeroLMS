@@ -31,7 +31,7 @@ public class NPCInteractionUIController : MonoBehaviour
     {
         interactionUIView.Show();
         actionChoiceViewUI.Show();
-        
+        interactionUIView.ShowSupportChatBox();
         tabItemManagerUI.gameObject.SetActive(false);
         advanceCourseUI.Hide();
     }
