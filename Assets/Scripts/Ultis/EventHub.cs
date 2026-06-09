@@ -34,16 +34,6 @@ public class EventHub
 
 public interface ICommand { }
 
-public struct ChairCheckPointVisibilityCommand : ICommand
-{
-    public bool isVisible;
-
-    public ChairCheckPointVisibilityCommand(bool isVisible)
-    {
-        this.isVisible = isVisible;
-    }
-}
-
 public static class SignalBus
 {
     private static readonly Dictionary<Type, List<object>> handlers = new();

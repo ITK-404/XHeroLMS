@@ -21,6 +21,7 @@ public class KyMon_WorldSpaceUI : WorldSpaceUI
 
    private void Update()
    {
+      if (wrapperCamera == null) return;
       HandleFollowTarget();
       HandleIconSize();
    }

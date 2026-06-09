@@ -42,16 +42,9 @@ public class PlayerChairManager : MonoBehaviour
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         courseExitWayHandler.Show();
-        
-        SignalBus.Subscribe<ChairCheckPointVisibilityCommand>(SetShowCheckPointState);
     }
 
-    private void SetShowCheckPointState(ChairCheckPointVisibilityCommand command)
-    {
-        ShowAllCheckPoints(command.isVisible);
-    }
-    
-    private void ShowAllCheckPoints(bool isVisible)
+    public void ShowAllCheckPoints(bool isVisible)
     {
         foreach (var item in allCheckPoints)
         {
@@ -62,7 +55,6 @@ public class PlayerChairManager : MonoBehaviour
     private void OnDestroy()
     {
         Instance = null;
-        SignalBus.Unsubscribe<ChairCheckPointVisibilityCommand>(SetShowCheckPointState);
     }
 
     private IEnumerator WaitForBlendDone(Action action)
@@ -212,18 +204,18 @@ public class PlayerChairManager : MonoBehaviour
 
     
     
-    private void OnSitdownUI_Immediate()
+    public void OnSitdownUI_Immediate()
     {
         inputCanvas.Hide();
         courseExitWayHandler.Hide();
         PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+        playerStandUI.returnBtn.gameObject.SetActive(false);
     }
 
     private void OnSitdownUI_Deferred()
     {
         playerStandUI.ShowLearningUI();
         videoPlayerControllerPro.EnterFullscreenUI();
-        playerStandUI.returnBtn.gameObject.SetActive(false);
     }
 
     private void OnStandupUI_Immediate()
@@ -232,7 +224,7 @@ public class PlayerChairManager : MonoBehaviour
         videoPlayerControllerPro.ExitFullscreenUI();
     }
 
-    private void OnStandupUI_Deferred()
+    public void OnStandupUI_Deferred()
     {
         inputCanvas.Show();
         courseExitWayHandler.Show();

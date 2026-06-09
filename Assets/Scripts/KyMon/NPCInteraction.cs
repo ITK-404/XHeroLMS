@@ -18,8 +18,11 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField] private ActionChoiceViewUI actionChoiceViewUI;
     [SerializeField] private KyMon_WorldSpaceUI worldSpaceUi;
     [SerializeField] private InputCanvas inputCanvas;
+    [SerializeField] private CourseExitWayHandler courseExitWayHandler;
+
+    [SerializeField] private PlayerChairManager playerChairManager;
     // player
-    private PlayerStandUI playerStandUI;
+    [SerializeField] private PlayerStandUI playerStandUI;
     
     private PointClickSystem pointClickSystem;
     private PlayerCamera playerCamera;
@@ -40,22 +43,23 @@ public class NPCInteraction : MonoBehaviour
         actionChoiceViewUI.OnClickReturnBtn -= InteractionUIViewOnOnClickReturnBtn;
     }
 
-    private void SetupWorldSpaceUI()
-    {
-        worldSpaceUi.SetPlayer(player.transform);
-        worldSpaceUi.SetTarget(target);
-        worldSpaceUi.SetCamera(playerCamera.mainCamera);
-        actionChoiceViewUI.Hide();
-        interactionUIView.ShowWorldSpaceIcon();
-    }
-    
     private void Start()
     {
+        interactionUIView.Show();
+        interactionUIView.ShowWorldSpaceIcon();
+        actionChoiceViewUI.Hide();
+        
         playerCamera = PlayerCamera.Instance;
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         
         focusCamera.Priority.Value = playerCamera.playerCinemachineCamera.Priority.Value;
-        SetupWorldSpaceUI();
+        
+        worldSpaceUi.SetPlayer(player.transform);
+        worldSpaceUi.SetTarget(target);
+        worldSpaceUi.SetCamera(playerCamera.mainCamera);
+        
+        actionChoiceViewUI.Hide();
+        interactionUIView.ShowWorldSpaceIcon();
     }
     private bool isFocused = false;
 
@@ -65,41 +69,39 @@ public class NPCInteraction : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    private void FocusCamera()
-    {
-        focusCamera.gameObject.SetActive(true);
-    }
     
     private void EnterFocusState()
     {
         isFocused = true;
-        inputCanvas.Hide();
         focusCamera.gameObject.SetActive(true);
-        playerMoveSystem.enabled = false;          // tắt di chuyển
-        playerStandUI.returnBtn.gameObject.SetActive(false);
         InputBlocker.SetBlocked(true);
+        // playerMoveSystem.enabled = false;          // tắt di chuyển
+        // playerStandUI.returnBtn.gameObject.SetActive(false);
+        // courseExitWayHandler.Hide();
+
+        playerChairManager.OnSitdownUI_Immediate();
+        playerStandUI.HideButtons();
+        
         StartCoroutine(WaitForBlending(() =>
         {
             interactionUIView.ShowSupportChatBox();
             actionChoiceViewUI.Show();
         }));
-        
-        SignalBus.Send(new ChairCheckPointVisibilityCommand(false));
+        playerChairManager.ShowAllCheckPoints(false);
     }
 
     private void ExitFocusState()
     {
         isFocused = false;
-        
         focusCamera.gameObject.SetActive(false);
+        
         InputBlocker.SetBlocked(false);
-        playerMoveSystem.enabled = true;           // bật lại di chuyển
         interactionUIView.ShowWorldSpaceIcon();
         actionChoiceViewUI.Hide();
-        playerStandUI.returnBtn.gameObject.SetActive(true);
-        inputCanvas.Show();
-        
-        SignalBus.Send(new ChairCheckPointVisibilityCommand(true));
+     
+        playerChairManager.OnStandupUI_Deferred();
+        playerChairManager.ShowAllCheckPoints(true);
+        playerStandUI.ShowSitdownButton();
     }
 
     // ==================== TRIGGERS ====================
@@ -124,4 +126,10 @@ public class NPCInteraction : MonoBehaviour
         if (isFocused)
             ExitFocusState();
     }
+}
+
+public class NPCInteractionUIController : MonoBehaviour
+{
+    [SerializeField] private NPCInteractionUIView interactionUIView;
+    [SerializeField] private ActionChoiceViewUI actionChoiceViewUI;
 }
