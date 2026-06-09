@@ -25,17 +25,15 @@ public class TabItemManagerUI : MonoBehaviour
     [SerializeField] private GameObject tabContainer;
 
     public GameObject container;
-    
+
+    public event Action OnClickReturnBtnEvent;
+
+    [SerializeField] private bool isLoadToPreviousSceneOrTurnOff = false;
     private void Awake()
     {
         tabIDs = GetComponentsInChildren<BookShelfManager>();
         tabButtonsList = GetComponentsInChildren<TabUI>();
-        returnBtn.onClick.AddListener(() =>
-        {
-            // LoadingTransition.Load("New Scene");
-            // LoadingTransition.Load_Scene("New Scene");
-            LoadingTransition.LoadPreviousSceneOrDefault();
-        });
+        returnBtn.onClick.AddListener(OnClickPreviousScene);
         foreach (var item in tabIDs)
         {
             tabList.Add(item.CourseID, item);
@@ -48,6 +46,16 @@ public class TabItemManagerUI : MonoBehaviour
         }
 
         ActiveTab(currentItemID);
+    }
+
+    private void OnDestroy()
+    {
+        returnBtn.onClick.RemoveListener(OnClickPreviousScene);
+    }
+
+    private void OnClickPreviousScene()
+    {
+        OnClickReturnBtnEvent?.Invoke();
     }
 
     private string GetNameCourseTitle(CourseLessonTabID ID)

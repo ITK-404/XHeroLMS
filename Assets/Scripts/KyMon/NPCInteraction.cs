@@ -8,7 +8,6 @@ public class NPCInteraction : MonoBehaviour
     [Header("References")]
     [SerializeField] private CinemachineCamera focusCamera;
     [SerializeField] private PointClickSystem playerMoveSystem;
-  
     [Header("Setting")]
     [SerializeField] private Transform player;
     [SerializeField] private Transform target;
@@ -126,10 +125,4 @@ public class NPCInteraction : MonoBehaviour
         if (isFocused)
             ExitFocusState();
     }
-}
-
-public class NPCInteractionUIController : MonoBehaviour
-{
-    [SerializeField] private NPCInteractionUIView interactionUIView;
-    [SerializeField] private ActionChoiceViewUI actionChoiceViewUI;
 }

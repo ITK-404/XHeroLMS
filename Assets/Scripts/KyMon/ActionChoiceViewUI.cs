@@ -17,7 +17,7 @@ public class ActionChoiceViewUI : UIView
     {
         base.Awake();
         optionOneBtn.onClick.AddListener(OnClickOptionOne);
-        optionTwoBtn.onClick.AddListener(OnClickOptionOne);
+        optionTwoBtn.onClick.AddListener(OnClickOptionTwo);
         returnBtn.onClick.AddListener(ClickReturnBtn);
         
     }
@@ -25,7 +25,7 @@ public class ActionChoiceViewUI : UIView
     private void OnDestroy()
     {
         optionOneBtn.onClick.RemoveListener(OnClickOptionOne);
-        optionTwoBtn.onClick.RemoveListener(OnClickOptionOne);
+        optionTwoBtn.onClick.RemoveListener(OnClickOptionTwo);
         returnBtn.onClick.RemoveListener(ClickReturnBtn);
     }
 
