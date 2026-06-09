@@ -15,8 +15,7 @@ public class IntroManager : MonoBehaviour
     public float videoStartTimeout = 6f;
     public bool skipVideoIfFail = true;
 
-    // public bool forceRefreshPersistentVideo = true;
-    public bool forceRefreshPersistentVideo = false;
+    public bool forceRefreshPersistentVideo = true;
 
     // Nếu file persistent nhỏ hơn ngưỡng này thì coi như lỗi và copy lại.
     public long minValidVideoBytes = 1024 * 50; // 50KB
@@ -31,22 +30,11 @@ public class IntroManager : MonoBehaviour
     public TMP_Text textLoading;
 
     [Header("Progress Behavior")]
-    public float visualLerpSpeed = 8f;
     public float warmupMinProgress = 0.01f;
-
-    // Khi preload đã xong, progress sẽ chạy từ vị trí hiện tại lên 100. Tăng số này nếu muốn chạy nhanh hơn.
-    float finishLerpSpeed = 2.5f;
-
-    // Khi progress gần 100% tới ngưỡng này thì snap lên 100 để tránh kẹt 99%.
-    [Range(0.95f, 0.9999f)]
-    float finishSnapThreshold = 0.995f;
 
     [Header("Intro Sync (6s default UX)")]
     [Tooltip("Thời gian tối thiểu chạy intro (thường = thời lượng video bạn muốn).")]
     [SerializeField] private float introDurationSec = 6f;
-
-    [Tooltip("Nếu hết introDurationSec mà data chưa xong: UI sẽ đạt tới mốc này rồi tăng tiếp theo download.")]
-    [SerializeField, Range(0.5f, 0.99f)] private float capWhenVideoDoneButNotReady = 0.85f;
 
     [Header("Fail UI (Optional)")]
     public CanvasGroup failCanvasGroup;
@@ -58,7 +46,9 @@ public class IntroManager : MonoBehaviour
 
     private bool videoStarted;
     private bool videoFailed;
+    private bool videoFrameVisible;
     private string videoFailReason = "";
+    private Coroutine videoFrameWaitRoutine;
 
     private float currentVisual;
     private float targetVisual;
@@ -67,8 +57,6 @@ public class IntroManager : MonoBehaviour
     private Coroutine progressRoutine;
 
     private float monotonicTarget01;
-    private bool sawAnyFailure;
-
     // Sync
     private float introStartRealtime;
     private bool videoEnded;
@@ -86,8 +74,8 @@ public class IntroManager : MonoBehaviour
 
 private void Awake()
 {
-    if (videoRawImage != null)
-        videoRawImage.enabled = false;
+    forceRefreshPersistentVideo = true;
+    HideVideoSurface();
 
     if (failCanvasGroup != null)
     {
@@ -128,6 +116,7 @@ private void Awake()
             videoPlayer.errorReceived += OnVideoError;
             videoPlayer.prepareCompleted += OnVideoPrepared;
             videoPlayer.loopPointReached += OnVideoEndReached;
+            videoPlayer.frameReady += OnVideoFrameReady;
 
             StartCoroutine(CoPrepareAndPlayVideo_Robust());
             StartCoroutine(CoVideoStartTimeoutCheck());
@@ -218,8 +207,6 @@ private void Awake()
 
         introStartRealtime = Time.realtimeSinceStartup;
         videoEnded = false;
-        sawAnyFailure = false;
-
         monotonicTarget01 = 0f;
         currentVisual = 0f;
         targetVisual = 0f;
@@ -229,7 +216,15 @@ private void Awake()
 
         videoStarted = false;
         videoFailed = false;
+        videoFrameVisible = false;
         videoFailReason = "";
+        HideVideoSurface();
+
+        if (videoFrameWaitRoutine != null)
+        {
+            StopCoroutine(videoFrameWaitRoutine);
+            videoFrameWaitRoutine = null;
+        }
 
         finishRequestedByBootFlow = false;
 
@@ -254,26 +249,21 @@ private void Awake()
         vp.isLooping = false;
         vp.waitForFirstFrame = true;
         vp.skipOnDrop = true;
-        vp.sendFrameReadyEvents = false;
+        vp.sendFrameReadyEvents = true;
 
         // Nếu bạn dùng RawImage + RenderTexture thì code tự gán.
-if (videoRenderTexture != null)
-{
-    vp.renderMode = VideoRenderMode.RenderTexture;
-    vp.targetTexture = videoRenderTexture;
+        if (videoRenderTexture != null)
+        {
+            vp.renderMode = VideoRenderMode.RenderTexture;
+            vp.targetTexture = videoRenderTexture;
 
-    if (videoRawImage != null)
-    {
-        videoRawImage.texture = videoRenderTexture;
+            if (videoRawImage != null)
+                videoRawImage.texture = videoRenderTexture;
 
-        // Quan trọng:
-        // Không hiện RawImage khi video chưa có frame đầu.
-        // Nếu bật sớm, lần đầu app dễ thấy màn hình trắng.
-        videoRawImage.enabled = false;
-    }
+            HideVideoSurface();
 
-    Debug.Log("[Intro] Video display mode = RenderTexture");
-}
+            Debug.Log("[Intro] Video display mode = RenderTexture");
+        }
         else if (videoRawImage != null)
         {
             Debug.LogWarning("[Intro] videoRawImage assigned but videoRenderTexture is null. RawImage sẽ không hiện video nếu VideoPlayer chưa có targetTexture.");
@@ -287,8 +277,10 @@ if (videoRenderTexture != null)
 
         videoStarted = false;
         videoFailed = false;
+        videoFrameVisible = false;
         videoEnded = false;
         videoFailReason = "";
+        HideVideoSurface();
 
         string persistentPath = Path.Combine(Application.persistentDataPath, streamingAssetsVideoName);
 
@@ -472,20 +464,117 @@ private void OnVideoPrepared(VideoPlayer vp)
 
     try
     {
-        if (videoRawImage != null)
-        {
-            videoRawImage.texture = videoRenderTexture;
-            videoRawImage.enabled = true;
-        }
+        HideVideoSurface();
 
         vp.Play();
         videoStarted = true;
+
+        if (videoFrameWaitRoutine != null)
+            StopCoroutine(videoFrameWaitRoutine);
+
+        videoFrameWaitRoutine = StartCoroutine(CoWaitForFirstVideoFrame(vp));
     }
     catch (System.Exception e)
     {
         FailVideo("[Intro] Video Play failed: " + e);
     }
 }
+
+    private IEnumerator CoWaitForFirstVideoFrame(VideoPlayer vp)
+    {
+        float t = 0f;
+        float timeout = Mathf.Max(1f, videoStartTimeout);
+
+        while (!videoFailed && !videoFrameVisible && t < timeout)
+        {
+            if (HasVisibleVideoFrame(vp))
+            {
+                ShowVideoSurface();
+                videoFrameWaitRoutine = null;
+                yield break;
+            }
+
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        videoFrameWaitRoutine = null;
+
+        if (!videoFailed && !videoFrameVisible)
+            FailVideo($"[Intro] Video first frame timeout ({timeout:0.##}s). url={(vp != null ? vp.url : "NULL")}");
+    }
+
+    private bool HasVisibleVideoFrame(VideoPlayer vp)
+    {
+        if (vp == null || !vp.isPrepared)
+            return false;
+
+        if (vp.texture == null && videoRenderTexture == null)
+            return false;
+
+        return vp.frame >= 0 || vp.time > 0.0;
+    }
+
+    private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
+    {
+        if (videoFailed || videoFrameVisible)
+            return;
+
+        ShowVideoSurface();
+    }
+
+    private void HideVideoSurface()
+    {
+        if (videoRawImage != null)
+            videoRawImage.enabled = false;
+
+        if (videoRenderTexture == null)
+            return;
+
+        RenderTexture previous = RenderTexture.active;
+
+        try
+        {
+            if (!videoRenderTexture.IsCreated())
+                videoRenderTexture.Create();
+
+            RenderTexture.active = videoRenderTexture;
+            GL.Clear(true, true, Color.black);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[Intro] Clear video RenderTexture failed: " + e);
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+        }
+    }
+
+    private void ShowVideoSurface()
+    {
+        if (videoFrameVisible)
+            return;
+
+        bool surfaceVisible = videoRawImage == null;
+
+        if (videoRawImage != null)
+        {
+            if (videoRenderTexture != null)
+                videoRawImage.texture = videoRenderTexture;
+            else if (videoPlayer != null && videoPlayer.texture != null)
+                videoRawImage.texture = videoPlayer.texture;
+
+            videoRawImage.enabled = videoRawImage.texture != null;
+            surfaceVisible = videoRawImage.enabled;
+        }
+
+        if (!surfaceVisible)
+            return;
+
+        videoFrameVisible = true;
+        Debug.Log("[Intro] Video first frame visible.");
+    }
 
     private void OnVideoEndReached(VideoPlayer vp)
     {
@@ -519,29 +608,39 @@ private void OnVideoPrepared(VideoPlayer vp)
 
     private IEnumerator CoVideoStartTimeoutCheck()
     {
+        while (!videoStarted && !videoFailed)
+            yield return null;
+
+        if (videoFailed)
+            yield break;
+
         float t = 0f;
 
-        while (t < videoStartTimeout && !videoStarted && !videoFailed)
+        while (t < videoStartTimeout && !videoFrameVisible && !videoFailed)
         {
             t += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        if (!videoStarted && !videoFailed)
+        if (!videoFrameVisible && !videoFailed)
         {
             bool isPrepared = videoPlayer != null && videoPlayer.isPrepared;
             string url = videoPlayer != null ? videoPlayer.url : "NULL";
-            FailVideo($"[Intro] Video start timeout ({videoStartTimeout:0.##}s). isPrepared={isPrepared}, url={url}");
+            FailVideo($"[Intro] Video frame timeout ({videoStartTimeout:0.##}s). isPrepared={isPrepared}, url={url}");
         }
     }
 
     private void FailVideo(string reason)
     {
+        if (videoFailed)
+            return;
+
         Debug.LogWarning(reason);
 
         videoFailed = true;
-        sawAnyFailure = true;
         videoFailReason = reason;
+
+        HideVideoSurface();
 
         // Nếu fail video mà vẫn cho qua, coi như video ended để flow không bị giữ.
         if (skipVideoIfFail)
@@ -573,8 +672,7 @@ private void UpdateProgressFromPreload()
 {
     if (_preload == null)
     {
-        float time01 = GetIntroTime01();
-        SetTargetMonotonic(Mathf.Max(warmupMinProgress, time01));
+        SetTargetMonotonic(warmupMinProgress);
         ApplyVisual();
         return;
     }
@@ -585,7 +683,12 @@ private void UpdateProgressFromPreload()
         ResetVisualProgressForNewPhase(Mathf.Max(warmupMinProgress, _preload.DownloadPercent01));
     }
 
-    if (_preload.IsReady)
+    bool preloadDataDone =
+        _preload.Stage == AddressablesPreload.PreloadStage.Done &&
+        Mathf.Clamp01(_preload.DownloadPercent01) >= 1f &&
+        !_preload.IsPreparingKey;
+
+    if (preloadDataDone || finishRequestedByBootFlow)
     {
         SetTargetMonotonic(1f);
         ApplyVisual();
@@ -614,24 +717,8 @@ private void UpdateProgressFromPreload()
     private void ApplyVisual()
     {
         targetVisual = monotonicTarget01;
-
-        float speed = targetVisual >= 1f ? finishLerpSpeed : visualLerpSpeed;
-
-        currentVisual = Mathf.Lerp(
-            currentVisual,
-            targetVisual,
-            1f - Mathf.Exp(-speed * Time.unscaledDeltaTime)
-        );
-
-        // Không cho lố quá 100.
-        currentVisual = Mathf.Clamp01(currentVisual);
-
-        // Khi đang finish, gần 100 thì snap để không kẹt 99%.
-        if (targetVisual >= 1f && currentVisual >= finishSnapThreshold)
-        {
-            currentVisual = 1f;
-            visualReached100 = true;
-        }
+        currentVisual = Mathf.Clamp01(targetVisual);
+        visualReached100 = currentVisual >= 1f;
 
         SetProgressInstant(currentVisual);
     }
@@ -648,6 +735,8 @@ private string GetStageText(float t01)
     {
         t01 = Mathf.Clamp01(t01);
 
+        EnsureAssignedProgressUiVisible();
+
         if (textLoading != null)
             textLoading.text = GetStageText(t01);
 
@@ -658,8 +747,51 @@ private string GetStageText(float t01)
             sliderUI.value = t01;
     }
 
+    private void EnsureAssignedProgressUiVisible()
+    {
+        EnsureUiBehaviourVisible(textLoading);
+        EnsureUiBehaviourVisible(progressRing);
+        EnsureUiBehaviourVisible(sliderUI);
+    }
+
+    private void EnsureUiBehaviourVisible(Behaviour ui)
+    {
+        if (ui == null)
+            return;
+
+        ui.enabled = true;
+        EnsureParentsActive(ui.transform);
+    }
+
+    private void EnsureParentsActive(Transform target)
+    {
+        Transform current = target;
+
+        while (current != null)
+        {
+            if (!current.gameObject.activeSelf)
+                current.gameObject.SetActive(true);
+
+            CanvasGroup canvasGroup = current.GetComponent<CanvasGroup>();
+            if (canvasGroup != null && canvasGroup.alpha <= 0.001f)
+            {
+                canvasGroup.alpha = 1f;
+                canvasGroup.blocksRaycasts = true;
+                canvasGroup.interactable = true;
+            }
+
+            current = current.parent;
+        }
+    }
+
     private void OnDestroy()
     {
+        if (videoFrameWaitRoutine != null)
+        {
+            StopCoroutine(videoFrameWaitRoutine);
+            videoFrameWaitRoutine = null;
+        }
+
         if (retryButton != null)
             retryButton.onClick.RemoveListener(OnRetryClicked);
 
@@ -668,6 +800,7 @@ private string GetStageText(float t01)
             videoPlayer.errorReceived -= OnVideoError;
             videoPlayer.prepareCompleted -= OnVideoPrepared;
             videoPlayer.loopPointReached -= OnVideoEndReached;
+            videoPlayer.frameReady -= OnVideoFrameReady;
         }
     }
 
@@ -685,6 +818,9 @@ public bool CanEnterMain
         if (_preload != null && !_preload.IsReady)
             return false;
 
+        if (_preload != null && _preload.IsPreparingKey)
+            return false;
+
         // Chặn vào Main cho tới khi UI progress thật sự lên 100%.
         if (!visualReached100)
             return false;
@@ -698,7 +834,7 @@ public bool CanEnterMain
 public void RequestFinishTo100()
 {
     // Chỉ cho finish khi preload thật sự xong.
-    if (_preload != null && !_preload.IsReady)
+    if (_preload != null && (!_preload.IsReady || _preload.IsPreparingKey))
         return;
 
     finishRequestedByBootFlow = true;
@@ -707,9 +843,8 @@ public void RequestFinishTo100()
     {
         p01 = Mathf.Clamp01(p01);
 
-        // Nếu chưa cho complete thật, không cho thanh lên 100.
-        if (!allowComplete)
-            p01 = Mathf.Min(p01, 0.99f);
+        if (allowComplete && p01 >= 1f)
+            finishRequestedByBootFlow = true;
 
         SetTargetMonotonic(p01);
     }
@@ -720,7 +855,7 @@ private void ResetVisualProgressForNewPhase(float start01)
     monotonicTarget01 = start01;
     currentVisual = start01;
     targetVisual = start01;
-    visualReached100 = false;
+    visualReached100 = start01 >= 1f;
 
     SetProgressInstant(start01);
 }

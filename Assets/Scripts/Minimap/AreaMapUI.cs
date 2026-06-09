@@ -6,7 +6,7 @@ public class WorldSpaceUI : MonoBehaviour
 {
     protected RectTransform uiElement;
     [SerializeField] protected bool isWorldSpaceUI = false;
-    protected Camera wrapperCamera;
+    [SerializeField] protected Camera wrapperCamera;
 
     protected virtual void Awake()
     {

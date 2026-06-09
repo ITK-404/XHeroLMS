@@ -44,6 +44,14 @@ public class PlayerChairManager : MonoBehaviour
         courseExitWayHandler.Show();
     }
 
+    public void ShowAllCheckPoints(bool isVisible)
+    {
+        foreach (var item in allCheckPoints)
+        {
+            item.Show(isVisible);
+        }
+    }
+    
     private void OnDestroy()
     {
         Instance = null;
@@ -72,10 +80,7 @@ public class PlayerChairManager : MonoBehaviour
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
-        foreach (var item in allCheckPoints)
-        {
-            item.Show(true);
-        }
+        ShowAllCheckPoints(true);
         // ẩn UI ngay khi bắt đầu đứng dậy
         //playerStandUI.UILearnCanvas.Hide();
         //playerStandUI.HideWatchVideoUI();
@@ -145,10 +150,8 @@ public class PlayerChairManager : MonoBehaviour
             inputCanvas.Hide();
 
             // ẩn tất cả icon của ghế
-            foreach (var item in allCheckPoints)
-            {
-                item.Show(false);
-            }
+            ShowAllCheckPoints(true);
+
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
@@ -170,6 +173,12 @@ public class PlayerChairManager : MonoBehaviour
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
                 
+            }));
+            
+            OnStandupUI_Immediate();
+            StartCoroutine(WaitForBlendDone(() =>
+            {
+                OnStandupUI_Deferred();
             }));
         }
     }
@@ -193,4 +202,33 @@ public class PlayerChairManager : MonoBehaviour
         }
     }
 
+    
+    
+    public void OnSitdownUI_Immediate()
+    {
+        inputCanvas.Hide();
+        courseExitWayHandler.Hide();
+        PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+        playerStandUI.returnBtn.gameObject.SetActive(false);
+    }
+
+    private void OnSitdownUI_Deferred()
+    {
+        playerStandUI.ShowLearningUI();
+        videoPlayerControllerPro.EnterFullscreenUI();
+    }
+
+    private void OnStandupUI_Immediate()
+    {
+        playerStandUI.HideLearningUI();
+        videoPlayerControllerPro.ExitFullscreenUI();
+    }
+
+    public void OnStandupUI_Deferred()
+    {
+        inputCanvas.Show();
+        courseExitWayHandler.Show();
+        PlayerPanelUI.Instance.ShowUnLoginContainer(true);
+        playerStandUI.returnBtn.gameObject.SetActive(true);
+    }
 }

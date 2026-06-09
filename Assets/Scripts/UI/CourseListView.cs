@@ -7,12 +7,11 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 using Unity.Cinemachine;
 
-
 public class CourseListView : MonoBehaviour
 {
     public ScrollRect scrollRect;
-    public Transform content; // Content của ScrollView
-    public ChapterUI headerPrefab; // Prefab dùng cho cả Header khóa học và Header chương (Tag "Chapter")
+    public Transform content;
+    public ChapterUI headerPrefab;
     public LessonUI itemPrefab;
     public VideoPlayer videoPlayer;
 
@@ -29,18 +28,14 @@ public class CourseListView : MonoBehaviour
     private Vector3 defaultLookAtOffset;
     private bool hasDefaultOffset;
 
-    [Tooltip("Chiều cao mặc định cho item nếu prefab không có LayoutElement.")]
     public float fallbackItemHeight = 120f;
-
     public float verticalSpacing = 6f;
 
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    // ====== FINAL EXAM ======
     [Header("Final Exam")]
     public string finalExamSectionTitle = "Bài thi cuối khóa";
-
     public string finalExamItemTitle = "Vào bài thi";
 
     private List<ChapterUI> chapterList = new();
@@ -56,27 +51,117 @@ public class CourseListView : MonoBehaviour
     private string _videoStartUrl;
     private bool _loggedFirstFrame;
 
-
     [SerializeField] private LocalProxyAutoBoot proxyBoot;
-    [Header("Android Local Proxy Buffer")]
-    [SerializeField] private bool useProxyPreloadOnAndroid = true;
 
-    [Tooltip("Số MB cần cache trước rồi mới Prepare video.")]
-    [SerializeField] private int preloadBeforePrepareMB = 20;
+    // Android Local Proxy Stable Cache
+    private bool useProxyPreloadOnAndroid = true;
 
-    [Tooltip("Thời gian chờ cache tối đa trước khi vẫn cho video chạy.")]
-    [SerializeField] private float preloadTimeoutSeconds = 10f;
+    // Buffer nhỏ để hiện frame đầu nhanh. Mượt khi phát sẽ do playback buffer guard quyết định.
+    private int startupPlayableBufferKB = 2048;
 
-    [Tooltip("Bật log đo cache/preload.")]
-    [SerializeField] private bool debugProxyPreload = true;
+    //Mức cache tối thiểu để bắt đầu sớm. Thấp quá sẽ có first frame nhưng dễ giật.
+    private int minimumPlayableBufferKB = 1024;
+
+    //Số luồng booster tải cache-ahead quanh vị trí player đang đọc.
+    private int proxyBoosterThreads = 3;
+
+    //Dung lượng mỗi chunk booster tải xuống disk.
+    private int proxyChunkKB = 1024;
+
+    //Thời gian tối đa warm head/tail trước khi bắt đầu Prepare video.
+    private float startupPreloadTimeoutSeconds = 4f;
+
+    //Sau thời gian này nếu đạt minimumPlayableBufferKB thì Prepare sớm.
+    private float fastStartMinWaitSeconds = 0.75f;
+
+    //Khi qua bài mới, cancel downloader bài cũ và xóa file cache bài cũ.
+    private bool deleteOldProxyCacheOnLessonChange = true;
+
+    //Ép cache-ahead chạy tuần tự. Chỉ bật khi upstream reset quá nhiều với nhiều Range song song.
+    private bool forceSingleThreadProxyStartup = false;
+
+    //Warm đoạn cuối MP4 trước Prepare vì Android thường seek tới cuối để đọc moov metadata.
+    private bool preloadTailMetadataBeforePrepare = true;
+
+    private int tailPreloadMB = 2;
+    private int tailReadyKB = 512;
+
+    //Legacy fallback. Để false nếu Android URL gốc không phát ổn định.
+    private bool fallbackToOriginWhenProxyNotReady = false;
+
+    //Android luôn phát qua local proxy nếu proxy start được. URL gốc đang không ổn định với MediaHTTPConnection.
+    private bool forceProxyPlaybackOnAndroid = true;
+
+    //Nếu VideoPlayer lỗi khi đang dùng proxy, restart network/proxy stream và thử lại local proxy 1 lần.
+    private bool retryProxyOnProxyError = true;
+
+    //Chỉ bật khi đã xác nhận Android phát trực tiếp URL gốc ổn định.
+    private bool fallbackToOriginOnProxyError = false;
+
+    //Bật log đo cache/preload.
+    private bool debugProxyPreload = true;
+
+    // Android Local Proxy Network Recovery
+    private bool enableProxyNetworkWatch = true;
+
+    private float networkWatchIntervalSeconds = 1f;
+    private float networkChangeNotifyCooldownSeconds = 2f;
+
+    // Android Local Proxy Health
+    private bool enableProxyHealthWatch = true;
+
+    private float proxyHealthIntervalSeconds = 1f;
+    private float proxyHealthLogIntervalSeconds = 4f;
+    private int lowBufferAheadWarningKB = 4096;
+
+    // Pause playback before decoder starves; resume only after a real reservoir is available.
+    private bool enableProxyPlaybackBufferGuard = true;
+    private float pauseWhenAheadBelowSeconds = 3.0f;
+    private float resumeWhenAheadAboveSeconds = 14.0f;
+    private int guardBoostWindowMB = 24;
+
+    // Android VideoPlayer can stall after decoder flush/recreate even while proxy buffer is healthy.
+    private bool enableProxyPlaybackWatchdog = true;
+    private float proxyPlaybackStallSeconds = 2.5f;
+    private float proxyWatchdogMinAheadSeconds = 5.0f;
+    private float proxyWatchdogResumeCooldownSeconds = 2.0f;
+
+    private const string AndroidProxyClass = "com.unity.localproxy.LocalVideoProxy";
+    private const int RuntimeStartupPlayableBufferKB = 2048;
+    private const int RuntimeMinimumPlayableBufferKB = 1024;
+    private const int RuntimeProxyChunkKB = 1024;
+    private const int RuntimeTailReadyKB = 512;
+    private const float RuntimeStartupPreloadTimeoutSeconds = 4f;
+    private const float RuntimeFastStartMinWaitSeconds = 0.75f;
+    private const float RuntimeProxyHealthBoostCooldownSeconds = 1.5f;
 
     private Coroutine _playVideoRoutine;
+    private Coroutine _networkWatchRoutine;
+    private Coroutine _proxyHealthRoutine;
+
     private int _playVideoToken;
+    private string _activeVideoOriginUrl;
+    private string _currentOriginUrl;
+
+    private bool _usingProxyForCurrentVideo;
+    private bool _fallbackToOriginTriedForCurrentVideo;
+    private bool _proxyRetryTriedForCurrentVideo;
+    private bool _proxyBufferGuardPaused;
+    private long _lastProxyRangeBoostStart = -1L;
+
+    private NetworkReachability _lastReachability;
+    private float _lastProxyNetworkNotifyRealtime = -999f;
+    private float _lastProxyHealthLogRealtime = -999f;
+    private float _lastProxyHealthBoostRealtime = -999f;
+    private float _lastProxyPlaybackProgressRealtime = -999f;
+    private float _lastProxyWatchdogResumeRealtime = -999f;
+    private double _lastProxyObservedVideoTime = -1.0;
+    private int _proxyWatchdogResumeCount;
 
     public const string FinalExamType = "FINAL_EXAM";
     public Action<LessonUI> OnClickFinalExamEvt;
 
-    [SerializeField] private bool debugFinalExam = true;
+    private bool debugFinalExam = true;
 
     private static readonly string[] FinalExamIdKeys = { "examId", "_id", "id" };
 
@@ -90,22 +175,326 @@ public class CourseListView : MonoBehaviour
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
 
+    private void OnEnable()
+    {
+        StartProxyWatchers();
+    }
+
+    private void OnDisable()
+    {
+        StopProxyWatchers();
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (!pause)
+        {
+            NotifyProxyNetworkChanged("app_resume");
+        }
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus)
+        {
+            NotifyProxyNetworkChanged("app_focus");
+        }
+    }
+
+    private void StartProxyWatchers()
+    {
+        _lastReachability = Application.internetReachability;
+
+        if (enableProxyNetworkWatch && _networkWatchRoutine == null)
+        {
+            _networkWatchRoutine = StartCoroutine(NetworkWatchLoop());
+        }
+
+        if (enableProxyHealthWatch && _proxyHealthRoutine == null)
+        {
+            _proxyHealthRoutine = StartCoroutine(ProxyHealthLoop());
+        }
+    }
+
+    private void StopProxyWatchers()
+    {
+        if (_networkWatchRoutine != null)
+        {
+            StopCoroutine(_networkWatchRoutine);
+            _networkWatchRoutine = null;
+        }
+
+        if (_proxyHealthRoutine != null)
+        {
+            StopCoroutine(_proxyHealthRoutine);
+            _proxyHealthRoutine = null;
+        }
+    }
+
+    private void ResetProxyPlaybackWatchdogState()
+    {
+        _lastProxyPlaybackProgressRealtime = -999f;
+        _lastProxyWatchdogResumeRealtime = -999f;
+        _lastProxyObservedVideoTime = -1.0;
+        _proxyWatchdogResumeCount = 0;
+    }
+
+    private IEnumerator NetworkWatchLoop()
+    {
+        while (true)
+        {
+            var current = Application.internetReachability;
+
+            if (current != _lastReachability)
+            {
+                Debug.Log($"[LocalProxy][NetworkWatch] changed: {_lastReachability} -> {current}");
+                _lastReachability = current;
+
+                NotifyProxyNetworkChanged("reachability_changed");
+            }
+
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.5f, networkWatchIntervalSeconds));
+        }
+    }
+
+    private void NotifyProxyNetworkChanged(string reason)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!useProxyPreloadOnAndroid)
+            return;
+
+        float now = Time.realtimeSinceStartup;
+
+        if (now - _lastProxyNetworkNotifyRealtime < networkChangeNotifyCooldownSeconds)
+            return;
+
+        _lastProxyNetworkNotifyRealtime = now;
+
+        if (!proxyBoot)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        if (!proxyBoot || !proxyBoot.enableProxyOnAndroid)
+            return;
+
+        if (!proxyBoot.EnsureStarted())
+            return;
+
+        bool ok = ProxyOnNetworkChanged();
+
+        Debug.Log(
+            $"[LocalProxy][NetworkChanged] reason={reason} ok={ok} activeUrl={_activeVideoOriginUrl ?? "<null>"}"
+        );
+#endif
+    }
+
+    private IEnumerator ProxyHealthLoop()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.5f, proxyHealthIntervalSeconds));
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!useProxyPreloadOnAndroid)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(_activeVideoOriginUrl))
+                continue;
+
+            if (!videoPlayer)
+                continue;
+
+            if (!_usingProxyForCurrentVideo)
+                continue;
+
+            if (!proxyBoot)
+                proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+            if (!proxyBoot || !proxyBoot.enableProxyOnAndroid)
+                continue;
+
+            long cachedUntil = proxyBoot.GetCachedUntil(_activeVideoOriginUrl);
+            long totalBytes = proxyBoot.GetTotalBytes(_activeVideoOriginUrl);
+            long cachedBytes = ProxyGetCachedBytes(_activeVideoOriginUrl);
+
+            long estimatedBytePos = -1;
+            long aheadBytes = -1;
+            double bytesPerSecond = -1.0;
+            double aheadSeconds = -1.0;
+
+            if (cachedUntil > 0 && totalBytes > 0 && videoPlayer.length > 1.0)
+            {
+                bytesPerSecond = totalBytes / Math.Max(1.0, videoPlayer.length);
+
+                double ratio = videoPlayer.time / videoPlayer.length;
+                ratio = Math.Max(0.0, Math.Min(1.0, ratio));
+
+                estimatedBytePos = (long)(totalBytes * ratio);
+                long cachedFromEstimatedPos = ProxyGetCachedUntilFrom(_activeVideoOriginUrl, estimatedBytePos);
+
+                if (cachedFromEstimatedPos >= estimatedBytePos)
+                    cachedUntil = cachedFromEstimatedPos;
+
+                aheadBytes = cachedUntil - estimatedBytePos;
+
+                if (bytesPerSecond > 1.0)
+                    aheadSeconds = aheadBytes / bytesPerSecond;
+            }
+
+            float now = Time.realtimeSinceStartup;
+            double currentVideoTime = videoPlayer.time;
+            float stalledForSeconds = -1f;
+
+            if (videoPlayer.isPrepared && currentVideoTime > 0.05)
+            {
+                if (_lastProxyObservedVideoTime < 0.0 ||
+                    currentVideoTime > _lastProxyObservedVideoTime + 0.15)
+                {
+                    _lastProxyObservedVideoTime = currentVideoTime;
+                    _lastProxyPlaybackProgressRealtime = now;
+                    _proxyWatchdogResumeCount = 0;
+                }
+                else if (_lastProxyPlaybackProgressRealtime > 0f)
+                {
+                    stalledForSeconds = now - _lastProxyPlaybackProgressRealtime;
+                }
+            }
+
+            bool shouldLog = now - _lastProxyHealthLogRealtime >= proxyHealthLogIntervalSeconds;
+
+            if (shouldLog)
+            {
+                _lastProxyHealthLogRealtime = now;
+
+                Debug.Log(
+                    $"[LocalProxy][Health] usingProxy={_usingProxyForCurrentVideo} " +
+                    $"time={videoPlayer.time:F1}/{videoPlayer.length:F1}s " +
+                    $"estimatedPos={FormatBytes(estimatedBytePos)} " +
+                    $"cachedUntil={FormatBytes(cachedUntil)} " +
+                    $"ahead={FormatBytes(aheadBytes)} " +
+                    $"aheadSeconds={(aheadSeconds >= 0.0 ? aheadSeconds.ToString("F1") : "<unknown>")} " +
+                    $"playing={videoPlayer.isPlaying} prepared={videoPlayer.isPrepared} " +
+                    $"guardPaused={_proxyBufferGuardPaused} " +
+                    $"stalledFor={(stalledForSeconds >= 0f ? stalledForSeconds.ToString("F1") : "<none>")} " +
+                    $"rangeCached={FormatBytes(cachedBytes)} " +
+                    $"total={FormatBytes(totalBytes)}"
+                );
+            }
+
+            long warningBytes = Mathf.Max(128, lowBufferAheadWarningKB) * 1024L;
+
+            if (aheadBytes >= 0 && aheadBytes < warningBytes)
+            {
+                Debug.LogWarning(
+                    $"[LocalProxy][Health] Low buffer ahead={FormatBytes(aheadBytes)} " +
+                    $"({(aheadSeconds >= 0.0 ? aheadSeconds.ToString("F1") : "<unknown>")}s). Network may be weak."
+                );
+            }
+
+            if (enableProxyPlaybackBufferGuard &&
+                aheadSeconds >= 0.0 &&
+                estimatedBytePos >= 0 &&
+                videoPlayer.isPrepared)
+            {
+                if (!_proxyBufferGuardPaused &&
+                    videoPlayer.isPlaying &&
+                    aheadSeconds < Math.Max(0.5f, pauseWhenAheadBelowSeconds))
+                {
+                    _proxyBufferGuardPaused = true;
+                    videoPlayer.Pause();
+
+                    Debug.LogWarning(
+                        $"[LocalProxy][BufferGuard] Pause playback. ahead={aheadSeconds:F1}s " +
+                        $"needResume={resumeWhenAheadAboveSeconds:F1}s"
+                    );
+                }
+                else if (_proxyBufferGuardPaused &&
+                         aheadSeconds >= Math.Max(pauseWhenAheadBelowSeconds + 1f, resumeWhenAheadAboveSeconds))
+                {
+                    _proxyBufferGuardPaused = false;
+                    ResetProxyPlaybackWatchdogState();
+                    videoPlayer.Play();
+
+                    Debug.Log(
+                        $"[LocalProxy][BufferGuard] Resume playback. ahead={aheadSeconds:F1}s"
+                    );
+                }
+            }
+
+            if (enableProxyPlaybackWatchdog &&
+                !_proxyBufferGuardPaused &&
+                videoPlayer.isPrepared &&
+                currentVideoTime > 0.05 &&
+                videoPlayer.length > 1.0 &&
+                currentVideoTime < videoPlayer.length - 1.0 &&
+                aheadSeconds >= Math.Max(1.0f, proxyWatchdogMinAheadSeconds) &&
+                stalledForSeconds >= Math.Max(1.0f, proxyPlaybackStallSeconds) &&
+                now - _lastProxyWatchdogResumeRealtime >= Math.Max(0.5f, proxyWatchdogResumeCooldownSeconds))
+            {
+                _lastProxyWatchdogResumeRealtime = now;
+                _proxyWatchdogResumeCount++;
+
+                if (_proxyWatchdogResumeCount >= 2 && videoPlayer.canSetTime)
+                {
+                    double nudgeTime = Math.Min(videoPlayer.length - 0.1, currentVideoTime + 0.05);
+                    videoPlayer.time = nudgeTime;
+                }
+
+                videoPlayer.Play();
+                videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
+
+                Debug.LogWarning(
+                    $"[LocalProxy][PlaybackWatchdog] Resume stalled player. " +
+                    $"count={_proxyWatchdogResumeCount} time={currentVideoTime:F2}s " +
+                    $"playing={videoPlayer.isPlaying} ahead={aheadSeconds:F1}s " +
+                    $"nudge={(_proxyWatchdogResumeCount >= 2 && videoPlayer.canSetTime)}"
+                );
+            }
+
+            if (estimatedBytePos >= 0 &&
+                aheadBytes >= 0 &&
+                aheadBytes < warningBytes &&
+                now - _lastProxyHealthBoostRealtime >= RuntimeProxyHealthBoostCooldownSeconds)
+            {
+                _lastProxyHealthBoostRealtime = now;
+
+                long boostStart = Math.Max(0L, estimatedBytePos);
+                long boostLength = Math.Max(1, guardBoostWindowMB) * 1024L * 1024L;
+
+                bool windowOk = proxyBoot.Preload(_activeVideoOriginUrl, boostStart);
+
+                if (_proxyBufferGuardPaused &&
+                    (_lastProxyRangeBoostStart < 0 ||
+                     Math.Abs(boostStart - _lastProxyRangeBoostStart) >= RuntimeProxyChunkKB * 1024L))
+                {
+                    _lastProxyRangeBoostStart = boostStart;
+                    ProxyPreloadRange(_activeVideoOriginUrl, boostStart, boostLength);
+                }
+
+                if (debugProxyPreload)
+                {
+                    Debug.Log(
+                        $"[LocalProxy][HealthBoost] start={FormatBytes(boostStart)} " +
+                        $"window={FormatBytes(boostLength)} windowOk={windowOk} paused={_proxyBufferGuardPaused}"
+                    );
+                }
+            }
+#endif
+        }
+    }
+
     public void BuildListUI(LmsCoursePrivate p)
     {
         _videoLessons.Clear();
 
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
 
-        // Clear cũ
         ChapterUIManager.Instance.ClearList();
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
 
-        // Lấy courseID an toàn (p._id hoặc p.course._id)
         courseID = GetStringMember(p, "_id")
                    ?? GetStringMember(GetMemberValue(p, "course"), "_id");
 
-        // ===== Với mỗi CHAPTER: tạo header chương + các item bài =====
         if (p.chapters != null)
         {
             foreach (var ch in p.chapters)
@@ -138,9 +527,6 @@ public class CourseListView : MonoBehaviour
                     string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
                     if (string.IsNullOrEmpty(lessonTitle)) continue;
 
-                    // Quan trọng:
-                    // - Video: ưu tiên videoLink2/videoLink.
-                    // - Tài liệu/PDF/Text: ưu tiên docAttach[0].uri.
                     string link2 = ResolveLessonPlayableUrl(lesson);
 
                     Debug.Log($"[Lesson Link Map] title={lesson.title} | type={lesson.type} | finalLink={link2}");
@@ -165,8 +551,6 @@ public class CourseListView : MonoBehaviour
                     int.TryParse(lesson.duration, out var duration);
                     lessonUI.duration = duration;
 
-                    // Chỉ đưa video thật vào danh sách Next.
-                    // Tài liệu/PDF không được đưa vào pipeline video/proxy.
                     if (!string.IsNullOrEmpty(lessonUI.linkVideo2) && IsVideoLesson(lessonUI))
                     {
                         _videoLessons.Add(lessonUI);
@@ -190,7 +574,6 @@ public class CourseListView : MonoBehaviour
             }
         }
 
-        // ====== Append “Bài thi cuối khóa” nếu course.settings.finalExam có ID hợp lệ ======
         var finalExamId = TryGetFinalExamId(p);
         if (!string.IsNullOrEmpty(finalExamId))
         {
@@ -236,7 +619,6 @@ public class CourseListView : MonoBehaviour
             type == "FILE" ||
             type == "HTML";
 
-        // Với tài liệu/text/pdf: ưu tiên docAttach[].uri trước.
         if (isDocumentType)
         {
             string docUrl = GetFirstDocAttachUri(lesson);
@@ -244,7 +626,6 @@ public class CourseListView : MonoBehaviour
                 return docUrl.Trim();
         }
 
-        // Với video: ưu tiên videoLink2 rồi videoLink.
         string video2 = GetStringMember(lesson, "videoLink2");
         if (!string.IsNullOrWhiteSpace(video2))
             return video2.Trim();
@@ -253,7 +634,6 @@ public class CourseListView : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(video1))
             return video1.Trim();
 
-        // Nếu API trả tài liệu bằng field trực tiếp.
         string direct =
             GetStringMember(lesson, "url") ??
             GetStringMember(lesson, "link") ??
@@ -268,7 +648,6 @@ public class CourseListView : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(direct))
             return direct.Trim();
 
-        // Fallback cuối: vẫn thử đọc docAttach để tránh API type thiếu/chưa chuẩn.
         string fallbackDoc = GetFirstDocAttachUri(lesson);
         return string.IsNullOrWhiteSpace(fallbackDoc) ? "" : fallbackDoc.Trim();
     }
@@ -283,7 +662,6 @@ public class CourseListView : MonoBehaviour
 
         if (docAttach == null) return null;
 
-        // Trường hợp docAttach là string trực tiếp.
         if (docAttach is string s)
             return string.IsNullOrWhiteSpace(s) ? null : s;
 
@@ -326,8 +704,29 @@ public class CourseListView : MonoBehaviour
             return;
         }
 
-        // Dừng VideoPlayer/coroutine cũ trước khi mở URL mới để socket cũ đóng hẳn.
+        string oldUrl = _activeVideoOriginUrl;
+
         StopVideoPipeline();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!proxyBoot)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        if (proxyBoot && proxyBoot.enableProxyOnAndroid && proxyBoot.EnsureStarted())
+        {
+            if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != url)
+            {
+                ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
+            }
+
+            ProxySetActiveUrl(url, deleteOldProxyCacheOnLessonChange);
+        }
+#endif
+
+        _activeVideoOriginUrl = url;
+        _currentOriginUrl = url;
+        _fallbackToOriginTriedForCurrentVideo = false;
+        _proxyRetryTriedForCurrentVideo = false;
 
         _playVideoToken++;
         _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
@@ -342,10 +741,19 @@ public class CourseListView : MonoBehaviour
             proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
 
         string finalUrl = originUrl;
+        bool useProxyForThisPlay = false;
 
         _videoStartRealtime = Time.realtimeSinceStartup;
         _videoStartUrl = originUrl;
         _loggedFirstFrame = false;
+        _currentOriginUrl = originUrl;
+        _fallbackToOriginTriedForCurrentVideo = false;
+        _proxyRetryTriedForCurrentVideo = false;
+        _lastProxyHealthBoostRealtime = -999f;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
+        _usingProxyForCurrentVideo = false;
 
         Debug.Log($"[testvideo][1] Got origin URL. t={_videoStartRealtime:F3}s | url={originUrl}");
 
@@ -358,49 +766,201 @@ public class CourseListView : MonoBehaviour
 
             if (started)
             {
-                long minBufferBytes = Mathf.Max(1, preloadBeforePrepareMB) * 1024L * 1024L;
+                int effectiveStartupKB = Mathf.Max(Mathf.Max(128, startupPlayableBufferKB), RuntimeStartupPlayableBufferKB);
+                int effectiveMinKB = Mathf.Max(Mathf.Max(128, minimumPlayableBufferKB), RuntimeMinimumPlayableBufferKB);
+                int effectiveChunkKB = Mathf.Max(Mathf.Max(256, proxyChunkKB), RuntimeProxyChunkKB);
+                int effectiveTailReadyKB = Mathf.Max(Mathf.Max(128, tailReadyKB), RuntimeTailReadyKB);
+                float effectiveTimeout = Mathf.Max(Mathf.Max(0.25f, startupPreloadTimeoutSeconds), RuntimeStartupPreloadTimeoutSeconds);
+                float effectiveFastStart = Mathf.Max(Mathf.Max(0.25f, fastStartMinWaitSeconds), RuntimeFastStartMinWaitSeconds);
 
+                long startupBytes = effectiveStartupKB * 1024L;
+                long minBytes = effectiveMinKB * 1024L;
+                long chunkBytes = effectiveChunkKB * 1024L;
+                int boosters = forceSingleThreadProxyStartup ? 0 : Mathf.Clamp(proxyBoosterThreads, 1, 3);
+                long tailBytes = Mathf.Max(1, tailPreloadMB) * 1024L * 1024L;
+                long tailReadyBytes = effectiveTailReadyKB * 1024L;
+
+                ProxyConfigure(startupBytes, boosters, chunkBytes);
+                ProxySetActiveUrl(originUrl, deleteOldProxyCacheOnLessonChange);
                 proxyBoot.Preload(originUrl, 0);
 
                 float waitStart = Time.realtimeSinceStartup;
                 long cachedUntil = -1;
                 long totalBytes = -1;
+                long tailStart = -1;
+                long tailCachedUntil = -1;
+                bool tailPreloadRequested = false;
 
-                while (Time.realtimeSinceStartup - waitStart < preloadTimeoutSeconds)
+                bool reachedStartupBuffer = false;
+                bool reachedMinBuffer = false;
+                bool reachedTailBuffer = false;
+
+                while (Time.realtimeSinceStartup - waitStart < effectiveTimeout)
                 {
                     if (token != _playVideoToken)
                         yield break;
 
-                    cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+                    cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
+                    if (cachedUntil < 0)
+                        cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+
                     totalBytes = proxyBoot.GetTotalBytes(originUrl);
+
+                    reachedStartupBuffer = cachedUntil >= startupBytes;
+                    reachedMinBuffer = cachedUntil >= minBytes;
+
+                    if (preloadTailMetadataBeforePrepare && totalBytes > 0 && reachedMinBuffer)
+                    {
+                        tailStart = Math.Max(0L, totalBytes - tailBytes);
+
+                        if (!tailPreloadRequested)
+                        {
+                            tailPreloadRequested = ProxyPreloadRange(originUrl, tailStart, tailBytes);
+
+                            if (debugProxyPreload)
+                            {
+                                Debug.Log(
+                                    $"[LocalProxy][WarmTail] request tail start={FormatBytes(tailStart)} length={FormatBytes(tailBytes)} ok={tailPreloadRequested}"
+                                );
+                            }
+                        }
+
+                        tailCachedUntil = ProxyGetCachedUntilFrom(originUrl, tailStart);
+                        long tailNeedUntil = Math.Min(totalBytes, tailStart + tailReadyBytes);
+                        reachedTailBuffer = tailCachedUntil >= tailNeedUntil;
+                    }
+                    else
+                    {
+                        reachedTailBuffer = !preloadTailMetadataBeforePrepare;
+                    }
 
                     if (debugProxyPreload)
                     {
                         Debug.Log(
-                            $"[LocalProxy][Preload] cached={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / need={FormatBytes(minBufferBytes)}"
+                            $"[LocalProxy][FastFramePreload] head={FormatBytes(cachedUntil)} / total={FormatBytes(totalBytes)} / startupNeed={FormatBytes(startupBytes)} / min={FormatBytes(minBytes)} / tail={FormatBytes(tailCachedUntil)} / tailStart={FormatBytes(tailStart)} / boosters={boosters}"
                         );
                     }
 
-                    if (cachedUntil >= minBufferBytes)
+                    float elapsed = Time.realtimeSinceStartup - waitStart;
+
+                    if (reachedStartupBuffer && reachedTailBuffer)
+                        break;
+
+                    if (elapsed >= effectiveFastStart && reachedMinBuffer && reachedTailBuffer)
                         break;
 
                     yield return null;
                 }
 
+                cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
+                if (cachedUntil < 0)
+                    cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+
+                totalBytes = proxyBoot.GetTotalBytes(originUrl);
+                if (tailStart >= 0)
+                    tailCachedUntil = ProxyGetCachedUntilFrom(originUrl, tailStart);
+
+                reachedStartupBuffer = cachedUntil >= startupBytes;
+                reachedMinBuffer = cachedUntil >= minBytes;
+                reachedTailBuffer =
+                    !preloadTailMetadataBeforePrepare ||
+                    (tailStart >= 0 && totalBytes > 0 && tailCachedUntil >= Math.Min(totalBytes, tailStart + tailReadyBytes));
+
+                // bool shouldUseProxy = reachedMinBuffer || (forceProxyPlaybackOnAndroid && cachedUntil > 0);
+                bool readyForSmoothProxy =
+                    reachedStartupBuffer &&
+                    (!preloadTailMetadataBeforePrepare || reachedTailBuffer);
+
+                // Không fallback origin vì origin direct đang 400.
+                // Nhưng cũng không Prepare quá sớm nếu muốn xem mượt.
+                float maxWaitForSmoothSeconds = Mathf.Max(6f, effectiveTimeout + 1.5f);
+
+                while (!readyForSmoothProxy && Time.realtimeSinceStartup - waitStart < maxWaitForSmoothSeconds)
+                {
+                    if (token != _playVideoToken)
+                        yield break;
+
+                    cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
+                    if (cachedUntil < 0)
+                        cachedUntil = proxyBoot.GetCachedUntil(originUrl);
+
+                    totalBytes = proxyBoot.GetTotalBytes(originUrl);
+
+                    reachedStartupBuffer = cachedUntil >= startupBytes;
+                    reachedMinBuffer = cachedUntil >= minBytes;
+
+                    if (preloadTailMetadataBeforePrepare && totalBytes > 0)
+                    {
+                        if (tailStart < 0)
+                            tailStart = Math.Max(0L, totalBytes - tailBytes);
+
+                        if (!tailPreloadRequested && reachedMinBuffer)
+                        {
+                            tailPreloadRequested = ProxyPreloadRange(originUrl, tailStart, tailBytes);
+
+                            if (debugProxyPreload)
+                            {
+                                Debug.Log(
+                                    $"[LocalProxy][WarmTail] request tail start={FormatBytes(tailStart)} length={FormatBytes(tailBytes)} ok={tailPreloadRequested}"
+                                );
+                            }
+                        }
+
+                        tailCachedUntil = ProxyGetCachedUntilFrom(originUrl, tailStart);
+                        long tailNeedUntil = Math.Min(totalBytes, tailStart + tailReadyBytes);
+                        reachedTailBuffer = tailCachedUntil >= tailNeedUntil;
+                    }
+                    else
+                    {
+                        reachedTailBuffer = !preloadTailMetadataBeforePrepare;
+                    }
+
+                    readyForSmoothProxy =
+                        reachedStartupBuffer &&
+                        (!preloadTailMetadataBeforePrepare || reachedTailBuffer);
+
+                    if (debugProxyPreload)
+                    {
+                        Debug.Log(
+                            $"[LocalProxy][WaitFirstFrame] head={FormatBytes(cachedUntil)} / " +
+                            $"startupNeed={FormatBytes(startupBytes)} / total={FormatBytes(totalBytes)} / " +
+                            $"tail={FormatBytes(tailCachedUntil)} / tailReady={reachedTailBuffer} / " +
+                            $"smoothReady={readyForSmoothProxy}"
+                        );
+                    }
+
+                    yield return null;
+                }
+
                 finalUrl = proxyBoot.GetPlayableUrl(originUrl);
+                useProxyForThisPlay = true;
 
                 if (debugProxyPreload)
                 {
                     float waited = Time.realtimeSinceStartup - waitStart;
 
                     Debug.Log(
-                        $"[LocalProxy][Preload] Done wait={waited:F2}s | cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | finalUrl={finalUrl}"
+                        $"[LocalProxy][FastFramePreload] Use proxy. wait={waited:F2}s | " +
+                        $"cached={FormatBytes(cachedUntil)} | total={FormatBytes(totalBytes)} | " +
+                        $"startupReady={reachedStartupBuffer} | minReady={reachedMinBuffer} | " +
+                        $"tailReady={reachedTailBuffer} | smoothReady={readyForSmoothProxy} | " +
+                        $"finalUrl={finalUrl}"
+                    );
+                }
+
+                if (!readyForSmoothProxy)
+                {
+                    Debug.LogWarning(
+                        $"[LocalProxy][FastFramePreload] Max wait reached. Continue through proxy read-through. " +
+                        $"head={FormatBytes(cachedUntil)}, startupNeed={FormatBytes(startupBytes)}, " +
+                        $"tailReady={reachedTailBuffer}"
                     );
                 }
             }
             else
             {
-                Debug.LogWarning("[LocalProxy] Proxy start failed. Fallback to origin URL.");
+                Debug.LogWarning("[LocalProxy] Proxy start failed. Stop prepare because origin direct may return 400.");
+                yield break;
             }
         }
 #endif
@@ -408,9 +968,13 @@ public class CourseListView : MonoBehaviour
         if (token != _playVideoToken)
             yield break;
 
+        _usingProxyForCurrentVideo = useProxyForThisPlay;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
         _videoStartUrl = finalUrl;
 
-        Debug.Log($"[testvideo][1.5] Prepare video. t={Time.realtimeSinceStartup:F3}s | url={finalUrl}");
+        Debug.Log($"[testvideo][1.5] Prepare video. proxy={useProxyForThisPlay} t={Time.realtimeSinceStartup:F3}s | url={finalUrl}");
 
         videoPlayer.source = VideoSource.Url;
         videoPlayer.url = finalUrl;
@@ -458,7 +1022,6 @@ public class CourseListView : MonoBehaviour
             _playVideoRoutine = null;
         }
 
-        // Tăng token để mọi coroutine video cũ tự hủy.
         _playVideoToken++;
 
         if (videoPlayer)
@@ -480,7 +1043,165 @@ public class CourseListView : MonoBehaviour
 
         _videoStartUrl = null;
         _loggedFirstFrame = false;
+        _usingProxyForCurrentVideo = false;
+        _proxyRetryTriedForCurrentVideo = false;
+        _lastProxyHealthBoostRealtime = -999f;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
     }
+
+    private void StopAndReleaseActiveVideo()
+    {
+        string oldUrl = _activeVideoOriginUrl;
+
+        StopVideoPipeline();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!string.IsNullOrWhiteSpace(oldUrl))
+        {
+            ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
+        }
+#endif
+
+        _activeVideoOriginUrl = null;
+        _currentOriginUrl = null;
+        _fallbackToOriginTriedForCurrentVideo = false;
+        _proxyRetryTriedForCurrentVideo = false;
+    }
+
+    private void OnDestroy()
+    {
+        StopProxyWatchers();
+        StopAndReleaseActiveVideo();
+    }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private static bool ProxyConfigure(long startupBytes, int boosterThreads, long chunkBytes)
+    {
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("configure", startupBytes, boosterThreads, chunkBytes);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] configure failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxySetActiveUrl(string originUrl, bool deleteOldCaches)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return false;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("setActiveUrl", originUrl, deleteOldCaches);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] setActiveUrl failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxyRelease(string originUrl, bool deleteFile)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return false;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("release", originUrl, deleteFile);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] release failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxyOnNetworkChanged()
+    {
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("onNetworkChanged");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] onNetworkChanged failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static bool ProxyPreloadRange(string originUrl, long start, long length)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl) || length <= 0)
+            return false;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<bool>("preloadRange", originUrl, start, length);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LocalProxy] preloadRange failed: " + e.Message);
+            return false;
+        }
+    }
+
+    private static long ProxyGetCachedBytes(string originUrl)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return -1L;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<long>("getCachedBytes", originUrl);
+            }
+        }
+        catch
+        {
+            return -1L;
+        }
+    }
+
+    private static long ProxyGetCachedUntilFrom(string originUrl, long start)
+    {
+        if (string.IsNullOrWhiteSpace(originUrl))
+            return -1L;
+
+        try
+        {
+            using (var jc = new AndroidJavaClass(AndroidProxyClass))
+            {
+                return jc.CallStatic<long>("getCachedUntilFrom", originUrl, start);
+            }
+        }
+        catch
+        {
+            return -1L;
+        }
+    }
+#endif
 
     private static string FormatBytes(long bytes)
     {
@@ -506,9 +1227,114 @@ public class CourseListView : MonoBehaviour
     private void OnVideoError(VideoPlayer vp, string msg)
     {
         Debug.LogError("[VideoPlayer] error: " + msg);
+
+        if (!_usingProxyForCurrentVideo)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_currentOriginUrl))
+            return;
+
+        if (retryProxyOnProxyError && !_proxyRetryTriedForCurrentVideo)
+        {
+            _proxyRetryTriedForCurrentVideo = true;
+            int token = ++_playVideoToken;
+            StartCoroutine(RetryProxyAfterVideoError(_currentOriginUrl, token));
+            return;
+        }
+
+        if (!fallbackToOriginOnProxyError)
+            return;
+
+        if (_fallbackToOriginTriedForCurrentVideo)
+            return;
+
+        _fallbackToOriginTriedForCurrentVideo = true;
+
+        StartCoroutine(FallbackToOriginAfterProxyError(_currentOriginUrl, ++_playVideoToken));
     }
 
-    // ===== Set text theo Tag & tự ẩn nếu rỗng =====
+    private IEnumerator RetryProxyAfterVideoError(string originUrl, int token)
+    {
+        yield return new WaitForSecondsRealtime(0.25f);
+
+        if (token != _playVideoToken)
+            yield break;
+
+        Debug.LogWarning("[LocalProxy] Proxy playback failed. Restart proxy stream and retry local URL: " + originUrl);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!proxyBoot)
+            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
+
+        if (!proxyBoot || !proxyBoot.enableProxyOnAndroid || !proxyBoot.EnsureStarted())
+        {
+            Debug.LogWarning("[LocalProxy] Retry skipped because proxy is not available.");
+            yield break;
+        }
+
+        ProxyOnNetworkChanged();
+
+        long startupBytes = Mathf.Max(Mathf.Max(128, startupPlayableBufferKB), RuntimeStartupPlayableBufferKB) * 1024L;
+        long chunkBytes = Mathf.Max(Mathf.Max(256, proxyChunkKB), RuntimeProxyChunkKB) * 1024L;
+        int boosters = forceSingleThreadProxyStartup ? 0 : Mathf.Clamp(proxyBoosterThreads, 1, 3);
+
+        ProxyConfigure(startupBytes, boosters, chunkBytes);
+        ProxySetActiveUrl(originUrl, false);
+        proxyBoot.Preload(originUrl, 0);
+
+        string proxyUrl = proxyBoot.GetPlayableUrl(originUrl);
+#else
+        string proxyUrl = originUrl;
+#endif
+
+        if (token != _playVideoToken)
+            yield break;
+
+        PrepareVideoPlayerForNewUrl();
+
+        _usingProxyForCurrentVideo = true;
+        _videoStartRealtime = Time.realtimeSinceStartup;
+        _videoStartUrl = proxyUrl;
+        _loggedFirstFrame = false;
+        _lastProxyHealthBoostRealtime = -999f;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
+
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = proxyUrl;
+        videoPlayer.Prepare();
+    }
+
+    private IEnumerator FallbackToOriginAfterProxyError(string originUrl, int token)
+    {
+        yield return null;
+
+        if (token != _playVideoToken)
+            yield break;
+
+        Debug.LogWarning("[LocalProxy] Proxy playback failed. Fallback to origin URL: " + originUrl);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        ProxyRelease(originUrl, true);
+#endif
+
+        _usingProxyForCurrentVideo = false;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
+
+        PrepareVideoPlayerForNewUrl();
+
+        _videoStartRealtime = Time.realtimeSinceStartup;
+        _videoStartUrl = originUrl;
+        _loggedFirstFrame = false;
+
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = originUrl;
+        videoPlayer.Prepare();
+    }
+
     private GameObject FindObjWithTag(GameObject root, string tag)
     {
         var tfs = root.GetComponentsInChildren<Transform>(true);
@@ -573,7 +1399,6 @@ public class CourseListView : MonoBehaviour
         return null;
     }
 
-    // ID hợp lệ (Mongo 24 hex)
     private static bool IsLikelyId(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return false;
@@ -582,16 +1407,13 @@ public class CourseListView : MonoBehaviour
         return System.Text.RegularExpressions.Regex.IsMatch(t, "^[a-fA-F0-9]{24}$");
     }
 
-    // Chỉ quét trong object finalExam, KHÔNG fallback sang settings/course
     private static string FindIdInObjectOnly(object obj)
     {
         if (obj == null) return null;
 
-        // string trực tiếp
         if (obj is string s && IsLikelyId(s))
             return s.Trim();
 
-        // dictionary
         if (obj is System.Collections.IDictionary dict)
         {
             foreach (var key in dict.Keys)
@@ -613,7 +1435,6 @@ public class CourseListView : MonoBehaviour
             return null;
         }
 
-        // object thường: thử đúng các key ID
         foreach (var k in FinalExamIdKeys)
         {
             var v = GetMemberValue(obj, k);
@@ -624,7 +1445,6 @@ public class CourseListView : MonoBehaviour
         return null;
     }
 
-    // Chỉ trả ID khi THẬT SỰ có settings.finalExam
     public static string TryGetFinalExamId(object courseLike)
     {
         var course = GetMemberValue(courseLike, "course") ?? courseLike;
@@ -650,8 +1470,6 @@ public class CourseListView : MonoBehaviour
     {
         if (_videoLessons == null || _videoLessons.Count == 0) return null;
 
-        // Nếu currentUrl là local proxy URL thì đổi ngược về origin URL
-        // để so với lesson.linkVideo2.
         currentUrl = NormalizeProxyUrlToOrigin(currentUrl);
 
         int startIndex = -1;
@@ -711,8 +1529,6 @@ public class CourseListView : MonoBehaviour
         bool targetIsVideo = IsVideoLesson(lesson);
         bool targetIsFinalExam = IsFinalExamLesson(lesson);
 
-        // Không chặn tài liệu bằng rule hoàn thành video.
-        // Chỉ chặn khi đang xem video chưa xong mà muốn qua video/bài thi khác.
         if (_currentLesson != null && _currentLesson != lesson)
         {
             bool currentIsBlockingVideo = IsVideoLesson(_currentLesson);
@@ -731,7 +1547,6 @@ public class CourseListView : MonoBehaviour
 
         LessonProgressTracker.Instance.UpdateLesson(null);
 
-        // Clear selection cũ
         if (_currentLesson != null && _currentLesson != lesson)
         {
             Debug.Log("[CourseListView] Clear selection lesson cũ");
@@ -755,15 +1570,13 @@ public class CourseListView : MonoBehaviour
             _currentLesson.chapterUI.SelectLesson(_currentLesson);
         }
 
-        // ===== FINAL EXAM =====
         if (targetIsFinalExam)
         {
-            StopVideoPipeline();
+            StopAndReleaseActiveVideo();
             OnClickFinalExamEvt?.Invoke(_currentLesson);
             return;
         }
 
-        // ===== DOCUMENT/PDF/TEXT =====
         if (targetIsDocument)
         {
             Debug.Log("[CourseListView] Open document, skip video/proxy: " + _currentLesson.linkVideo2);
@@ -776,7 +1589,7 @@ public class CourseListView : MonoBehaviour
                 return;
             }
 
-            StopVideoPipeline();
+            StopAndReleaseActiveVideo();
 
             if (videoPlayerControllerPro != null)
             {
@@ -791,7 +1604,6 @@ public class CourseListView : MonoBehaviour
             return;
         }
 
-        // ===== VIDEO =====
         if (targetIsVideo)
         {
             Debug.Log("[CourseListView] Play video: " + _currentLesson.linkVideo2);
@@ -827,6 +1639,38 @@ public class CourseListView : MonoBehaviour
         float delta = now - _videoStartRealtime;
 
         Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (enableProxyPlaybackBufferGuard &&
+            _usingProxyForCurrentVideo &&
+            !_proxyBufferGuardPaused &&
+            !string.IsNullOrWhiteSpace(_activeVideoOriginUrl))
+        {
+            long totalBytes = proxyBoot ? proxyBoot.GetTotalBytes(_activeVideoOriginUrl) : -1L;
+
+            if (totalBytes > 0 && vp.length > 1.0)
+            {
+                double ratio = vp.time / vp.length;
+                ratio = Math.Max(0.0, Math.Min(1.0, ratio));
+
+                long estimatedBytePos = (long)(totalBytes * ratio);
+                long cachedUntil = ProxyGetCachedUntilFrom(_activeVideoOriginUrl, estimatedBytePos);
+                double bytesPerSecond = totalBytes / Math.Max(1.0, vp.length);
+                double aheadSeconds = (cachedUntil - estimatedBytePos) / Math.Max(1.0, bytesPerSecond);
+
+                if (aheadSeconds >= 0.0 && aheadSeconds < Math.Max(0.5f, pauseWhenAheadBelowSeconds))
+                {
+                    _proxyBufferGuardPaused = true;
+                    vp.Pause();
+
+                    Debug.LogWarning(
+                        $"[LocalProxy][BufferGuard] Pause after first frame. ahead={aheadSeconds:F1}s " +
+                        $"needResume={resumeWhenAheadAboveSeconds:F1}s"
+                    );
+                }
+            }
+        }
+#endif
 
         vp.frameReady -= OnVideoFrameReady;
         vp.sendFrameReadyEvents = false;

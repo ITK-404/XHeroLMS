@@ -70,17 +70,33 @@ public class LessonUI : MonoBehaviour
 
     public void TryUpdateProgress(float newProgressTime)
     {
-        if(IsLessonDone())
+        if (duration <= 0)
+        {
+            progressTime = Mathf.Max(progressTime, newProgressTime);
+            return;
+        }
+
+        float adjustedProgress = Mathf.Clamp(newProgressTime + 1, 0, duration);
+
+        if (IsPlaybackComplete(adjustedProgress))
         {
             progressTime = duration;
             return;
         }
-        progressTime = Mathf.Clamp(newProgressTime + 1, progressTime, duration);
+
+        progressTime = Mathf.Clamp(adjustedProgress, progressTime, duration);
     }
 
     public bool IsLessonDone()
     {
-        return progressTime >= duration - 60;
+        return duration > 0 && progressTime >= CompletionThreshold;
     }
+
+    public bool IsPlaybackComplete(float playbackTime)
+    {
+        return duration > 0 && playbackTime >= CompletionThreshold;
+    }
+
+    private float CompletionThreshold => Mathf.Max(1f, duration - 60f);
 }
 

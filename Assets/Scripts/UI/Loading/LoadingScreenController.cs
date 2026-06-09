@@ -1,9 +1,13 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
@@ -14,6 +18,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 public class LoadingScreenController : MonoBehaviour
 {
     [Header("UI References")]
+    public GameObject panelLoadingRoot;
     public Image imageScene1;
     public Image progressRing;
     public TMP_Text textLoading;
@@ -25,12 +30,8 @@ public class LoadingScreenController : MonoBehaviour
     public string baseText = "Đang tải";
 
     [Header("Fast Loading Settings")]
-    [Tooltip("Tổng thời gian loading UI từ 0 đến 100 nếu scene đã preload xong.")]
+    [Tooltip("Chỉ dùng để log cảnh báo nếu scene load quá lâu. Không dùng để đẩy progress ảo.")]
     public float maxLoadingSeconds = 2f;
-
-    [Tooltip("Nếu scene chưa ready, thanh loading giữ tối đa ở mức này thay vì lên 100 giả.")]
-    [Range(0.9f, 0.999f)]
-    public float waitCapProgress = 0.99f;
 
     [Tooltip("Thời gian tối thiểu để người dùng thấy loading screen, tránh chớp màn quá nhanh.")]
     public float minVisibleSeconds = 0.25f;
@@ -41,45 +42,57 @@ public class LoadingScreenController : MonoBehaviour
     [Header("Image Cycle")]
     public float imageSwitchInterval = 1f;
 
+    [Header("Load Next Video")]
+    public bool enableLoadNextVideo = true;
+    public string loadNextSourceSceneName = "New Scene";
+    public string loadNextVideoFileName = "Load_next.mp4";
+    public float loadNextVideoDuration = 6f;
+    public float loadNextVideoPrepareTimeout = 3f;
+    public bool muteLoadNextVideo = true;
+    public GameObject loadNextVideoRoot;
+    public RawImage loadNextVideoRawImage;
+    public VideoPlayer loadNextVideoPlayer;
+    public RenderTexture loadNextVideoRenderTexture;
+    public long minValidLoadNextVideoBytes = 1024 * 50;
+    public bool forceRefreshLoadNextVideoCache = false;
+
+    private readonly List<Image> _images = new List<Image>();
+
     private bool _isLoading;
+    private bool _defaultLoadingVisible;
+    private bool _loadNextVideoRequired;
+    private bool _loadNextVideoFinished = true;
+    private CanvasGroup _panelLoadingCanvasGroup;
+
     private float _dotTimer;
     private int _dotCount;
     private float _currentProgress;
     private float _displayStartTime;
     private string _targetSceneName;
+    private string _loadingStatusOverride = "";
 
-    private readonly List<Image> _images = new();
     private int _currentImageIndex = -1;
+    private Coroutine _imageCycleRoutine;
+    private RenderTexture _runtimeLoadNextRenderTexture;
 
 #if ADDRESSABLES
-    private static readonly Dictionary<string, AsyncOperationHandle<SceneInstance>> _preloadedScenes = new();
     private static AsyncOperationHandle<SceneInstance>? _lastActivatedAddressableSceneHandle;
 #endif
 
-    void Awake()
+    private void Awake()
     {
-        if (imageScene1)
+        if (imageScene1 != null)
             _images.Add(imageScene1);
 
-        foreach (var img in _images)
-        {
-            if (img)
-                img.gameObject.SetActive(false);
-        }
-
-        if (imageScene1)
-            imageScene1.gameObject.SetActive(true);
-
-        if (progressRing)
-            progressRing.fillAmount = 0f;
-
-        if (sliderUI)
-            sliderUI.value = 0f;
+        ResolvePanelLoadingRoot();
+        ResolveExistingLoadNextVideoObjects();
+        HideLoadNextVideoSurface();
+        SetDefaultLoadingVisible(false);
 
         SetProgress(0f);
     }
 
-    void Start()
+    private void Start()
     {
         if (!string.IsNullOrEmpty(LoadingTransition.TargetSceneName))
         {
@@ -92,104 +105,42 @@ public class LoadingScreenController : MonoBehaviour
         }
     }
 
-    // ============================================================
-    // PUBLIC PRELOAD API
-    // Gọi hàm này từ scene hiện tại TRƯỚC KHI chuyển sang loading scene.
-    // Ví dụ:
-    // StartCoroutine(LoadingScreenController.PreloadAddressableSceneRoutine("Scene_KyMon"));
-    // ============================================================
-
-#if ADDRESSABLES
-    public static IEnumerator PreloadAddressableSceneRoutine(string sceneName)
+    private IEnumerator LoadByNameRoutine(string sceneName)
     {
-        if (string.IsNullOrEmpty(sceneName))
+        _isLoading = true;
+        _currentProgress = 0f;
+        _loadingStatusOverride = baseText;
+        SetProgress(0f);
+
+        _loadNextVideoRequired = ShouldPlayLoadNextVideo(sceneName);
+        _loadNextVideoFinished = !_loadNextVideoRequired;
+
+        if (_loadNextVideoRequired)
         {
-            Debug.LogError("[LoadingScreenController] Preload failed: sceneName is empty.");
-            yield break;
-        }
+            HideDefaultLoadingPanel();
+            yield return PlayLoadNextVideoRoutine();
 
-        if (_preloadedScenes.TryGetValue(sceneName, out var existingHandle))
-        {
-            if (existingHandle.IsValid())
-            {
-                if (!existingHandle.IsDone)
-                {
-                    Debug.Log($"[LoadingScreenController] Waiting existing preload: {sceneName}");
-
-                    while (!existingHandle.IsDone)
-                        yield return null;
-                }
-
-                Debug.Log($"[LoadingScreenController] Already preloaded: {sceneName}");
-                yield break;
-            }
-
-            _preloadedScenes.Remove(sceneName);
-        }
-
-        Debug.Log($"[LoadingScreenController] Start preload addressable scene: {sceneName}");
-
-        var handle = Addressables.LoadSceneAsync(
-            sceneName,
-            LoadSceneMode.Single,
-            activateOnLoad: false
-        );
-
-        _preloadedScenes[sceneName] = handle;
-
-        while (!handle.IsDone)
-            yield return null;
-
-        if (handle.Status == AsyncOperationStatus.Succeeded)
-        {
-            Debug.Log($"[LoadingScreenController] Preload completed: {sceneName}");
+            _currentProgress = 0f;
+            _loadingStatusOverride = baseText;
+            SetProgress(0f);
+            ShowDefaultLoadingVisuals();
         }
         else
         {
-            Debug.LogError($"[LoadingScreenController] Preload failed: {sceneName}");
-            _preloadedScenes.Remove(sceneName);
+            ShowDefaultLoadingVisuals();
         }
-    }
-
-    public static bool IsAddressableScenePreloaded(string sceneName)
-    {
-        if (string.IsNullOrEmpty(sceneName))
-            return false;
-
-        if (!_preloadedScenes.TryGetValue(sceneName, out var handle))
-            return false;
-
-        return handle.IsValid()
-               && handle.IsDone
-               && handle.Status == AsyncOperationStatus.Succeeded;
-    }
-#endif
-
-    IEnumerator LoadByNameRoutine(string sceneName)
-    {
-        _isLoading = true;
-        _displayStartTime = Time.unscaledTime;
 
         float startTime = Time.realtimeSinceStartup;
         float visualStartTime = Time.unscaledTime;
-
-        SetProgress(0f);
-
-        if (loadingParticle && !loadingParticle.isPlaying)
-            loadingParticle.Play();
-
-        StartCoroutine(CycleRandomImages());
-
         bool useAddressables = LoadingTransition.UseAddressables;
-        
-        Debug.Log($"[LoadingScreenController] Load start. Scene={sceneName}, UseAddressables={useAddressables}");
 
-        var previousScene = LoadingTransition.PreviousSceneName;
+        Debug.Log(
+            $"[LoadingScreenController] Load start. " +
+            $"Scene={sceneName}, UseAddressables={useAddressables}, Previous={LoadingTransition.PreviousSceneName}"
+        );
 
-        yield return SceneManager.UnloadSceneAsync(previousScene);
-        
-        // yield return new WaitForSecondsRealtime(5f);
-        
+        yield return SafeUnloadPreviousScene();
+
         if (useAddressables)
         {
 #if ADDRESSABLES
@@ -216,118 +167,213 @@ public class LoadingScreenController : MonoBehaviour
         }
 
         float visibleTime = Time.unscaledTime - _displayStartTime;
-        if (visibleTime < minVisibleSeconds)
+        if (_defaultLoadingVisible && visibleTime < minVisibleSeconds)
             yield return new WaitForSecondsRealtime(minVisibleSeconds - visibleTime);
 
+        _loadingStatusOverride = "Hoan tat";
         SetProgress(1f);
 
         _isLoading = false;
-
-        if (loadingParticle && loadingParticle.isPlaying)
-            loadingParticle.Stop();
+        StopDefaultLoadingVisuals();
 
         Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
 
         Destroy(gameObject);
     }
 
-#if ADDRESSABLES
-    IEnumerator LoadAddressableSceneFast(string sceneName, float startTime, float visualStartTime)
+    private IEnumerator SafeUnloadPreviousScene()
     {
-        AsyncOperationHandle<SceneInstance> handle;
-        bool usedPreloadedHandle = false;
+        string previousScene = LoadingTransition.PreviousSceneName;
 
-        if (_preloadedScenes.TryGetValue(sceneName, out var preloadedHandle) && preloadedHandle.IsValid())
+        if (string.IsNullOrWhiteSpace(previousScene))
+            yield break;
+
+        Scene prev = SceneManager.GetSceneByName(previousScene);
+
+        if (!prev.IsValid() || !prev.isLoaded)
         {
-            handle = preloadedHandle;
-            usedPreloadedHandle = true;
+            Debug.Log($"[LoadingScreenController] Previous scene not loaded or invalid. Skip unload: {previousScene}");
+            yield break;
+        }
 
-            Debug.Log($"[LoadingScreenController] Use preloaded addressable scene: {sceneName}");
+        if (previousScene == SceneManager.GetActiveScene().name && SceneManager.sceneCount <= 1)
+        {
+            Debug.LogWarning(
+                $"[LoadingScreenController] Skip unload previous scene because it is the only loaded scene: {previousScene}"
+            );
+            yield break;
+        }
+
+        Debug.Log($"[LoadingScreenController] Unload previous scene: {previousScene}");
+
+        AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(previousScene);
+
+        if (unloadOp == null)
+        {
+            Debug.LogWarning($"[LoadingScreenController] UnloadSceneAsync returned null: {previousScene}");
+            yield break;
+        }
+
+        while (!unloadOp.isDone)
+            yield return null;
+    }
+
+#if ADDRESSABLES
+    private IEnumerator LoadAddressableSceneFast(string sceneName, float startTime, float visualStartTime)
+    {
+        if (ShouldRunAddressablesPreloadPhase())
+        {
+            yield return PrepareAddressablesTarget(sceneName, startTime);
+            if (LoadingTransition.HasPrepareFailed)
+                yield break;
         }
         else
         {
-            Debug.LogWarning($"[LoadingScreenController] Scene was NOT preloaded. Loading now: {sceneName}");
-
-            handle = Addressables.LoadSceneAsync(
-                sceneName,
-                LoadSceneMode.Single,
-                activateOnLoad: false
-            );
-
-            _preloadedScenes[sceneName] = handle;
+            Debug.Log($"[LoadingScreenController] Editor mode: skip AddressablesPreload phase for {sceneName}.");
         }
 
-        // Phase 1: chờ preload/load scene package xong.
-        while (!handle.IsDone)
+        _loadingStatusOverride = "Đang kết nối đến thế giới";
+        SetProgress(0f);
+
+        Debug.Log($"[LoadingScreenController] Addressables LoadSceneAsync started: {sceneName}");
+
+        AsyncOperationHandle<SceneInstance> handle = LoadAddressableScenePackage(sceneName);
+
+        while (handle.IsValid() && !handle.IsDone)
         {
-            float elapsed = Time.unscaledTime - visualStartTime;
-            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
-
-            float realProgress = Mathf.Clamp01(handle.PercentComplete);
-            float visual = Mathf.Min(waitCapProgress, Mathf.Max(time01 * 0.85f, realProgress * 0.85f));
-
-            SetProgress(visual);
-
-            if (elapsed > maxLoadingSeconds && !usedPreloadedHandle)
-            {
-                Debug.LogWarning(
-                    $"[LoadingScreenController] Loading exceeded {maxLoadingSeconds:0.00}s because scene was not preloaded yet. " +
-                    $"Scene={sceneName}, Percent={handle.PercentComplete:0.00}"
-                );
-            }
-
+            SetProgress(Mathf.Clamp01(handle.PercentComplete));
             yield return null;
+        }
+
+        if (!handle.IsValid())
+        {
+            Debug.LogError($"[LoadingScreenController] Addressables LoadSceneAsync handle invalid: {sceneName}");
+            yield break;
         }
 
         if (handle.Status != AsyncOperationStatus.Succeeded)
         {
-            Debug.LogError($"[LoadingScreenController] Addressables LoadSceneAsync failed: {sceneName}");
+            string err = handle.OperationException != null
+                ? handle.OperationException.ToString()
+                : handle.Status.ToString();
+
+            Debug.LogError($"[LoadingScreenController] Addressables LoadSceneAsync failed: {sceneName}\n{err}");
             yield break;
         }
 
         Debug.Log($"[LoadingScreenController] Scene package ready at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        // Nếu scene đã preload xong từ trước, đến đây gần như tức thì.
-        SetProgress(Mathf.Max(_currentProgress, 0.88f));
+        SetProgress(1f);
 
-        // Phase 2: activate scene.
+        yield return WaitForLoadNextVideoFinished("addressables activation");
+
+        _loadingStatusOverride = "Đang mở lối vào";
+        SetProgress(_currentProgress);
+
         Debug.Log($"[LoadingScreenController] Activate scene started: {sceneName}");
 
-        var activateOp = handle.Result.ActivateAsync();
+        AsyncOperation activateOp = handle.Result.ActivateAsync();
 
         while (!activateOp.isDone)
         {
-            float elapsed = Time.unscaledTime - visualStartTime;
-            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
-
-            float activateProgress = Mathf.Clamp01(activateOp.progress);
-            float visual = Mathf.Lerp(0.88f, waitCapProgress, Mathf.Max(time01, activateProgress));
-
-            SetProgress(visual);
-
-            if (elapsed > maxLoadingSeconds)
-            {
-                Debug.LogWarning(
-                    $"[LoadingScreenController] Scene activation exceeded {maxLoadingSeconds:0.00}s. " +
-                    $"This is usually caused by heavy Awake/OnEnable/Start/shader/lighting in scene: {sceneName}"
-                );
-            }
-
+            SetProgress(Mathf.Clamp01(activateOp.progress));
             yield return null;
         }
 
         Debug.Log($"[LoadingScreenController] Scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
         _lastActivatedAddressableSceneHandle = handle;
-        _preloadedScenes.Remove(sceneName);
 
-        // Phase 3: fill 100 trong phần thời gian còn lại, không cố giữ loading lâu.
-        yield return FillToCompleteWithinLimit(visualStartTime);
+        _loadingStatusOverride = "Hoan tat";
+        SetProgress(1f);
+    }
+
+    private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
+    {
+        _loadingStatusOverride = "Đang chuẩn bị tài nguyên";
+        SetProgress(0.01f);
+
+        Debug.Log($"[LoadingScreenController] Prepare addressables target started: {sceneName}");
+
+        bool prepareDone = false;
+
+        StartCoroutine(RunPrepareTargetAddressablesRoutine(() =>
+        {
+            prepareDone = true;
+        }));
+
+        while (!prepareDone)
+        {
+            ApplyAddressablesPrepareProgress();
+
+            if (LoadingTransition.HasPrepareFailed)
+                break;
+
+            yield return null;
+        }
+
+        ApplyAddressablesPrepareProgress();
+
+        if (LoadingTransition.HasPrepareFailed)
+        {
+            Debug.LogError("[LoadingScreenController] Prepare target addressables failed: " + LoadingTransition.LastPrepareError);
+
+            _loadingStatusOverride = "";
+            SetProgress(_currentProgress);
+
+            LoadingUI.ShowErrorPopup(null);
+            yield break;
+        }
+
+        Debug.Log($"[LoadingScreenController] Prepare addressables target DONE at {Time.realtimeSinceStartup - startTime:0.00}s");
+
+        SetProgress(1f);
+    }
+
+    private IEnumerator RunPrepareTargetAddressablesRoutine(Action onDone)
+    {
+        yield return LoadingTransition.PrepareTargetAddressablesRoutine();
+        onDone?.Invoke();
+    }
+
+    private void ApplyAddressablesPrepareProgress()
+    {
+        if (AddressablesPreload.Instance == null)
+        {
+            _loadingStatusOverride = "Đang chuẩn bị tài nguyên";
+            SetProgress(0f);
+            return;
+        }
+
+        float prepare01 = Mathf.Clamp01(AddressablesPreload.Instance.DownloadPercent01);
+        _loadingStatusOverride = AddressablesPreload.Instance.LoadingText;
+
+        SetProgress(prepare01);
+    }
+
+    private AsyncOperationHandle<SceneInstance> LoadAddressableScenePackage(string sceneName)
+    {
+#if UNITY_EDITOR
+        return Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, false);
+#else
+        return LoadingTransition.LoadAddressableAsync(false);
+#endif
+    }
+
+    private bool ShouldRunAddressablesPreloadPhase()
+    {
+#if UNITY_EDITOR
+        return false;
+#else
+        return true;
+#endif
     }
 #endif
 
-    IEnumerator LoadBuildSceneFast(string sceneName, float startTime, float visualStartTime)
+    private IEnumerator LoadBuildSceneFast(string sceneName, float startTime, float visualStartTime)
     {
+        _loadingStatusOverride = "Đang kết nối đến thế giới";
+
         Debug.Log($"[LoadingScreenController] Build scene load started: {sceneName}");
 
         AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
@@ -343,12 +389,8 @@ public class LoadingScreenController : MonoBehaviour
         while (op.progress < 0.9f)
         {
             float elapsed = Time.unscaledTime - visualStartTime;
-            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
-
             float realProgress = Mathf.Clamp01(op.progress / 0.9f);
-            float visual = Mathf.Min(waitCapProgress, Mathf.Max(time01 * 0.85f, realProgress * 0.85f));
-
-            SetProgress(visual);
+            SetProgress(realProgress);
 
             if (elapsed > maxLoadingSeconds)
             {
@@ -363,17 +405,18 @@ public class LoadingScreenController : MonoBehaviour
 
         Debug.Log($"[LoadingScreenController] Build scene ready at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        SetProgress(Mathf.Max(_currentProgress, 0.9f));
+        SetProgress(1f);
+
+        yield return WaitForLoadNextVideoFinished("build scene activation");
+
+        _loadingStatusOverride = "Đang mở lối vao";
+        SetProgress(_currentProgress);
 
         op.allowSceneActivation = true;
 
         while (!op.isDone)
         {
             float elapsed = Time.unscaledTime - visualStartTime;
-            float time01 = Mathf.Clamp01(elapsed / maxLoadingSeconds);
-
-            float visual = Mathf.Lerp(0.9f, waitCapProgress, time01);
-            SetProgress(visual);
 
             if (elapsed > maxLoadingSeconds)
             {
@@ -388,59 +431,166 @@ public class LoadingScreenController : MonoBehaviour
 
         Debug.Log($"[LoadingScreenController] Build scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        yield return FillToCompleteWithinLimit(visualStartTime);
-    }
-
-    IEnumerator FillToCompleteWithinLimit(float visualStartTime)
-    {
-        float elapsed = Time.unscaledTime - visualStartTime;
-        float remaining = Mathf.Max(0.05f, maxLoadingSeconds - elapsed);
-
-        float start = _currentProgress;
-        float duration = Mathf.Min(0.18f, remaining);
-
-        if (elapsed >= maxLoadingSeconds)
-            duration = 0.05f;
-
-        float t = 0f;
-
-        while (t < duration)
-        {
-            t += Time.unscaledDeltaTime;
-            float s = Mathf.Clamp01(t / duration);
-            SetProgress(Mathf.Lerp(start, 1f, s));
-            yield return null;
-        }
-
+        _loadingStatusOverride = "Hoan tat";
         SetProgress(1f);
     }
 
-    void SetProgress(float t)
+    private void SetProgress(float t)
     {
-        _currentProgress = Mathf.Clamp01(t);
+        float nextProgress = Mathf.Clamp01(t);
+
+        if (_isLoading && nextProgress < _currentProgress)
+            nextProgress = _currentProgress;
+
+        _currentProgress = nextProgress;
 
         int percent = Mathf.RoundToInt(_currentProgress * 100f);
+        string dots = new string('.', _dotCount);
 
-        if (textLoading)
-            textLoading.text = $"{baseText} {percent}%{new string('.', _dotCount)}";
+        string displayText = string.IsNullOrWhiteSpace(_loadingStatusOverride)
+            ? baseText
+            : _loadingStatusOverride;
 
-        if (progressRing)
+        bool textAlreadyHasProgress =
+            displayText.Contains("%") ||
+            displayText.Contains("/") ||
+            displayText.Contains("|");
+
+        if (textLoading != null)
+        {
+            if (textAlreadyHasProgress)
+                textLoading.text = $"{displayText}{dots}";
+            else
+                textLoading.text = $"{displayText} {percent}%{dots}";
+        }
+
+        if (progressRing != null)
             progressRing.fillAmount = _currentProgress;
 
-        if (sliderUI)
+        if (sliderUI != null)
             sliderUI.value = _currentProgress;
     }
 
-    IEnumerator CycleRandomImages()
+    private void ShowDefaultLoadingVisuals()
+    {
+        SetDefaultLoadingVisible(true);
+        _displayStartTime = Time.unscaledTime;
+
+        if (loadingParticle != null && !loadingParticle.isPlaying)
+            loadingParticle.Play();
+
+        if (_imageCycleRoutine == null)
+            _imageCycleRoutine = StartCoroutine(CycleRandomImages());
+    }
+
+    private void StopDefaultLoadingVisuals()
+    {
+        if (_imageCycleRoutine != null)
+        {
+            StopCoroutine(_imageCycleRoutine);
+            _imageCycleRoutine = null;
+        }
+
+        if (loadingParticle != null && loadingParticle.isPlaying)
+            loadingParticle.Stop();
+
+        SetDefaultLoadingVisible(false);
+    }
+
+    private void SetDefaultLoadingVisible(bool visible)
+    {
+        _defaultLoadingVisible = visible;
+        SetPanelLoadingAlpha(visible ? 1f : 0f);
+
+        foreach (Image img in _images)
+        {
+            if (img != null)
+                img.gameObject.SetActive(false);
+        }
+
+        if (visible && imageScene1 != null)
+            imageScene1.gameObject.SetActive(true);
+
+        if (progressRing != null)
+            progressRing.gameObject.SetActive(visible);
+
+        if (textLoading != null)
+            textLoading.gameObject.SetActive(visible);
+
+        if (sliderUI != null)
+            sliderUI.gameObject.SetActive(visible);
+
+        if (loadingParticle != null)
+            loadingParticle.gameObject.SetActive(visible);
+    }
+
+    private void HideDefaultLoadingPanel()
+    {
+        StopDefaultLoadingVisuals();
+        SetPanelLoadingAlpha(0f);
+    }
+
+    private void ResolvePanelLoadingRoot()
+    {
+        if (panelLoadingRoot == null)
+            panelLoadingRoot = FindScenePanelLoadingRoot();
+
+        if (panelLoadingRoot == null)
+            panelLoadingRoot = gameObject;
+
+        _panelLoadingCanvasGroup = panelLoadingRoot.GetComponent<CanvasGroup>();
+
+        if (_panelLoadingCanvasGroup == null)
+            _panelLoadingCanvasGroup = panelLoadingRoot.AddComponent<CanvasGroup>();
+    }
+
+    private GameObject FindScenePanelLoadingRoot()
+    {
+        Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        foreach (Transform candidate in transforms)
+        {
+            if (candidate == null || candidate.gameObject.scene != gameObject.scene)
+                continue;
+
+            if (string.Equals(candidate.gameObject.name, "Panel_Loading", StringComparison.OrdinalIgnoreCase))
+                return candidate.gameObject;
+        }
+
+        return null;
+    }
+
+    private void SetPanelLoadingAlpha(float alpha)
+    {
+        if (_panelLoadingCanvasGroup == null)
+            ResolvePanelLoadingRoot();
+
+        if (_panelLoadingCanvasGroup == null)
+            return;
+
+        bool visible = alpha > 0.001f;
+
+        _panelLoadingCanvasGroup.alpha = visible ? 1f : 0f;
+        _panelLoadingCanvasGroup.interactable = visible;
+        _panelLoadingCanvasGroup.blocksRaycasts = visible;
+    }
+
+    private IEnumerator CycleRandomImages()
     {
         if (_images.Count == 0)
             yield break;
 
         while (_isLoading)
         {
+            if (!_defaultLoadingVisible)
+            {
+                yield return null;
+                continue;
+            }
+
             if (_currentImageIndex >= 0 && _currentImageIndex < _images.Count)
             {
-                if (_images[_currentImageIndex])
+                if (_images[_currentImageIndex] != null)
                     _images[_currentImageIndex].gameObject.SetActive(false);
             }
 
@@ -448,26 +598,496 @@ public class LoadingScreenController : MonoBehaviour
 
             do
             {
-                nextIndex = Random.Range(0, _images.Count);
+                nextIndex = UnityEngine.Random.Range(0, _images.Count);
             }
             while (nextIndex == _currentImageIndex && _images.Count > 1);
 
             _currentImageIndex = nextIndex;
 
-            if (_images[_currentImageIndex])
+            if (_images[_currentImageIndex] != null)
                 _images[_currentImageIndex].gameObject.SetActive(true);
 
             yield return new WaitForSecondsRealtime(imageSwitchInterval);
         }
 
-        foreach (var img in _images)
+        foreach (Image img in _images)
         {
-            if (img)
+            if (img != null)
                 img.gameObject.SetActive(false);
         }
     }
 
-    void Update()
+    private bool ShouldPlayLoadNextVideo(string targetSceneName)
+    {
+        if (!enableLoadNextVideo)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(loadNextVideoFileName))
+            return false;
+
+        string previous = LoadingTransition.PreviousSceneName;
+
+        if (string.IsNullOrWhiteSpace(previous))
+            return false;
+
+        return SceneNameEquals(previous, loadNextSourceSceneName) &&
+               !SceneNameEquals(targetSceneName, loadNextSourceSceneName);
+    }
+
+    private static bool SceneNameEquals(string a, string b)
+    {
+        return NormalizeSceneName(a) == NormalizeSceneName(b);
+    }
+
+    private static string NormalizeSceneName(string sceneName)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName))
+            return "";
+
+        return sceneName
+            .Replace(" ", "")
+            .Replace("_", "")
+            .Replace("-", "")
+            .Trim()
+            .ToLowerInvariant();
+    }
+
+    private IEnumerator WaitForLoadNextVideoFinished(string reason)
+    {
+        if (!_loadNextVideoRequired || _loadNextVideoFinished)
+            yield break;
+
+        Debug.Log($"[LoadingScreenController] Waiting Load_next video before {reason}.");
+
+        while (!_loadNextVideoFinished)
+            yield return null;
+    }
+
+    private IEnumerator PlayLoadNextVideoRoutine()
+    {
+        _loadNextVideoFinished = false;
+        HideDefaultLoadingPanel();
+
+        string videoUrl = "";
+
+        yield return ResolveLoadNextVideoUrlRoutine(url =>
+        {
+            videoUrl = url;
+        });
+
+        bool canPlayVideo = !string.IsNullOrWhiteSpace(videoUrl) && EnsureLoadNextVideoObjects();
+
+        if (canPlayVideo)
+        {
+            PrepareLoadNextVideoPlayer(videoUrl);
+
+            float prepareStarted = Time.unscaledTime;
+
+            try
+            {
+                loadNextVideoPlayer.Prepare();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LoadingScreenController] Load_next video Prepare failed: " + e);
+                canPlayVideo = false;
+            }
+
+            while (canPlayVideo &&
+                   !loadNextVideoPlayer.isPrepared &&
+                   Time.unscaledTime - prepareStarted < Mathf.Max(0.1f, loadNextVideoPrepareTimeout))
+            {
+                yield return null;
+            }
+
+            if (canPlayVideo && !loadNextVideoPlayer.isPrepared)
+            {
+                Debug.LogWarning("[LoadingScreenController] Load_next video prepare timeout. Show default loading UI.");
+                canPlayVideo = false;
+            }
+        }
+
+        if (!canPlayVideo)
+        {
+            HideLoadNextVideoSurface();
+            _loadNextVideoFinished = true;
+            yield break;
+        }
+
+        ShowLoadNextVideoSurface();
+
+        try
+        {
+            loadNextVideoPlayer.Play();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LoadingScreenController] Load_next video Play failed: " + e);
+            HideLoadNextVideoSurface();
+            _loadNextVideoFinished = true;
+            yield break;
+        }
+
+        yield return WaitForLoadNextVideoStarted();
+
+        float duration = Mathf.Max(0.1f, loadNextVideoDuration);
+        float visibleStarted = Time.unscaledTime;
+
+        while (Time.unscaledTime - visibleStarted < duration)
+            yield return null;
+
+        if (loadNextVideoPlayer != null)
+        {
+            try
+            {
+                loadNextVideoPlayer.Stop();
+            }
+            catch { }
+        }
+
+        HideLoadNextVideoSurface();
+
+        _loadNextVideoFinished = true;
+    }
+
+    private IEnumerator WaitForLoadNextVideoStarted()
+    {
+        if (loadNextVideoPlayer == null)
+            yield break;
+
+        float waitStarted = Time.unscaledTime;
+        float maxWait = Mathf.Max(0.25f, loadNextVideoPrepareTimeout);
+
+        while (Time.unscaledTime - waitStarted < maxWait)
+        {
+            if (loadNextVideoPlayer.isPlaying)
+                yield break;
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator ResolveLoadNextVideoUrlRoutine(Action<string> onResolved)
+    {
+        string streamingPath = Path.Combine(Application.streamingAssetsPath, loadNextVideoFileName);
+        bool streamingPathIsUrl = streamingPath.Contains("://") || streamingPath.Contains("jar:");
+
+        if (!streamingPathIsUrl && IsValidLocalVideoFile(streamingPath))
+        {
+            onResolved?.Invoke(new Uri(streamingPath).AbsoluteUri);
+            yield break;
+        }
+
+        string persistentPath = Path.Combine(Application.persistentDataPath, loadNextVideoFileName);
+        bool needCopy = forceRefreshLoadNextVideoCache || !IsValidLocalVideoFile(persistentPath);
+
+        if (needCopy)
+        {
+            string sourceUrl = streamingPath;
+
+            if (!sourceUrl.Contains("://") && !sourceUrl.Contains("jar:"))
+                sourceUrl = new Uri(sourceUrl).AbsoluteUri;
+
+            using (UnityWebRequest request = UnityWebRequest.Get(sourceUrl))
+            {
+                yield return request.SendWebRequest();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    Debug.LogWarning(
+                        $"[LoadingScreenController] Cannot read Load_next video. Url={sourceUrl}, Error={request.error}"
+                    );
+
+                    onResolved?.Invoke("");
+                    yield break;
+                }
+
+                byte[] data = request.downloadHandler.data;
+
+                if (data == null || data.Length < minValidLoadNextVideoBytes)
+                {
+                    Debug.LogWarning(
+                        $"[LoadingScreenController] Load_next video data invalid. Bytes={(data == null ? 0 : data.Length)}"
+                    );
+
+                    onResolved?.Invoke("");
+                    yield break;
+                }
+
+                try
+                {
+                    string dir = Path.GetDirectoryName(persistentPath);
+
+                    if (!string.IsNullOrWhiteSpace(dir))
+                        Directory.CreateDirectory(dir);
+
+                    File.WriteAllBytes(persistentPath, data);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("[LoadingScreenController] Cannot cache Load_next video: " + e);
+                    onResolved?.Invoke("");
+                    yield break;
+                }
+            }
+        }
+
+        if (!IsValidLocalVideoFile(persistentPath))
+        {
+            Debug.LogWarning("[LoadingScreenController] Load_next video cache missing or invalid: " + persistentPath);
+            onResolved?.Invoke("");
+            yield break;
+        }
+
+        onResolved?.Invoke(new Uri(persistentPath).AbsoluteUri);
+    }
+
+    private bool IsValidLocalVideoFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        try
+        {
+            if (!File.Exists(path))
+                return false;
+
+            FileInfo file = new FileInfo(path);
+            return file.Length >= minValidLoadNextVideoBytes;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ResolveExistingLoadNextVideoObjects()
+    {
+        if (loadNextVideoPlayer == null && loadNextVideoRoot != null)
+            loadNextVideoPlayer = loadNextVideoRoot.GetComponent<VideoPlayer>();
+
+        if (loadNextVideoRawImage == null)
+            loadNextVideoRawImage = FindSceneLoadNextRawImage();
+
+        if (loadNextVideoPlayer == null && loadNextVideoRawImage != null)
+            loadNextVideoPlayer = loadNextVideoRawImage.GetComponent<VideoPlayer>();
+
+        if (loadNextVideoPlayer == null)
+            loadNextVideoPlayer = FindSceneLoadNextVideoPlayer();
+
+        if (loadNextVideoRoot == null && loadNextVideoPlayer != null)
+            loadNextVideoRoot = loadNextVideoPlayer.gameObject;
+
+        if (loadNextVideoPlayer != null)
+        {
+            loadNextVideoPlayer.playOnAwake = false;
+
+            try
+            {
+                if (loadNextVideoPlayer.isPlaying)
+                    loadNextVideoPlayer.Stop();
+            }
+            catch { }
+        }
+    }
+
+    private RawImage FindSceneLoadNextRawImage()
+    {
+        RawImage[] rawImages = FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        foreach (RawImage rawImage in rawImages)
+        {
+            if (rawImage == null || rawImage.gameObject.scene != gameObject.scene)
+                continue;
+
+            bool likelyLoadNextSurface =
+                rawImage.texture == null &&
+                rawImage.transform.parent != null &&
+                rawImage.transform.parent.GetComponent<Canvas>() != null &&
+                string.Equals(rawImage.gameObject.name, "RawImage", StringComparison.OrdinalIgnoreCase);
+
+            if (likelyLoadNextSurface)
+                return rawImage;
+        }
+
+        foreach (RawImage rawImage in rawImages)
+        {
+            if (rawImage == null || rawImage.gameObject.scene != gameObject.scene)
+                continue;
+
+            if (rawImage.gameObject.name.IndexOf("Load_next", StringComparison.OrdinalIgnoreCase) >= 0)
+                return rawImage;
+        }
+
+        return null;
+    }
+
+    private VideoPlayer FindSceneLoadNextVideoPlayer()
+    {
+        VideoPlayer[] videoPlayers = FindObjectsByType<VideoPlayer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        foreach (VideoPlayer videoPlayer in videoPlayers)
+        {
+            if (videoPlayer == null || videoPlayer.gameObject.scene != gameObject.scene)
+                continue;
+
+            if (string.Equals(videoPlayer.gameObject.name, "VideoPlayer", StringComparison.OrdinalIgnoreCase) ||
+                videoPlayer.gameObject.name.IndexOf("Load_next", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return videoPlayer;
+            }
+        }
+
+        return null;
+    }
+
+    private bool EnsureLoadNextVideoObjects()
+    {
+        if (loadNextVideoRawImage == null)
+            loadNextVideoRawImage = CreateLoadNextVideoRawImage();
+
+        if (loadNextVideoRawImage == null)
+        {
+            Debug.LogWarning("[LoadingScreenController] Cannot create Load_next RawImage.");
+            return false;
+        }
+
+        PlaceLoadNextVideoSurface();
+
+        if (loadNextVideoPlayer == null)
+            loadNextVideoPlayer = loadNextVideoRawImage.GetComponent<VideoPlayer>();
+
+        if (loadNextVideoPlayer == null && loadNextVideoRoot != null)
+            loadNextVideoPlayer = loadNextVideoRoot.GetComponent<VideoPlayer>();
+
+        if (loadNextVideoPlayer == null)
+            loadNextVideoPlayer = loadNextVideoRawImage.gameObject.AddComponent<VideoPlayer>();
+
+        if (loadNextVideoRoot == null && loadNextVideoPlayer != null)
+            loadNextVideoRoot = loadNextVideoPlayer.gameObject;
+
+        if (loadNextVideoRenderTexture == null && _runtimeLoadNextRenderTexture == null)
+        {
+            _runtimeLoadNextRenderTexture = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32)
+            {
+                name = "Load_next_RuntimeRT"
+            };
+            _runtimeLoadNextRenderTexture.Create();
+        }
+
+        RenderTexture targetTexture = loadNextVideoRenderTexture != null
+            ? loadNextVideoRenderTexture
+            : _runtimeLoadNextRenderTexture;
+
+        loadNextVideoRawImage.texture = targetTexture;
+        loadNextVideoPlayer.targetTexture = targetTexture;
+
+        return true;
+    }
+
+    private RawImage CreateLoadNextVideoRawImage()
+    {
+        Transform parent = GetLoadNextVideoParent();
+
+        GameObject go = new GameObject("Load_next_Video", typeof(RectTransform), typeof(RawImage));
+        go.transform.SetParent(parent, false);
+
+        RectTransform rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+
+        RawImage rawImage = go.GetComponent<RawImage>();
+        rawImage.raycastTarget = false;
+        rawImage.color = Color.white;
+        rawImage.gameObject.SetActive(false);
+
+        return rawImage;
+    }
+
+    private void PlaceLoadNextVideoSurface()
+    {
+        if (loadNextVideoRawImage == null)
+            return;
+
+        RectTransform rect = loadNextVideoRawImage.rectTransform;
+        Transform targetParent = GetLoadNextVideoParent();
+
+        loadNextVideoRawImage.raycastTarget = false;
+
+        if (loadNextVideoRawImage.transform.parent != targetParent)
+            loadNextVideoRawImage.transform.SetParent(targetParent, false);
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.localScale = Vector3.one;
+
+        loadNextVideoRawImage.transform.SetAsLastSibling();
+    }
+
+    private Transform GetLoadNextVideoParent()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+
+        if (canvas != null)
+            return canvas.transform;
+
+        if (panelLoadingRoot != null && panelLoadingRoot.transform.parent != null)
+            return panelLoadingRoot.transform.parent;
+
+        if (transform.parent != null)
+            return transform.parent;
+
+        return transform;
+    }
+
+    private void PrepareLoadNextVideoPlayer(string videoUrl)
+    {
+        loadNextVideoPlayer.Stop();
+        loadNextVideoPlayer.playOnAwake = false;
+        loadNextVideoPlayer.isLooping = false;
+        loadNextVideoPlayer.waitForFirstFrame = true;
+        loadNextVideoPlayer.skipOnDrop = false;
+        loadNextVideoPlayer.renderMode = VideoRenderMode.RenderTexture;
+        loadNextVideoPlayer.source = VideoSource.Url;
+        loadNextVideoPlayer.url = videoUrl;
+
+        if (muteLoadNextVideo)
+        {
+            loadNextVideoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+        }
+        else
+        {
+            loadNextVideoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
+            loadNextVideoPlayer.SetDirectAudioMute(0, false);
+        }
+    }
+
+    private void ShowLoadNextVideoSurface()
+    {
+        if (loadNextVideoRawImage == null)
+            return;
+
+        PlaceLoadNextVideoSurface();
+        loadNextVideoRawImage.enabled = true;
+        loadNextVideoRawImage.gameObject.SetActive(true);
+    }
+
+    private void HideLoadNextVideoSurface()
+    {
+        if (loadNextVideoRawImage == null)
+            return;
+
+        loadNextVideoRawImage.enabled = false;
+        loadNextVideoRawImage.gameObject.SetActive(false);
+    }
+
+    private void Update()
     {
         if (!_isLoading)
             return;
@@ -480,6 +1100,26 @@ public class LoadingScreenController : MonoBehaviour
             _dotCount = (_dotCount + 1) % 4;
 
             SetProgress(_currentProgress);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (loadNextVideoPlayer != null)
+        {
+            try
+            {
+                loadNextVideoPlayer.Stop();
+                loadNextVideoPlayer.targetTexture = null;
+            }
+            catch { }
+        }
+
+        if (_runtimeLoadNextRenderTexture != null)
+        {
+            _runtimeLoadNextRenderTexture.Release();
+            Destroy(_runtimeLoadNextRenderTexture);
+            _runtimeLoadNextRenderTexture = null;
         }
     }
 }
