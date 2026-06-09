@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public class GameSessionHandler : MonoBehaviour
 {
-    private const string DEFAULT_SCENE = "New Scene";
+    private const string DEFAULT_SCENE = "IntroScene";
     
     [SerializeField] private GameSessionConfig config;
     private SceneLocationHandler sceneLocationHandler;
@@ -200,7 +200,7 @@ public class GameSessionHandler : MonoBehaviour
         else
         {
             Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
-            LoadingTransition.Load_Scene(sceneLocation.SceneName);
+            // LoadingTransition.Load_Scene(sceneLocation.SceneName);
         }
     }
 
