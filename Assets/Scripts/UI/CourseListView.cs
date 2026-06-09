@@ -594,7 +594,7 @@ private void OnDisable()
             finalItem.lessonID = finalExamId;
             finalItem.type = FinalExamType;
             finalItem.chapterUI = headerFinal;
-            finalItem.OnClickPlayVideo = (_) => OnClickFinalExamEvt?.Invoke(finalItem);
+            finalItem.OnClickPlayVideo = (_) => PlayLesson(finalItem);
             finalItem.SetActive(false);
 
             headerFinal.AddToList(finalItem);
@@ -1610,20 +1610,14 @@ private void HardStopVideoAudio()
         bool targetIsVideo = IsVideoLesson(lesson);
         bool targetIsFinalExam = IsFinalExamLesson(lesson);
 
-        if (_currentLesson != null && _currentLesson != lesson)
+        if (_currentLesson != lesson && !IsLessonUnlocked(lesson))
         {
-            bool currentIsBlockingVideo = IsVideoLesson(_currentLesson);
-            bool targetRequiresPreviousDone = targetIsVideo || targetIsFinalExam;
-
-            if (currentIsBlockingVideo && targetRequiresPreviousDone && !_currentLesson.IsLessonDone())
-            {
-                LoadingUI.ShowErrorPopup(
-                    message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
-                    header: "Thông báo",
-                    onReturn: null
-                );
-                return;
-            }
+            LoadingUI.ShowErrorPopup(
+                message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
+                header: "Thông báo",
+                onReturn: null
+            );
+            return;
         }
 
         LessonProgressTracker.Instance.UpdateLesson(null);
@@ -1702,6 +1696,37 @@ private void HardStopVideoAudio()
         Debug.LogWarning(
             $"[CourseListView] Unsupported lesson content. type={_currentLesson.type}, url={_currentLesson.linkVideo2}"
         );
+    }
+
+    private bool IsLessonUnlocked(LessonUI lesson)
+    {
+        if (lesson == null)
+            return false;
+
+        if (lesson.IsLessonDone())
+            return true;
+
+        if (lesson.chapterUI != null &&
+            lesson.chapterUI.chapterState == ChapterUI.ChapterState.Lock)
+        {
+            return false;
+        }
+
+        if (!IsVideoLesson(lesson))
+            return true;
+
+        int targetIndex = _videoLessons.IndexOf(lesson);
+        if (targetIndex <= 0)
+            return true;
+
+        for (int i = 0; i < targetIndex; i++)
+        {
+            var previousLesson = _videoLessons[i];
+            if (previousLesson != null && !previousLesson.IsLessonDone())
+                return false;
+        }
+
+        return true;
     }
 
 private void OnVideoPrepared(VideoPlayer vp)
