@@ -1,7 +1,6 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
 
 [Serializable]
 public class GameSessionData
@@ -12,6 +11,13 @@ public class GameSessionData
     public DateTime SavedAt { get; set; } = DateTime.Now;
     public SceneLocation SceneLocation;
     public CourseData CourseData;
+
+    public bool HasValidScene =>
+        SceneLocation != null && !string.IsNullOrWhiteSpace(SceneLocation.SceneName);
+
+    public bool HasCourseData =>
+        CourseData != null && !string.IsNullOrWhiteSpace(CourseData.seoId);
+
     public static GameSessionData CaptureCurrentState(GameObject player)
     {
         return new GameSessionData
@@ -28,12 +34,16 @@ public class GameSessionData
         var tracker = LessonProgressTracker.Instance;
         if (tracker != null && !string.IsNullOrEmpty(tracker.CourseID))
         {
-            CourseData courseData = new();
-            courseData.seoId = SeoResolver.seoCourse;
-            return courseData;
+            string seoId = SeoResolver.seoCourse;
+
+            if (string.IsNullOrWhiteSpace(seoId))
+                seoId = SeoResolver.GetSeoCourseByScene(SceneManager.GetActiveScene().name);
+
+            if (!string.IsNullOrWhiteSpace(seoId))
+                return new CourseData { seoId = seoId };
         }
 
-        return new();
+        return null;
     }
     
     public static SceneLocation CaptureFromPlayer(GameObject player)

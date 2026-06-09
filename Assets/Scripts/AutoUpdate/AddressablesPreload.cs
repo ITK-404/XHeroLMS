@@ -191,6 +191,27 @@ public class AddressablesPreload : MonoBehaviour
 
         key = key.Trim();
 
+        bool coalescedWithRunningPrepare = false;
+        while (_prepareRunning != null)
+        {
+            if (string.Equals(ActivePrepareKey, key, StringComparison.Ordinal))
+                coalescedWithRunningPrepare = true;
+
+            yield return null;
+        }
+
+        if (coalescedWithRunningPrepare)
+        {
+            if (!HasFailed)
+            {
+                SetProgressExact(1f);
+                SetCheckingResourceText();
+                Debug.Log($"[Preload] Tái sử dụng quá trình: {key}");
+            }
+
+            yield break;
+        }
+
         BeginNewLoadingSession();
 
         while (_catalogRunning != null)
