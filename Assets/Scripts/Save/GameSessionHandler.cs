@@ -33,13 +33,34 @@ public class GameSessionHandler : MonoBehaviour
     {
         // dọn data vị trí, scene đã lưu
         previousLoadingID = string.Empty;
-        GameInitializer.Instance.SceneHistory.ClearHistory();
-        GameInitializer.Instance.SceneLocationHandle.Clear();
+        if (GameInitializer.Instance != null)
+        {
+            GameInitializer.Instance.SceneHistory.ClearHistory();
+            GameInitializer.Instance.SceneLocationHandle.Clear();
+        }
     }
 
     public void Init(SceneLocationHandler sceneLocationHandler)
     {
         this.sceneLocationHandler = sceneLocationHandler;
+    }
+
+    private bool EnsureSceneLocationHandler()
+    {
+        if (sceneLocationHandler != null)
+            return true;
+
+        if (GameInitializer.Instance != null)
+            sceneLocationHandler = GameInitializer.Instance.SceneLocationHandle;
+
+        if (sceneLocationHandler == null)
+            sceneLocationHandler = FindObjectOfType<SceneLocationHandler>();
+
+        if (sceneLocationHandler != null)
+            return true;
+
+        Debug.LogWarning("[GameSessionHandler] SceneLocationHandler is null.");
+        return false;
     }
 
     private void OnApplicationFocus(bool hasFocus)
@@ -128,6 +149,12 @@ public class GameSessionHandler : MonoBehaviour
 
     public async UniTask SaveSession()
     {
+        if (config == null)
+        {
+            Debug.LogWarning("[GameSessionHandler] Skip save session because config is null.");
+            return;
+        }
+
         if (config.canSave == false) return;
         Debug.Log($"[GameSessionHandler] Bắt đầu save game session");
 
@@ -184,8 +211,16 @@ public class GameSessionHandler : MonoBehaviour
         LoadSceneBySession(data);
     }
 
-    private void LoadSceneBySession(GameSessionData data)
+    private bool LoadSceneBySession(GameSessionData data)
     {
+        if (data == null || data.SceneLocation == null)
+        {
+            return false;
+        }
+
+        if (!EnsureSceneLocationHandler())
+            return false;
+
         var sceneLocation = data.SceneLocation;
         var currentScene = SceneManager.GetActiveScene().name;
         // CAP NHAT VI TRI O SCENE DO
@@ -202,6 +237,41 @@ public class GameSessionHandler : MonoBehaviour
             Debug.Log($"[GameSessionHandler] khác scene hiện, load vị trí rồi load vị trí sau");
             // LoadingTransition.Load_Scene(sceneLocation.SceneName);
         }
+
+        return true;
+    }
+
+    public async UniTask<bool> LoadGameSessionData2(GameSessionData data)
+    {
+        if (data == null)
+        {
+            return false;
+        }
+
+        if (data.SceneLocation == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(data.SceneLocation.SceneName))
+        {
+            return false;
+        }
+
+        // Tái dùng cùng logic fetch data như LoadGameSessionData,
+        // nhưng hàm này trả bool để BootFlow biết khi nào xong.
+        if (data.CourseData != null && !string.IsNullOrEmpty(data.CourseData.seoId))
+        {
+            var seoId = data.CourseData.seoId;
+            SeoResolver.seoCourse = seoId;
+            await SeoResolver.LoadPrivateAndFillData();
+            if (!SeoResolver.canEnterCourse)
+            {
+                return false;
+            }
+        }
+
+        return LoadSceneBySession(data);
     }
 
     public void LoadDefaultSession()

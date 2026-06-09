@@ -50,11 +50,19 @@ public class SaveManager
         foreach (var f in files)
         {
             var data = JsonUtility.FromJson<GameSessionData>(File.ReadAllText(f.FullName));
-            if (data == null || data.SaveVersion != GameSessionData.CurrentVersion)
+            if (data == null)
             {
                 File.Delete(f.FullName);
                 continue;
             }
+
+            if (!string.IsNullOrEmpty(data.SaveVersion) && data.SaveVersion != GameSessionData.CurrentVersion)
+            {
+                Debug.LogWarning(
+                    $"[SaveManager] Save version {data.SaveVersion}"
+                );
+            }
+
             if (!string.IsNullOrEmpty(data.UserID))
                 result.Add(data);
         }

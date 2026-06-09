@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using System;
 using System.Collections;
 using System.IO;
+using Cysharp.Threading.Tasks;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
@@ -33,9 +34,19 @@ public class BootFlow : MonoBehaviour
 
     // Nếu chưa có UserID nhưng chỉ có 1 save hợp lệ trên máy, cho phép load thẳng save đó.
     bool allowSingleSaveFallbackWhenNoUserID = true;
+    bool restoreTokenStoreFromDiskBeforeResolveSave = true;
 
     private bool _loadingMain;
     private string _resolvedMainSceneKey;
+    private bool _triedRestoreTokenStoreFromDisk;
+
+    // Lưu full session data để BootFlow gọi GameSessionHandler.LoadGameSessionData2(data)
+    private GameSessionData _resolvedSessionData;
+
+    [Header("Game Session")]
+    private GameSessionHandler gameSessionHandler;
+    private bool waitSavedSessionDataBeforeLoadScene = true;
+    private float savedSessionDataTimeoutSeconds = 45f;
 
 #if ADDRESSABLES
     [Header("Scene Dependency Download Recovery")]
@@ -81,6 +92,12 @@ public class BootFlow : MonoBehaviour
 
         if (intro != null)
             intro.SetExternalPreload(preload);
+
+        if (gameSessionHandler == null)
+            gameSessionHandler = FindObjectOfType<GameSessionHandler>();
+
+        if (gameSessionHandler == null && GameInitializer.Instance != null)
+            gameSessionHandler = GameInitializer.Instance.EnsureGameSessionHandler();
     }
 
     private void Start()
@@ -88,51 +105,49 @@ public class BootFlow : MonoBehaviour
         StartCoroutine(CoBoot());
     }
 
-private IEnumerator CoBoot()
-{
-    while (preload == null)
+    private IEnumerator CoBoot()
     {
-        preload = AddressablesPreload.Instance;
-        yield return null;
-    }
+        while (preload == null)
+        {
+            preload = AddressablesPreload.Instance;
+            yield return null;
+        }
 
-while (!preload.IsReady && !preload.HasFailed)
-{
-    if (intro != null && preload != null)
-    {
-        float p = Mathf.Clamp01(preload.DownloadPercent01);
-        intro.SetBootProgress01(p);
-    }
+        while (!preload.IsReady && !preload.HasFailed)
+        {
+            if (intro != null && preload != null)
+            {
+                float p = Mathf.Clamp01(preload.DownloadPercent01);
+                intro.SetBootProgress01(p);
+            }
 
-    yield return null;
-}
+            yield return null;
+        }
 
-    if (preload.HasFailed)
-    {
-        Debug.LogWarning("[BootFlow] Preload failed, but BootFlow will continue because allowEnterMainWhenPreloadFailed=" + allowEnterMainWhenPreloadFailed);
-        Debug.LogWarning("[BootFlow] Preload LastError: " + preload.LastError);
-    }
+        if (preload.HasFailed)
+        {
+            Debug.LogWarning("[BootFlow] Preload failed, but BootFlow will continue because allowEnterMainWhenPreloadFailed=" + allowEnterMainWhenPreloadFailed);
+            Debug.LogWarning("[BootFlow] Preload LastError: " + preload.LastError);
+        }
 
-    if (preload.HasFailed && !allowEnterMainWhenPreloadFailed)
-    {
+        if (preload.HasFailed && !allowEnterMainWhenPreloadFailed)
+        {
+            if (intro != null)
+                intro.ShowFatalFail(preload.LastError);
+
+            yield break;
+        }
+
         if (intro != null)
-            intro.ShowFatalFail(preload.LastError);
+        {
+            intro.SetBootProgress01(preload != null ? preload.DownloadPercent01 : 0f);
+        }
 
-        yield break;
+        if (minHoldBeforeEnterMain > 0f)
+            yield return new WaitForSecondsRealtime(minHoldBeforeEnterMain);
+
+        EnterMain();
     }
-
-    if (intro != null)
-    {
-        intro.SetBootProgress01(preload != null ? preload.DownloadPercent01 : 0f);
-    }
-
-    if (minHoldBeforeEnterMain > 0f)
-        yield return new WaitForSecondsRealtime(minHoldBeforeEnterMain);
-
-    Debug.Log("[BootFlow] Boot preload ready. Resolve saved session local, không chờ LoginComplete.");
-
-    EnterMain();
-}
 
     public void EnterMain()
     {
@@ -149,6 +164,24 @@ while (!preload.IsReady && !preload.HasFailed)
             intro.OnAboutToEnterMain();
 
         _resolvedMainSceneKey = ResolveMainSceneKey();
+
+        if (waitSavedSessionDataBeforeLoadScene && _resolvedSessionData != null)
+        {
+            bool dataReady = false;
+
+            yield return CoPrepareSavedSessionDataBeforeSceneLoad(
+                _resolvedSessionData,
+                result => dataReady = result
+            );
+
+            if (!dataReady)
+            {
+                Debug.LogWarning(
+                    "[BootFlow] GameSessionHandler.LoadGameSessionData2 failed or timeout, " +
+                    "Nhưng cảnh đã lưu vẫn còn. Tiếp tục tải cảnh đã lưu: " + _resolvedMainSceneKey
+                );
+            }
+        }
 
 #if ADDRESSABLES
         if (mainSceneIsAddressable)
@@ -198,23 +231,114 @@ while (!preload.IsReady && !preload.HasFailed)
                 Debug.LogWarning("[BootFlow] downloadSceneDependenciesInBootFlow=false. Loading scene directly.");
             }
 
-if (intro != null)
-{
-    intro.SetBootProgress01(1f, true);
+            if (intro != null)
+            {
+                intro.SetBootProgress01(1f, true);
 
-    while (!intro.CanEnterMain)
-        yield return null;
-}
+                while (!intro.CanEnterMain)
+                    yield return null;
+            }
 
-Debug.Log("[BootFlow] Loading scene once: " + _resolvedMainSceneKey);
-Addressables.LoadSceneAsync(_resolvedMainSceneKey, LoadSceneMode.Single, true);
-yield break;
+            Debug.Log("[BootFlow] Loading scene once: " + _resolvedMainSceneKey);
+            Addressables.LoadSceneAsync(_resolvedMainSceneKey, LoadSceneMode.Single, true);
+            yield break;
         }
 #endif
 
         Debug.Log("[BootFlow] Load main by BuildIndex: " + mainSceneBuildIndex);
         SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
         yield break;
+    }
+
+    private IEnumerator CoPrepareSavedSessionDataBeforeSceneLoad(GameSessionData data, Action<bool> onDone)
+    {
+        if (data == null)
+        {
+            Debug.LogWarning("[BootFlow] Cannot prepare saved session data because data is null.");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        if (gameSessionHandler == null)
+            gameSessionHandler = FindObjectOfType<GameSessionHandler>();
+
+        if (gameSessionHandler == null && GameInitializer.Instance != null)
+            gameSessionHandler = GameInitializer.Instance.EnsureGameSessionHandler();
+
+        if (gameSessionHandler == null)
+        {
+            Debug.LogWarning("[BootFlow] GameSessionHandler not found. Cannot call LoadGameSessionData2.");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        bool done = false;
+        bool result = false;
+        Exception exception = null;
+
+        Debug.Log("[BootFlow] Waiting GameSessionHandler.LoadGameSessionData2 before loading saved scene...");
+
+        RunLoadGameSessionData2ForBootFlow(
+            data,
+            (success, ex) =>
+            {
+                result = success;
+                exception = ex;
+                done = true;
+            }
+        );
+
+        float timer = 0f;
+
+        while (!done)
+        {
+            timer += Time.unscaledDeltaTime;
+
+            if (savedSessionDataTimeoutSeconds > 0f && timer >= savedSessionDataTimeoutSeconds)
+            {
+                Debug.LogWarning("[BootFlow] Timeout waiting GameSessionHandler.LoadGameSessionData2.");
+                onDone?.Invoke(false);
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        if (exception != null)
+        {
+            Debug.LogError("[BootFlow] GameSessionHandler.LoadGameSessionData2 exception: " + exception);
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        Debug.Log("[BootFlow] GameSessionHandler.LoadGameSessionData2 finished. result=" + result);
+        onDone?.Invoke(result);
+    }
+
+    private async UniTaskVoid RunLoadGameSessionData2ForBootFlow(GameSessionData data, Action<bool, Exception> onDone)
+    {
+        try
+        {
+            if (gameSessionHandler == null)
+                gameSessionHandler = FindObjectOfType<GameSessionHandler>();
+
+            if (gameSessionHandler == null && GameInitializer.Instance != null)
+                gameSessionHandler = GameInitializer.Instance.EnsureGameSessionHandler();
+
+            if (gameSessionHandler == null)
+            {
+                onDone?.Invoke(false, null);
+                return;
+            }
+
+            bool result = await gameSessionHandler.LoadGameSessionData2(data);
+
+            onDone?.Invoke(result, null);
+        }
+        catch (Exception e)
+        {
+            onDone?.Invoke(false, e);
+        }
     }
 
 #if ADDRESSABLES
@@ -252,13 +376,16 @@ yield break;
 
     private string ResolveMainSceneKey()
     {
-        string savedScene = TryGetSavedSessionSceneName();
+        _resolvedSessionData = TryGetSavedSessionData();
 
-        if (!string.IsNullOrWhiteSpace(savedScene))
+        if (_resolvedSessionData != null &&
+            _resolvedSessionData.SceneLocation != null &&
+            !string.IsNullOrWhiteSpace(_resolvedSessionData.SceneLocation.SceneName))
         {
+            string savedScene = _resolvedSessionData.SceneLocation.SceneName;
             string sceneKey = ConvertSceneNameToAddressableKey(savedScene);
 
-            Debug.Log("[BootFlow] Có session cũ. Load thẳng scene đã lưu, không load NewScene. SavedScene="
+            Debug.Log("[BootFlow] Có session cũ. Chờ GameSessionHandler.LoadGameSessionData2 rồi load scene đã lưu. SavedScene="
                       + savedScene + ", ResolvedKey=" + sceneKey);
 
             return sceneKey;
@@ -268,10 +395,12 @@ yield break;
         return mainAddressableSceneKey;
     }
 
-    private string TryGetSavedSessionSceneName()
+    private GameSessionData TryGetSavedSessionData()
     {
         try
         {
+            TryRestoreTokenStoreFromDiskForBootFlow();
+
             Debug.Log("[BootFlow] Resolve saved session local. IsAuthenticated="
                       + TokenStore.IsAuthenticated
                       + ", UserID="
@@ -315,8 +444,10 @@ yield break;
                         return null;
                     }
 
-                    Debug.Log("[BootFlow] Tìm thấy saved session đúng UserID. SceneName=" + item.SceneLocation.SceneName);
-                    return item.SceneLocation.SceneName;
+                    Debug.Log("[BootFlow] Tìm thấy saved session đúng UserID. SceneName="
+                              + item.SceneLocation.SceneName);
+
+                    return item;
                 }
 
                 Debug.Log("[BootFlow] Có UserID nhưng không tìm thấy saved session cho account hiện tại.");
@@ -354,10 +485,10 @@ yield break;
 
             if (validCount == 1 && onlyValidSave != null)
             {
-                Debug.LogWarning("[BootFlow] Chưa có UserID nhưng chỉ có 1 saved session hợp lệ. Load thẳng saved scene: "
+                Debug.LogWarning("[BootFlow] Chưa có UserID nhưng chỉ có 1 saved session hợp lệ. Load saved session: "
                                  + onlyValidSave.SceneLocation.SceneName);
 
-                return onlyValidSave.SceneLocation.SceneName;
+                return onlyValidSave;
             }
 
             Debug.LogWarning("[BootFlow] Chưa có UserID và số saved session hợp lệ = "
@@ -368,9 +499,32 @@ yield break;
         }
         catch (Exception e)
         {
-            Debug.LogWarning("[BootFlow] TryGetSavedSessionSceneName failed: " + e);
+            Debug.LogWarning("[BootFlow] TryGetSavedSessionData failed: " + e);
             return null;
         }
+    }
+
+    private void TryRestoreTokenStoreFromDiskForBootFlow()
+    {
+        if (!restoreTokenStoreFromDiskBeforeResolveSave)
+            return;
+
+        if (_triedRestoreTokenStoreFromDisk)
+            return;
+
+        _triedRestoreTokenStoreFromDisk = true;
+
+        if (!string.IsNullOrWhiteSpace(TokenStore.UserID))
+            return;
+
+        bool restored = TokenStore.TryRestoreFromDisk();
+
+        Debug.Log("[BootFlow] TokenStore restore before saved session resolve. restored="
+                  + restored
+                  + ", IsAuthenticated="
+                  + TokenStore.IsAuthenticated
+                  + ", UserID="
+                  + TokenStore.UserID);
     }
 
     private string ConvertSceneNameToAddressableKey(string sceneName)
@@ -549,7 +703,7 @@ yield break;
 
             float p = Mathf.Clamp01(dl.PercentComplete);
 
-if (intro != null)
+            if (intro != null)
                 intro.ForceProgress(p);
 
             if (p > lastProgress + 0.0005f)

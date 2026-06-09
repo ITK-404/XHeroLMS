@@ -106,6 +106,30 @@ public class GameInitializer : MonoBehaviour
 
         if (sceneLocationHandle == null)
             sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
+
+        EnsureGameSessionHandler();
+    }
+
+    public GameSessionHandler EnsureGameSessionHandler()
+    {
+        if (sceneLocationHandle == null)
+        {
+            sceneLocationHandle = FindObjectOfType<SceneLocationHandler>();
+            if (sceneLocationHandle == null)
+                sceneLocationHandle = CreateGameObject<SceneLocationHandler>(donDestroyOnLoad: true);
+        }
+
+        if (gameSessionHandle == null)
+        {
+            gameSessionHandle = FindObjectOfType<GameSessionHandler>();
+            if (gameSessionHandle == null)
+                gameSessionHandle = CreateGameObject<GameSessionHandler>(donDestroyOnLoad: true);
+            else
+                DontDestroyOnLoad(gameSessionHandle.gameObject);
+        }
+
+        gameSessionHandle.Init(sceneLocationHandle);
+        return gameSessionHandle;
     }
 
     private void BindEvent()
@@ -150,13 +174,9 @@ public class GameInitializer : MonoBehaviour
         // Tạm thời disable để xác nhận nguyên nhân và tránh chặn scene mới.
         
         await AddressablesLoader.EnsureInitialized();
-        if (gameSessionHandle == null)
-        {
-            gameSessionHandle = CreateGameObject<GameSessionHandler>(donDestroyOnLoad: true);
-            gameSessionHandle.Init(sceneLocationHandle);
-        }
-        if(gameSessionHandle)
-            gameSessionHandle.StartSession().Forget();
+        var handler = EnsureGameSessionHandler();
+        if(handler)
+            handler.StartSession().Forget();
     }
 
     
