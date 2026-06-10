@@ -149,6 +149,11 @@ public class CourseListView : MonoBehaviour
     private bool _proxyRetryTriedForCurrentVideo;
     private bool _proxyBufferGuardPaused;
     private bool _standUpPausedVideo;
+    private bool _videoFirstFrameLoading;
+    private bool _cachedVideoLoadingTapToCancel;
+    private bool _hasCachedVideoLoadingTapToCancel;
+    private string _videoFirstFrameLoadingUrl;
+    private int _videoFirstFrameLoadingToken;
     private long _lastProxyRangeBoostStart = -1L;
 
     private NetworkReachability _lastReachability;
@@ -713,9 +718,19 @@ private void OnDisable()
             return;
         }
 
+        if (IsSameVideoWaitingForFirstFrame(url))
+        {
+            Debug.Log("[CourseListView] Ignore duplicate video click while waiting first frame: " + url);
+            return;
+        }
+
         string oldUrl = _activeVideoOriginUrl;
 
         StopVideoPipeline();
+
+        _playVideoToken++;
+        int playToken = _playVideoToken;
+        ShowVideoFirstFrameLoading(url, playToken);
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!proxyBoot)
@@ -737,14 +752,16 @@ private void OnDisable()
         _fallbackToOriginTriedForCurrentVideo = false;
         _proxyRetryTriedForCurrentVideo = false;
 
-        _playVideoToken++;
-        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
+        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, playToken));
     }
 
     private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
     {
         if (string.IsNullOrEmpty(originUrl) || !videoPlayer)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         if (!proxyBoot)
             proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
@@ -807,7 +824,10 @@ private void OnDisable()
                 while (Time.realtimeSinceStartup - waitStart < effectiveTimeout)
                 {
                     if (token != _playVideoToken)
+                    {
+                        HideVideoFirstFrameLoading(token);
                         yield break;
+                    }
 
                     cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
                     if (cachedUntil < 0)
@@ -887,7 +907,10 @@ private void OnDisable()
                 while (!readyForSmoothProxy && Time.realtimeSinceStartup - waitStart < maxWaitForSmoothSeconds)
                 {
                     if (token != _playVideoToken)
+                    {
+                        HideVideoFirstFrameLoading(token);
                         yield break;
+                    }
 
                     cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
                     if (cachedUntil < 0)
@@ -969,13 +992,17 @@ private void OnDisable()
             else
             {
                 Debug.LogWarning("[LocalProxy] Proxy start failed. Stop prepare because origin direct may return 400.");
+                HideVideoFirstFrameLoading(token);
                 yield break;
             }
         }
 #endif
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         _usingProxyForCurrentVideo = useProxyForThisPlay;
         _proxyBufferGuardPaused = false;
@@ -992,6 +1019,64 @@ private void OnDisable()
         if (learnUI && learnUI.toggleLessonScrollView != null)
         {
             learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        }
+    }
+
+    private bool ShouldShowVideoFirstFrameLoading()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    private bool IsSameVideoWaitingForFirstFrame(string originUrl)
+    {
+        return _videoFirstFrameLoading &&
+               string.Equals(_videoFirstFrameLoadingUrl, originUrl, StringComparison.Ordinal);
+    }
+
+    private void ShowVideoFirstFrameLoading(string originUrl, int token)
+    {
+        _videoFirstFrameLoading = true;
+        _videoFirstFrameLoadingUrl = originUrl;
+        _videoFirstFrameLoadingToken = token;
+
+        if (ShouldShowVideoFirstFrameLoading())
+        {
+            if (!_hasCachedVideoLoadingTapToCancel)
+            {
+                _cachedVideoLoadingTapToCancel = LoadingUI.tapToCancel;
+                _hasCachedVideoLoadingTapToCancel = true;
+            }
+
+            LoadingUI.tapToCancel = false;
+            LoadingUI.Show();
+        }
+    }
+
+    private void HideVideoFirstFrameLoading(int token = 0)
+    {
+        if (!_videoFirstFrameLoading)
+            return;
+
+        if (token != 0 && token != _videoFirstFrameLoadingToken)
+            return;
+
+        _videoFirstFrameLoading = false;
+        _videoFirstFrameLoadingUrl = null;
+        _videoFirstFrameLoadingToken = 0;
+
+        if (ShouldShowVideoFirstFrameLoading())
+        {
+            LoadingUI.Hide();
+
+            if (_hasCachedVideoLoadingTapToCancel)
+            {
+                LoadingUI.tapToCancel = _cachedVideoLoadingTapToCancel;
+                _hasCachedVideoLoadingTapToCancel = false;
+            }
         }
     }
 
@@ -1145,6 +1230,8 @@ private void PauseVideoAudioOnly()
 {
     if (!videoPlayer) return;
 
+    HideVideoFirstFrameLoading();
+
     _videoStopRequested = true;
 
     videoPlayer.prepareCompleted -= OnVideoPrepared;
@@ -1186,6 +1273,7 @@ private void PauseVideoAudioOnly()
         string oldUrl = _activeVideoOriginUrl;
 
         StopVideoPipeline();
+        HideVideoFirstFrameLoading();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!string.IsNullOrWhiteSpace(oldUrl))
@@ -1381,28 +1469,43 @@ private void PauseVideoAudioOnly()
         Debug.LogError("[VideoPlayer] error: " + msg);
 
         if (!_usingProxyForCurrentVideo)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (string.IsNullOrWhiteSpace(_currentOriginUrl))
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (retryProxyOnProxyError && !_proxyRetryTriedForCurrentVideo)
         {
             _proxyRetryTriedForCurrentVideo = true;
             int token = ++_playVideoToken;
+            ShowVideoFirstFrameLoading(_currentOriginUrl, token);
             StartCoroutine(RetryProxyAfterVideoError(_currentOriginUrl, token));
             return;
         }
 
         if (!fallbackToOriginOnProxyError)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (_fallbackToOriginTriedForCurrentVideo)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         _fallbackToOriginTriedForCurrentVideo = true;
 
-        StartCoroutine(FallbackToOriginAfterProxyError(_currentOriginUrl, ++_playVideoToken));
+        int fallbackToken = ++_playVideoToken;
+        ShowVideoFirstFrameLoading(_currentOriginUrl, fallbackToken);
+        StartCoroutine(FallbackToOriginAfterProxyError(_currentOriginUrl, fallbackToken));
     }
 
     private IEnumerator RetryProxyAfterVideoError(string originUrl, int token)
@@ -1410,7 +1513,10 @@ private void PauseVideoAudioOnly()
         yield return new WaitForSecondsRealtime(0.25f);
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         Debug.LogWarning("[LocalProxy] Proxy playback failed. Restart proxy stream and retry local URL: " + originUrl);
 
@@ -1421,6 +1527,7 @@ private void PauseVideoAudioOnly()
         if (!proxyBoot || !proxyBoot.enableProxyOnAndroid || !proxyBoot.EnsureStarted())
         {
             Debug.LogWarning("[LocalProxy] Retry skipped because proxy is not available.");
+            HideVideoFirstFrameLoading(token);
             yield break;
         }
 
@@ -1440,7 +1547,10 @@ private void PauseVideoAudioOnly()
 #endif
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         PrepareVideoPlayerForNewUrl();
 
@@ -1463,7 +1573,10 @@ private void PauseVideoAudioOnly()
         yield return null;
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         Debug.LogWarning("[LocalProxy] Proxy playback failed. Fallback to origin URL: " + originUrl);
 
@@ -1829,6 +1942,7 @@ private void OnVideoPrepared(VideoPlayer vp)
         float delta = now - _videoStartRealtime;
 
         Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+        HideVideoFirstFrameLoading();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (enableProxyPlaybackBufferGuard &&
