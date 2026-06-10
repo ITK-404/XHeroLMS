@@ -47,7 +47,8 @@ public float rollbackPopupDelaySeconds = 0.15f;
 
 private bool _loadSucceeded;
 private bool _loadFailedOrCancelled;
-
+private GameObject _inputBlockerRoot;
+private Image _inputBlockerImage;
 #if ADDRESSABLES
 private Coroutine _prepareAddressablesCoroutine;
 #endif
@@ -98,18 +99,22 @@ private Coroutine _prepareAddressablesCoroutine;
     private static AsyncOperationHandle<SceneInstance>? _lastActivatedAddressableSceneHandle;
 #endif
 
-    private void Awake()
-    {
-        if (imageScene1 != null)
-            _images.Add(imageScene1);
+private void Awake()
+{
+    if (imageScene1 != null)
+        _images.Add(imageScene1);
 
-        ResolvePanelLoadingRoot();
-        ResolveExistingLoadNextVideoObjects();
-        HideLoadNextVideoSurface();
-        SetDefaultLoadingVisible(false);
+    ResolvePanelLoadingRoot();
+    ResolveExistingLoadNextVideoObjects();
 
-        SetProgress(0f);
-    }
+    EnsureInputBlocker();
+    SetInputBlockerVisible(false);
+
+    HideLoadNextVideoSurface();
+    SetDefaultLoadingVisible(false);
+
+    SetProgress(0f);
+}
 
     private void Start()
     {
@@ -534,46 +539,52 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
             _imageCycleRoutine = StartCoroutine(CycleRandomImages());
     }
 
-    private void StopDefaultLoadingVisuals()
+private void StopDefaultLoadingVisuals()
+{
+    if (_imageCycleRoutine != null)
     {
-        if (_imageCycleRoutine != null)
-        {
-            StopCoroutine(_imageCycleRoutine);
-            _imageCycleRoutine = null;
-        }
-
-        if (loadingParticle != null && loadingParticle.isPlaying)
-            loadingParticle.Stop();
-
-        SetDefaultLoadingVisible(false);
+        StopCoroutine(_imageCycleRoutine);
+        _imageCycleRoutine = null;
     }
 
-    private void SetDefaultLoadingVisible(bool visible)
+    if (loadingParticle != null && loadingParticle.isPlaying)
+        loadingParticle.Stop();
+
+    SetDefaultLoadingVisible(false);
+
+    // Load xong thì trả lại input bình thường.
+    SetInputBlockerVisible(false);
+}
+
+private void SetDefaultLoadingVisible(bool visible)
+{
+    _defaultLoadingVisible = visible;
+    SetPanelLoadingAlpha(visible ? 1f : 0f);
+
+    foreach (Image img in _images)
     {
-        _defaultLoadingVisible = visible;
-        SetPanelLoadingAlpha(visible ? 1f : 0f);
-
-        foreach (Image img in _images)
-        {
-            if (img != null)
-                img.gameObject.SetActive(false);
-        }
-
-        if (visible && imageScene1 != null)
-            imageScene1.gameObject.SetActive(true);
-
-        if (progressRing != null)
-            progressRing.gameObject.SetActive(visible);
-
-        if (textLoading != null)
-            textLoading.gameObject.SetActive(visible);
-
-        if (sliderUI != null)
-            sliderUI.gameObject.SetActive(visible);
-
-        if (loadingParticle != null)
-            loadingParticle.gameObject.SetActive(visible);
+        if (img != null)
+            img.gameObject.SetActive(false);
     }
+
+    if (visible && imageScene1 != null)
+        imageScene1.gameObject.SetActive(true);
+
+    if (progressRing != null)
+        progressRing.gameObject.SetActive(visible);
+
+    if (textLoading != null)
+        textLoading.gameObject.SetActive(visible);
+
+    if (sliderUI != null)
+        sliderUI.gameObject.SetActive(visible);
+
+    if (loadingParticle != null)
+        loadingParticle.gameObject.SetActive(visible);
+
+    // Chặn người dùng bấm xuyên xuống scene cũ trong lúc đang load.
+    SetInputBlockerVisible(_isLoading);
+}
 
     private void HideDefaultLoadingPanel()
     {
@@ -625,7 +636,75 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
         _panelLoadingCanvasGroup.interactable = visible;
         _panelLoadingCanvasGroup.blocksRaycasts = visible;
     }
+private void EnsureInputBlocker()
+{
+    if (_inputBlockerRoot != null && _inputBlockerImage != null)
+        return;
 
+    Transform parent = GetLoadNextVideoParent();
+
+    _inputBlockerRoot = new GameObject("Loading_Input_Blocker", typeof(RectTransform), typeof(Image));
+    _inputBlockerRoot.transform.SetParent(parent, false);
+
+    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    rect.anchorMin = Vector2.zero;
+    rect.anchorMax = Vector2.one;
+    rect.offsetMin = Vector2.zero;
+    rect.offsetMax = Vector2.zero;
+    rect.pivot = new Vector2(0.5f, 0.5f);
+    rect.localScale = Vector3.one;
+
+    _inputBlockerImage = _inputBlockerRoot.GetComponent<Image>();
+
+    // Trong suốt nhưng vẫn bắt raycast để không cho click xuyên xuống video/UI bên dưới.
+    _inputBlockerImage.color = new Color(0f, 0f, 0f, 0f);
+    _inputBlockerImage.raycastTarget = true;
+
+    _inputBlockerRoot.SetActive(false);
+}
+
+private void PlaceInputBlockerOnTop()
+{
+    EnsureInputBlocker();
+
+    if (_inputBlockerRoot == null)
+        return;
+
+    Transform parent = GetLoadNextVideoParent();
+
+    if (_inputBlockerRoot.transform.parent != parent)
+        _inputBlockerRoot.transform.SetParent(parent, false);
+
+    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    rect.anchorMin = Vector2.zero;
+    rect.anchorMax = Vector2.one;
+    rect.offsetMin = Vector2.zero;
+    rect.offsetMax = Vector2.zero;
+    rect.pivot = new Vector2(0.5f, 0.5f);
+    rect.localScale = Vector3.one;
+
+    // Cho blocker nằm trên cùng để bắt toàn bộ touch/click.
+    // Nó trong suốt nên không che hình ảnh/video.
+    _inputBlockerRoot.transform.SetAsLastSibling();
+}
+
+private void SetInputBlockerVisible(bool visible)
+{
+    if (visible)
+    {
+        PlaceInputBlockerOnTop();
+    }
+    else
+    {
+        if (_inputBlockerRoot == null)
+            return;
+    }
+
+    _inputBlockerRoot.SetActive(visible);
+
+    if (_inputBlockerImage != null)
+        _inputBlockerImage.raycastTarget = visible;
+}
     private IEnumerator CycleRandomImages()
     {
         if (_images.Count == 0)
@@ -1119,24 +1198,33 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
         }
     }
 
-    private void ShowLoadNextVideoSurface()
+private void ShowLoadNextVideoSurface()
+{
+    if (loadNextVideoRawImage == null)
+        return;
+
+    PlaceLoadNextVideoSurface();
+
+    loadNextVideoRawImage.enabled = true;
+    loadNextVideoRawImage.gameObject.SetActive(true);
+
+    // Chặn touch khi đang phát video chuyển cảnh.
+    // Đặt sau video để blocker nằm trên cùng, nhưng nó trong suốt nên không che hình.
+    SetInputBlockerVisible(true);
+}
+
+private void HideLoadNextVideoSurface()
+{
+    if (loadNextVideoRawImage != null)
     {
-        if (loadNextVideoRawImage == null)
-            return;
-
-        PlaceLoadNextVideoSurface();
-        loadNextVideoRawImage.enabled = true;
-        loadNextVideoRawImage.gameObject.SetActive(true);
-    }
-
-    private void HideLoadNextVideoSurface()
-    {
-        if (loadNextVideoRawImage == null)
-            return;
-
         loadNextVideoRawImage.enabled = false;
         loadNextVideoRawImage.gameObject.SetActive(false);
     }
+
+    // Nếu vẫn đang loading thì tiếp tục chặn click,
+    // tránh có 1 frame bị click xuyên xuống scene/video bên dưới.
+    SetInputBlockerVisible(_isLoading);
+}
 
     private void Update()
     {
@@ -1154,25 +1242,32 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
         }
     }
 
-    private void OnDestroy()
+private void OnDestroy()
+{
+    if (loadNextVideoPlayer != null)
     {
-        if (loadNextVideoPlayer != null)
+        try
         {
-            try
-            {
-                loadNextVideoPlayer.Stop();
-                loadNextVideoPlayer.targetTexture = null;
-            }
-            catch { }
+            loadNextVideoPlayer.Stop();
+            loadNextVideoPlayer.targetTexture = null;
         }
-
-        if (_runtimeLoadNextRenderTexture != null)
-        {
-            _runtimeLoadNextRenderTexture.Release();
-            Destroy(_runtimeLoadNextRenderTexture);
-            _runtimeLoadNextRenderTexture = null;
-        }
+        catch { }
     }
+
+    if (_runtimeLoadNextRenderTexture != null)
+    {
+        _runtimeLoadNextRenderTexture.Release();
+        Destroy(_runtimeLoadNextRenderTexture);
+        _runtimeLoadNextRenderTexture = null;
+    }
+
+    if (_inputBlockerRoot != null)
+    {
+        Destroy(_inputBlockerRoot);
+        _inputBlockerRoot = null;
+        _inputBlockerImage = null;
+    }
+}
 private bool IsNetworkDisconnectedNow()
 {
     if (!enableRollbackProtection)
