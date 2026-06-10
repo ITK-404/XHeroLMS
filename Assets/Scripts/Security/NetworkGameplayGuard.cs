@@ -38,10 +38,15 @@ public class NetworkGameplayGuard : MonoBehaviour
 
     [SerializeField] private float checkIntervalSeconds = 2f;
     [SerializeField] private int requestTimeoutSeconds = 4;
+    [SerializeField] private float startupGraceSeconds = 8f;
+    [SerializeField] private float offlineConfirmSeconds = 4f;
+    [SerializeField] private int offlineConfirmChecks = 2;
 
     [Header("Offline Flow")]
     [SerializeField] private float retryCheckDelaySeconds = 5f;
     [SerializeField] private float weakToFatalSeconds = 300f; // 5 phút
+    [SerializeField] private bool recoverBootFlowWhenOnline = true;
+    [SerializeField] private float bootFlowRecoveryCooldownSeconds = 2f;
 
     [Header("Popup Text")]
     [SerializeField] private string weakHeader = "Mạng không ổn định";
@@ -63,7 +68,11 @@ public class NetworkGameplayGuard : MonoBehaviour
 
     private bool isWaitingOnlineToResumeAfterFallback;
 
+    private float appStartedAtRealtime;
+    private float offlineCandidateStartedAtRealtime = -1f;
     private float offlineStartedAtRealtime;
+    private int consecutiveOfflineChecks;
+    private float lastBootFlowRecoveryAtRealtime = -999f;
 
     private Coroutine watchRoutine;
     private Coroutine retryRoutine;
@@ -83,6 +92,8 @@ public class NetworkGameplayGuard : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
+
+        appStartedAtRealtime = Time.realtimeSinceStartup;
 
         string activeSceneName = SceneManager.GetActiveScene().name;
         currentRealSceneName = activeSceneName;
@@ -148,9 +159,17 @@ public class NetworkGameplayGuard : MonoBehaviour
             yield return CheckInternetRoutine(result => hasInternet = result);
 
             if (hasInternet)
+            {
+                ResetOfflineCandidate();
                 HandleOnline();
+            }
             else
-                HandleOffline();
+            {
+                TrackOfflineCandidate();
+
+                if (ShouldConfirmOfflineNow())
+                    HandleOffline();
+            }
 
             yield return new WaitForSecondsRealtime(checkIntervalSeconds);
         }
@@ -201,7 +220,9 @@ public class NetworkGameplayGuard : MonoBehaviour
 
     private void HandleOnline()
     {
-        if (!isOffline && !networkPopupShowing && !ownsLoadingUI)
+        bool shouldRecoverBootFlow = ShouldRecoverBootFlowWhenOnline();
+
+        if (!isOffline && !networkPopupShowing && !ownsLoadingUI && !shouldRecoverBootFlow)
             return;
 
         isOffline = false;
@@ -218,6 +239,9 @@ public class NetworkGameplayGuard : MonoBehaviour
 
         RestoreLoadingTapToCancel();
 
+        if (shouldRecoverBootFlow)
+            TryRecoverBootFlowWhenOnline();
+
         if (isWaitingOnlineToResumeAfterFallback &&
             autoResumeLastGameplaySceneWhenOnline &&
             !string.IsNullOrWhiteSpace(resumeSceneAfterFallback) &&
@@ -232,6 +256,61 @@ public class NetworkGameplayGuard : MonoBehaviour
             isWaitingOnlineToResumeAfterFallback = false;
             resumeSceneAfterFallback = "";
         }
+    }
+
+    private void TrackOfflineCandidate()
+    {
+        consecutiveOfflineChecks++;
+
+        if (offlineCandidateStartedAtRealtime < 0f)
+            offlineCandidateStartedAtRealtime = Time.realtimeSinceStartup;
+    }
+
+    private void ResetOfflineCandidate()
+    {
+        consecutiveOfflineChecks = 0;
+        offlineCandidateStartedAtRealtime = -1f;
+    }
+
+    private bool ShouldConfirmOfflineNow()
+    {
+        if (isOffline)
+            return true;
+
+        float now = Time.realtimeSinceStartup;
+
+        if (now - appStartedAtRealtime < Mathf.Max(0f, startupGraceSeconds))
+            return false;
+
+        if (consecutiveOfflineChecks < Mathf.Max(1, offlineConfirmChecks))
+            return false;
+
+        if (offlineCandidateStartedAtRealtime < 0f)
+            return false;
+
+        return now - offlineCandidateStartedAtRealtime >= Mathf.Max(0f, offlineConfirmSeconds);
+    }
+
+    private bool ShouldRecoverBootFlowWhenOnline()
+    {
+        if (!recoverBootFlowWhenOnline)
+            return false;
+
+        if (Time.realtimeSinceStartup - lastBootFlowRecoveryAtRealtime < Mathf.Max(0.1f, bootFlowRecoveryCooldownSeconds))
+            return false;
+
+        BootFlow bootFlow = BootFlow.Instance;
+        return bootFlow != null && bootFlow.NeedsNetworkRecovery;
+    }
+
+    private void TryRecoverBootFlowWhenOnline()
+    {
+        BootFlow bootFlow = BootFlow.Instance;
+        if (bootFlow == null || !bootFlow.NeedsNetworkRecovery)
+            return;
+
+        lastBootFlowRecoveryAtRealtime = Time.realtimeSinceStartup;
+        bootFlow.RetryAfterNetworkRestored();
     }
 
     private void HandleOffline()

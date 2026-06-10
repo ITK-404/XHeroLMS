@@ -37,6 +37,8 @@ public class BootFlow : MonoBehaviour
     bool restoreTokenStoreFromDiskBeforeResolveSave = true;
 
     private bool _loadingMain;
+    private bool _waitingForNetworkRecovery;
+    private Coroutine _networkRecoveryRoutine;
     private string _resolvedMainSceneKey;
     private bool _triedRestoreTokenStoreFromDisk;
 
@@ -103,6 +105,64 @@ public class BootFlow : MonoBehaviour
     private void Start()
     {
         StartCoroutine(CoBoot());
+    }
+
+    public bool NeedsNetworkRecovery
+    {
+        get
+        {
+            if (_waitingForNetworkRecovery)
+                return true;
+
+            return preload != null && preload.HasFailed;
+        }
+    }
+
+    public void RetryAfterNetworkRestored()
+    {
+        if (_networkRecoveryRoutine != null)
+            return;
+
+        _networkRecoveryRoutine = StartCoroutine(CoRetryAfterNetworkRestored());
+    }
+
+    private IEnumerator CoRetryAfterNetworkRestored()
+    {
+        _waitingForNetworkRecovery = false;
+        _loadingMain = false;
+
+        if (intro != null)
+            intro.ClearFatalFailAfterNetworkRestored();
+
+        if (preload == null)
+            preload = AddressablesPreload.Instance;
+
+        if (preload != null && (!preload.IsReady || preload.HasFailed))
+        {
+            Debug.Log("[BootFlow] Network restored. Retrying Addressables preload before entering main.");
+            preload.RequestRetry();
+
+            yield return null;
+
+            while (preload != null && !preload.IsReady && !preload.HasFailed)
+            {
+                if (intro != null)
+                    intro.SetBootProgress01(Mathf.Clamp01(preload.DownloadPercent01));
+
+                yield return null;
+            }
+
+            if (preload != null && preload.HasFailed)
+            {
+                Debug.LogWarning("[BootFlow] Network recovery retry failed. Waiting for the next online check. LastError=" + preload.LastError);
+                _waitingForNetworkRecovery = true;
+                _networkRecoveryRoutine = null;
+                yield break;
+            }
+        }
+
+        _networkRecoveryRoutine = null;
+        EnterMain();
     }
 
     private IEnumerator CoBoot()
@@ -212,6 +272,14 @@ public class BootFlow : MonoBehaviour
                 {
                     Debug.LogError("[BootFlow] Scene dependency prepare failed.");
 
+                    if (IsRecoverablePreloadFailure())
+                    {
+                        Debug.LogWarning("[BootFlow] Scene dependency failed because network/preload is not ready. Waiting for NetworkGameplayGuard recovery.");
+                        _waitingForNetworkRecovery = true;
+                        _loadingMain = false;
+                        yield break;
+                    }
+
                     if (tryLoadSceneDirectlyAfterDependencyFail)
                     {
                         Debug.LogWarning("[BootFlow] Trying LoadSceneAsync directly after dependency fail...");
@@ -248,6 +316,35 @@ public class BootFlow : MonoBehaviour
         Debug.Log("[BootFlow] Load main by BuildIndex: " + mainSceneBuildIndex);
         SceneManager.LoadScene(mainSceneBuildIndex, LoadSceneMode.Single);
         yield break;
+    }
+
+    private bool IsRecoverablePreloadFailure()
+    {
+        if (preload == null)
+            return true;
+
+        if (!preload.IsReady)
+            return true;
+
+        if (!preload.HasFailed)
+            return false;
+
+        string error = preload.LastError ?? "";
+
+        if (string.IsNullOrWhiteSpace(error))
+            return true;
+
+        return error.IndexOf("network", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("internet", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("download", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("http", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("catalog", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("probe", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("host", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("resolve", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               error.IndexOf("connection", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private IEnumerator CoPrepareSavedSessionDataBeforeSceneLoad(GameSessionData data, Action<bool> onDone)

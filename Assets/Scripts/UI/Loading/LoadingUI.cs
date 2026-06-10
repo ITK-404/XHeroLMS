@@ -244,100 +244,112 @@ public static class LoadingUI
         _timeoutRoutine = null;
     }
 
-    public static void ShowErrorPopup(string message,
-                                     string header = "Lỗi hệ thống",
-                                     UnityAction onReturn = null)
+public static void ShowErrorPopup(string message,
+                                 string header = "Lỗi hệ thống",
+                                 UnityAction onReturn = null)
+{
+    GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
+    if (prefab == null)
     {
-        GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
-        if (prefab == null)
-        {
-            Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
-            return;
-        }
-
-        var popupCanvasGO = new GameObject("~LoadingErrorCanvas",
-            typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
-
-        var canvas = popupCanvasGO.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32761;
-
-        var scaler = popupCanvasGO.GetComponent<UnityEngine.UI.CanvasScaler>();
-        scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-
-        GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
-        var ui = popup.GetComponent<LoginPopupUI>();
-
-        if (ui == null)
-        {
-            Debug.LogError("Prefab popup không chứa LoginPopupUI!");
-            return;
-        }
-
-        var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
-        if (headerTMP != null)
-        {
-            headerTMP.enableAutoSizing = false;
-            headerTMP.fontSize = 28;
-        }
-
-        UnityAction combined = () =>
-        {
-            onReturn?.Invoke();
-            Hide();
-            Object.Destroy(popupCanvasGO);
-        };
-
-        ui.Init(header, message, combined);
+        Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
+        return;
     }
 
-    public static void ShowUpdatePopup(string message,
-                                     UnityAction onReturn = null)
+    var popupCanvasGO = new GameObject("~LoadingErrorCanvas",
+        typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
+
+    var canvas = popupCanvasGO.GetComponent<Canvas>();
+    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+    canvas.sortingOrder = 32761;
+
+    var scaler = popupCanvasGO.GetComponent<UnityEngine.UI.CanvasScaler>();
+    scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+    scaler.referenceResolution = new Vector2(1920, 1080);
+
+    // CHẶN TOUCH XUYÊN QUA POPUP
+    CreateTouchBlocker(popupCanvasGO.transform, "~PopupTouchBlocker");
+
+    GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
+    popup.transform.SetAsLastSibling();
+
+    var ui = popup.GetComponent<LoginPopupUI>();
+
+    if (ui == null)
     {
-        GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
-        if (prefab == null)
-        {
-            Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
-            return;
-        }
-
-        var popupCanvasGO = new GameObject("~LoadingUpdateCanvas",
-            typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
-
-        var canvas = popupCanvasGO.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32761;
-
-        var scaler = popupCanvasGO.GetComponent<UnityEngine.UI.CanvasScaler>();
-        scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-
-        GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
-        var ui = popup.GetComponent<UpdatePopupUI>();
-
-        if (ui == null)
-        {
-            Debug.LogError("Prefab popup không chứa UpdatePopupUI!");
-            return;
-        }
-
-        var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
-        if (headerTMP != null)
-        {
-            headerTMP.enableAutoSizing = false;
-            headerTMP.fontSize = 28;
-        }
-
-        UnityAction combined = () =>
-        {
-            onReturn?.Invoke();
-            Hide();
-            Object.Destroy(popupCanvasGO);
-        };
-
-        ui.Init(message, combined);
+        Debug.LogError("Prefab popup không chứa LoginPopupUI!");
+        Object.Destroy(popupCanvasGO);
+        return;
     }
+
+    var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
+    if (headerTMP != null)
+    {
+        headerTMP.enableAutoSizing = false;
+        headerTMP.fontSize = 28;
+    }
+
+    UnityAction combined = () =>
+    {
+        onReturn?.Invoke();
+        Hide();
+        Object.Destroy(popupCanvasGO);
+    };
+
+    ui.Init(header, message, combined);
+}
+
+public static void ShowUpdatePopup(string message,
+                                 UnityAction onReturn = null)
+{
+    GameObject prefab = Resources.Load<GameObject>(DEFAULT_POPUP_PATH);
+    if (prefab == null)
+    {
+        Debug.LogError("Không tìm thấy prefab: " + DEFAULT_POPUP_PATH);
+        return;
+    }
+
+    var popupCanvasGO = new GameObject("~LoadingUpdateCanvas",
+        typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
+
+    var canvas = popupCanvasGO.GetComponent<Canvas>();
+    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+    canvas.sortingOrder = 32761;
+
+    var scaler = popupCanvasGO.GetComponent<UnityEngine.UI.CanvasScaler>();
+    scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+    scaler.referenceResolution = new Vector2(1920, 1080);
+
+    // CHẶN TOUCH XUYÊN QUA POPUP
+    CreateTouchBlocker(popupCanvasGO.transform, "~PopupTouchBlocker");
+
+    GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
+    popup.transform.SetAsLastSibling();
+
+    var ui = popup.GetComponent<UpdatePopupUI>();
+
+    if (ui == null)
+    {
+        Debug.LogError("Prefab popup không chứa UpdatePopupUI!");
+        Object.Destroy(popupCanvasGO);
+        return;
+    }
+
+    var headerTMP = popup.GetComponentInChildren<TMPro.TMP_Text>(true);
+    if (headerTMP != null)
+    {
+        headerTMP.enableAutoSizing = false;
+        headerTMP.fontSize = 28;
+    }
+
+    UnityAction combined = () =>
+    {
+        onReturn?.Invoke();
+        Hide();
+        Object.Destroy(popupCanvasGO);
+    };
+
+    ui.Init(message, combined);
+}
 
     private static LoadingUICoroutineHost EnsureHost()
     {
@@ -348,4 +360,31 @@ public static class LoadingUI
         _host = go.AddComponent<LoadingUICoroutineHost>();
         return _host;
     }
+private static GameObject CreateTouchBlocker(Transform parent, string name)
+{
+    var blocker = new GameObject(
+        name,
+        typeof(RectTransform),
+        typeof(UnityEngine.UI.Image)
+    );
+
+    blocker.transform.SetParent(parent, false);
+
+    var rect = blocker.GetComponent<RectTransform>();
+    rect.anchorMin = Vector2.zero;
+    rect.anchorMax = Vector2.one;
+    rect.offsetMin = Vector2.zero;
+    rect.offsetMax = Vector2.zero;
+    rect.localScale = Vector3.one;
+
+    var img = blocker.GetComponent<UnityEngine.UI.Image>();
+
+    img.color = new Color(0f, 0f, 0f, 0.001f);
+    img.raycastTarget = true;
+
+    // Đặt dưới popup, nhưng trên toàn bộ UI phía sau.
+    blocker.transform.SetAsFirstSibling();
+
+    return blocker;
+}
 }

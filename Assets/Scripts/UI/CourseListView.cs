@@ -34,7 +34,7 @@ public class CourseListView : MonoBehaviour
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    [Header("Final Exam")]
+    [Header("Final Exam")] 
     public string finalExamSectionTitle = "Bài thi cuối khóa";
     public string finalExamItemTitle = "Vào bài thi";
 
