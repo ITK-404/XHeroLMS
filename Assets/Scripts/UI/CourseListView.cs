@@ -148,6 +148,7 @@ public class CourseListView : MonoBehaviour
     private bool _fallbackToOriginTriedForCurrentVideo;
     private bool _proxyRetryTriedForCurrentVideo;
     private bool _proxyBufferGuardPaused;
+    private bool _standUpPausedVideo;
     private long _lastProxyRangeBoostStart = -1L;
 
     private NetworkReachability _lastReachability;
@@ -304,6 +305,9 @@ private void OnDisable()
                 continue;
 
             if (!videoPlayer)
+                continue;
+
+            if (_standUpPausedVideo || _videoStopRequested)
                 continue;
 
             if (!_usingProxyForCurrentVideo)
@@ -693,6 +697,8 @@ private void OnDisable()
     {
         if (lesson == null) return;
 
+        _standUpPausedVideo = false;
+
         string url = lesson.linkVideo2;
 
         if (string.IsNullOrWhiteSpace(url))
@@ -993,6 +999,7 @@ private void OnDisable()
     {
         if (!videoPlayer) return;
 
+        _standUpPausedVideo = false;
         _videoStopRequested = false;
         SetVideoAudioEnabled(true);
 
@@ -1035,6 +1042,7 @@ private void StopVideoPipeline()
 
     _videoStartUrl = null;
     _loggedFirstFrame = false;
+    _standUpPausedVideo = false;
     _usingProxyForCurrentVideo = false;
     _proxyRetryTriedForCurrentVideo = false;
     _lastProxyHealthBoostRealtime = -999f;
@@ -1132,6 +1140,47 @@ private void HardStopVideoAudio()
 
     videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
 }
+
+private void PauseVideoAudioOnly()
+{
+    if (!videoPlayer) return;
+
+    _videoStopRequested = true;
+
+    videoPlayer.prepareCompleted -= OnVideoPrepared;
+    videoPlayer.frameReady -= OnVideoFrameReady;
+    videoPlayer.sendFrameReadyEvents = false;
+
+    try
+    {
+        videoPlayer.Pause();
+    }
+    catch { }
+
+    try
+    {
+        int trackCount = videoPlayer.controlledAudioTrackCount > 0
+            ? videoPlayer.controlledAudioTrackCount
+            : videoPlayer.audioTrackCount;
+
+        trackCount = Mathf.Clamp(trackCount, 1, 8);
+
+        for (ushort i = 0; i < trackCount; i++)
+        {
+            try
+            {
+                AudioSource source = videoPlayer.GetTargetAudioSource(i);
+                if (source)
+                    source.Pause();
+            }
+            catch { }
+        }
+    }
+    catch { }
+
+    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
+}
+
     private void StopAndReleaseActiveVideo()
     {
         string oldUrl = _activeVideoOriginUrl;
@@ -1149,6 +1198,28 @@ private void HardStopVideoAudio()
         _currentOriginUrl = null;
         _fallbackToOriginTriedForCurrentVideo = false;
         _proxyRetryTriedForCurrentVideo = false;
+    }
+
+    public void StopVideoAndAudioForStandUp()
+    {
+        if (_playVideoRoutine != null)
+        {
+            StopCoroutine(_playVideoRoutine);
+            _playVideoRoutine = null;
+        }
+
+        _playVideoToken++;
+        _standUpPausedVideo = true;
+        _proxyBufferGuardPaused = false;
+        ResetProxyPlaybackWatchdogState();
+
+        PauseVideoAudioOnly();
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        if (videoPlayerControllerPro != null)
+            videoPlayerControllerPro.PauseVideoAndAudioForStandUp();
     }
 
     private void OnDestroy()
@@ -1738,7 +1809,7 @@ private void OnVideoPrepared(VideoPlayer vp)
     {
         Debug.LogWarning("[CourseListView] Video prepared after stop/stand-up. Block auto play.");
 
-        HardStopVideoAudio();
+        PauseVideoAudioOnly();
         return;
     }
 

@@ -873,6 +873,42 @@ public void EnterFullScreenMode()
     {
         _currentUrl = url;
     }
+
+    public void PauseVideoAndAudioForStandUp()
+    {
+        if (videoPlayer)
+        {
+            try { videoPlayer.Pause(); } catch { }
+
+            try
+            {
+                int trackCount = videoPlayer.controlledAudioTrackCount > 0
+                    ? videoPlayer.controlledAudioTrackCount
+                    : videoPlayer.audioTrackCount;
+
+                trackCount = Mathf.Clamp(trackCount, 1, 8);
+
+                for (ushort i = 0; i < trackCount; i++)
+                {
+                    try
+                    {
+                        AudioSource target = videoPlayer.GetTargetAudioSource(i);
+                        if (target)
+                            target.Pause();
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        if (audioSource)
+            audioSource.Pause();
+
+        _wasPlayingBeforeSwitch = false;
+        OnPlayStateChanged?.Invoke(false);
+    }
+
     [Obsolete("Đã cũ")]
     public void StopVideo()
     {

@@ -24,6 +24,7 @@ public class PlayerChairManager : MonoBehaviour
     [Header("UI")]
 
     VideoPlayerControllerPro videoPlayerControllerPro;
+    CourseListView courseListView;
     [SerializeField] PlayerStandUI playerStandUI;
     [SerializeField] InputCanvas inputCanvas;
     [SerializeField] private CourseExitWayHandler courseExitWayHandler;
@@ -40,6 +41,7 @@ public class PlayerChairManager : MonoBehaviour
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+        courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         courseExitWayHandler.Show();
     }
@@ -68,7 +70,7 @@ public class PlayerChairManager : MonoBehaviour
             TutorialHandler.Instance.Save();
         }
 
-        videoPlayerControllerPro.TryToPauseVideo();
+        StopCourseVideoForStandUp();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
@@ -94,6 +96,23 @@ public class PlayerChairManager : MonoBehaviour
             PlayerPanelUI.Instance.ShowUnLoginContainer(true);
             
         }));
+    }
+
+    private void StopCourseVideoForStandUp()
+    {
+        if (courseListView == null)
+            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
+
+        if (courseListView != null)
+        {
+            courseListView.StopVideoAndAudioForStandUp();
+            return;
+        }
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        videoPlayerControllerPro?.PauseVideoAndAudioForStandUp();
     }
 
     private void Recalculator()
