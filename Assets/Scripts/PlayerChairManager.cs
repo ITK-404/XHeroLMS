@@ -24,6 +24,7 @@ public class PlayerChairManager : MonoBehaviour
     [Header("UI")]
 
     VideoPlayerControllerPro videoPlayerControllerPro;
+    CourseListView courseListView;
     [SerializeField] PlayerStandUI playerStandUI;
     [SerializeField] InputCanvas inputCanvas;
     [SerializeField] private CourseExitWayHandler courseExitWayHandler;
@@ -40,18 +41,11 @@ public class PlayerChairManager : MonoBehaviour
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+        courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         courseExitWayHandler.Show();
     }
 
-    public void ShowAllCheckPoints(bool isVisible)
-    {
-        foreach (var item in allCheckPoints)
-        {
-            item.Show(isVisible);
-        }
-    }
-    
     private void OnDestroy()
     {
         Instance = null;
@@ -69,6 +63,7 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
+
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
 
         if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
@@ -76,29 +71,48 @@ public class PlayerChairManager : MonoBehaviour
             TutorialHandler.Instance.Save();
         }
 
-        videoPlayerControllerPro.TryToPauseVideo();
+        StopCourseVideoForStandUp();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
-        ShowAllCheckPoints(true);
+        foreach (var item in allCheckPoints)
+        {
+            item.Show(true);
+        }
         // ẩn UI ngay khi bắt đầu đứng dậy
         //playerStandUI.UILearnCanvas.Hide();
         //playerStandUI.HideWatchVideoUI();
         playerStandUI.HideLearningUI();
         videoPlayerControllerPro.ExitFullscreenUI();
-        StopAllCoroutines();
-        StartCoroutine(WaitForBlendDone(() =>
+        InputBlocker.SetBlocked(false);
+        StartBlendCoroutine(() =>
         {
             Debug.Log("bật lại input");
-            InputBlocker.SetBlocked(false);
+            
             playerStandUI.returnBtn.gameObject.SetActive(true);
             inputCanvas.Show();
 
             courseExitWayHandler.Show();
-            
+
             PlayerPanelUI.Instance.ShowUnLoginContainer(true);
-            
-        }));
+        });
+    }
+
+    private void StopCourseVideoForStandUp()
+    {
+        if (courseListView == null)
+            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
+
+        if (courseListView != null)
+        {
+            courseListView.StopVideoAndAudioForStandUp();
+            return;
+        }
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        videoPlayerControllerPro?.PauseVideoAndAudioForStandUp();
     }
 
     private void Recalculator()
@@ -131,9 +145,12 @@ public class PlayerChairManager : MonoBehaviour
 
     }
 
+    private float timer;
+    private float blockTimer = 2.3f;
+    private void UpdateBlockTimer() => timer = Time.time;
+    private bool CanInteract() => Time.time > timer + blockTimer;
     public void PlayerSitdown()
     {
-
         // sit down logic
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
     
@@ -150,8 +167,10 @@ public class PlayerChairManager : MonoBehaviour
             inputCanvas.Hide();
 
             // ẩn tất cả icon của ghế
-            ShowAllCheckPoints(true);
-
+            foreach (var item in allCheckPoints)
+            {
+                item.Show(false);
+            }
             // d
             StopAllCoroutines();
             InputBlocker.SetBlocked(true);
@@ -159,8 +178,7 @@ public class PlayerChairManager : MonoBehaviour
             courseExitWayHandler.Hide();
             
             PlayerPanelUI.Instance.ShowUnLoginContainer(false);
-            
-            StartCoroutine(WaitForBlendDone(() =>
+            StartBlendCoroutine(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
                 //playerStandUI.ShowWatchVideoUI();
@@ -172,14 +190,7 @@ public class PlayerChairManager : MonoBehaviour
                 {
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
-                
-            }));
-            
-            OnStandupUI_Immediate();
-            StartCoroutine(WaitForBlendDone(() =>
-            {
-                OnStandupUI_Deferred();
-            }));
+            });
         }
     }
 
@@ -201,34 +212,26 @@ public class PlayerChairManager : MonoBehaviour
             Recalculator();
         }
     }
+    private Coroutine _blendCoroutine;
+    private int _blendToken = 0; // tăng mỗi lần gọi, callback tự check có còn valid không
 
-    
-    
-    public void OnSitdownUI_Immediate()
+    private IEnumerator WaitForBlendDone(Action action, int token)
     {
-        inputCanvas.Hide();
-        courseExitWayHandler.Hide();
-        PlayerPanelUI.Instance.ShowUnLoginContainer(false);
-        playerStandUI.returnBtn.gameObject.SetActive(false);
+        yield return new WaitForSeconds(2f);
+
+        // Nếu token không còn khớp => có lệnh mới override rồi, bỏ qua
+        if (token != _blendToken) yield break;
+
+        Debug.Log("Chạy callback");
+        action?.Invoke();
     }
 
-    private void OnSitdownUI_Deferred()
+    private void StartBlendCoroutine(Action action)
     {
-        playerStandUI.ShowLearningUI();
-        videoPlayerControllerPro.EnterFullscreenUI();
-    }
+        if (_blendCoroutine != null)
+            StopCoroutine(_blendCoroutine);
 
-    private void OnStandupUI_Immediate()
-    {
-        playerStandUI.HideLearningUI();
-        videoPlayerControllerPro.ExitFullscreenUI();
-    }
-
-    public void OnStandupUI_Deferred()
-    {
-        inputCanvas.Show();
-        courseExitWayHandler.Show();
-        PlayerPanelUI.Instance.ShowUnLoginContainer(true);
-        playerStandUI.returnBtn.gameObject.SetActive(true);
+        _blendToken++;
+        _blendCoroutine = StartCoroutine(WaitForBlendDone(action, _blendToken));
     }
 }

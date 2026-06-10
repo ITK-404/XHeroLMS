@@ -34,7 +34,7 @@ public class CourseListView : MonoBehaviour
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    [Header("Final Exam")]
+    [Header("Final Exam")] 
     public string finalExamSectionTitle = "Bài thi cuối khóa";
     public string finalExamItemTitle = "Vào bài thi";
 
@@ -142,11 +142,18 @@ public class CourseListView : MonoBehaviour
     private int _playVideoToken;
     private string _activeVideoOriginUrl;
     private string _currentOriginUrl;
+    private bool _videoStopRequested = true;
 
     private bool _usingProxyForCurrentVideo;
     private bool _fallbackToOriginTriedForCurrentVideo;
     private bool _proxyRetryTriedForCurrentVideo;
     private bool _proxyBufferGuardPaused;
+    private bool _standUpPausedVideo;
+    private bool _videoFirstFrameLoading;
+    private bool _cachedVideoLoadingTapToCancel;
+    private bool _hasCachedVideoLoadingTapToCancel;
+    private string _videoFirstFrameLoadingUrl;
+    private int _videoFirstFrameLoadingToken;
     private long _lastProxyRangeBoostStart = -1L;
 
     private NetworkReachability _lastReachability;
@@ -180,10 +187,12 @@ public class CourseListView : MonoBehaviour
         StartProxyWatchers();
     }
 
-    private void OnDisable()
-    {
-        StopProxyWatchers();
-    }
+private void OnDisable()
+{
+    StopProxyWatchers();
+    StopAndReleaseActiveVideo();
+    HardStopVideoAudio();
+}
 
     private void OnApplicationPause(bool pause)
     {
@@ -301,6 +310,9 @@ public class CourseListView : MonoBehaviour
                 continue;
 
             if (!videoPlayer)
+                continue;
+
+            if (_standUpPausedVideo || _videoStopRequested)
                 continue;
 
             if (!_usingProxyForCurrentVideo)
@@ -591,7 +603,7 @@ public class CourseListView : MonoBehaviour
             finalItem.lessonID = finalExamId;
             finalItem.type = FinalExamType;
             finalItem.chapterUI = headerFinal;
-            finalItem.OnClickPlayVideo = (_) => OnClickFinalExamEvt?.Invoke(finalItem);
+            finalItem.OnClickPlayVideo = (_) => PlayLesson(finalItem);
             finalItem.SetActive(false);
 
             headerFinal.AddToList(finalItem);
@@ -690,6 +702,8 @@ public class CourseListView : MonoBehaviour
     {
         if (lesson == null) return;
 
+        _standUpPausedVideo = false;
+
         string url = lesson.linkVideo2;
 
         if (string.IsNullOrWhiteSpace(url))
@@ -704,9 +718,19 @@ public class CourseListView : MonoBehaviour
             return;
         }
 
+        if (IsSameVideoWaitingForFirstFrame(url))
+        {
+            Debug.Log("[CourseListView] Ignore duplicate video click while waiting first frame: " + url);
+            return;
+        }
+
         string oldUrl = _activeVideoOriginUrl;
 
         StopVideoPipeline();
+
+        _playVideoToken++;
+        int playToken = _playVideoToken;
+        ShowVideoFirstFrameLoading(url, playToken);
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!proxyBoot)
@@ -728,14 +752,16 @@ public class CourseListView : MonoBehaviour
         _fallbackToOriginTriedForCurrentVideo = false;
         _proxyRetryTriedForCurrentVideo = false;
 
-        _playVideoToken++;
-        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, _playVideoToken));
+        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, playToken));
     }
 
     private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
     {
         if (string.IsNullOrEmpty(originUrl) || !videoPlayer)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         if (!proxyBoot)
             proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
@@ -798,7 +824,10 @@ public class CourseListView : MonoBehaviour
                 while (Time.realtimeSinceStartup - waitStart < effectiveTimeout)
                 {
                     if (token != _playVideoToken)
+                    {
+                        HideVideoFirstFrameLoading(token);
                         yield break;
+                    }
 
                     cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
                     if (cachedUntil < 0)
@@ -878,7 +907,10 @@ public class CourseListView : MonoBehaviour
                 while (!readyForSmoothProxy && Time.realtimeSinceStartup - waitStart < maxWaitForSmoothSeconds)
                 {
                     if (token != _playVideoToken)
+                    {
+                        HideVideoFirstFrameLoading(token);
                         yield break;
+                    }
 
                     cachedUntil = ProxyGetCachedUntilFrom(originUrl, 0);
                     if (cachedUntil < 0)
@@ -960,13 +992,17 @@ public class CourseListView : MonoBehaviour
             else
             {
                 Debug.LogWarning("[LocalProxy] Proxy start failed. Stop prepare because origin direct may return 400.");
+                HideVideoFirstFrameLoading(token);
                 yield break;
             }
         }
 #endif
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         _usingProxyForCurrentVideo = useProxyForThisPlay;
         _proxyBufferGuardPaused = false;
@@ -986,9 +1022,71 @@ public class CourseListView : MonoBehaviour
         }
     }
 
+    private bool ShouldShowVideoFirstFrameLoading()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    private bool IsSameVideoWaitingForFirstFrame(string originUrl)
+    {
+        return _videoFirstFrameLoading &&
+               string.Equals(_videoFirstFrameLoadingUrl, originUrl, StringComparison.Ordinal);
+    }
+
+    private void ShowVideoFirstFrameLoading(string originUrl, int token)
+    {
+        _videoFirstFrameLoading = true;
+        _videoFirstFrameLoadingUrl = originUrl;
+        _videoFirstFrameLoadingToken = token;
+
+        if (ShouldShowVideoFirstFrameLoading())
+        {
+            if (!_hasCachedVideoLoadingTapToCancel)
+            {
+                _cachedVideoLoadingTapToCancel = LoadingUI.tapToCancel;
+                _hasCachedVideoLoadingTapToCancel = true;
+            }
+
+            LoadingUI.tapToCancel = false;
+            LoadingUI.Show();
+        }
+    }
+
+    private void HideVideoFirstFrameLoading(int token = 0)
+    {
+        if (!_videoFirstFrameLoading)
+            return;
+
+        if (token != 0 && token != _videoFirstFrameLoadingToken)
+            return;
+
+        _videoFirstFrameLoading = false;
+        _videoFirstFrameLoadingUrl = null;
+        _videoFirstFrameLoadingToken = 0;
+
+        if (ShouldShowVideoFirstFrameLoading())
+        {
+            LoadingUI.Hide();
+
+            if (_hasCachedVideoLoadingTapToCancel)
+            {
+                LoadingUI.tapToCancel = _cachedVideoLoadingTapToCancel;
+                _hasCachedVideoLoadingTapToCancel = false;
+            }
+        }
+    }
+
     private void PrepareVideoPlayerForNewUrl()
     {
         if (!videoPlayer) return;
+
+        _standUpPausedVideo = false;
+        _videoStopRequested = false;
+        SetVideoAudioEnabled(true);
 
         videoPlayer.errorReceived -= OnVideoError;
         videoPlayer.prepareCompleted -= OnVideoPrepared;
@@ -1014,48 +1112,168 @@ public class CourseListView : MonoBehaviour
         videoPlayer.clip = null;
     }
 
-    private void StopVideoPipeline()
+private void StopVideoPipeline()
+{
+    if (_playVideoRoutine != null)
     {
-        if (_playVideoRoutine != null)
+        StopCoroutine(_playVideoRoutine);
+        _playVideoRoutine = null;
+    }
+
+    _playVideoToken++;
+    _videoStopRequested = true;
+
+    HardStopVideoAudio();
+
+    _videoStartUrl = null;
+    _loggedFirstFrame = false;
+    _standUpPausedVideo = false;
+    _usingProxyForCurrentVideo = false;
+    _proxyRetryTriedForCurrentVideo = false;
+    _lastProxyHealthBoostRealtime = -999f;
+    _proxyBufferGuardPaused = false;
+    _lastProxyRangeBoostStart = -1L;
+    ResetProxyPlaybackWatchdogState();
+}
+private void SetVideoAudioEnabled(bool enabled)
+{
+    if (!videoPlayer) return;
+
+    try
+    {
+        int trackCount = 1;
+
+        try
         {
-            StopCoroutine(_playVideoRoutine);
-            _playVideoRoutine = null;
+            trackCount = videoPlayer.controlledAudioTrackCount > 0
+                ? videoPlayer.controlledAudioTrackCount
+                : videoPlayer.audioTrackCount;
+        }
+        catch
+        {
+            trackCount = 1;
         }
 
-        _playVideoToken++;
+        trackCount = Mathf.Clamp(trackCount, 1, 8);
 
-        if (videoPlayer)
+        for (ushort i = 0; i < trackCount; i++)
         {
-            videoPlayer.errorReceived -= OnVideoError;
-            videoPlayer.prepareCompleted -= OnVideoPrepared;
-            videoPlayer.frameReady -= OnVideoFrameReady;
-            videoPlayer.sendFrameReadyEvents = false;
-
             try
             {
-                videoPlayer.Stop();
+                videoPlayer.EnableAudioTrack(i, enabled);
             }
             catch { }
 
-            videoPlayer.url = string.Empty;
-            videoPlayer.clip = null;
-        }
+            try
+            {
+                videoPlayer.SetDirectAudioMute(i, !enabled);
+                videoPlayer.SetDirectAudioVolume(i, enabled ? 1f : 0f);
+            }
+            catch { }
 
-        _videoStartUrl = null;
-        _loggedFirstFrame = false;
-        _usingProxyForCurrentVideo = false;
-        _proxyRetryTriedForCurrentVideo = false;
-        _lastProxyHealthBoostRealtime = -999f;
-        _proxyBufferGuardPaused = false;
-        _lastProxyRangeBoostStart = -1L;
-        ResetProxyPlaybackWatchdogState();
+            try
+            {
+                AudioSource source = videoPlayer.GetTargetAudioSource(i);
+                if (source)
+                {
+                    source.mute = !enabled;
+                    source.volume = enabled ? 1f : 0f;
+
+                    if (!enabled)
+                    {
+                        source.Stop();
+                    }
+                }
+            }
+            catch { }
+        }
     }
+    catch { }
+}
+
+private void HardStopVideoAudio()
+{
+    if (!videoPlayer) return;
+
+    _videoStopRequested = true;
+
+    videoPlayer.errorReceived -= OnVideoError;
+    videoPlayer.prepareCompleted -= OnVideoPrepared;
+    videoPlayer.frameReady -= OnVideoFrameReady;
+    videoPlayer.sendFrameReadyEvents = false;
+
+    SetVideoAudioEnabled(false);
+
+    try
+    {
+        videoPlayer.Pause();
+    }
+    catch { }
+
+    try
+    {
+        videoPlayer.Stop();
+    }
+    catch { }
+
+    try
+    {
+        videoPlayer.url = string.Empty;
+        videoPlayer.clip = null;
+    }
+    catch { }
+
+    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
+}
+
+private void PauseVideoAudioOnly()
+{
+    if (!videoPlayer) return;
+
+    HideVideoFirstFrameLoading();
+
+    _videoStopRequested = true;
+
+    videoPlayer.prepareCompleted -= OnVideoPrepared;
+    videoPlayer.frameReady -= OnVideoFrameReady;
+    videoPlayer.sendFrameReadyEvents = false;
+
+    try
+    {
+        videoPlayer.Pause();
+    }
+    catch { }
+
+    try
+    {
+        int trackCount = videoPlayer.controlledAudioTrackCount > 0
+            ? videoPlayer.controlledAudioTrackCount
+            : videoPlayer.audioTrackCount;
+
+        trackCount = Mathf.Clamp(trackCount, 1, 8);
+
+        for (ushort i = 0; i < trackCount; i++)
+        {
+            try
+            {
+                AudioSource source = videoPlayer.GetTargetAudioSource(i);
+                if (source)
+                    source.Pause();
+            }
+            catch { }
+        }
+    }
+    catch { }
+
+    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
+}
 
     private void StopAndReleaseActiveVideo()
     {
         string oldUrl = _activeVideoOriginUrl;
 
         StopVideoPipeline();
+        HideVideoFirstFrameLoading();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!string.IsNullOrWhiteSpace(oldUrl))
@@ -1068,6 +1286,28 @@ public class CourseListView : MonoBehaviour
         _currentOriginUrl = null;
         _fallbackToOriginTriedForCurrentVideo = false;
         _proxyRetryTriedForCurrentVideo = false;
+    }
+
+    public void StopVideoAndAudioForStandUp()
+    {
+        if (_playVideoRoutine != null)
+        {
+            StopCoroutine(_playVideoRoutine);
+            _playVideoRoutine = null;
+        }
+
+        _playVideoToken++;
+        _standUpPausedVideo = true;
+        _proxyBufferGuardPaused = false;
+        ResetProxyPlaybackWatchdogState();
+
+        PauseVideoAudioOnly();
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        if (videoPlayerControllerPro != null)
+            videoPlayerControllerPro.PauseVideoAndAudioForStandUp();
     }
 
     private void OnDestroy()
@@ -1229,28 +1469,43 @@ public class CourseListView : MonoBehaviour
         Debug.LogError("[VideoPlayer] error: " + msg);
 
         if (!_usingProxyForCurrentVideo)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (string.IsNullOrWhiteSpace(_currentOriginUrl))
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (retryProxyOnProxyError && !_proxyRetryTriedForCurrentVideo)
         {
             _proxyRetryTriedForCurrentVideo = true;
             int token = ++_playVideoToken;
+            ShowVideoFirstFrameLoading(_currentOriginUrl, token);
             StartCoroutine(RetryProxyAfterVideoError(_currentOriginUrl, token));
             return;
         }
 
         if (!fallbackToOriginOnProxyError)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         if (_fallbackToOriginTriedForCurrentVideo)
+        {
+            HideVideoFirstFrameLoading();
             return;
+        }
 
         _fallbackToOriginTriedForCurrentVideo = true;
 
-        StartCoroutine(FallbackToOriginAfterProxyError(_currentOriginUrl, ++_playVideoToken));
+        int fallbackToken = ++_playVideoToken;
+        ShowVideoFirstFrameLoading(_currentOriginUrl, fallbackToken);
+        StartCoroutine(FallbackToOriginAfterProxyError(_currentOriginUrl, fallbackToken));
     }
 
     private IEnumerator RetryProxyAfterVideoError(string originUrl, int token)
@@ -1258,7 +1513,10 @@ public class CourseListView : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.25f);
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         Debug.LogWarning("[LocalProxy] Proxy playback failed. Restart proxy stream and retry local URL: " + originUrl);
 
@@ -1269,6 +1527,7 @@ public class CourseListView : MonoBehaviour
         if (!proxyBoot || !proxyBoot.enableProxyOnAndroid || !proxyBoot.EnsureStarted())
         {
             Debug.LogWarning("[LocalProxy] Retry skipped because proxy is not available.");
+            HideVideoFirstFrameLoading(token);
             yield break;
         }
 
@@ -1288,7 +1547,10 @@ public class CourseListView : MonoBehaviour
 #endif
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         PrepareVideoPlayerForNewUrl();
 
@@ -1311,7 +1573,10 @@ public class CourseListView : MonoBehaviour
         yield return null;
 
         if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
             yield break;
+        }
 
         Debug.LogWarning("[LocalProxy] Proxy playback failed. Fallback to origin URL: " + originUrl);
 
@@ -1529,20 +1794,14 @@ public class CourseListView : MonoBehaviour
         bool targetIsVideo = IsVideoLesson(lesson);
         bool targetIsFinalExam = IsFinalExamLesson(lesson);
 
-        if (_currentLesson != null && _currentLesson != lesson)
+        if (_currentLesson != lesson && !IsLessonUnlocked(lesson))
         {
-            bool currentIsBlockingVideo = IsVideoLesson(_currentLesson);
-            bool targetRequiresPreviousDone = targetIsVideo || targetIsFinalExam;
-
-            if (currentIsBlockingVideo && targetRequiresPreviousDone && !_currentLesson.IsLessonDone())
-            {
-                LoadingUI.ShowErrorPopup(
-                    message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
-                    header: "Thông báo",
-                    onReturn: null
-                );
-                return;
-            }
+            LoadingUI.ShowErrorPopup(
+                message: "Vui lòng hoàn thành bài học trước khi qua bài mới.",
+                header: "Thông báo",
+                onReturn: null
+            );
+            return;
         }
 
         LessonProgressTracker.Instance.UpdateLesson(null);
@@ -1623,10 +1882,54 @@ public class CourseListView : MonoBehaviour
         );
     }
 
-    private void OnVideoPrepared(VideoPlayer vp)
+    private bool IsLessonUnlocked(LessonUI lesson)
     {
-        vp.Play();
+        if (lesson == null)
+            return false;
+
+        if (lesson.IsLessonDone())
+            return true;
+
+        if (lesson.chapterUI != null &&
+            lesson.chapterUI.chapterState == ChapterUI.ChapterState.Lock)
+        {
+            return false;
+        }
+
+        if (!IsVideoLesson(lesson))
+            return true;
+
+        int targetIndex = _videoLessons.IndexOf(lesson);
+        if (targetIndex <= 0)
+            return true;
+
+        for (int i = 0; i < targetIndex; i++)
+        {
+            var previousLesson = _videoLessons[i];
+            if (previousLesson != null && !previousLesson.IsLessonDone())
+                return false;
+        }
+
+        return true;
     }
+
+private void OnVideoPrepared(VideoPlayer vp)
+{
+    if (_videoStopRequested ||
+        !isActiveAndEnabled ||
+        string.IsNullOrWhiteSpace(_currentOriginUrl) ||
+        string.IsNullOrWhiteSpace(vp.url))
+    {
+        Debug.LogWarning("[CourseListView] Video prepared after stop/stand-up. Block auto play.");
+
+        PauseVideoAudioOnly();
+        return;
+    }
+
+    SetVideoAudioEnabled(true);
+    vp.Play();
+    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
+}
 
     private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
     {
@@ -1639,6 +1942,7 @@ public class CourseListView : MonoBehaviour
         float delta = now - _videoStartRealtime;
 
         Debug.Log($"[testvideo][2] First frame READY after {delta:F3}s | frame={frameIdx} | url={_videoStartUrl}");
+        HideVideoFirstFrameLoading();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (enableProxyPlaybackBufferGuard &&

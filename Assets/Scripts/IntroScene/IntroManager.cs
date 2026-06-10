@@ -183,6 +183,11 @@ private void Awake()
         }
     }
 
+    public void ClearFatalFailAfterNetworkRestored()
+    {
+        HideFail();
+    }
+
     private void HideFail()
     {
         hasFatalFail = false;

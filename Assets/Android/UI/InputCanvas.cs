@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class InputCanvas : MonoBehaviour
 {
+    [SerializeField] private bool debugInputBlocker = false;
+    [SerializeField] private int blockCount = 0;
     public GameObject container;
     private bool isWindow = false;
     private void Awake()
@@ -19,6 +21,12 @@ public class InputCanvas : MonoBehaviour
 //         {
 //             Hide();
 //         }
+    }
+
+    private void Update()
+    {
+        debugInputBlocker = InputBlocker.IsBlocked();
+        blockCount = InputBlocker.GetBlockCount();
     }
 
     public void Show()

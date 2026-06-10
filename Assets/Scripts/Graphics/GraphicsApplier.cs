@@ -39,6 +39,8 @@ public static class GraphicsApplier
         // LOD
         QualitySettings.lodBias = config.lodBias;
         QualitySettings.maximumLODLevel = config.maxLODLevel;
+
+        FPSHandler.SetLowestFrameRate();
     }
 
     public static void ApplyFps(int fps)

@@ -53,7 +53,7 @@ public class LessonProgressTracker : MonoBehaviour
     {
         if (second <= 1) return true;
         if (lessonUI == null) return false;
-        if (second > lessonUI.progressTime) return false;
+        // if (second > lessonUI.progressTime) return false;
 
         return true;
     }
