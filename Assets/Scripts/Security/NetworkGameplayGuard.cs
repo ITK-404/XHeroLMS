@@ -82,6 +82,8 @@ public class NetworkGameplayGuard : MonoBehaviour
     private bool cachedTapToCancel;
     private bool hasCachedTapToCancel;
 
+private bool ownsInputBlockerLock;
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -117,14 +119,17 @@ public class NetworkGameplayGuard : MonoBehaviour
             watchRoutine = StartCoroutine(NetworkWatchRoutine());
     }
 
-    private void OnDestroy()
+private void OnDestroy()
+{
+    if (instance == this)
     {
-        if (instance == this)
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            instance = null;
-        }
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        UnlockGameplayInputByNetwork();
+
+        instance = null;
     }
+}
 
     private void OnApplicationFocus(bool hasFocus)
     {
@@ -218,45 +223,46 @@ public class NetworkGameplayGuard : MonoBehaviour
         return $"{url}{separator}_t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
     }
 
-    private void HandleOnline()
+private void HandleOnline()
+{
+    bool shouldRecoverBootFlow = ShouldRecoverBootFlowWhenOnline();
+
+    if (!isOffline && !networkPopupShowing && !ownsLoadingUI && !shouldRecoverBootFlow)
+        return;
+
+    isOffline = false;
+    fatalPopupShowing = false;
+    offlineStartedAtRealtime = 0f;
+
+    DestroyCurrentNetworkPopupIfAny();
+    UnlockGameplayInputByNetwork();
+
+    if (ownsLoadingUI)
     {
-        bool shouldRecoverBootFlow = ShouldRecoverBootFlowWhenOnline();
-
-        if (!isOffline && !networkPopupShowing && !ownsLoadingUI && !shouldRecoverBootFlow)
-            return;
-
-        isOffline = false;
-        fatalPopupShowing = false;
-        offlineStartedAtRealtime = 0f;
-
-        DestroyCurrentNetworkPopupIfAny();
-
-        if (ownsLoadingUI)
-        {
-            LoadingUI.Hide();
-            ownsLoadingUI = false;
-        }
-
-        RestoreLoadingTapToCancel();
-
-        if (shouldRecoverBootFlow)
-            TryRecoverBootFlowWhenOnline();
-
-        if (isWaitingOnlineToResumeAfterFallback &&
-            autoResumeLastGameplaySceneWhenOnline &&
-            !string.IsNullOrWhiteSpace(resumeSceneAfterFallback) &&
-            !IsIgnoredScene(resumeSceneAfterFallback) &&
-            resumeSceneAfterFallback != currentRealSceneName)
-        {
-            if (resumeRoutine == null)
-                resumeRoutine = StartCoroutine(ResumeSceneAfterNetworkBackRoutine(resumeSceneAfterFallback));
-        }
-        else
-        {
-            isWaitingOnlineToResumeAfterFallback = false;
-            resumeSceneAfterFallback = "";
-        }
+        LoadingUI.Hide();
+        ownsLoadingUI = false;
     }
+
+    RestoreLoadingTapToCancel();
+
+    if (shouldRecoverBootFlow)
+        TryRecoverBootFlowWhenOnline();
+
+    if (isWaitingOnlineToResumeAfterFallback &&
+        autoResumeLastGameplaySceneWhenOnline &&
+        !string.IsNullOrWhiteSpace(resumeSceneAfterFallback) &&
+        !IsIgnoredScene(resumeSceneAfterFallback) &&
+        resumeSceneAfterFallback != currentRealSceneName)
+    {
+        if (resumeRoutine == null)
+            resumeRoutine = StartCoroutine(ResumeSceneAfterNetworkBackRoutine(resumeSceneAfterFallback));
+    }
+    else
+    {
+        isWaitingOnlineToResumeAfterFallback = false;
+        resumeSceneAfterFallback = "";
+    }
+}
 
     private void TrackOfflineCandidate()
     {
@@ -340,47 +346,49 @@ public class NetworkGameplayGuard : MonoBehaviour
         }
     }
 
-    private void ShowWeakNetworkPopup()
-    {
-        LockLoadingTapToCancel();
+private void ShowWeakNetworkPopup()
+{
+    LockGameplayInputByNetwork();
+    LockLoadingTapToCancel();
 
-        DestroyCurrentNetworkPopupIfAny();
+    DestroyCurrentNetworkPopupIfAny();
 
-        ownsLoadingUI = true;
-        LoadingUI.Show();
+    ownsLoadingUI = true;
+    LoadingUI.Show();
 
-        networkPopupShowing = true;
-        fatalPopupShowing = false;
+    networkPopupShowing = true;
+    fatalPopupShowing = false;
 
-        LoadingUI.ShowErrorPopup(
-            weakMessage,
-            weakHeader,
-            OnRetryButtonClicked
-        );
+    LoadingUI.ShowErrorPopup(
+        weakMessage,
+        weakHeader,
+        OnRetryButtonClicked
+    );
 
-        StartCoroutine(PatchPopupButtonTextNextFrames(weakButtonText));
-    }
+    StartCoroutine(PatchPopupButtonTextNextFrames(weakButtonText));
+}
 
-    private void ShowFatalNetworkPopup()
-    {
-        LockLoadingTapToCancel();
+private void ShowFatalNetworkPopup()
+{
+    LockGameplayInputByNetwork();
+    LockLoadingTapToCancel();
 
-        DestroyCurrentNetworkPopupIfAny();
+    DestroyCurrentNetworkPopupIfAny();
 
-        ownsLoadingUI = true;
-        LoadingUI.Show();
+    ownsLoadingUI = true;
+    LoadingUI.Show();
 
-        networkPopupShowing = true;
-        fatalPopupShowing = true;
+    networkPopupShowing = true;
+    fatalPopupShowing = true;
 
-        LoadingUI.ShowErrorPopup(
-            fatalMessage,
-            fatalHeader,
-            OnFatalOkButtonClicked
-        );
+    LoadingUI.ShowErrorPopup(
+        fatalMessage,
+        fatalHeader,
+        OnFatalOkButtonClicked
+    );
 
-        StartCoroutine(PatchPopupButtonTextNextFrames(fatalButtonText));
-    }
+    StartCoroutine(PatchPopupButtonTextNextFrames(fatalButtonText));
+}
 
     private void OnRetryButtonClicked()
     {
@@ -613,6 +621,31 @@ public class NetworkGameplayGuard : MonoBehaviour
 
         return null;
     }
+
+private void LockGameplayInputByNetwork()
+{
+    // Chỉ lock 1 lần để tránh blockCount tăng liên tục khi popup bị show lại.
+    if (ownsInputBlockerLock)
+        return;
+
+    InputBlocker.SetBlocked(true);
+    ownsInputBlockerLock = true;
+
+    Debug.Log("[NetworkGameplayGuard] Gameplay input locked by network popup.");
+}
+
+private void UnlockGameplayInputByNetwork()
+{
+    // Chỉ unlock nếu chính NetworkGameplayGuard là bên đã lock.
+    // Tránh mở nhầm input của hệ thống khác.
+    if (!ownsInputBlockerLock)
+        return;
+
+    InputBlocker.SetBlocked(false);
+    ownsInputBlockerLock = false;
+
+    Debug.Log("[NetworkGameplayGuard] Gameplay input unlocked after network restored.");
+}
 
     private void LockLoadingTapToCancel()
     {
