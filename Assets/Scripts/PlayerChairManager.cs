@@ -61,6 +61,7 @@ public class PlayerChairManager : MonoBehaviour
     }
     public void PlayerStandup()
     {
+
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
 
         if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
@@ -81,19 +82,18 @@ public class PlayerChairManager : MonoBehaviour
         //playerStandUI.HideWatchVideoUI();
         playerStandUI.HideLearningUI();
         videoPlayerControllerPro.ExitFullscreenUI();
-        StopAllCoroutines();
-        StartCoroutine(WaitForBlendDone(() =>
+        InputBlocker.SetBlocked(false);
+        StartBlendCoroutine(() =>
         {
             Debug.Log("bật lại input");
-            InputBlocker.SetBlocked(false);
+            
             playerStandUI.returnBtn.gameObject.SetActive(true);
             inputCanvas.Show();
 
             courseExitWayHandler.Show();
-            
+
             PlayerPanelUI.Instance.ShowUnLoginContainer(true);
-            
-        }));
+        });
     }
 
     private void Recalculator()
@@ -126,9 +126,12 @@ public class PlayerChairManager : MonoBehaviour
 
     }
 
+    private float timer;
+    private float blockTimer = 2.3f;
+    private void UpdateBlockTimer() => timer = Time.time;
+    private bool CanInteract() => Time.time > timer + blockTimer;
     public void PlayerSitdown()
     {
-
         // sit down logic
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
     
@@ -156,8 +159,7 @@ public class PlayerChairManager : MonoBehaviour
             courseExitWayHandler.Hide();
             
             PlayerPanelUI.Instance.ShowUnLoginContainer(false);
-            
-            StartCoroutine(WaitForBlendDone(() =>
+            StartBlendCoroutine(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
                 //playerStandUI.ShowWatchVideoUI();
@@ -169,8 +171,7 @@ public class PlayerChairManager : MonoBehaviour
                 {
                     TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
                 }
-                
-            }));
+            });
         }
     }
 
@@ -192,5 +193,26 @@ public class PlayerChairManager : MonoBehaviour
             Recalculator();
         }
     }
+    private Coroutine _blendCoroutine;
+    private int _blendToken = 0; // tăng mỗi lần gọi, callback tự check có còn valid không
 
+    private IEnumerator WaitForBlendDone(Action action, int token)
+    {
+        yield return new WaitForSeconds(2f);
+
+        // Nếu token không còn khớp => có lệnh mới override rồi, bỏ qua
+        if (token != _blendToken) yield break;
+
+        Debug.Log("Chạy callback");
+        action?.Invoke();
+    }
+
+    private void StartBlendCoroutine(Action action)
+    {
+        if (_blendCoroutine != null)
+            StopCoroutine(_blendCoroutine);
+
+        _blendToken++;
+        _blendCoroutine = StartCoroutine(WaitForBlendDone(action, _blendToken));
+    }
 }
