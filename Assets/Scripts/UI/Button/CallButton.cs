@@ -6,6 +6,8 @@ public class CallButton : MonoBehaviour
     [SerializeField] private Button button;
     [SerializeField] private string phoneNumber = "";
 
+    private const string ErrorPopup = "Thiết bị có thể chưa được cài đặt thiết bị gọi mặt định";
+    
     void Awake()
     {
         if (button == null)
@@ -25,7 +27,13 @@ public class CallButton : MonoBehaviour
         }
 
 #if UNITY_IOS
-        Application.OpenURL("tel://" + cleanNumber);
+        string url = "tel://" + cleanNumber;
+        if (IOSUrlChecker.CanOpen(url))
+        {
+            LoadingUI.Show(0f, ErrorPopup);
+            return;
+        }
+        Application.OpenURL(url);
 #elif UNITY_ANDROID
         Application.OpenURL("tel:" + cleanNumber);
 #else
