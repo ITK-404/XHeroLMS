@@ -379,7 +379,9 @@ public class StoreUpdateChecker : MonoBehaviour
 
     private IEnumerator CoFetchIosStoreVersion(Action<string> onDone)
     {
-        string url = $"https://itunes.apple.com/lookup?id={UnityWebRequest.EscapeURL(iosAppId)}&country={UnityWebRequest.EscapeURL(iosCountry)}";
+        // string url = $"https://itunes.apple.com/lookup?id={UnityWebRequest.EscapeURL(iosAppId)}&country={UnityWebRequest.EscapeURL(iosCountry)}";
+        string url =
+            $"https://itunes.apple.com/lookup?id=6756565267&country=vn&t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         using (var req = UnityWebRequest.Get(url))
         {
             req.timeout = 10;
@@ -394,6 +396,8 @@ public class StoreUpdateChecker : MonoBehaviour
             string json = req.downloadHandler.text;
             var m = Regex.Match(json, "\"version\"\\s*:\\s*\"([^\"]+)\"");
             onDone?.Invoke(m.Success ? m.Groups[1].Value.Trim() : null);
+
+            Debug.Log($"[StoreUpdateChecker]Raw json {json}");
         }
     }
 #endif
