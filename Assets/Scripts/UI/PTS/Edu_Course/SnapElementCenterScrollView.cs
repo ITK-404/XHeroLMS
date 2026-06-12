@@ -65,12 +65,14 @@ public partial class SnapElementCenterScrollView : MonoBehaviour
     private void LateUpdate()
     {
         float scrollHorizontalNormalize = scrollRect.horizontalNormalizedPosition;
-        bool isExpandToLimit = scrollHorizontalNormalize > 1.02f ||
-                               scrollHorizontalNormalize < - 0.02f;
+        float x = 1.005f;
+        float y = -0.005f;
+        bool isExpandToLimit = scrollHorizontalNormalize > x ||
+                               scrollHorizontalNormalize <  y;
         if (isExpandToLimit)
         {
             scrollRect.horizontalNormalizedPosition =
-                Mathf.Clamp(scrollHorizontalNormalize, -0.02f, 1.02f);
+                Mathf.Clamp(scrollHorizontalNormalize,  y, x);
         }
     }
 
