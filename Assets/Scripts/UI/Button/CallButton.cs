@@ -30,7 +30,7 @@ public class CallButton : MonoBehaviour
         string url = "tel://" + cleanNumber;
         if (IOSUrlChecker.CanOpen(url))
         {
-            LoadingUI.Show(0f, ErrorPopup);
+            LoadingUI.Show(2f, ErrorPopup);
             return;
         }
         Application.OpenURL(url);
