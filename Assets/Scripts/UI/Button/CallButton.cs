@@ -28,7 +28,7 @@ public class CallButton : MonoBehaviour
 
 #if UNITY_IOS
         string url = "tel://" + cleanNumber;
-        if (IOSUrlChecker.CanOpen(url))
+        if (!IOSUrlChecker.CanOpen(url))
         {
             LoadingUI.Show(2f, ErrorPopup);
             return;
