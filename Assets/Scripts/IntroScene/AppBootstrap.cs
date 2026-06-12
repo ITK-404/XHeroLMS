@@ -6,7 +6,7 @@ public class AppBootstrap : MonoBehaviour
     {
 #if UNITY_ANDROID || UNITY_IOS
         // QualitySettings.vSyncCount = 0;
-        // Application.targetFrameRate = 15;
+        Application.targetFrameRate = 15;
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
 #endif
         DontDestroyOnLoad(gameObject);

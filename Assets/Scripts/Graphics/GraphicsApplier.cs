@@ -42,10 +42,4 @@ public static class GraphicsApplier
 
         FPSHandler.SetLowestFrameRate();
     }
-
-    public static void ApplyFps(int fps)
-    {
-        QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 30;
-    }
 }

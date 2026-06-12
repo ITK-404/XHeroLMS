@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 public static class FPSHandler 
 {
     private const string SAVE_FPS_KEY = "save_target_fps";
-    private const int DEFAULT_FPS = 60;
+    private const int DEFAULT_FPS = 30;
     private const int LOWEST_FPS = 30;
     private const int LOADING_FPS = 15;
 
