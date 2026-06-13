@@ -16,6 +16,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     [SerializeField] private bool loadOnStart = true;
     [SerializeField] private float initialDelaySeconds = 0.75f;
     [SerializeField] private float delayBetweenScenesSeconds = 0.1f;
+    [SerializeField] private bool loadScenesDirectly = true;
+    [SerializeField] private int maxConcurrentSceneLoads = 2;
     [SerializeField] private bool downloadDependenciesTogether = true;
     [SerializeField] private bool loadSceneAsSoonAsDependenciesReady = true;
     [SerializeField] private List<string> sceneKeys = new List<string>();
@@ -55,6 +57,13 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             yield break;
         }
 
+        if (loadScenesDirectly)
+        {
+            yield return LoadScenesDirectlyRoutine(keys);
+            _isLoading = false;
+            yield break;
+        }
+
         if (downloadDependenciesTogether)
         {
             yield return DownloadAndLoadTogetherRoutine(keys);
@@ -82,6 +91,67 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     }
 
 #if ADDRESSABLES
+    private IEnumerator LoadScenesDirectlyRoutine(List<string> keys)
+    {
+        if (initialDelaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(initialDelaySeconds);
+
+        int nextIndex = 0;
+        int maxConcurrent = Mathf.Max(1, maxConcurrentSceneLoads);
+        List<RunningSceneLoad> running = new List<RunningSceneLoad>(maxConcurrent);
+
+        while (nextIndex < keys.Count || running.Count > 0)
+        {
+            while (nextIndex < keys.Count && running.Count < maxConcurrent)
+            {
+                string key = keys[nextIndex++];
+
+                if (IsSceneAlreadyLoaded(key))
+                    continue;
+
+                Debug.Log("[LateSceneLoader] Start additive scene load: " + key);
+
+                running.Add(new RunningSceneLoad
+                {
+                    Key = key,
+                    Handle = Addressables.LoadSceneAsync(key, LoadSceneMode.Additive, true)
+                });
+            }
+
+            bool completedAny = false;
+
+            for (int i = running.Count - 1; i >= 0; i--)
+            {
+                RunningSceneLoad load = running[i];
+
+                if (!load.Handle.IsValid() || !load.Handle.IsDone)
+                    continue;
+
+                if (load.Handle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    Debug.Log("[LateSceneLoader] Additive scene loaded: " + load.Key);
+                    _loadedSceneHandles.Add(load.Handle);
+                }
+                else
+                {
+                    string error = load.Handle.OperationException != null
+                        ? load.Handle.OperationException.ToString()
+                        : load.Handle.Status.ToString();
+
+                    Debug.LogError("[LateSceneLoader] Failed to load additive scene key=" + load.Key + ", error=" + error);
+                }
+
+                running.RemoveAt(i);
+                completedAny = true;
+            }
+
+            if (completedAny && delayBetweenScenesSeconds > 0f)
+                yield return new WaitForSecondsRealtime(delayBetweenScenesSeconds);
+            else
+                yield return null;
+        }
+    }
+
     private IEnumerator DownloadAndLoadTogetherRoutine(List<string> keys)
     {
         List<LateSceneState> states = new List<LateSceneState>(keys.Count);
@@ -246,6 +316,12 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         public bool DownloadFinished;
         public bool DownloadReleased;
         public bool LoadFinished;
+    }
+
+    private sealed class RunningSceneLoad
+    {
+        public string Key;
+        public AsyncOperationHandle<SceneInstance> Handle;
     }
 #endif
 

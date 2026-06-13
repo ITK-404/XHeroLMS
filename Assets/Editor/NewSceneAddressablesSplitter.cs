@@ -16,9 +16,12 @@ using UnityEngine.SceneManagement;
 public static class NewSceneAddressablesSplitter
 {
     private const string AuthoringScenePath = "Assets/Scenes/New Scene.unity";
-    private const string GeneratedSceneDirectory = "Assets/Scenes/New Scene_AddressableGenerated";
+    private const string GeneratedRootDirectory = "Assets/Scenes/Bundle_NewScene";
+    private const string GeneratedSceneDirectory = GeneratedRootDirectory + "/Scenes";
+    private const string GeneratedMaterialDirectory = GeneratedRootDirectory + "/Materials";
     private const string GeneratedMainScenePath = GeneratedSceneDirectory + "/New Scene Addressable.unity";
-    private const string GeneratedLiteWindowMaterialPath = GeneratedSceneDirectory + "/SG_WindowCubemap Material Lite.mat";
+    private const string GeneratedLiteWindowMaterialPath = GeneratedMaterialDirectory + "/SG_WindowCubemap Material Lite.mat";
+    private const string LegacyGeneratedSceneDirectory = "Assets/Scenes/New Scene_AddressableGenerated";
     private const string LegacyLateSceneDirectory = "Assets/Scenes/New Scene_AddressableLate";
     private const string ReportDirectory = "Library/NewSceneAddressableSplit";
     private const string LoaderObjectName = "[New Scene Late Content Loader]";
@@ -173,12 +176,93 @@ public static class NewSceneAddressablesSplitter
         "Assets/Shaders/Prefabs_UI/Minimap_New/Find Course/Course Semi 3D UI.prefab"
     };
 
+    private static readonly string[][] OrderedLateHierarchyBatches =
+    {
+        new[]
+        {
+            "Enviroment/ToaChanhDien_3toa",
+            "Enviroment/MB_Nen_Sau (1)"
+        },
+        new[]
+        {
+            "Enviroment/Tuong_Thanh",
+            "Enviroment/CongTrong",
+            "Enviroment/MB_VachDa",
+            "Enviroment/CongT2"
+        },
+        new[]
+        {
+            "Enviroment/Upper House",
+            "Enviroment/House",
+            "Enviroment/Nha_T1",
+            "Enviroment/Nha_T1 (1)",
+            "Enviroment/Nha_T1 (2)",
+            "Enviroment/Nha_T1 (3)"
+        },
+        new[]
+        {
+            "Enviroment/Khu Co Hoc 1",
+            "Enviroment/Khu Co Hoc 1 (1)"
+        },
+        new[]
+        {
+            "Enviroment/khu_trung_bay_vat_pham",
+            "Enviroment/khu_trung_bay_vat_pham (1)",
+            "Enviroment/khu_trung_bay_vat_pham (2)",
+            "Enviroment/khu_trung_bay_vat_pham (3)"
+        },
+        new[]
+        {
+            "Enviroment/Mot Goc Khuon Vien",
+            "Enviroment/Mot Goc Khuon Vien (1)"
+        },
+        new[]
+        {
+            "Enviroment/Bon Cay Sanh",
+            "Enviroment/Bon Cay Sanh (1)",
+            "Enviroment/Cay Co Bon Hoa",
+            "Enviroment/Cay Co Bon Hoa (1)",
+            "Enviroment/CayCauLon",
+            "Enviroment/BonHoaNho",
+            "Enviroment/BonHoaNho (1)",
+            "Enviroment/BonHoaNho (2)",
+            "Enviroment/BonHoaNho (3)",
+            "Enviroment/caygameS",
+            "Enviroment/caygameS (1)",
+            "Enviroment/caygameS (2)",
+            "Enviroment/caygameS (3)"
+        },
+        new[]
+        {
+            "Enviroment/KMDG (1)",
+            "Enviroment/KMDG (3)",
+            "Enviroment/ChoiNho",
+            "Enviroment/Hoa Sen Group",
+            "Enviroment/Tru Den Group",
+            "Enviroment/CauCauNho",
+            "Enviroment/CauCauNho (1)",
+            "Enviroment/Lan Can Group",
+            "Enviroment/Tree Decor - Upper map",
+            "Enviroment/GachToOng",
+            "Enviroment/GachToOng (1)",
+            "Enviroment/HoNuoc",
+            "Enviroment/stone (1)",
+            "Enviroment/MB_Nenbatquai",
+            "Enviroment/MB_Nenbatquai (1)"
+        },
+        new[]
+        {
+            "Enviroment/sold3_waterfall_high",
+            "Enviroment/VFX_Water_Surface_Calm_02"
+        }
+    };
+
     [MenuItem("Tools/Addressables/Regenerate Cloud_New Scene Group")]
     public static void RegenerateCloudNewSceneGroupMenu()
     {
         if (!EditorUtility.DisplayDialog(
-                "Regenerate Cloud_New Scene",
-                "This keeps Assets/Scenes/New Scene.unity intact, creates generated addressable split scenes from a copy, and refreshes the Cloud_New Scene group.",
+                "Regenerate Bundle_NewScene",
+                "This keeps Assets/Scenes/New Scene.unity intact, recreates Assets/Scenes/Bundle_NewScene, and refreshes the Cloud_New Scene group.",
                 "Regenerate",
                 "Cancel"))
         {
@@ -193,6 +277,7 @@ public static class NewSceneAddressablesSplitter
         EnsureReportDirectory();
         CleanupGeneratedAddressableOutputs(false);
         EnsureAssetFolder(GeneratedSceneDirectory);
+        EnsureAssetFolder(GeneratedMaterialDirectory);
 
         if (!AssetDatabase.CopyAsset(AuthoringScenePath, GeneratedMainScenePath))
             throw new InvalidOperationException("Failed to copy authoring scene to generated path: " + GeneratedMainScenePath);
@@ -209,14 +294,10 @@ public static class NewSceneAddressablesSplitter
         splitReport.AppendLine("scene_key\tgameobject_path");
 
         int nextLateIndex = 1;
+        foreach (string[] batch in OrderedLateHierarchyBatches)
+            SplitHierarchyPathBatch(generatedMainScene, batch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+
         SplitAutomaticRootCandidates(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
-        SplitHierarchyPathBatch(generatedMainScene, AdditionalLateHierarchyPaths, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
-
-        foreach (string[] batch in PlannedEnvironmentLateBatches)
-            SplitHierarchyPathBatch(generatedMainScene, batch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
-
-        foreach (string[] batch in RuntimeEnvironmentLateBatches)
-            SplitHierarchyPathBatch(generatedMainScene, batch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
         EnsureLateSceneLoader(generatedMainScene, lateSceneKeys);
 
@@ -588,7 +669,8 @@ public static class NewSceneAddressablesSplitter
         }
 
         DeleteGeneratedSchemaAssets();
-        DeleteAssetIfExists(GeneratedSceneDirectory);
+        DeleteAssetIfExists(GeneratedRootDirectory);
+        DeleteAssetIfExists(LegacyGeneratedSceneDirectory);
 
         if (deleteLegacyLateScenes)
             DeleteAssetIfExists(LegacyLateSceneDirectory);
@@ -715,7 +797,8 @@ public static class NewSceneAddressablesSplitter
     private static bool IsGeneratedAssetPath(string assetPath)
     {
         return !string.IsNullOrEmpty(assetPath)
-               && (assetPath.StartsWith(GeneratedSceneDirectory + "/", StringComparison.OrdinalIgnoreCase)
+               && (assetPath.StartsWith(GeneratedRootDirectory + "/", StringComparison.OrdinalIgnoreCase)
+                   || assetPath.StartsWith(LegacyGeneratedSceneDirectory + "/", StringComparison.OrdinalIgnoreCase)
                    || assetPath.StartsWith(LegacyLateSceneDirectory + "/", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -898,7 +981,9 @@ public static class NewSceneAddressablesSplitter
         serialized.FindProperty("loadOnStart").boolValue = true;
         serialized.FindProperty("initialDelaySeconds").floatValue = 0f;
         serialized.FindProperty("delayBetweenScenesSeconds").floatValue = 0.1f;
-        serialized.FindProperty("downloadDependenciesTogether").boolValue = true;
+        serialized.FindProperty("loadScenesDirectly").boolValue = true;
+        serialized.FindProperty("maxConcurrentSceneLoads").intValue = 2;
+        serialized.FindProperty("downloadDependenciesTogether").boolValue = false;
         serialized.FindProperty("loadSceneAsSoonAsDependenciesReady").boolValue = true;
 
         SerializedProperty sceneKeysProperty = serialized.FindProperty("sceneKeys");
