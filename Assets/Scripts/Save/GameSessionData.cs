@@ -38,7 +38,7 @@ public class GameSessionData
     
     public static SceneLocation CaptureFromPlayer(GameObject player)
     {
-        var sceneName = SceneManager.GetActiveScene().name;
+        var sceneName = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
         var sceneLocation = new SceneLocation(sceneName: sceneName, position: player.transform.position,
             rotation: player.transform.rotation);
 

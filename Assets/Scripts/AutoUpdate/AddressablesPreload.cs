@@ -72,7 +72,7 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private bool catalogOnlyOnBoot = true;
 
     [Tooltip("Mỗi lần vào scene sẽ kiểm tra dữ liệu mới trên GCS. Nếu có mới thì update rồi tải lại đúng scene.")]
-    [SerializeField] private bool checkCatalogBeforeEveryPrepare = true;
+    [SerializeField] private bool checkCatalogBeforeEveryPrepare = false;
 
     [Tooltip("Sau khi update dữ liệu, xóa bundle cũ không còn dùng.")]
     [SerializeField] private bool cleanOldBundleCacheAfterCatalogUpdate = true;
@@ -86,6 +86,7 @@ public class AddressablesPreload : MonoBehaviour
 
     [Header("Warmup / Giải nén")]
     [SerializeField] private bool warmupKeyDataAfterDownload = true;
+    [SerializeField] private bool warmupCachedKeyData = false;
     [SerializeField] private bool skipSceneWarmup = true;
     [SerializeField] private int warmupAssetBatchSize = 6;
     [SerializeField] private float warmupAssetBatchTimeoutSeconds = 240f;
@@ -103,7 +104,7 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private float progressWarmupEnd = 0.99f;
 
     // Khi dữ liệu đã có sẵn trong cache, vẫn chạy thanh load tối thiểu bấy nhiêu giây thay vì nhảy thẳng 100%.
-    private float cachedDataMinimumLoadSeconds = 1.2f;
+    private float cachedDataMinimumLoadSeconds = 0f;
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxCatalogRetries = 3;
@@ -572,7 +573,7 @@ public class AddressablesPreload : MonoBehaviour
             SetCheckingResourceText();
         }
 
-        if (warmupKeyDataAfterDownload)
+        if (warmupKeyDataAfterDownload && (totalBytes > 0 || warmupCachedKeyData))
         {
             BeginLoadingPhase(
                 PreloadStage.WarmupKeyData,

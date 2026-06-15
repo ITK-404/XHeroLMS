@@ -59,6 +59,15 @@ private Coroutine _prepareAddressablesCoroutine;
     [Tooltip("Có unload unused assets sau khi activate scene không. Bật cái này sẽ sạch RAM hơn nhưng có thể chậm thêm.")]
     public bool unloadUnusedAssetsAfterLoad = false;
 
+    [Header("New Scene Late Content")]
+    public bool waitForNewSceneLateContentBeforeReveal = false;
+    public float newSceneLateContentWaitTimeoutSeconds = 300f;
+    public float newSceneLateContentFindTimeoutSeconds = 5f;
+    public bool waitForCachedNewSceneLateContentBeforeReveal = true;
+    public float cachedNewSceneLateContentWaitTimeoutSeconds = 12f;
+    public float uncachedNewSceneLateContentRevealGraceSeconds = 4f;
+    public float newSceneLateContentCacheProbeWaitSeconds = 1.5f;
+
     [Header("Image Cycle")]
     public float imageSwitchInterval = 1f;
 
@@ -222,7 +231,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
     Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
 
-    Destroy(gameObject);
+    yield return CloseLoadingScreenRoutine();
 }
 
     private IEnumerator SafeUnloadPreviousScene()
@@ -262,6 +271,31 @@ private IEnumerator LoadByNameRoutine(string sceneName)
             yield return null;
     }
 
+    private IEnumerator CloseLoadingScreenRoutine()
+    {
+        Scene ownScene = gameObject.scene;
+
+        if (ownScene.IsValid() &&
+            ownScene.isLoaded &&
+            string.Equals(ownScene.name, loadingSceneName, StringComparison.Ordinal) &&
+            SceneManager.sceneCount > 1)
+        {
+            Debug.Log($"[LoadingScreenController] Unload loading scene: {ownScene.name}");
+
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(ownScene);
+
+            if (unloadOp != null)
+            {
+                while (!unloadOp.isDone)
+                    yield return null;
+
+                yield break;
+            }
+        }
+
+        Destroy(gameObject);
+    }
+
 #if ADDRESSABLES
     private IEnumerator LoadAddressableSceneFast(string sceneName, float startTime, float visualStartTime)
     {
@@ -281,11 +315,12 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         Debug.Log($"[LoadingScreenController] Addressables LoadSceneAsync started: {sceneName}");
 
-        AsyncOperationHandle<SceneInstance> handle = LoadAddressableScenePackage(sceneName);
+        bool loadTargetAdditively = ShouldLoadTargetAdditivelyBeforeReveal(sceneName);
+        AsyncOperationHandle<SceneInstance> handle = LoadAddressableScenePackage(sceneName, loadTargetAdditively);
 
         while (handle.IsValid() && !handle.IsDone)
         {
-            SetProgress(Mathf.Clamp01(handle.PercentComplete));
+            SetProgress(Mathf.Lerp(0.45f, 0.65f, Mathf.Clamp01(handle.PercentComplete)));
             yield return null;
         }
 
@@ -307,7 +342,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         Debug.Log($"[LoadingScreenController] Scene package ready at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        SetProgress(1f);
+        SetProgress(0.65f);
 
         yield return WaitForLoadNextVideoFinished("addressables activation");
 
@@ -320,17 +355,154 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         while (!activateOp.isDone)
         {
-            SetProgress(Mathf.Clamp01(activateOp.progress));
+            SetProgress(Mathf.Lerp(0.65f, 0.75f, Mathf.Clamp01(activateOp.progress)));
             yield return null;
         }
 
         Debug.Log($"[LoadingScreenController] Scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
+        if (loadTargetAdditively && handle.Result.Scene.IsValid())
+        {
+            SceneManager.SetActiveScene(handle.Result.Scene);
+            Debug.Log($"[LoadingScreenController] Target scene set active after additive load: {handle.Result.Scene.name}");
+        }
+
+        SetProgress(0.75f);
+
+        yield return WaitForNewSceneLateContentIfNeeded(sceneName, startTime);
+
         _lastActivatedAddressableSceneHandle = handle;
 
         _loadingStatusOverride = "Hoan tat";
         SetProgress(1f);
+        _loadSucceeded = true;
     }
+
+    private bool ShouldLoadTargetAdditivelyBeforeReveal(string sceneName)
+    {
+        return SceneNameAliases.IsNewSceneFamily(sceneName);
+    }
+
+    private IEnumerator WaitForNewSceneLateContentIfNeeded(string sceneName, float startTime)
+    {
+        if (!SceneNameAliases.IsNewSceneFamily(sceneName))
+            yield break;
+
+        if (!waitForNewSceneLateContentBeforeReveal && !waitForCachedNewSceneLateContentBeforeReveal)
+            yield break;
+
+        _loadingStatusOverride = "Dang dung the gioi";
+        SetProgress(0.75f);
+
+        AddressableAdditiveSceneLoader loader = null;
+        float findTimer = 0f;
+
+        while (loader == null && findTimer < Mathf.Max(0f, newSceneLateContentFindTimeoutSeconds))
+        {
+            loader = FindNewSceneLateLoader();
+
+            if (loader != null)
+                break;
+
+            findTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (loader == null)
+        {
+            Debug.LogWarning("[LoadingScreenController] New Scene late loader not found. Reveal scene without late wait.");
+            yield break;
+        }
+
+        loader.BeginLoad();
+
+        float cacheProbeTimer = 0f;
+
+        while (!loader.CacheStateKnown &&
+               cacheProbeTimer < Mathf.Max(0f, newSceneLateContentCacheProbeWaitSeconds) &&
+               !loader.IsComplete)
+        {
+            cacheProbeTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        bool shouldWaitForCachedContent =
+            waitForCachedNewSceneLateContentBeforeReveal &&
+            loader.CacheStateKnown &&
+            loader.AllDependenciesCached;
+
+        float timeoutSeconds;
+
+        if (waitForNewSceneLateContentBeforeReveal)
+            timeoutSeconds = newSceneLateContentWaitTimeoutSeconds;
+        else if (shouldWaitForCachedContent)
+            timeoutSeconds = cachedNewSceneLateContentWaitTimeoutSeconds;
+        else
+            timeoutSeconds = uncachedNewSceneLateContentRevealGraceSeconds;
+
+        Debug.Log("[LoadingScreenController] New Scene late wait. cacheKnown="
+                  + loader.CacheStateKnown
+                  + ", allCached="
+                  + loader.AllDependenciesCached
+                  + ", timeout="
+                  + timeoutSeconds.ToString("0.0"));
+
+        float waitTimer = 0f;
+
+        while (!loader.IsComplete)
+        {
+            waitTimer += Time.unscaledDeltaTime;
+
+            float lateProgress = Mathf.Clamp01(loader.Progress01);
+            SetProgress(Mathf.Lerp(0.75f, 0.98f, lateProgress));
+
+            if (timeoutSeconds > 0f && waitTimer >= timeoutSeconds)
+            {
+                Debug.LogWarning("[LoadingScreenController] Continue before New Scene late content is fully loaded. loaded="
+                                 + loader.LoadedSceneCount
+                                 + "/"
+                                 + loader.TotalSceneCount
+                                 + ", failed="
+                                 + loader.FailedSceneCount
+                                 + ", allCached="
+                                 + loader.AllDependenciesCached);
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        SetProgress(0.98f);
+
+        Debug.Log("[LoadingScreenController] New Scene late content ready at "
+                  + (Time.realtimeSinceStartup - startTime).ToString("0.00")
+                  + "s. loaded="
+                  + loader.LoadedSceneCount
+                  + "/"
+                  + loader.TotalSceneCount
+                  + ", failed="
+                  + loader.FailedSceneCount);
+    }
+
+private AddressableAdditiveSceneLoader FindNewSceneLateLoader()
+{
+    AddressableAdditiveSceneLoader[] loaders =
+        FindObjectsByType<AddressableAdditiveSceneLoader>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+    for (int i = 0; i < loaders.Length; i++)
+    {
+        AddressableAdditiveSceneLoader loader = loaders[i];
+
+        if (loader == null)
+            continue;
+
+        if (SceneNameAliases.IsNewSceneFamily(loader.gameObject.scene.name))
+            return loader;
+    }
+
+    return loaders.Length > 0 ? loaders[0] : null;
+}
+
 private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 {
     _loadingStatusOverride = "Đang chuẩn bị tài nguyên";
@@ -383,7 +555,7 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 
     Debug.Log($"[LoadingScreenController] Prepare addressables target DONE at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-    SetProgress(1f);
+    SetProgress(0.45f);
 }
 
     private IEnumerator RunPrepareTargetAddressablesRoutine(Action onDone)
@@ -404,16 +576,14 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
         float prepare01 = Mathf.Clamp01(AddressablesPreload.Instance.DownloadPercent01);
         _loadingStatusOverride = AddressablesPreload.Instance.LoadingText;
 
-        SetProgress(prepare01);
+        SetProgress(Mathf.Lerp(0.01f, 0.45f, prepare01));
     }
 
-    private AsyncOperationHandle<SceneInstance> LoadAddressableScenePackage(string sceneName)
+    private AsyncOperationHandle<SceneInstance> LoadAddressableScenePackage(string sceneName, bool loadAdditively)
     {
-#if UNITY_EDITOR
-        return Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, false);
-#else
-        return LoadingTransition.LoadAddressableAsync(false);
-#endif
+        LoadSceneMode mode = loadAdditively ? LoadSceneMode.Additive : LoadSceneMode.Single;
+        Debug.Log($"[LoadingScreenController] Addressables scene mode={mode}, activateOnLoad=false, scene={sceneName}");
+        return Addressables.LoadSceneAsync(sceneName, mode, false);
     }
 
     private bool ShouldRunAddressablesPreloadPhase()
@@ -489,6 +659,7 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 
         _loadingStatusOverride = "Hoan tat";
         SetProgress(1f);
+        _loadSucceeded = true;
     }
 
     private void SetProgress(float t)
@@ -766,7 +937,8 @@ private void SetInputBlockerVisible(bool visible)
 
     private static bool SceneNameEquals(string a, string b)
     {
-        return NormalizeSceneName(a) == NormalizeSceneName(b);
+        return SceneNameAliases.AreSameScene(a, b) ||
+               NormalizeSceneName(a) == NormalizeSceneName(b);
     }
 
     private static string NormalizeSceneName(string sceneName)

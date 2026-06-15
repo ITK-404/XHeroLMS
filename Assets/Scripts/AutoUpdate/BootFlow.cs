@@ -23,7 +23,7 @@ public class BootFlow : MonoBehaviour
     public bool mainSceneIsAddressable = true;
 
     // Nếu mainSceneIsAddressable=true -> key scene Addressables mặc định khi không có saved session
-    string mainAddressableSceneKey = "New Scene";
+    string mainAddressableSceneKey = SceneNameAliases.NewSceneAddress;
 
     [Tooltip("Nếu mainSceneIsAddressable=false -> build index của Scene main")]
     public int mainSceneBuildIndex = 1;
@@ -48,7 +48,9 @@ public class BootFlow : MonoBehaviour
     [Header("Game Session")]
     private GameSessionHandler gameSessionHandler;
     private bool waitSavedSessionDataBeforeLoadScene = true;
-    private float savedSessionDataTimeoutSeconds = 45f;
+    private float savedSessionDataTimeoutSeconds = 10f;
+    private float introEnterMainGateTimeoutSeconds = 12f;
+    private bool prepareNewSceneLateContentBeforeEnter = false;
 
 #if ADDRESSABLES
     [Header("Scene Dependency Download Recovery")]
@@ -293,6 +295,36 @@ public class BootFlow : MonoBehaviour
                     _loadingMain = false;
                     yield break;
                 }
+
+                if (prepareNewSceneLateContentBeforeEnter &&
+                    SceneNameAliases.IsNewSceneFamily(_resolvedMainSceneKey))
+                {
+                    bool lateDependencyReady = false;
+
+                    yield return CoPrepareSceneDependenciesWithPreload(
+                        SceneNameAliases.NewSceneLateLabel,
+                        result => lateDependencyReady = result
+                    );
+
+                    if (!lateDependencyReady)
+                    {
+                        Debug.LogError("[BootFlow] New Scene late content dependency prepare failed.");
+
+                        if (IsRecoverablePreloadFailure())
+                        {
+                            Debug.LogWarning("[BootFlow] New Scene late dependency failed because network/preload is not ready. Waiting for NetworkGameplayGuard recovery.");
+                            _waitingForNetworkRecovery = true;
+                            _loadingMain = false;
+                            yield break;
+                        }
+
+                        if (intro != null)
+                            intro.ShowFatalFail("World content download failed.");
+
+                        _loadingMain = false;
+                        yield break;
+                    }
+                }
             }
             else
             {
@@ -303,8 +335,20 @@ public class BootFlow : MonoBehaviour
             {
                 intro.SetBootProgress01(1f, true);
 
+                float introGateTimer = 0f;
                 while (!intro.CanEnterMain)
+                {
+                    introGateTimer += Time.unscaledDeltaTime;
+
+                    if (introEnterMainGateTimeoutSeconds > 0f &&
+                        introGateTimer >= introEnterMainGateTimeoutSeconds)
+                    {
+                        Debug.LogWarning("[BootFlow] Intro gate timeout. Continue loading main scene: " + _resolvedMainSceneKey);
+                        break;
+                    }
+
                     yield return null;
+                }
             }
 
             Debug.Log("[BootFlow] Loading scene once: " + _resolvedMainSceneKey);
@@ -535,7 +579,7 @@ public class BootFlow : MonoBehaviour
                         return null;
                     }
 
-                    if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                    if (!SceneNameAliases.CanUseSavedSceneForResume(item.SceneLocation.SceneName))
                     {
                         Debug.LogWarning("[BootFlow] Saved session đúng UserID nhưng SceneName rỗng.");
                         return null;
@@ -568,7 +612,7 @@ public class BootFlow : MonoBehaviour
                 if (item.SceneLocation == null)
                     continue;
 
-                if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                if (!SceneNameAliases.CanUseSavedSceneForResume(item.SceneLocation.SceneName))
                     continue;
 
                 onlyValidSave = item;
@@ -629,7 +673,7 @@ public class BootFlow : MonoBehaviour
         if (string.IsNullOrWhiteSpace(sceneName))
             return sceneName;
 
-        return sceneName;
+        return SceneNameAliases.ToAddressableSceneKey(sceneName);
     }
 
 #if ADDRESSABLES

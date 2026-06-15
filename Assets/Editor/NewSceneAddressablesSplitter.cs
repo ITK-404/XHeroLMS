@@ -19,12 +19,14 @@ public static class NewSceneAddressablesSplitter
     private const string GeneratedRootDirectory = "Assets/Scenes/Bundle_NewScene";
     private const string GeneratedSceneDirectory = GeneratedRootDirectory + "/Scenes";
     private const string GeneratedMaterialDirectory = GeneratedRootDirectory + "/Materials";
-    private const string GeneratedMainScenePath = GeneratedSceneDirectory + "/New Scene Addressable.unity";
+    private const string GeneratedMainScenePath = GeneratedSceneDirectory + "/New Scene.unity";
     private const string GeneratedLiteWindowMaterialPath = GeneratedMaterialDirectory + "/SG_WindowCubemap Material Lite.mat";
     private const string LegacyGeneratedSceneDirectory = "Assets/Scenes/New Scene_AddressableGenerated";
     private const string LegacyLateSceneDirectory = "Assets/Scenes/New Scene_AddressableLate";
     private const string ReportDirectory = "Library/NewSceneAddressableSplit";
     private const string LoaderObjectName = "[New Scene Late Content Loader]";
+    private const string CollisionProxyRootName = "[New Scene Collision Proxies]";
+    private const string CollisionProxyNamePrefix = "[Collision Proxy] ";
     private const string OriginalWindowMaterialPath = "Assets/HDRI_Captures/SG_WindowCubemap Material.mat";
 
     private const string MainGroupName = "Cloud_New Scene";
@@ -34,9 +36,12 @@ public static class NewSceneAddressablesSplitter
     private const string CloudLabel = "cloud";
     private const string LateLabel = "new_scene_late";
     private const string InitialLabel = "new_scene_initial";
+    private const string SharedLabel = "new_scene_shared";
 
-    private const long MaxGroupBytes = 100L * 1024L * 1024L;
+    private const int MaxConcurrentWebRequests = 8;
+    private const long MaxGroupBytes = 50L * 1024L * 1024L;
     private const long MinCandidateBytes = 2L * 1024L * 1024L;
+    private const long SharedDependencyMinBytes = 10L * 1024L * 1024L;
 
     private static readonly string[] LateAssetPathPrefixes =
     {
@@ -82,6 +87,11 @@ public static class NewSceneAddressablesSplitter
     private static readonly string[] AdditionalLateHierarchyPaths =
     {
         "Enviroment/ToaChanhDien_3toa",
+        "Enviroment/MB_Nen_Sau (1)"
+    };
+
+    private static readonly string[] CollisionProxyHierarchyPaths =
+    {
         "Enviroment/MB_Nen_Sau (1)"
     };
 
@@ -180,20 +190,38 @@ public static class NewSceneAddressablesSplitter
     {
         new[]
         {
-            "Enviroment/ToaChanhDien_3toa",
+            "Enviroment/ToaChanhDien_3toa"
+        },
+        new[]
+        {
             "Enviroment/MB_Nen_Sau (1)"
         },
         new[]
         {
-            "Enviroment/Tuong_Thanh",
-            "Enviroment/CongTrong",
-            "Enviroment/MB_VachDa",
+            "Enviroment/Tuong_Thanh"
+        },
+        new[]
+        {
+            "Enviroment/CongTrong"
+        },
+        new[]
+        {
+            "Enviroment/MB_VachDa"
+        },
+        new[]
+        {
             "Enviroment/CongT2"
         },
         new[]
         {
-            "Enviroment/Upper House",
-            "Enviroment/House",
+            "Enviroment/Upper House"
+        },
+        new[]
+        {
+            "Enviroment/House"
+        },
+        new[]
+        {
             "Enviroment/Nha_T1",
             "Enviroment/Nha_T1 (1)",
             "Enviroment/Nha_T1 (2)",
@@ -222,7 +250,10 @@ public static class NewSceneAddressablesSplitter
             "Enviroment/Bon Cay Sanh (1)",
             "Enviroment/Cay Co Bon Hoa",
             "Enviroment/Cay Co Bon Hoa (1)",
-            "Enviroment/CayCauLon",
+            "Enviroment/CayCauLon"
+        },
+        new[]
+        {
             "Enviroment/BonHoaNho",
             "Enviroment/BonHoaNho (1)",
             "Enviroment/BonHoaNho (2)",
@@ -235,13 +266,19 @@ public static class NewSceneAddressablesSplitter
         new[]
         {
             "Enviroment/KMDG (1)",
-            "Enviroment/KMDG (3)",
+            "Enviroment/KMDG (3)"
+        },
+        new[]
+        {
             "Enviroment/ChoiNho",
             "Enviroment/Hoa Sen Group",
             "Enviroment/Tru Den Group",
             "Enviroment/CauCauNho",
             "Enviroment/CauCauNho (1)",
-            "Enviroment/Lan Can Group",
+            "Enviroment/Lan Can Group"
+        },
+        new[]
+        {
             "Enviroment/Tree Decor - Upper map",
             "Enviroment/GachToOng",
             "Enviroment/GachToOng (1)",
@@ -257,19 +294,28 @@ public static class NewSceneAddressablesSplitter
         }
     };
 
-    [MenuItem("Tools/Addressables/Regenerate Cloud_New Scene Group")]
-    public static void RegenerateCloudNewSceneGroupMenu()
+    [MenuItem("Tools/Addressables/Regenerate Cloud_New Scene Group + Build Addressables")]
+    public static void RegenerateCloudNewSceneGroupAndBuildAddressablesMenu()
     {
         if (!EditorUtility.DisplayDialog(
-                "Regenerate Bundle_NewScene",
-                "This keeps Assets/Scenes/New Scene.unity intact, recreates Assets/Scenes/Bundle_NewScene, and refreshes the Cloud_New Scene group.",
-                "Regenerate",
+                "Regenerate Bundle_NewScene + Build",
+                "This regenerates Assets/Scenes/Bundle_NewScene, refreshes the Cloud_New Scene group, then builds Addressables.",
+                "Regenerate + Build",
                 "Cancel"))
         {
             return;
         }
 
+        RegenerateCloudNewSceneGroupAndBuildAddressables();
+    }
+
+    public static void RegenerateCloudNewSceneGroupAndBuildAddressables()
+    {
         RegenerateCloudNewSceneGroup();
+        AddressableAssetSettings.BuildPlayerContent();
+        CreateCatalogAliasesForActiveBuildTarget();
+        DeleteUnreferencedServerDataBundlesForActiveBuildTarget();
+        Debug.Log("[NewSceneSplit] Regenerated Cloud_New Scene group and built Addressables.");
     }
 
     public static void RegenerateCloudNewSceneGroup()
@@ -304,8 +350,18 @@ public static class NewSceneAddressablesSplitter
         if (!EditorSceneManager.SaveScene(generatedMainScene, GeneratedMainScenePath))
             throw new InvalidOperationException("Failed to save generated main scene: " + GeneratedMainScenePath);
 
+        PatchGeneratedMainSceneYaml();
+        AssetDatabase.ImportAsset(GeneratedMainScenePath, ImportAssetOptions.ForceUpdate);
+
         List<string> initialUiDependencyPaths = CollectInitialUiDependencyPaths();
-        RegisterGeneratedAddressables(generatedScenePaths, lateSceneKeys, initialUiDependencyPaths);
+        List<string> sharedGeneratedDependencyPaths =
+            CollectSharedGeneratedDependencyPaths(generatedScenePaths, initialUiDependencyPaths);
+
+        RegisterGeneratedAddressables(
+            generatedScenePaths,
+            lateSceneKeys,
+            initialUiDependencyPaths,
+            sharedGeneratedDependencyPaths);
 
         File.WriteAllText(
             Path.Combine(Directory.GetCurrentDirectory(), Path.Combine(ReportDirectory, "regenerate_cloud_new_scene.tsv")),
@@ -384,6 +440,8 @@ public static class NewSceneAddressablesSplitter
                 continue;
             }
 
+            CreateCollisionProxyIfNeeded(generatedMainScene, go, hierarchyPath);
+
             if (!objects.Contains(go))
                 objects.Add(go);
         }
@@ -429,6 +487,112 @@ public static class NewSceneAddressablesSplitter
 
         generatedScenePaths.Add(scenePath);
         lateSceneKeys.Add(sceneName);
+    }
+
+    private static void CreateCollisionProxyIfNeeded(Scene scene, GameObject source, string hierarchyPath)
+    {
+        if (!ShouldCreateCollisionProxy(hierarchyPath))
+            return;
+
+        if (!TryGetCombinedProxyBounds(source, out Bounds bounds))
+        {
+            Debug.LogWarning("[NewSceneSplit] Cannot create collision proxy, no bounds found: " + hierarchyPath);
+            return;
+        }
+
+        GameObject root = GetOrCreateCollisionProxyRoot(scene);
+        GameObject proxy = new GameObject(CollisionProxyNamePrefix + hierarchyPath);
+        proxy.layer = source.layer;
+
+        SceneManager.MoveGameObjectToScene(proxy, scene);
+        proxy.transform.SetParent(root.transform, false);
+        proxy.transform.rotation = Quaternion.identity;
+        proxy.transform.localScale = Vector3.one;
+
+        float height = Mathf.Clamp(bounds.size.y, 0.25f, 2f);
+        float centerY = bounds.size.y > 2f ? bounds.min.y + (height * 0.5f) : bounds.center.y;
+        proxy.transform.position = new Vector3(bounds.center.x, centerY, bounds.center.z);
+
+        BoxCollider collider = proxy.AddComponent<BoxCollider>();
+        collider.center = Vector3.zero;
+        collider.size = new Vector3(
+            Mathf.Max(1f, bounds.size.x),
+            height,
+            Mathf.Max(1f, bounds.size.z));
+
+        EditorUtility.SetDirty(proxy);
+
+        Debug.Log("[NewSceneSplit] Created generated collision proxy for "
+                  + hierarchyPath
+                  + " size="
+                  + collider.size);
+    }
+
+    private static bool ShouldCreateCollisionProxy(string hierarchyPath)
+    {
+        return CollisionProxyHierarchyPaths.Any(path =>
+            string.Equals(path, hierarchyPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static GameObject GetOrCreateCollisionProxyRoot(Scene scene)
+    {
+        GameObject root = scene
+            .GetRootGameObjects()
+            .FirstOrDefault(go => go.name == CollisionProxyRootName);
+
+        if (root == null)
+        {
+            root = new GameObject(CollisionProxyRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+        }
+
+        root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        root.transform.localScale = Vector3.one;
+
+        return root;
+    }
+
+    private static bool TryGetCombinedProxyBounds(GameObject source, out Bounds bounds)
+    {
+        bool hasBounds = false;
+        bounds = new Bounds(source.transform.position, Vector3.zero);
+
+        foreach (Collider collider in source.GetComponentsInChildren<Collider>(true))
+        {
+            if (collider == null || collider.isTrigger)
+                continue;
+
+            if (!hasBounds)
+            {
+                bounds = collider.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(collider.bounds);
+            }
+        }
+
+        if (hasBounds)
+            return true;
+
+        foreach (Renderer renderer in source.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer == null)
+                continue;
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        return hasBounds;
     }
 
     private static int RestoreLegacyLateScenesIntoAuthoringScene(
@@ -557,12 +721,67 @@ public static class NewSceneAddressablesSplitter
             .ToList();
     }
 
+    private static List<string> CollectSharedGeneratedDependencyPaths(
+        List<string> generatedScenePaths,
+        List<string> initialUiDependencyPaths)
+    {
+        HashSet<string> excludedPaths = new HashSet<string>(
+            initialUiDependencyPaths ?? Enumerable.Empty<string>(),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (generatedScenePaths.Count > 0)
+        {
+            foreach (string mainDependencyPath in AssetDatabase.GetDependencies(generatedScenePaths[0], true))
+                excludedPaths.Add(mainDependencyPath);
+        }
+
+        Dictionary<string, int> sceneReferenceCounts =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string scenePath in generatedScenePaths.Skip(1))
+        {
+            HashSet<string> sceneDependencies = new HashSet<string>(
+                AssetDatabase.GetDependencies(scenePath, true),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (string dependencyPath in sceneDependencies)
+            {
+                if (!ShouldMoveSharedGeneratedDependency(dependencyPath, excludedPaths))
+                    continue;
+
+                if (!sceneReferenceCounts.TryGetValue(dependencyPath, out int count))
+                    count = 0;
+
+                sceneReferenceCounts[dependencyPath] = count + 1;
+            }
+        }
+
+        List<string> sharedPaths = sceneReferenceCounts
+            .Where(pair => pair.Value >= 2)
+            .Select(pair => pair.Key)
+            .OrderByDescending(GetAssetFileBytes)
+            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        long totalBytes = sharedPaths.Sum(GetAssetFileBytes);
+
+        Debug.Log("[NewSceneSplit] Shared generated dependencies: "
+                  + sharedPaths.Count
+                  + " assets, approx "
+                  + FormatBytes(totalBytes));
+
+        return sharedPaths;
+    }
+
     private static void RegisterGeneratedAddressables(
         List<string> generatedScenePaths,
         List<string> lateSceneKeys,
-        List<string> initialUiDependencyPaths)
+        List<string> initialUiDependencyPaths,
+        List<string> sharedGeneratedDependencyPaths)
     {
         AddressableAssetSettings settings = GetAddressableSettings();
+        ConfigureGlobalAddressableRuntimeSettings(settings);
+
         AddressableAssetGroup mainGroup = GetOrCreateGroup(settings, MainGroupName);
         ConfigureRemoteGroup(settings, mainGroup, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
         SetCloudSharedPacking(BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
@@ -570,12 +789,14 @@ public static class NewSceneAddressablesSplitter
         settings.AddLabel(CloudLabel, false);
         settings.AddLabel(LateLabel, false);
         settings.AddLabel(InitialLabel, false);
+        settings.AddLabel(SharedLabel, false);
 
         RemoveEntries(mainGroup, entry =>
             string.Equals(entry.address, GeneratedMainAddress, StringComparison.OrdinalIgnoreCase)
             || entry.address.StartsWith("New Scene Late ", StringComparison.OrdinalIgnoreCase)
             || entry.labels.Contains(LateLabel)
             || entry.labels.Contains(InitialLabel)
+            || entry.labels.Contains(SharedLabel)
             || IsGeneratedAssetPath(AssetDatabase.GUIDToAssetPath(entry.guid)));
 
         for (int i = 0; i < generatedScenePaths.Count; i++)
@@ -608,12 +829,29 @@ public static class NewSceneAddressablesSplitter
             entry.SetLabel(InitialLabel, true, false, true);
         }
 
+        foreach (string assetPath in sharedGeneratedDependencyPaths)
+        {
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+
+            if (string.IsNullOrEmpty(guid))
+                continue;
+
+            if (settings.FindAssetEntry(guid) != null)
+                continue;
+
+            AddressableAssetEntry entry = CreateOrMoveEntry(settings, mainGroup, assetPath, assetPath);
+            entry.SetLabel(CloudLabel, true, false, true);
+            entry.SetLabel(SharedLabel, true, false, true);
+        }
+
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
     }
 
     private static void RegisterAuthoringSceneAsAddressable()
     {
         AddressableAssetSettings settings = GetAddressableSettings();
+        ConfigureGlobalAddressableRuntimeSettings(settings);
+
         AddressableAssetGroup mainGroup = GetOrCreateGroup(settings, MainGroupName);
         ConfigureRemoteGroup(settings, mainGroup, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
 
@@ -626,6 +864,7 @@ public static class NewSceneAddressablesSplitter
                 || entry.address.StartsWith("New Scene Late ", StringComparison.OrdinalIgnoreCase)
                 || entry.labels.Contains(LateLabel)
                 || entry.labels.Contains(InitialLabel)
+                || entry.labels.Contains(SharedLabel)
                 || IsGeneratedAssetPath(AssetDatabase.GUIDToAssetPath(entry.guid))));
 
         AddressableAssetEntry authoringEntry = settings.CreateOrMoveEntry(authoringGuid, mainGroup, false, false);
@@ -724,6 +963,8 @@ public static class NewSceneAddressablesSplitter
 
     private static void ApplyGeneratedSceneOptimizations(Scene scene)
     {
+        RenderSettings.skybox = null;
+
         Material originalMaterial = AssetDatabase.LoadAssetAtPath<Material>(OriginalWindowMaterialPath);
         Material liteMaterial = GetOrCreateGeneratedLiteWindowMaterial();
 
@@ -759,6 +1000,29 @@ public static class NewSceneAddressablesSplitter
 
         if (replacedCount > 0)
             Debug.Log("[NewSceneSplit] Replaced generated-only heavy window material refs: " + replacedCount);
+    }
+
+    private static void PatchGeneratedMainSceneYaml()
+    {
+        string absoluteScenePath = ToAbsolutePath(GeneratedMainScenePath);
+
+        if (!File.Exists(absoluteScenePath))
+            return;
+
+        string sceneYaml = File.ReadAllText(absoluteScenePath);
+        string patchedYaml = sceneYaml
+            .Replace(
+                "m_OcclusionCullingData: {fileID: 36300000, guid: 5dd80b04e569fa248ac82d2c7abbe5bd, type: 2}",
+                "m_OcclusionCullingData: {fileID: 0}")
+            .Replace(
+                "m_SkyboxMaterial: {fileID: 2100000, guid: d41ed884a61bd9b44b55f1e9f86f80d0, type: 2}",
+                "m_SkyboxMaterial: {fileID: 0}");
+
+        if (string.Equals(sceneYaml, patchedYaml, StringComparison.Ordinal))
+            return;
+
+        File.WriteAllText(absoluteScenePath, patchedYaml);
+        Debug.Log("[NewSceneSplit] Removed generated-only skybox/occlusion references from main scene.");
     }
 
     private static Material GetOrCreateGeneratedLiteWindowMaterial()
@@ -980,11 +1244,18 @@ public static class NewSceneAddressablesSplitter
         SerializedObject serialized = new SerializedObject(loader);
         serialized.FindProperty("loadOnStart").boolValue = true;
         serialized.FindProperty("initialDelaySeconds").floatValue = 0f;
-        serialized.FindProperty("delayBetweenScenesSeconds").floatValue = 0.1f;
+        serialized.FindProperty("delayBetweenScenesSeconds").floatValue = 0f;
         serialized.FindProperty("loadScenesDirectly").boolValue = true;
-        serialized.FindProperty("maxConcurrentSceneLoads").intValue = 2;
+        serialized.FindProperty("maxConcurrentSceneLoads").intValue = 6;
+        serialized.FindProperty("loadCachedScenesWithoutDelay").boolValue = true;
+        serialized.FindProperty("cachedMaxConcurrentSceneLoads").intValue = 12;
+        serialized.FindProperty("cachedDelayBetweenScenesSeconds").floatValue = 0f;
+        serialized.FindProperty("cachedDependencyCheckTimeoutSeconds").floatValue = 3f;
         serialized.FindProperty("downloadDependenciesTogether").boolValue = false;
         serialized.FindProperty("loadSceneAsSoonAsDependenciesReady").boolValue = true;
+        serialized.FindProperty("showBlockingOverlayUntilLoaded").boolValue = false;
+        serialized.FindProperty("blockingOverlayText").stringValue = "Dang dung the gioi...";
+        serialized.FindProperty("minimumOverlaySeconds").floatValue = 0.1f;
 
         SerializedProperty sceneKeysProperty = serialized.FindProperty("sceneKeys");
         sceneKeysProperty.arraySize = lateSceneKeys.Count;
@@ -994,6 +1265,121 @@ public static class NewSceneAddressablesSplitter
 
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(loaderObject);
+    }
+
+    private static void CreateCatalogAliasesForActiveBuildTarget()
+    {
+        string outputDirectory = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "ServerData",
+            EditorUserBuildSettings.activeBuildTarget.ToString());
+
+        if (!Directory.Exists(outputDirectory))
+        {
+            Debug.LogWarning("[NewSceneSplit] Addressables output directory not found: " + outputDirectory);
+            return;
+        }
+
+        string versionedJson = Directory
+            .GetFiles(outputDirectory, "catalog_*.json", SearchOption.AllDirectories)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+
+        string versionedHash = Directory
+            .GetFiles(outputDirectory, "catalog_*.hash", SearchOption.AllDirectories)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+
+        if (string.IsNullOrEmpty(versionedJson) || string.IsNullOrEmpty(versionedHash))
+        {
+            Debug.LogWarning("[NewSceneSplit] Versioned catalog files not found in: " + outputDirectory);
+            return;
+        }
+
+        string catalogDirectory = Path.GetDirectoryName(versionedJson);
+
+        if (string.IsNullOrEmpty(catalogDirectory))
+        {
+            Debug.LogWarning("[NewSceneSplit] Cannot resolve catalog directory for: " + versionedJson);
+            return;
+        }
+
+        File.Copy(versionedJson, Path.Combine(catalogDirectory, "catalog.json"), true);
+        File.Copy(versionedHash, Path.Combine(catalogDirectory, "catalog.hash"), true);
+
+        Debug.Log("[NewSceneSplit] Updated catalog aliases from "
+                  + Path.GetFileName(versionedJson)
+                  + " and "
+                  + Path.GetFileName(versionedHash));
+    }
+
+    private static void DeleteUnreferencedServerDataBundlesForActiveBuildTarget()
+    {
+        string outputDirectory = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "ServerData",
+            EditorUserBuildSettings.activeBuildTarget.ToString());
+
+        string catalogPath = Path.Combine(outputDirectory, "catalog.json");
+
+        if (!File.Exists(catalogPath))
+        {
+            Debug.LogWarning("[NewSceneSplit] Cannot clean ServerData bundles because catalog.json is missing: " + catalogPath);
+            return;
+        }
+
+        string catalogJson = File.ReadAllText(catalogPath);
+        HashSet<string> referencedBundles = new HashSet<string>(
+            catalogJson.Split('"')
+                .Where(token => token.IndexOf(".bundle", StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(GetFileNameFromCatalogToken)
+                .Where(fileName => !string.IsNullOrEmpty(fileName)),
+            StringComparer.OrdinalIgnoreCase);
+
+        int deletedCount = 0;
+        long deletedBytes = 0L;
+
+        foreach (string bundlePath in Directory.GetFiles(outputDirectory, "*.bundle", SearchOption.AllDirectories))
+        {
+            string fileName = Path.GetFileName(bundlePath);
+
+            if (referencedBundles.Contains(fileName))
+                continue;
+
+            FileInfo fileInfo = new FileInfo(bundlePath);
+            deletedBytes += fileInfo.Length;
+            fileInfo.Delete();
+            deletedCount++;
+        }
+
+        Debug.Log("[NewSceneSplit] Cleaned stale ServerData bundles: "
+                  + deletedCount
+                  + " files, "
+                  + FormatBytes(deletedBytes));
+    }
+
+    private static string GetFileNameFromCatalogToken(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return "";
+
+        token = token.Replace('\\', '/');
+
+        int queryIndex = token.IndexOf('?');
+
+        if (queryIndex >= 0)
+            token = token.Substring(0, queryIndex);
+
+        int slashIndex = token.LastIndexOf('/');
+
+        token = slashIndex >= 0 ? token.Substring(slashIndex + 1) : token;
+
+        int bundleIndex = token.IndexOf(".bundle", StringComparison.OrdinalIgnoreCase);
+
+        if (bundleIndex < 0)
+            return "";
+
+        return token.Substring(0, bundleIndex + ".bundle".Length);
     }
 
     private static void RemoveLoaderObject(Scene scene)
@@ -1040,6 +1426,22 @@ public static class NewSceneAddressablesSplitter
             throw new InvalidOperationException("AddressableAssetSettingsDefaultObject.Settings is null.");
 
         return settings;
+    }
+
+    private static void ConfigureGlobalAddressableRuntimeSettings(AddressableAssetSettings settings)
+    {
+        if (settings == null)
+            return;
+
+        if (settings.MaxConcurrentWebRequests == MaxConcurrentWebRequests)
+            return;
+
+        settings.MaxConcurrentWebRequests = MaxConcurrentWebRequests;
+        EditorUtility.SetDirty(settings);
+        settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
+
+        Debug.Log("[NewSceneSplit] Addressables MaxConcurrentWebRequests set to "
+                  + MaxConcurrentWebRequests);
     }
 
     private static AddressableAssetGroup GetOrCreateGroup(AddressableAssetSettings settings, string groupName)
@@ -1120,6 +1522,39 @@ public static class NewSceneAddressablesSplitter
                || path.StartsWith("Assets/Fonts/", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool ShouldMoveSharedGeneratedDependency(string path, HashSet<string> excludedPaths)
+    {
+        if (string.IsNullOrEmpty(path) || !path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (excludedPaths != null && excludedPaths.Contains(path))
+            return false;
+
+        if (AssetDatabase.IsValidFolder(path))
+            return false;
+
+        if (path.StartsWith(GeneratedRootDirectory + "/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("Assets/Scenes/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("Assets/Scripts/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("Assets/Editor/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("Assets/AddressableAssetsData/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string extension = Path.GetExtension(path);
+
+        if (string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".asmdef", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".unity", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return GetAssetFileBytes(path) >= SharedDependencyMinBytes;
+    }
+
     private static long GetAssetFileBytes(string assetPath)
     {
         string absolutePath = ToAbsolutePath(assetPath);
@@ -1128,6 +1563,17 @@ public static class NewSceneAddressablesSplitter
             return new FileInfo(absolutePath).Length;
 
         return 0L;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024L)
+            return (bytes / (1024f * 1024f)).ToString("0.##", CultureInfo.InvariantCulture) + " MB";
+
+        if (bytes >= 1024L)
+            return (bytes / 1024f).ToString("0.##", CultureInfo.InvariantCulture) + " KB";
+
+        return bytes.ToString(CultureInfo.InvariantCulture) + " B";
     }
 
     private static string ToAbsolutePath(string assetPath)

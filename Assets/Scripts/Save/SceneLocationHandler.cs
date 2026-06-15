@@ -81,7 +81,7 @@ public class SceneLocationHandler : MonoBehaviour
     {
         foreach (var item in sceneLocationList)
         {
-            if (item.SceneName == sceneName)
+            if (SceneNameAliases.AreSameScene(item.SceneName, sceneName))
             {
                 return item;
             }
@@ -92,7 +92,7 @@ public class SceneLocationHandler : MonoBehaviour
 
     public void SavePlayerInformation()
     {
-        var currentScene = SceneManager.GetActiveScene().name;
+        var currentScene = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
         if (!config.IsSceneCanSave(currentScene))
         {
             return;
@@ -110,7 +110,7 @@ public class SceneLocationHandler : MonoBehaviour
 
     public void SavePlayerPosition(Vector3 position, Quaternion rotation)
     {
-        var currentScene = SceneManager.GetActiveScene().name;
+        var currentScene = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
         if (!config.IsSceneCanSave(currentScene))
         {
             return;

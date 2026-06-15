@@ -194,17 +194,18 @@ public static class LoadingTransition
         ResetTargetPrepareState();
 
         bool isCloudScene = false;
+        string loadTargetScene = SceneNameAliases.ToAddressableSceneKey(targetScene);
 
 #if ADDRESSABLES
-        Debug.Log("[LoadingTransition] Start checking Addressables scene: " + targetScene);
-        yield return CoCheckIsCloudScene(targetScene, r => isCloudScene = r);
+        Debug.Log("[LoadingTransition] Start checking Addressables scene: " + loadTargetScene);
+        yield return CoCheckIsCloudScene(loadTargetScene, r => isCloudScene = r);
 #else
         isCloudScene = false;
 #endif
 
         PreviousSceneName = SceneManager.GetActiveScene().name;
-        TargetSceneName = targetScene;
-        TargetPrepareKey = targetScene;
+        TargetSceneName = loadTargetScene;
+        TargetPrepareKey = loadTargetScene;
         UseAddressables = isCloudScene;
 
         Debug.Log(
@@ -214,7 +215,7 @@ public static class LoadingTransition
 
         if (isSaveHistory && sceneHistory != null)
         {
-            string currentScene = SceneManager.GetActiveScene().name;
+            string currentScene = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
 
             Debug.Log("[LoadingTransition] Save scene to history: " + currentScene);
             sceneHistory.Record(currentScene);
