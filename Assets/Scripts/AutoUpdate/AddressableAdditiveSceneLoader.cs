@@ -41,6 +41,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private int _failedSceneCount;
     private float _overlayShownAt;
     private GameObject _blockingOverlayRoot;
+    private Scene _ownerScene;
 
     public bool IsLoading => _isLoading;
     public bool IsComplete => _loadComplete && !_isLoading;
@@ -100,6 +101,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         _isLoading = true;
         _loadComplete = false;
+        _ownerScene = gameObject.scene;
+        EnsureOwnerSceneActive();
 
 #if ADDRESSABLES
         List<string> keys = BuildUniquePendingSceneKeys();
@@ -161,6 +164,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
     private void FinishLoad()
     {
+        EnsureOwnerSceneActive();
+
         _isLoading = false;
         _loadComplete = true;
 
@@ -246,6 +251,20 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             text.font = font;
     }
 
+    private void EnsureOwnerSceneActive()
+    {
+        if (!_ownerScene.IsValid() || !_ownerScene.isLoaded)
+            _ownerScene = gameObject.scene;
+
+        if (!_ownerScene.IsValid() || !_ownerScene.isLoaded)
+            return;
+
+        Scene activeScene = SceneManager.GetActiveScene();
+
+        if (!activeScene.IsValid() || activeScene != _ownerScene)
+            SceneManager.SetActiveScene(_ownerScene);
+    }
+
 #if ADDRESSABLES
     private IEnumerator LoadScenesDirectlyRoutine(List<string> keys)
     {
@@ -288,6 +307,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
                 if (IsSceneAlreadyLoaded(key))
                 {
+                    EnsureOwnerSceneActive();
                     MarkSceneLoadFinished(true);
                     continue;
                 }
@@ -314,6 +334,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                 {
                     Debug.Log("[LateSceneLoader] Additive scene loaded: " + load.Key);
                     _loadedSceneHandles.Add(load.Handle);
+                    EnsureOwnerSceneActive();
                     MarkSceneLoadFinished(true);
                 }
                 else
@@ -450,6 +471,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                 {
                     ReleaseDownloadHandle(state);
                     state.LoadFinished = true;
+                    EnsureOwnerSceneActive();
                     MarkSceneLoadFinished(true);
                     continue;
                 }
@@ -519,6 +541,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         if (IsSceneAlreadyLoaded(key))
         {
+            EnsureOwnerSceneActive();
             MarkSceneLoadFinished(true);
             yield break;
         }
@@ -542,6 +565,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         }
 
         _loadedSceneHandles.Add(handle);
+        EnsureOwnerSceneActive();
         MarkSceneLoadFinished(true);
     }
 

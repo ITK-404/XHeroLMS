@@ -18,16 +18,11 @@ public static class NewSceneAddressablesSplitter
     private const string AuthoringScenePath = "Assets/Scenes/New Scene.unity";
     private const string GeneratedRootDirectory = "Assets/Scenes/Bundle_NewScene";
     private const string GeneratedSceneDirectory = GeneratedRootDirectory + "/Scenes";
-    private const string GeneratedMaterialDirectory = GeneratedRootDirectory + "/Materials";
     private const string GeneratedMainScenePath = GeneratedSceneDirectory + "/New Scene.unity";
-    private const string GeneratedLiteWindowMaterialPath = GeneratedMaterialDirectory + "/SG_WindowCubemap Material Lite.mat";
     private const string LegacyGeneratedSceneDirectory = "Assets/Scenes/New Scene_AddressableGenerated";
     private const string LegacyLateSceneDirectory = "Assets/Scenes/New Scene_AddressableLate";
     private const string ReportDirectory = "Library/NewSceneAddressableSplit";
     private const string LoaderObjectName = "[New Scene Late Content Loader]";
-    private const string CollisionProxyRootName = "[New Scene Collision Proxies]";
-    private const string CollisionProxyNamePrefix = "[Collision Proxy] ";
-    private const string OriginalWindowMaterialPath = "Assets/HDRI_Captures/SG_WindowCubemap Material.mat";
 
     private const string MainGroupName = "Cloud_New Scene";
     private const string LegacyLateGroupPrefix = "Cloud_New Scene_Late_";
@@ -41,7 +36,7 @@ public static class NewSceneAddressablesSplitter
     private const int MaxConcurrentWebRequests = 8;
     private const long MaxGroupBytes = 50L * 1024L * 1024L;
     private const long MinCandidateBytes = 2L * 1024L * 1024L;
-    private const long SharedDependencyMinBytes = 10L * 1024L * 1024L;
+    private const long SharedDependencyMinBytes = 5L * 1024L * 1024L;
 
     private static readonly string[] LateAssetPathPrefixes =
     {
@@ -86,13 +81,7 @@ public static class NewSceneAddressablesSplitter
 
     private static readonly string[] AdditionalLateHierarchyPaths =
     {
-        "Enviroment/ToaChanhDien_3toa",
-        "Enviroment/MB_Nen_Sau (1)"
-    };
-
-    private static readonly string[] CollisionProxyHierarchyPaths =
-    {
-        "Enviroment/MB_Nen_Sau (1)"
+        "Enviroment/ToaChanhDien_3toa"
     };
 
     private static readonly string[][] PlannedEnvironmentLateBatches =
@@ -191,10 +180,6 @@ public static class NewSceneAddressablesSplitter
         new[]
         {
             "Enviroment/ToaChanhDien_3toa"
-        },
-        new[]
-        {
-            "Enviroment/MB_Nen_Sau (1)"
         },
         new[]
         {
@@ -323,7 +308,6 @@ public static class NewSceneAddressablesSplitter
         EnsureReportDirectory();
         CleanupGeneratedAddressableOutputs(false);
         EnsureAssetFolder(GeneratedSceneDirectory);
-        EnsureAssetFolder(GeneratedMaterialDirectory);
 
         if (!AssetDatabase.CopyAsset(AuthoringScenePath, GeneratedMainScenePath))
             throw new InvalidOperationException("Failed to copy authoring scene to generated path: " + GeneratedMainScenePath);
@@ -440,8 +424,6 @@ public static class NewSceneAddressablesSplitter
                 continue;
             }
 
-            CreateCollisionProxyIfNeeded(generatedMainScene, go, hierarchyPath);
-
             if (!objects.Contains(go))
                 objects.Add(go);
         }
@@ -468,14 +450,29 @@ public static class NewSceneAddressablesSplitter
         foreach (GameObject go in objects)
         {
             string originalPath = GetHierarchyPath(go);
-            bool activeInHierarchy = go.activeInHierarchy;
+            TransformSnapshot transformSnapshot = CaptureTransformSnapshot(go.transform);
+            List<TransformSnapshot> parentSnapshots = CaptureParentSnapshots(go.transform);
 
-            go.transform.SetParent(null, true);
-
-            if (!activeInHierarchy)
-                go.SetActive(false);
-
+            go.transform.SetParent(null, false);
             SceneManager.MoveGameObjectToScene(go, lateScene);
+
+            GameObject parent = FindOrCreateTransformHierarchy(lateScene, parentSnapshots);
+
+            if (parent != null)
+                go.transform.SetParent(parent.transform, false);
+
+            ApplyObjectSnapshot(go, transformSnapshot);
+            ApplyTransformSnapshot(go.transform, transformSnapshot);
+            int clearedBatchingStaticCount = ClearBatchingStaticRecursive(go);
+
+            if (clearedBatchingStaticCount > 0)
+            {
+                Debug.Log("[NewSceneSplit] Disabled runtime static batching for late scene object '"
+                          + originalPath
+                          + "' render hierarchy count="
+                          + clearedBatchingStaticCount);
+            }
+
             splitReport.Append(sceneName);
             splitReport.Append('\t');
             splitReport.Append(EscapeTsv(originalPath));
@@ -489,110 +486,126 @@ public static class NewSceneAddressablesSplitter
         lateSceneKeys.Add(sceneName);
     }
 
-    private static void CreateCollisionProxyIfNeeded(Scene scene, GameObject source, string hierarchyPath)
+    private static List<TransformSnapshot> CaptureParentSnapshots(Transform transform)
     {
-        if (!ShouldCreateCollisionProxy(hierarchyPath))
-            return;
+        List<TransformSnapshot> snapshots = new List<TransformSnapshot>();
+        Transform current = transform.parent;
 
-        if (!TryGetCombinedProxyBounds(source, out Bounds bounds))
+        while (current != null)
         {
-            Debug.LogWarning("[NewSceneSplit] Cannot create collision proxy, no bounds found: " + hierarchyPath);
-            return;
+            snapshots.Add(CaptureTransformSnapshot(current));
+            current = current.parent;
         }
 
-        GameObject root = GetOrCreateCollisionProxyRoot(scene);
-        GameObject proxy = new GameObject(CollisionProxyNamePrefix + hierarchyPath);
-        proxy.layer = source.layer;
-
-        SceneManager.MoveGameObjectToScene(proxy, scene);
-        proxy.transform.SetParent(root.transform, false);
-        proxy.transform.rotation = Quaternion.identity;
-        proxy.transform.localScale = Vector3.one;
-
-        float height = Mathf.Clamp(bounds.size.y, 0.25f, 2f);
-        float centerY = bounds.size.y > 2f ? bounds.min.y + (height * 0.5f) : bounds.center.y;
-        proxy.transform.position = new Vector3(bounds.center.x, centerY, bounds.center.z);
-
-        BoxCollider collider = proxy.AddComponent<BoxCollider>();
-        collider.center = Vector3.zero;
-        collider.size = new Vector3(
-            Mathf.Max(1f, bounds.size.x),
-            height,
-            Mathf.Max(1f, bounds.size.z));
-
-        EditorUtility.SetDirty(proxy);
-
-        Debug.Log("[NewSceneSplit] Created generated collision proxy for "
-                  + hierarchyPath
-                  + " size="
-                  + collider.size);
+        snapshots.Reverse();
+        return snapshots;
     }
 
-    private static bool ShouldCreateCollisionProxy(string hierarchyPath)
+    private static TransformSnapshot CaptureTransformSnapshot(Transform transform)
     {
-        return CollisionProxyHierarchyPaths.Any(path =>
-            string.Equals(path, hierarchyPath, StringComparison.OrdinalIgnoreCase));
-    }
+        GameObject go = transform.gameObject;
 
-    private static GameObject GetOrCreateCollisionProxyRoot(Scene scene)
-    {
-        GameObject root = scene
-            .GetRootGameObjects()
-            .FirstOrDefault(go => go.name == CollisionProxyRootName);
-
-        if (root == null)
+        return new TransformSnapshot
         {
-            root = new GameObject(CollisionProxyRootName);
-            SceneManager.MoveGameObjectToScene(root, scene);
-        }
-
-        root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-        root.transform.localScale = Vector3.one;
-
-        return root;
+            Name = go.name,
+            LocalPosition = transform.localPosition,
+            LocalRotation = transform.localRotation,
+            LocalScale = transform.localScale,
+            ActiveSelf = go.activeSelf,
+            Layer = go.layer,
+            Tag = go.tag,
+            StaticFlags = GameObjectUtility.GetStaticEditorFlags(go)
+        };
     }
 
-    private static bool TryGetCombinedProxyBounds(GameObject source, out Bounds bounds)
+    private static GameObject FindOrCreateTransformHierarchy(Scene scene, IReadOnlyList<TransformSnapshot> snapshots)
     {
-        bool hasBounds = false;
-        bounds = new Bounds(source.transform.position, Vector3.zero);
+        if (snapshots == null || snapshots.Count == 0)
+            return null;
 
-        foreach (Collider collider in source.GetComponentsInChildren<Collider>(true))
+        GameObject current = null;
+
+        for (int i = 0; i < snapshots.Count; i++)
         {
-            if (collider == null || collider.isTrigger)
-                continue;
+            TransformSnapshot snapshot = snapshots[i];
 
-            if (!hasBounds)
+            if (current == null)
             {
-                bounds = collider.bounds;
-                hasBounds = true;
+                current = scene.GetRootGameObjects()
+                    .FirstOrDefault(go => string.Equals(go.name, snapshot.Name, StringComparison.Ordinal));
+
+                if (current == null)
+                {
+                    current = new GameObject(snapshot.Name);
+                    SceneManager.MoveGameObjectToScene(current, scene);
+                }
             }
             else
             {
-                bounds.Encapsulate(collider.bounds);
+                Transform child = current.transform.Cast<Transform>()
+                    .FirstOrDefault(t => string.Equals(t.name, snapshot.Name, StringComparison.Ordinal));
+
+                if (child == null)
+                {
+                    GameObject created = new GameObject(snapshot.Name);
+                    created.transform.SetParent(current.transform, false);
+                    child = created.transform;
+                }
+
+                current = child.gameObject;
             }
+
+            ApplyObjectSnapshot(current, snapshot);
+            ApplyTransformSnapshot(current.transform, snapshot);
         }
 
-        if (hasBounds)
-            return true;
+        return current;
+    }
 
-        foreach (Renderer renderer in source.GetComponentsInChildren<Renderer>(true))
+    private static void ApplyObjectSnapshot(GameObject go, TransformSnapshot snapshot)
+    {
+        go.layer = snapshot.Layer;
+
+        try
         {
-            if (renderer == null)
+            go.tag = snapshot.Tag;
+        }
+        catch (UnityException)
+        {
+            go.tag = "Untagged";
+        }
+
+        GameObjectUtility.SetStaticEditorFlags(go, snapshot.StaticFlags);
+        go.SetActive(snapshot.ActiveSelf);
+        EditorUtility.SetDirty(go);
+    }
+
+    private static void ApplyTransformSnapshot(Transform transform, TransformSnapshot snapshot)
+    {
+        transform.localPosition = snapshot.LocalPosition;
+        transform.localRotation = snapshot.LocalRotation;
+        transform.localScale = snapshot.LocalScale;
+        EditorUtility.SetDirty(transform);
+    }
+
+    private static int ClearBatchingStaticRecursive(GameObject root)
+    {
+        int changedCount = 0;
+
+        foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))
+        {
+            GameObject go = transform.gameObject;
+            StaticEditorFlags flags = GameObjectUtility.GetStaticEditorFlags(go);
+
+            if ((flags & StaticEditorFlags.BatchingStatic) == 0)
                 continue;
 
-            if (!hasBounds)
-            {
-                bounds = renderer.bounds;
-                hasBounds = true;
-            }
-            else
-            {
-                bounds.Encapsulate(renderer.bounds);
-            }
+            GameObjectUtility.SetStaticEditorFlags(go, flags & ~StaticEditorFlags.BatchingStatic);
+            EditorUtility.SetDirty(go);
+            changedCount++;
         }
 
-        return hasBounds;
+        return changedCount;
     }
 
     private static int RestoreLegacyLateScenesIntoAuthoringScene(
@@ -729,16 +742,10 @@ public static class NewSceneAddressablesSplitter
             initialUiDependencyPaths ?? Enumerable.Empty<string>(),
             StringComparer.OrdinalIgnoreCase);
 
-        if (generatedScenePaths.Count > 0)
-        {
-            foreach (string mainDependencyPath in AssetDatabase.GetDependencies(generatedScenePaths[0], true))
-                excludedPaths.Add(mainDependencyPath);
-        }
-
         Dictionary<string, int> sceneReferenceCounts =
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (string scenePath in generatedScenePaths.Skip(1))
+        foreach (string scenePath in generatedScenePaths)
         {
             HashSet<string> sceneDependencies = new HashSet<string>(
                 AssetDatabase.GetDependencies(scenePath, true),
@@ -963,93 +970,12 @@ public static class NewSceneAddressablesSplitter
 
     private static void ApplyGeneratedSceneOptimizations(Scene scene)
     {
-        RenderSettings.skybox = null;
-
-        Material originalMaterial = AssetDatabase.LoadAssetAtPath<Material>(OriginalWindowMaterialPath);
-        Material liteMaterial = GetOrCreateGeneratedLiteWindowMaterial();
-
-        if (originalMaterial == null || liteMaterial == null)
-            return;
-
-        int replacedCount = 0;
-
-        foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
-            {
-                Material[] materials = renderer.sharedMaterials;
-                bool changed = false;
-
-                for (int i = 0; i < materials.Length; i++)
-                {
-                    if (materials[i] != originalMaterial)
-                        continue;
-
-                    materials[i] = liteMaterial;
-                    changed = true;
-                    replacedCount++;
-                }
-
-                if (!changed)
-                    continue;
-
-                renderer.sharedMaterials = materials;
-                EditorUtility.SetDirty(renderer);
-            }
-        }
-
-        if (replacedCount > 0)
-            Debug.Log("[NewSceneSplit] Replaced generated-only heavy window material refs: " + replacedCount);
+        Debug.Log("[NewSceneSplit] Preserve scene mode: material and render settings optimizations are disabled.");
     }
 
     private static void PatchGeneratedMainSceneYaml()
     {
-        string absoluteScenePath = ToAbsolutePath(GeneratedMainScenePath);
-
-        if (!File.Exists(absoluteScenePath))
-            return;
-
-        string sceneYaml = File.ReadAllText(absoluteScenePath);
-        string patchedYaml = sceneYaml
-            .Replace(
-                "m_OcclusionCullingData: {fileID: 36300000, guid: 5dd80b04e569fa248ac82d2c7abbe5bd, type: 2}",
-                "m_OcclusionCullingData: {fileID: 0}")
-            .Replace(
-                "m_SkyboxMaterial: {fileID: 2100000, guid: d41ed884a61bd9b44b55f1e9f86f80d0, type: 2}",
-                "m_SkyboxMaterial: {fileID: 0}");
-
-        if (string.Equals(sceneYaml, patchedYaml, StringComparison.Ordinal))
-            return;
-
-        File.WriteAllText(absoluteScenePath, patchedYaml);
-        Debug.Log("[NewSceneSplit] Removed generated-only skybox/occlusion references from main scene.");
-    }
-
-    private static Material GetOrCreateGeneratedLiteWindowMaterial()
-    {
-        Material material = AssetDatabase.LoadAssetAtPath<Material>(GeneratedLiteWindowMaterialPath);
-
-        if (material == null)
-        {
-            if (!AssetDatabase.CopyAsset(OriginalWindowMaterialPath, GeneratedLiteWindowMaterialPath))
-            {
-                Debug.LogWarning("[NewSceneSplit] Failed to create generated lite material from: " + OriginalWindowMaterialPath);
-                return null;
-            }
-
-            AssetDatabase.ImportAsset(GeneratedLiteWindowMaterialPath);
-            material = AssetDatabase.LoadAssetAtPath<Material>(GeneratedLiteWindowMaterialPath);
-        }
-
-        if (material == null)
-            return null;
-
-        if (material.HasProperty("_RoomCube"))
-            material.SetTexture("_RoomCube", null);
-
-        EditorUtility.SetDirty(material);
-
-        return material;
+        Debug.Log("[NewSceneSplit] Preserve scene mode: YAML skybox/occlusion patch is disabled.");
     }
 
     private static void RemoveEntries(AddressableAssetGroup group, Func<AddressableAssetEntry, bool> predicate)
@@ -1730,5 +1656,17 @@ public static class NewSceneAddressablesSplitter
         public bool UsesLateAssetPath;
         public bool MoveCandidate;
         public string Reason;
+    }
+
+    private sealed class TransformSnapshot
+    {
+        public string Name;
+        public Vector3 LocalPosition;
+        public Quaternion LocalRotation;
+        public Vector3 LocalScale;
+        public bool ActiveSelf;
+        public int Layer;
+        public string Tag;
+        public StaticEditorFlags StaticFlags;
     }
 }
