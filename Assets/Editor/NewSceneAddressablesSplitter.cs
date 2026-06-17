@@ -463,14 +463,14 @@ public static class NewSceneAddressablesSplitter
 
             ApplyObjectSnapshot(go, transformSnapshot);
             ApplyTransformSnapshot(go.transform, transformSnapshot);
-            int batchingStaticCount = CountBatchingStaticRecursive(go);
+            int clearedBatchingStaticCount = ClearBatchingStaticRecursive(go);
 
-            if (batchingStaticCount > 0)
+            if (clearedBatchingStaticCount > 0)
             {
-                Debug.Log("[NewSceneSplit] Preserved runtime static batching for late scene object '"
+                Debug.Log("[NewSceneSplit] Disabled runtime static batching for late scene object '"
                           + originalPath
                           + "' render hierarchy count="
-                          + batchingStaticCount);
+                          + clearedBatchingStaticCount);
             }
 
             splitReport.Append(sceneName);
@@ -481,9 +481,6 @@ public static class NewSceneAddressablesSplitter
 
         if (!EditorSceneManager.SaveScene(lateScene, scenePath))
             throw new InvalidOperationException("Failed to save generated late scene: " + scenePath);
-
-        PatchGeneratedSceneLightingYaml(scenePath, GeneratedMainScenePath);
-        AssetDatabase.ImportAsset(scenePath, ImportAssetOptions.ForceUpdate);
 
         generatedScenePaths.Add(scenePath);
         lateSceneKeys.Add(sceneName);
@@ -591,20 +588,24 @@ public static class NewSceneAddressablesSplitter
         EditorUtility.SetDirty(transform);
     }
 
-    private static int CountBatchingStaticRecursive(GameObject root)
+    private static int ClearBatchingStaticRecursive(GameObject root)
     {
-        int count = 0;
+        int changedCount = 0;
 
         foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))
         {
             GameObject go = transform.gameObject;
             StaticEditorFlags flags = GameObjectUtility.GetStaticEditorFlags(go);
 
-            if ((flags & StaticEditorFlags.BatchingStatic) != 0)
-                count++;
+            if ((flags & StaticEditorFlags.BatchingStatic) == 0)
+                continue;
+
+            GameObjectUtility.SetStaticEditorFlags(go, flags & ~StaticEditorFlags.BatchingStatic);
+            EditorUtility.SetDirty(go);
+            changedCount++;
         }
 
-        return count;
+        return changedCount;
     }
 
     private static int RestoreLegacyLateScenesIntoAuthoringScene(
@@ -974,60 +975,7 @@ public static class NewSceneAddressablesSplitter
 
     private static void PatchGeneratedMainSceneYaml()
     {
-        PatchGeneratedSceneLightingYaml(GeneratedMainScenePath, AuthoringScenePath);
-        AssetDatabase.ImportAsset(GeneratedMainScenePath, ImportAssetOptions.ForceUpdate);
-        Debug.Log("[NewSceneSplit] Preserved authoring RenderSettings and LightmapSettings in generated main scene.");
-    }
-
-    private static void PatchGeneratedSceneLightingYaml(string scenePath, string sourceScenePath)
-    {
-        string absoluteScenePath = ToAbsolutePath(scenePath);
-        string absoluteSourcePath = ToAbsolutePath(sourceScenePath);
-
-        if (!File.Exists(absoluteScenePath) || !File.Exists(absoluteSourcePath))
-            return;
-
-        string sceneYaml = File.ReadAllText(absoluteScenePath);
-        string sourceYaml = File.ReadAllText(absoluteSourcePath);
-        string patchedYaml = sceneYaml;
-
-        patchedYaml = ReplaceUnityYamlDocument(patchedYaml, sourceYaml, "104");
-        patchedYaml = ReplaceUnityYamlDocument(patchedYaml, sourceYaml, "157");
-
-        if (!string.Equals(sceneYaml, patchedYaml, StringComparison.Ordinal))
-            File.WriteAllText(absoluteScenePath, patchedYaml, new UTF8Encoding(false));
-    }
-
-    private static string ReplaceUnityYamlDocument(string targetYaml, string sourceYaml, string classId)
-    {
-        string marker = "--- !u!" + classId + " ";
-        string sourceBlock = GetUnityYamlDocument(sourceYaml, marker);
-
-        if (string.IsNullOrEmpty(sourceBlock))
-            return targetYaml;
-
-        int targetStart = targetYaml.IndexOf(marker, StringComparison.Ordinal);
-        if (targetStart < 0)
-            return targetYaml;
-
-        int targetEnd = FindUnityYamlDocumentEnd(targetYaml, targetStart);
-        return targetYaml.Substring(0, targetStart) + sourceBlock + targetYaml.Substring(targetEnd);
-    }
-
-    private static string GetUnityYamlDocument(string yaml, string marker)
-    {
-        int start = yaml.IndexOf(marker, StringComparison.Ordinal);
-        if (start < 0)
-            return null;
-
-        int end = FindUnityYamlDocumentEnd(yaml, start);
-        return yaml.Substring(start, end - start);
-    }
-
-    private static int FindUnityYamlDocumentEnd(string yaml, int start)
-    {
-        int next = yaml.IndexOf("\n--- !u!", start + 1, StringComparison.Ordinal);
-        return next < 0 ? yaml.Length : next + 1;
+        Debug.Log("[NewSceneSplit] Preserve scene mode: YAML skybox/occlusion patch is disabled.");
     }
 
     private static void RemoveEntries(AddressableAssetGroup group, Func<AddressableAssetEntry, bool> predicate)

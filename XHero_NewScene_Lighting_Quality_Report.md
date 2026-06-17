@@ -1,6 +1,6 @@
 ﻿# XHero LMS URP Mobile Scene Optimization Report
 
-Generated: 2026-06-16 15:39:15
+Generated: 2026-06-17 08:46:29
 Mode: after mobile lighting quality pass
 Unity: 6000.2.6f2
 Active build target: Android
@@ -8,11 +8,6 @@ Active build target: Android
 ## Applied Changes
 - Mobile lighting quality pass: better main-light shadows, mixed lighting bake prep, HTrace/GPUI remain disabled.
 - Mobile quality lighting tuned: 2x MSAA, 28m shadow distance, 2 cascades, high main shadow quality target.
-- Main light shadowmap raised to 2048 to reduce blocky shadows.
-- Shadow distance reduced to 28m so 2048 shadows stay sharp without raising batches.
-- 2-cascade split set to 0.22 for a sharper near-player cascade.
-- Additional lights per object limited to 1.
-- Soft shadow quality set to Medium.
 - Scene 'Assets/Scenes/New Scene.unity':
 - Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
 - RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
@@ -24,7 +19,7 @@ Active build target: Android
 - Updated existing XHero mobile reflection probe.
 - Existing LightProbeGroup found; kept as-is.
 - Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
-- Disabled realtime shadows on 33 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
+- Disabled realtime shadows on 25 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 
 ## URP / Quality Baseline
 Quality level: Mobile (0)

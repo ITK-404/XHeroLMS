@@ -1,204 +1,342 @@
 ﻿# XHero LMS URP Mobile Scene Optimization Report
 
-Generated: 2026-06-16 15:38:39
-Mode: after stable mobile repair pass
+Generated: 2026-06-17 09:09:47
+Mode: after one-click mobile optimization
 Unity: 6000.2.6f2
 Active build target: Android
 
 ## Applied Changes
-- Stable recovery pass: HTrace, GPUI prefab rendering, HDR/post stack, and bulk material instancing are disabled by default until each group is visually verified.
+- One-click mobile pass: stable rendering repair, mobile lighting quality, mesh-safe static prep, then generated New Scene split refresh.
 - Mobile quality tuned: 2x MSAA, 35m shadows, 2 cascades, display buffer 32-bit.
-- Main light shadowmap kept at 1024.
-- URP shadow distance restored to 35m stable baseline.
-- 2-cascade split kept at 0.28.
-- Additional lights per object restored to 2.
-- Soft shadow quality kept Low.
+- Mobile quality lighting tuned: 2x MSAA, 28m shadow distance, 2 cascades, high main shadow quality target.
 - No auto-added GPUIPrefab components found on the previous unsafe prototype prefabs.
 - Scene 'Assets/Scenes/Certificates Scene.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=3, batchingStatic=3, contributeGI=3.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Course Scene Test_Data.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Course Scene.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/dai_dao_chi_gian_1.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=242, batchingStatic=242, contributeGI=242.
+- Disabled realtime shadows on 36 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/dai_dao_chi_gian_2.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=79, batchingStatic=79, contributeGI=79.
+- Disabled realtime shadows on 29 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Enter_Webview.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/IntroScene.unity':
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- No Directional Light found; skipped main light quality tuning.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/LoadingScene.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/New Scene 1.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=18, batchingStatic=18, contributeGI=18.
+- Disabled realtime shadows on 16 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/New Scene.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Updated existing XHero mobile reflection probe.
+- Existing LightProbeGroup found; kept as-is.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 25 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/New Scene/testS.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/NewScene/DDCG2.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=81, batchingStatic=81, contributeGI=76.
+- Disabled realtime shadows on 15 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/phong_ky_mon.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=365, batchingStatic=365, contributeGI=201.
+- Disabled realtime shadows on 21 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/phong_tuyen_sinh.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=234, batchingStatic=234, contributeGI=203.
+- Disabled realtime shadows on 31 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Preview_Certificates.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=20, batchingStatic=20, contributeGI=20.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Safe/Backup.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=236, batchingStatic=236, contributeGI=71.
+- Disabled realtime shadows on 653 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/Safe/dai_dao_chi_gian_2_archive.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=143, batchingStatic=143, contributeGI=138.
+- Disabled realtime shadows on 28 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/test.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/UI_Creator Scene.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Added one baked box-projected mobile reflection probe.
+- Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=2, batchingStatic=2, contributeGI=2.
+- Disabled realtime shadows on 2 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
 - Scene 'Assets/Scenes/WebView_Mobile.unity':
-- Directional Light restored to stable realtime white light with soft medium shadows.
-- RenderSettings restored to Skybox ambient/reflection at intensity 1.0.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
-- Disabled 1 XHero cinematic/HTrace volume object(s).
-- Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.
 - Disabled GPUI Prefab Manager 'GPUI Prefab Manager - XHero Mobile' and cleared 0 prototype(s).
 - No risky ShaderGraph/custom/legacy material instancing found to disable.
+- Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.
+- RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Disabled HTrace volume component in profile 'Assets/Settings/XHero_Mobile_CinematicLook.asset'.
+- Cameras kept HDR/post off; world cameras keep depth and occlusion culling.
+- Direct light samples set to 24.
+- Assigned XHero_NewScene_MobileLighting.lighting to the active scene.
+- Renderer bounds empty; skipped reflection probe fit.
+- Renderer bounds empty; skipped light probe grid.
+- Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.
+- HTrace mobile-low look enabled: volume weight 0.85, world cameras use depth/color/post; UI/minimap cameras stay cheap.
+- Prepared static environment for mobile bake: changed=0, batchingStatic=0, contributeGI=0.
+- Disabled realtime shadows on 0 tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable.
+- Regenerated mesh-safe Bundle_NewScene addressable scene split.
 
 ## URP / Quality Baseline
 Quality level: Mobile (0)
 Static batching project flag: use Player Settings UI; scene renderer static flags are reported below.
 Dynamic batching project flag: controlled in URP asset below.
-Quality shadow distance: 35
+Quality shadow distance: 28
 Quality anti-aliasing: 2
 Quality realtime reflection probes: False
 
@@ -210,18 +348,18 @@ Quality realtime reflection probes: False
 - m_MSAA: 2x
 - m_RequireDepthTexture: True
 - m_RequireOpaqueTexture: True
-- m_MainLightShadowmapResolution: 1024
-- m_ShadowDistance: 35
+- m_MainLightShadowmapResolution: 2048
+- m_ShadowDistance: 28
 - m_ShadowCascadeCount: 2
-- m_AdditionalLightsPerObjectLimit: 2
+- m_AdditionalLightsPerObjectLimit: 1
 - m_AdditionalLightShadowsSupported: False
 - m_SoftShadowsSupported: True
-- m_SoftShadowQuality: Low
+- m_SoftShadowQuality: Medium
 
 ### Mobile Renderer Features
 - DecalRendererFeature (DecalRendererFeature) active=True
 - ScreenSpaceAmbientOcclusion_MobileLow (ScreenSpaceAmbientOcclusion) active=False
-- HTrace Screen Space Global Illumination (HTraceSSGIRendererFeature) active=False
+- HTrace Screen Space Global Illumination (HTraceSSGIRendererFeature) active=True
 
 ## HTrace SSGI Status
 - Assets/HTraceSSGI exists: True
@@ -232,27 +370,27 @@ Quality realtime reflection probes: False
 
 ## Scene: Assets/Scenes/Certificates Scene.unity
 ### Scene Summary
-- Root objects: 8
-- GameObjects: 93 active=29 inactive=64
+- Root objects: 10
+- GameObjects: 95 active=32 inactive=63
 - Renderers: 16 enabled+active=3
 - MeshRenderers: 16 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=3 approx rendered tris=13,618 verts=9,306
 - Material slots approx draw submissions before batching: 3; unique materials=3; instancing-enabled materials=0
-- Static batching flagged renderers: 0/3
+- Static batching flagged renderers: 3/3
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -281,8 +419,8 @@ Quality realtime reflection probes: False
 
 ## Scene: Assets/Scenes/Course Scene Test_Data.unity
 ### Scene Summary
-- Root objects: 12
-- GameObjects: 598 active=102 inactive=496
+- Root objects: 14
+- GameObjects: 600 active=105 inactive=495
 - Renderers: 35 enabled+active=4
 - MeshRenderers: 35 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=1 approx rendered tris=22,448 verts=16,572
@@ -291,17 +429,17 @@ Quality realtime reflection probes: False
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -332,8 +470,8 @@ Quality realtime reflection probes: False
 
 ## Scene: Assets/Scenes/Course Scene.unity
 ### Scene Summary
-- Root objects: 13
-- GameObjects: 599 active=103 inactive=496
+- Root objects: 15
+- GameObjects: 601 active=106 inactive=495
 - Renderers: 35 enabled+active=4
 - MeshRenderers: 35 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=1 approx rendered tris=22,448 verts=16,572
@@ -342,17 +480,17 @@ Quality realtime reflection probes: False
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -383,36 +521,36 @@ Quality realtime reflection probes: False
 
 ## Scene: Assets/Scenes/dai_dao_chi_gian_1.unity
 ### Scene Summary
-- Root objects: 15
-- GameObjects: 1695 active=1113 inactive=582
+- Root objects: 17
+- GameObjects: 1697 active=1116 inactive=581
 - Renderers: 720 enabled+active=512
 - MeshRenderers: 684 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=376 approx rendered tris=1,934,729 verts=1,128,047
 - Material slots approx draw submissions before batching: 611; unique materials=37; instancing-enabled materials=32
-- Static batching flagged renderers: 476/512
+- Static batching flagged renderers: 512/512
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=5, active=5, realtime=5, mixed=0, baked=0
+- Lights: total=5, active=5, realtime=4, mixed=1, baked=0
 - Point: 4
 - Directional: 1
   - Light group/Point Light (7) type=Point mode=Realtime intensity=21.6 shadows=Soft range=10
   - Light group/Point Light (8) type=Point mode=Realtime intensity=9 shadows=Soft range=10
   - Light group/Point Light (9) type=Point mode=Realtime intensity=9 shadows=Soft range=10
   - Light group/Point Light (10) type=Point mode=Realtime intensity=42.96 shadows=Soft range=10
-  - Directional Light type=Directional mode=Realtime intensity=2 shadows=Soft range=10
-- ReflectionProbes: 1
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
+  - Directional Light type=Directional mode=Mixed intensity=1.55 shadows=Soft range=10
+- ReflectionProbes: 2
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
 
 ### Cameras / Volumes
-- Camera phongthuycohoc1 1 1/Main Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera phongthuycohoc1 1 1/Main Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
-- Camera Animator/Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera CaptureCam active=False post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Animator/Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera CaptureCam active=False post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -497,21 +635,21 @@ Quality realtime reflection probes: False
 
 ## Scene: Assets/Scenes/dai_dao_chi_gian_2.unity
 ### Scene Summary
-- Root objects: 16
-- GameObjects: 1054 active=495 inactive=559
+- Root objects: 18
+- GameObjects: 1056 active=498 inactive=558
 - Renderers: 173 enabled+active=112
 - MeshRenderers: 144 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=68 approx rendered tris=656,788 verts=614,119
 - Material slots approx draw submissions before batching: 188; unique materials=91; instancing-enabled materials=9
-- Static batching flagged renderers: 65/112
+- Static batching flagged renderers: 86/112
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=10, active=9, realtime=9, mixed=0, baked=1
+- Lights: total=10, active=9, realtime=8, mixed=1, baked=1
 - Directional: 3
 - Point: 6
 - Rectangle: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
   - Directional Light (1) type=Directional mode=Realtime intensity=0.25 shadows=Soft range=10
   - Dai dao chi gian 2/Light Group/Directional Light type=Directional mode=Realtime intensity=15.3 shadows=Soft range=10
   - Dai dao chi gian 2/Light Group/Point Light type=Point mode=Realtime intensity=5.26 shadows=None range=45.79
@@ -520,17 +658,17 @@ Quality realtime reflection probes: False
   - Point Light type=Point mode=Realtime intensity=4.24 shadows=None range=25.5
   - Point Light (1) type=Point mode=Realtime intensity=4.31 shadows=None range=25.5
   - Point Light (2) type=Point mode=Realtime intensity=0.22 shadows=None range=0.74
-- ReflectionProbes: 1
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- ReflectionProbes: 2
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Animator/Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera Learning Group (1)/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Animator/Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera Learning Group (1)/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Learning Group (1)/Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/DefaultVolumeProfile.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -618,7 +756,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/Enter_Webview.unity
 ### Scene Summary
 - Root objects: 6
-- GameObjects: 8 active=6 inactive=2
+- GameObjects: 8 active=7 inactive=1
 - Renderers: 0 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -627,17 +765,17 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -663,7 +801,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/IntroScene.unity
 ### Scene Summary
 - Root objects: 9
-- GameObjects: 33 active=20 inactive=13
+- GameObjects: 33 active=21 inactive=12
 - Renderers: 1 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -675,12 +813,12 @@ Potential duplicate material names:
 - Lights: total=0, active=0, realtime=0, mixed=0, baked=0
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -706,7 +844,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/LoadingScene.unity
 ### Scene Summary
 - Root objects: 7
-- GameObjects: 32 active=19 inactive=13
+- GameObjects: 32 active=20 inactive=12
 - Renderers: 1 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -715,16 +853,16 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=0, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=0, realtime=0, mixed=1, baked=0
 - Directional: 1
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -749,33 +887,33 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/New Scene 1.unity
 ### Scene Summary
-- Root objects: 7
-- GameObjects: 102 active=99 inactive=3
+- Root objects: 9
+- GameObjects: 104 active=102 inactive=2
 - Renderers: 84 enabled+active=83
 - MeshRenderers: 84 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=67 approx rendered tris=653,988 verts=612,425
 - Material slots approx draw submissions before batching: 159; unique materials=89; instancing-enabled materials=9
-- Static batching flagged renderers: 65/83
+- Static batching flagged renderers: 83/83
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=6, active=6, realtime=6, mixed=0, baked=0
+- Lights: total=6, active=6, realtime=5, mixed=1, baked=0
 - Directional: 3
 - Point: 3
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
   - Directional Light (1) type=Directional mode=Realtime intensity=0.3 shadows=Soft range=10
   - Dai dao chi gian 2/Light Group/Directional Light type=Directional mode=Realtime intensity=15.3 shadows=Soft range=10
   - Dai dao chi gian 2/Light Group/Point Light type=Point mode=Realtime intensity=5.26 shadows=None range=45.79
   - Dai dao chi gian 2/Light Group/Point Light (1) type=Point mode=Realtime intensity=1.34 shadows=None range=52.75
   - Dai dao chi gian 2/Light Group/Point Light (2) type=Point mode=Realtime intensity=16.16 shadows=None range=52.75
-- ReflectionProbes: 1
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- ReflectionProbes: 2
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -835,7 +973,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/New Scene.unity
 ### Scene Summary
 - Root objects: 39
-- GameObjects: 8413 active=4762 inactive=3651
+- GameObjects: 8413 active=4763 inactive=3650
 - Renderers: 4942 enabled+active=2175
 - MeshRenderers: 4911 SkinnedMeshRenderers: 0 Terrains: 4
 - Meshes: unique=184 approx rendered tris=7,894,161 verts=8,854,376
@@ -844,21 +982,21 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.55 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.55 shadows=Soft range=10
 - ReflectionProbes: 1
 - LightProbeGroups: 1, probe count=18
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
 
 ### Cameras / Volumes
-- Camera Main Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Main Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
 - Camera Minimap/Topdown Camera active=True post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/SampleSceneProfile.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager active=False enabled=False prototypes=0 findAtInit=False
@@ -1017,7 +1155,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/New Scene/testS.unity
 ### Scene Summary
 - Root objects: 7
-- GameObjects: 20 active=8 inactive=12
+- GameObjects: 20 active=9 inactive=11
 - Renderers: 0 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -1026,17 +1164,17 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1061,31 +1199,31 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/NewScene/DDCG2.unity
 ### Scene Summary
-- Root objects: 5
-- GameObjects: 95 active=93 inactive=2
+- Root objects: 7
+- GameObjects: 97 active=96 inactive=1
 - Renderers: 81 enabled+active=81
 - MeshRenderers: 81 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=66 approx rendered tris=627,452 verts=577,828
 - Material slots approx draw submissions before batching: 151; unique materials=86; instancing-enabled materials=9
-- Static batching flagged renderers: 0/81
+- Static batching flagged renderers: 81/81
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=4, active=4, realtime=4, mixed=0, baked=0
+- Lights: total=4, active=4, realtime=3, mixed=1, baked=0
 - Directional: 2
 - Point: 2
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
   - Dai dao chi gian 2 1/Light Group/Directional Light type=Directional mode=Realtime intensity=21.57 shadows=Soft range=10
   - Dai dao chi gian 2 1/Light Group/Point Light type=Point mode=Realtime intensity=24.53 shadows=None range=42.98
   - Dai dao chi gian 2 1/Light Group/Point Light (1) type=Point mode=Realtime intensity=22.3 shadows=None range=52.75
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1144,32 +1282,32 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/phong_ky_mon.unity
 ### Scene Summary
-- Root objects: 56
-- GameObjects: 1757 active=1137 inactive=620
+- Root objects: 58
+- GameObjects: 1759 active=1140 inactive=619
 - Renderers: 579 enabled+active=477
 - MeshRenderers: 554 SkinnedMeshRenderers: 7 Terrains: 0
 - Meshes: unique=106 approx rendered tris=566,913 verts=560,239
 - Material slots approx draw submissions before batching: 512; unique materials=61; instancing-enabled materials=15
-- Static batching flagged renderers: 0/477
+- Static batching flagged renderers: 280/477
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=3, active=1, realtime=3, mixed=0, baked=0
+- Lights: total=3, active=1, realtime=2, mixed=1, baked=0
 - Directional: 1
 - Spot: 1
 - Point: 1
-  - Directional Light type=Directional mode=Realtime intensity=2 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
+  - Directional Light type=Directional mode=Mixed intensity=1.55 shadows=Soft range=10
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/SampleSceneProfile.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1273,32 +1411,32 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/phong_tuyen_sinh.unity
 ### Scene Summary
-- Root objects: 28
-- GameObjects: 2609 active=829 inactive=1780
+- Root objects: 30
+- GameObjects: 2611 active=832 inactive=1779
 - Renderers: 396 enabled+active=373
 - MeshRenderers: 370 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=199 approx rendered tris=982,788 verts=1,284,498
 - Material slots approx draw submissions before batching: 435; unique materials=78; instancing-enabled materials=15
-- Static batching flagged renderers: 0/373
+- Static batching flagged renderers: 223/373
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=2, active=2, realtime=2, mixed=0, baked=0
+- Lights: total=2, active=2, realtime=1, mixed=1, baked=0
 - Directional: 1
 - Point: 1
-  - Directional Light type=Directional mode=Realtime intensity=2 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.55 shadows=Soft range=10
   - VFX/Point Light type=Point mode=Realtime intensity=7.04 shadows=None range=10
-- ReflectionProbes: 1
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
+- ReflectionProbes: 2
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Assets/Asset_Store/AllSkyFree/SkyMap.mat
 
 ### Cameras / Volumes
-- Camera Main Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Main Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/SampleSceneProfile.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1407,8 +1545,8 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/Preview_Certificates.unity
 ### Scene Summary
-- Root objects: 11
-- GameObjects: 84 active=48 inactive=36
+- Root objects: 13
+- GameObjects: 86 active=51 inactive=35
 - Renderers: 20 enabled+active=0
 - MeshRenderers: 20 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -1417,21 +1555,21 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=4, active=4, realtime=4, mixed=0, baked=0
+- Lights: total=4, active=4, realtime=3, mixed=1, baked=0
 - Directional: 1
 - Spot: 3
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
   - Spot Light type=Spot mode=Realtime intensity=2383 shadows=None range=50.37
   - Spot Light (2) type=Spot mode=Realtime intensity=2383 shadows=None range=50.37
   - Spot Light (1) type=Spot mode=Realtime intensity=2383 shadows=None range=50.37
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1456,31 +1594,31 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/Safe/Backup.unity
 ### Scene Summary
-- Root objects: 24
-- GameObjects: 3873 active=2066 inactive=1807
+- Root objects: 26
+- GameObjects: 3875 active=2069 inactive=1806
 - Renderers: 2361 enabled+active=972
 - MeshRenderers: 2361 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=113 approx rendered tris=5,849,059 verts=6,598,565
 - Material slots approx draw submissions before batching: 1,907; unique materials=160; instancing-enabled materials=63
-- Static batching flagged renderers: 259/972
+- Static batching flagged renderers: 367/972
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=3, active=1, realtime=3, mixed=0, baked=0
+- Lights: total=3, active=1, realtime=2, mixed=1, baked=0
 - Directional: 3
   - Directional Light (2) type=Directional mode=Realtime intensity=2 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=True post=True depth=True color=True hdr=False msaa=True
 - Camera Player/YawPivot/PitchPivot/FP_Camera/UICamera active=True post=False depth=False color=False hdr=False msaa=False
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
 - Camera CameraMiniMap active=True post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/SampleSceneProfile.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1604,31 +1742,31 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/Safe/dai_dao_chi_gian_2_archive.unity
 ### Scene Summary
-- Root objects: 20
-- GameObjects: 774 active=73 inactive=701
+- Root objects: 22
+- GameObjects: 776 active=76 inactive=700
 - Renderers: 146 enabled+active=65
 - MeshRenderers: 131 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=65 approx rendered tris=491,196 verts=416,020
 - Material slots approx draw submissions before batching: 136; unique materials=88; instancing-enabled materials=9
-- Static batching flagged renderers: 0/65
+- Static batching flagged renderers: 65/65
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=12, active=1, realtime=12, mixed=0, baked=0
+- Lights: total=12, active=1, realtime=11, mixed=1, baked=0
 - Directional: 1
 - Point: 11
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
-- ReflectionProbes: 1
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
+- ReflectionProbes: 2
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=False post=False depth=True color=True hdr=False msaa=True
-- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=False post=False depth=True color=True hdr=False msaa=True
+- Camera Main Camera active=False post=True depth=True color=True hdr=False msaa=True
+- Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/CameraPlayer active=False post=True depth=True color=True hdr=False msaa=True
 - Camera Learning Group/Player/YawPivot/PitchPivot/FP_Camera/UICamera active=False post=False depth=False color=False hdr=False msaa=False
 - Volume Global Volume active=True global=True weight=1 profile=Assets/Settings/SampleSceneProfile 1.asset
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1713,7 +1851,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/test.unity
 ### Scene Summary
 - Root objects: 5
-- GameObjects: 47 active=42 inactive=5
+- GameObjects: 47 active=43 inactive=4
 - Renderers: 0 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -1722,17 +1860,17 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1757,27 +1895,27 @@ Potential duplicate material names:
 
 ## Scene: Assets/Scenes/UI_Creator Scene.unity
 ### Scene Summary
-- Root objects: 17
-- GameObjects: 2582 active=44 inactive=2538
+- Root objects: 19
+- GameObjects: 2584 active=47 inactive=2537
 - Renderers: 4 enabled+active=1
 - MeshRenderers: 3 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
 - Material slots approx draw submissions before batching: 1; unique materials=1; instancing-enabled materials=0
-- Static batching flagged renderers: 0/1
+- Static batching flagged renderers: 1/1
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
-- ReflectionProbes: 0
-- LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
+- ReflectionProbes: 1
+- LightProbeGroups: 1, probe count=18
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False
@@ -1804,7 +1942,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/WebView_Mobile.unity
 ### Scene Summary
 - Root objects: 6
-- GameObjects: 33 active=27 inactive=6
+- GameObjects: 33 active=28 inactive=5
 - Renderers: 0 enabled+active=0
 - MeshRenderers: 0 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=0 approx rendered tris=0 verts=0
@@ -1813,17 +1951,17 @@ Potential duplicate material names:
 - Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.
 
 ### Lighting / Probes
-- Lights: total=1, active=1, realtime=1, mixed=0, baked=0
+- Lights: total=1, active=1, realtime=0, mixed=1, baked=0
 - Directional: 1
-  - Directional Light type=Directional mode=Realtime intensity=1.25 shadows=Soft range=10
+  - Directional Light type=Directional mode=Mixed intensity=1.3 shadows=Soft range=10
 - ReflectionProbes: 0
 - LightProbeGroups: 0, probe count=0
-- Ambient mode=Skybox, ambientIntensity=1, reflectionIntensity=1, skybox=Resources/unity_builtin_extra
+- Ambient mode=Skybox, ambientIntensity=0.92, reflectionIntensity=0.82, skybox=Resources/unity_builtin_extra
 
 ### Cameras / Volumes
-- Camera Main Camera active=True post=False depth=True color=True hdr=False msaa=True
-- Volume XHero Mobile Cinematic Look active=False global=True weight=0 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
-  - HTrace enabled=False active=False rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
+- Camera Main Camera active=True post=True depth=True color=True hdr=False msaa=True
+- Volume XHero Mobile Cinematic Look active=True global=True weight=0.85 profile=Assets/Settings/XHero_Mobile_CinematicLook.asset
+  - HTrace enabled=True active=True rays=2 steps=10 scale=0.5 checkerboard=True intensity=0.62
 
 ### GPU Instancer Pro
 - GPUI Prefab Manager - XHero Mobile active=False enabled=False prototypes=0 findAtInit=False

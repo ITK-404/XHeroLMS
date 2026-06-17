@@ -53,39 +53,54 @@ public static class XHeroMobileSceneOptimizer
         "npc", "quest", "video", "webview", "canvas"
     };
 
-    [MenuItem("Tools/XHero LMS/Optimization/Generate Current Scene Report")]
-    public static void GenerateCurrentSceneReportMenu()
+    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Stable Mobile Repair + Lighting Optimize")]
+    public static void ApplyOneClickStableMobileRepairAndLightingMenu()
     {
-        var scene = SceneManager.GetActiveScene().path;
-        if (string.IsNullOrEmpty(scene))
-            scene = DefaultScene;
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        {
+            Debug.LogWarning("[XHeroMobileSceneOptimizer] ONE CLICK cancelled because current scene changes were not saved.");
+            return;
+        }
 
-        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_Scene_Optimization_Report.md"));
-        GenerateReport(new[] { scene }, outPath, "manual");
-        EditorUtility.RevealInFinder(outPath);
-    }
+        var allScenes = GetAllProjectScenePaths();
+        if (allScenes == null || allScenes.Length == 0)
+            allScenes = new[] { DefaultScene };
 
-    [MenuItem("Tools/XHero LMS/Optimization/Apply Safe Mobile Look To Current Scene")]
-    public static void ApplySafeMobileLookMenu()
-    {
-        ApplySafeMobileQualityPass(new[] { SceneManager.GetActiveScene().path }, null);
-    }
+        var lightingScenes = allScenes
+            .Where(path => string.Equals(path, DefaultScene, StringComparison.OrdinalIgnoreCase))
+            .DefaultIfEmpty(DefaultScene)
+            .ToArray();
 
-    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Stable Mobile Repair + Optimize")]
-    public static void ApplyOneClickMobileProjectOptimizationMenu()
-    {
-        var scenes = GetAllProjectScenePaths();
-        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + FullProjectReportPath));
-        ApplyStableMobileRepairPass(scenes, outPath);
-        EditorUtility.RevealInFinder(outPath);
-    }
+        try
+        {
+            Debug.Log("[XHeroMobileSceneOptimizer] ONE CLICK started: Stable Repair -> Mobile Lighting Quality. No .md report will be exported.");
 
-    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - New Scene Lighting + Sharp Mobile Shadows")]
-    public static void ApplyNewSceneLightingQualityMenu()
-    {
-        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_NewScene_Lighting_Quality_Report.md"));
-        ApplyMobileLightingQualityPass(new[] { DefaultScene }, outPath, false);
-        EditorUtility.RevealInFinder(outPath);
+            // Step 1: repair/restore safe mobile baseline for all project scenes.
+            // This keeps HTrace, GPUI prefab rendering, HDR/post stack, and risky material instancing disabled.
+            ApplyStableMobileRepairPass(allScenes, null);
+
+            // Step 2: apply sharp mobile lighting/shadow settings for New Scene only.
+            // bakeNow = false to avoid long blocking bake and keep this as a safe one-click editor pass.
+            ApplyMobileLightingQualityPass(lightingScenes, null, false);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log("[XHeroMobileSceneOptimizer] ONE CLICK completed successfully. No .md report was exported.");
+            EditorUtility.DisplayDialog(
+                "XHero Mobile Optimizer",
+                "ONE CLICK hoàn tất.\n\nĐã chạy Stable Mobile Repair + Lighting Optimize.\nKhông xuất file .md.",
+                "OK");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[XHeroMobileSceneOptimizer] ONE CLICK failed:\n" + ex);
+            EditorUtility.DisplayDialog(
+                "XHero Mobile Optimizer",
+                "ONE CLICK bị lỗi. Xem Console để kiểm tra chi tiết:\n\n" + ex.Message,
+                "OK");
+            throw;
+        }
     }
 
     public static void GenerateReportBatch()
