@@ -1,6 +1,6 @@
 ﻿# XHero LMS URP Mobile Scene Optimization Report
 
-Generated: 2026-06-17 08:46:29
+Generated: 2026-06-17 11:08:37
 Mode: after mobile lighting quality pass
 Unity: 6000.2.6f2
 Active build target: Android
