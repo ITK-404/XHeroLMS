@@ -27,6 +27,13 @@ public static class XHeroMobileSceneOptimizer
     private const string NewSceneMobileLightingSettingsPath = "Assets/Settings/XHero_NewScene_MobileLighting.lighting";
     private const string FullProjectReportPath = "XHero_Mobile_Full_Optimization_Report.md";
 
+    private static readonly string[] GeneratedScenePathHints =
+    {
+        "/Bundle_NewScene/",
+        "/New Scene_AddressableGenerated/",
+        "/New Scene_AddressableLate/"
+    };
+
     private static readonly string[] AutoGpuiPrototypePrefabPaths =
     {
         "Assets/Models_LMS_Mobile/Luat/tree_sen/ghep/Hoa Sen Group.prefab",
@@ -53,7 +60,12 @@ public static class XHeroMobileSceneOptimizer
         "npc", "quest", "video", "webview", "canvas"
     };
 
-    [MenuItem("Tools/XHero LMS/Optimization/Generate Current Scene Report")]
+    private static readonly string[] StaticBatchingRiskyPathHints =
+    {
+        "enviroment/toachanhdien",
+        "modelslms/toachanhdien"
+    };
+
     public static void GenerateCurrentSceneReportMenu()
     {
         var scene = SceneManager.GetActiveScene().path;
@@ -65,22 +77,20 @@ public static class XHeroMobileSceneOptimizer
         EditorUtility.RevealInFinder(outPath);
     }
 
-    [MenuItem("Tools/XHero LMS/Optimization/Apply Safe Mobile Look To Current Scene")]
     public static void ApplySafeMobileLookMenu()
     {
         ApplySafeMobileQualityPass(new[] { SceneManager.GetActiveScene().path }, null);
     }
 
-    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Stable Mobile Repair + Optimize")]
+    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Optimize All Scenes AAA Mobile")]
     public static void ApplyOneClickMobileProjectOptimizationMenu()
     {
         var scenes = GetAllProjectScenePaths();
         var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + FullProjectReportPath));
-        ApplyStableMobileRepairPass(scenes, outPath);
+        ApplyOneClickDeepMobileProjectOptimization(scenes, outPath, false, true);
         EditorUtility.RevealInFinder(outPath);
     }
 
-    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - New Scene Lighting + Sharp Mobile Shadows")]
     public static void ApplyNewSceneLightingQualityMenu()
     {
         var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_NewScene_Lighting_Quality_Report.md"));
@@ -129,6 +139,23 @@ public static class XHeroMobileSceneOptimizer
         ApplyMobileLightingQualityPass(scenes, output, bakeNow);
     }
 
+    public static void ApplyOneClickDeepMobileProjectOptimizationBatch()
+    {
+        var explicitScenes = GetArg("-xheroScenes");
+        var scenes = (string.IsNullOrWhiteSpace(explicitScenes) ? GetAllProjectScenePaths() : GetSceneArgs())
+            .Where(path => !IsGeneratedSplitScenePath(path))
+            .ToArray();
+        var output = GetArg("-xheroOut");
+        if (string.IsNullOrEmpty(output))
+            output = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + FullProjectReportPath));
+
+        var bakeArg = GetArg("-xheroBake");
+        var bakeNow = string.Equals(bakeArg, "true", StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(bakeArg, "1", StringComparison.OrdinalIgnoreCase);
+
+        ApplyOneClickDeepMobileProjectOptimization(scenes, output, bakeNow, true);
+    }
+
     private static string[] GetSceneArgs()
     {
         var sceneArg = GetArg("-xheroScenes");
@@ -152,6 +179,7 @@ public static class XHeroMobileSceneOptimizer
         return Directory.GetFiles(scenesRoot, "*.unity", SearchOption.AllDirectories)
             .Select(path => "Assets" + path.Substring(Application.dataPath.Length).Replace('\\', '/'))
             .Where(path => !path.Contains("/HTraceSSGI/", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !IsGeneratedSplitScenePath(path))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -184,6 +212,7 @@ public static class XHeroMobileSceneOptimizer
 
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             changes.AddRange(ApplySceneLook(scene));
+            changes.AddRange(EnsureMobileFillLights(scene));
             EditorSceneManager.SaveScene(scene);
         }
 
@@ -216,6 +245,7 @@ public static class XHeroMobileSceneOptimizer
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             changes.Add($"Scene '{scenePath}':");
             changes.AddRange(ApplySceneLook(scene, true));
+            changes.AddRange(EnsureMobileFillLights(scene));
             changes.AddRange(ApplyTerrainMobileSettings(scene));
             changes.AddRange(ApplyRendererMobileCulling(scene));
             changes.AddRange(ApplyGpuiPrefabOptimization(scene));
@@ -292,6 +322,7 @@ public static class XHeroMobileSceneOptimizer
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             changes.Add($"Scene '{scenePath}':");
             changes.AddRange(ApplyMobileQualityLighting(scene));
+            changes.AddRange(EnsureMobileFillLights(scene));
             changes.AddRange(PrepareStaticEnvironmentForMobileBake(scene));
             changes.AddRange(OptimizeMobileShadowCasters(scene));
             EditorSceneManager.SaveScene(scene);
@@ -310,6 +341,73 @@ public static class XHeroMobileSceneOptimizer
         else
         {
             Debug.Log("[XHeroMobileSceneOptimizer] Applied mobile lighting quality pass:\n" + string.Join("\n", changes));
+        }
+    }
+
+    private static void ApplyOneClickDeepMobileProjectOptimization(
+        string[] scenePaths,
+        string outputPath,
+        bool bakeNow,
+        bool regenerateNewSceneAddressables)
+    {
+        scenePaths = (scenePaths == null || scenePaths.Length == 0 ? GetAllProjectScenePaths() : scenePaths)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Where(path => !IsGeneratedSplitScenePath(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var changes = new List<string>
+        {
+            "Safe one-click mobile repair/optimization pipeline: disable unsafe auto-GPUI/HTrace, restore stable lighting, keep SRP Batcher/static split safety, terrain/shadow culling, then New Scene split regeneration."
+        };
+
+        changes.AddRange(ApplyProjectMobileSettings());
+        changes.AddRange(ApplyStableMobileRpAssetSettings());
+        changes.AddRange(ApplyStableMobileRendererSettings());
+        changes.AddRange(RemoveAutoGpuiPrefabComponents());
+
+        foreach (var scenePath in scenePaths)
+        {
+            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
+                continue;
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            changes.Add($"Scene '{scenePath}':");
+            changes.AddRange(ApplyMobileQualityLighting(scene));
+            changes.AddRange(EnsureMobileFillLights(scene));
+            changes.AddRange(PrepareStaticEnvironmentForMobileBake(scene));
+            changes.AddRange(ApplyTerrainMobileSettings(scene));
+            changes.AddRange(DisableGpuiPrefabRendering(scene));
+            changes.AddRange(RemoveSceneGpuIPrefabComponents(scene));
+            changes.AddRange(ApplyRendererMobileCulling(scene));
+            changes.AddRange(OptimizeMobileShadowCasters(scene));
+            changes.AddRange(DisableRiskyMaterialInstancing(scene));
+            EditorSceneManager.SaveScene(scene);
+
+            if (bakeNow)
+                changes.AddRange(TryBakeActiveSceneLighting(scene));
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        if (regenerateNewSceneAddressables && scenePaths.Any(path => string.Equals(path, DefaultScene, StringComparison.OrdinalIgnoreCase)))
+        {
+            NewSceneAddressablesSplitter.RegenerateCloudNewSceneGroup();
+            changes.Add("Regenerated mesh-safe Bundle_NewScene split after optimizer pass so generated scenes inherit current lighting/post/HTrace settings.");
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        if (!string.IsNullOrEmpty(outputPath))
+        {
+            GenerateReport(scenePaths, outputPath, bakeNow ? "after safe one-click mobile repair + bake attempt" : "after safe one-click mobile repair", changes);
+        }
+        else
+        {
+            Debug.Log("[XHeroMobileSceneOptimizer] Applied deep one-click mobile optimization:\n" + string.Join("\n", changes));
         }
     }
 
@@ -355,7 +453,7 @@ public static class XHeroMobileSceneOptimizer
         SetBool(so, "m_MixedLightingSupported", true, changes, "Mixed lighting support enabled.");
         SetBool(so, "m_RequireDepthTexture", true, changes, "Depth texture kept on for SSAO/post.");
         SetBool(so, "m_RequireOpaqueTexture", true, changes, "Opaque texture kept on because project already uses screen/decal effects.");
-        SetBool(so, "m_SupportsHDR", true, changes, "HDR enabled on Mobile RP asset for ACES/bloom quality.");
+        SetBool(so, "m_SupportsHDR", true, changes, "HDR enabled on Mobile RP asset for neutral bloom quality.");
         SetInt(so, "m_MSAA", 2, changes, "MSAA kept at 2x.");
         SetFloat(so, "m_RenderScale", aggressive ? 0.75f : 0.8f, changes, aggressive ? "Render scale set to 0.75 for mobile FPS headroom." : "Render scale kept at 0.80 for mobile performance.");
         SetInt(so, "m_MainLightShadowmapResolution", 1024, changes, "Main light shadowmap set to 1024 for cleaner outdoor shadows.");
@@ -450,7 +548,7 @@ public static class XHeroMobileSceneOptimizer
         SetFloat(so, "m_ShadowDistance", 28f, changes, "Shadow distance reduced to 28m so 2048 shadows stay sharp without raising batches.");
         SetInt(so, "m_ShadowCascadeCount", 2, changes, "URP shadow cascades kept at 2 for mobile.");
         SetFloat(so, "m_Cascade2Split", 0.22f, changes, "2-cascade split set to 0.22 for a sharper near-player cascade.");
-        SetInt(so, "m_AdditionalLightsPerObjectLimit", 1, changes, "Additional lights per object limited to 1.");
+        SetInt(so, "m_AdditionalLightsPerObjectLimit", 2, changes, "Additional lights per object limited to 2 so neutral corner fill lights can work without opening the floodgate.");
         SetBool(so, "m_AdditionalLightShadowsSupported", false, changes, "Additional light shadows disabled to keep GPU cost stable.");
         SetBool(so, "m_SoftShadowsSupported", true, changes, "Soft shadows enabled.");
         SetInt(so, "m_SoftShadowQuality", 2, changes, "Soft shadow quality set to Medium.");
@@ -625,9 +723,9 @@ public static class XHeroMobileSceneOptimizer
             SetRelativeBool(settings, "AfterOpaque", false);
             SetRelativeInt(settings, "Source", 1);
             SetRelativeInt(settings, "NormalSamples", 1);
-            SetRelativeFloat(settings, "Intensity", 0.32f);
-            SetRelativeFloat(settings, "DirectLightingStrength", 0.25f);
-            SetRelativeFloat(settings, "Radius", 0.23f);
+            SetRelativeFloat(settings, "Intensity", 0.22f);
+            SetRelativeFloat(settings, "DirectLightingStrength", 0.18f);
+            SetRelativeFloat(settings, "Radius", 0.18f);
             SetRelativeInt(settings, "Samples", 1);
             SetRelativeInt(settings, "BlurQuality", 0);
             SetRelativeFloat(settings, "Falloff", 75f);
@@ -635,7 +733,7 @@ public static class XHeroMobileSceneOptimizer
 
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(ssao);
-        changes.Add("Configured SSAO: downsampled, low samples, 0.32 intensity, 0.23 radius.");
+        changes.Add("Configured SSAO: downsampled, low samples, 0.22 intensity, 0.18 radius for softer non-dirty corners.");
     }
 
     private static IEnumerable<string> ApplySceneLook(Scene scene, bool enableHTrace = false)
@@ -653,23 +751,23 @@ public static class XHeroMobileSceneOptimizer
             directional.lightmapBakeType = LightmapBakeType.Mixed;
             directional.shadows = LightShadows.Soft;
             directional.shadowResolution = LightShadowResolution.Medium;
-            directional.shadowStrength = 0.78f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.25f : directional.intensity, 1.05f, 2.0f);
+            directional.shadowStrength = 0.62f;
+            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.48f : directional.intensity, 1.32f, 1.62f);
             directional.useColorTemperature = true;
-            directional.colorTemperature = 5600f;
-            directional.color = new Color(1f, 0.956f, 0.88f, 1f);
+            directional.colorTemperature = 6500f;
+            directional.color = Color.white;
             EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light tuned to mixed, warm 5600K, soft medium shadows, 0.78 shadow strength.");
+            changes.Add("Directional Light tuned to mixed, fresh white 6500K, soft medium shadows, 0.62 shadow strength.");
         }
 
         RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = enableHTrace ? 0.95f : 1.08f;
+        RenderSettings.ambientIntensity = enableHTrace ? 0.92f : 1.04f;
         RenderSettings.reflectionIntensity = Mathf.Clamp(RenderSettings.reflectionIntensity <= 0 ? 0.65f : RenderSettings.reflectionIntensity, 0.6f, 0.9f);
         RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
         RenderSettings.defaultReflectionResolution = 128;
         changes.Add(enableHTrace
-            ? "RenderSettings kept Skybox ambient/reflection, ambient intensity 0.95 for HTrace blend, reflection resolution 128."
-            : "RenderSettings kept Skybox ambient/reflection, ambient intensity 1.08, reflection resolution 128.");
+            ? "RenderSettings kept Skybox ambient/reflection, ambient intensity 0.92 for HTrace blend, reflection resolution 128."
+            : "RenderSettings kept Skybox ambient/reflection, ambient intensity 1.04, reflection resolution 128.");
 
         var volume = FindOrCreateGlobalVolume(roots);
         volume.isGlobal = true;
@@ -677,7 +775,7 @@ public static class XHeroMobileSceneOptimizer
         volume.weight = 1f;
         volume.sharedProfile = LoadOrCreateLookProfile();
         EditorUtility.SetDirty(volume);
-        changes.Add("Global Volume 'XHero Mobile Cinematic Look' assigned to scene with ACES/color/bloom/vignette.");
+        changes.Add("Global Volume 'XHero Mobile Cinematic Look' assigned to scene with neutral fresh-white color/bloom/vignette.");
         if (enableHTrace)
             ConfigureHTraceVolume(volume.sharedProfile, changes);
 
@@ -771,20 +869,22 @@ public static class XHeroMobileSceneOptimizer
             directional.lightmapBakeType = LightmapBakeType.Realtime;
             directional.shadows = LightShadows.Soft;
             directional.shadowResolution = LightShadowResolution.Medium;
-            directional.shadowStrength = 0.82f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 2f : directional.intensity, 1.25f, 2.0f);
-            directional.useColorTemperature = false;
-            directional.color = Color.white;
+            directional.shadowStrength = 0.50f;
+            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.24f, 1.48f);
+            directional.useColorTemperature = true;
+            directional.colorTemperature = 6800f;
+            directional.color = new Color(0.97f, 0.995f, 1f, 1f);
             EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light restored to stable realtime white light with soft medium shadows.");
+            changes.Add("Directional Light restored to clean fresh daylight, softer contrast, and non-yellow neutral-cool tint.");
         }
 
         RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = 1f;
-        RenderSettings.reflectionIntensity = 1f;
+        RenderSettings.ambientIntensity = 1.14f;
+        RenderSettings.reflectionIntensity = 0.90f;
         RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
         RenderSettings.defaultReflectionResolution = 128;
-        changes.Add("RenderSettings restored to Skybox ambient/reflection at intensity 1.0.");
+        RenderSettings.subtractiveShadowColor = new Color(0.70f, 0.74f, 0.82f, 1f);
+        changes.Add("RenderSettings restored to white-fresh Skybox ambient 1.14, reflection 0.90, and softer cool shadow color.");
 
         var disabledVolumes = 0;
         foreach (var volume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v))
@@ -852,7 +952,7 @@ public static class XHeroMobileSceneOptimizer
         return changes;
     }
 
-    private static IEnumerable<string> ApplyMobileQualityLighting(Scene scene)
+    private static IEnumerable<string> ApplyMobileQualityLighting(Scene scene, bool preserveHTraceProfile = false)
     {
         var changes = new List<string>();
         if (!scene.IsValid())
@@ -867,14 +967,14 @@ public static class XHeroMobileSceneOptimizer
             directional.lightmapBakeType = LightmapBakeType.Mixed;
             directional.shadows = LightShadows.Soft;
             directional.shadowResolution = LightShadowResolution.High;
-            directional.shadowStrength = 0.74f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.45f : directional.intensity, 1.3f, 1.55f);
+            directional.shadowStrength = 0.50f;
+            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.24f, 1.48f);
             directional.useColorTemperature = true;
-            directional.colorTemperature = 5900f;
-            directional.color = new Color(1f, 0.975f, 0.93f, 1f);
+            directional.colorTemperature = 6800f;
+            directional.color = new Color(0.97f, 0.995f, 1f, 1f);
             RenderSettings.sun = directional;
             EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light set to Mixed, neutral-warm 5900K, High soft shadows, 0.74 shadow strength.");
+            changes.Add("Directional Light set to Mixed clean daylight 6800K, High soft shadows, 0.50 shadow strength.");
         }
         else
         {
@@ -882,18 +982,25 @@ public static class XHeroMobileSceneOptimizer
         }
 
         RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = 0.88f;
-        RenderSettings.reflectionIntensity = 0.82f;
+        RenderSettings.ambientIntensity = 1.14f;
+        RenderSettings.reflectionIntensity = 0.90f;
         RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
         RenderSettings.defaultReflectionResolution = 128;
-        RenderSettings.subtractiveShadowColor = new Color(0.46f, 0.52f, 0.64f, 1f);
-        changes.Add("RenderSettings balanced: Skybox ambient 0.88, reflection 0.82, neutral cool subtractive shadow color.");
+        RenderSettings.subtractiveShadowColor = new Color(0.70f, 0.74f, 0.82f, 1f);
+        changes.Add("RenderSettings balanced for fresh white mobile look: Skybox ambient 1.14, reflection 0.90, soft cool subtractive shadow color.");
 
-        foreach (var volume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v))
-            DisableHTraceInProfile(volume.sharedProfile, changes);
+        if (preserveHTraceProfile)
+        {
+            changes.Add("HTrace profile preserved for the dedicated mobile-low HTrace pass.");
+        }
+        else
+        {
+            foreach (var volume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v))
+                DisableHTraceInProfile(volume.sharedProfile, changes);
 
-        var lookProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(SceneLookProfilePath);
-        DisableHTraceInProfile(lookProfile, changes);
+            var lookProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(SceneLookProfilePath);
+            DisableHTraceInProfile(lookProfile, changes);
+        }
 
         foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
         {
@@ -924,6 +1031,262 @@ public static class XHeroMobileSceneOptimizer
         changes.AddRange(EnsureMobileReflectionProbe(scene, roots));
         changes.AddRange(EnsureMobileLightProbeGrid(scene, roots));
         return changes;
+    }
+
+    private static IEnumerable<string> ApplyAutomaticSceneLightingBalance(Scene scene)
+    {
+        var changes = new List<string>();
+        if (!scene.IsValid())
+            return changes;
+
+        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
+        var threeDGeometryCount = CountRenderable3DGeometry(roots);
+        if (threeDGeometryCount == 0)
+            return new[] { "Scene has no real 3D mesh/terrain geometry; skipped 3D lighting balance." };
+
+        var bounds = CalculateSceneRendererBounds(roots);
+        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Where(l => l).ToArray();
+        var directional = lights.FirstOrDefault(l => l.type == LightType.Directional);
+        if (!directional)
+        {
+            var go = new GameObject("XHero Auto Sun");
+            SceneManager.MoveGameObjectToScene(go, scene);
+            directional = go.AddComponent<Light>();
+            directional.type = LightType.Directional;
+            changes.Add("Added Directional Light 'XHero Auto Sun'.");
+        }
+
+        directional.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
+        directional.lightmapBakeType = LightmapBakeType.Mixed;
+        directional.shadows = LightShadows.Soft;
+        directional.shadowResolution = LightShadowResolution.High;
+        directional.shadowStrength = 0.60f;
+        directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.28f, 1.58f);
+        directional.useColorTemperature = true;
+        directional.colorTemperature = 6500f;
+        directional.color = Color.white;
+        RenderSettings.sun = directional;
+        EditorUtility.SetDirty(directional);
+
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        RenderSettings.ambientIntensity = bounds.size.sqrMagnitude > 0.01f ? 1.02f : 1.04f;
+        RenderSettings.reflectionIntensity = 0.78f;
+        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+        RenderSettings.defaultReflectionResolution = 128;
+        RenderSettings.subtractiveShadowColor = new Color(0.58f, 0.62f, 0.70f, 1f);
+
+        changes.Add("Balanced scene lighting: mixed fresh white sun, 1.02 sky ambient, 0.78 sky reflection, cool subtractive shadows.");
+        return changes;
+    }
+
+    private static IEnumerable<string> ApplyHTraceMobileLowLook(Scene scene)
+    {
+        var changes = new List<string>();
+        if (!scene.IsValid())
+            return changes;
+
+        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
+        var threeDRendererCount = CountRenderable3DGeometry(roots);
+
+        if (threeDRendererCount == 0)
+        {
+            foreach (var htraceVolume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v && v.name == "XHero Mobile Cinematic Look"))
+            {
+                htraceVolume.weight = 0f;
+                htraceVolume.enabled = false;
+                htraceVolume.gameObject.SetActive(false);
+                EditorUtility.SetDirty(htraceVolume);
+            }
+
+            foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
+            {
+                var data = camera.GetUniversalAdditionalCameraData();
+                if (data != null)
+                {
+                    data.renderPostProcessing = false;
+                    data.requiresDepthTexture = false;
+                    data.requiresColorTexture = false;
+                    EditorUtility.SetDirty(data);
+                }
+
+                camera.allowHDR = false;
+                EditorUtility.SetDirty(camera);
+            }
+
+            changes.Add("Scene has no real 3D mesh/terrain geometry; HTrace/post/depth/color disabled for UI-only performance.");
+            return changes;
+        }
+
+        var volume = FindOrCreateGlobalVolume(roots);
+        SceneManager.MoveGameObjectToScene(volume.gameObject, scene);
+        volume.gameObject.SetActive(true);
+        volume.enabled = true;
+        volume.isGlobal = true;
+        volume.priority = 20f;
+        volume.weight = 0.85f;
+        volume.sharedProfile = LoadOrCreateLookProfile();
+        ConfigureHTraceVolume(volume.sharedProfile, changes);
+        EditorUtility.SetDirty(volume);
+
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        RenderSettings.ambientIntensity = 0.92f;
+        RenderSettings.reflectionIntensity = 0.78f;
+        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+        RenderSettings.defaultReflectionResolution = 128;
+
+        foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
+        {
+            var data = camera.GetUniversalAdditionalCameraData();
+            var isUtilityCamera = IsUtilityCamera(camera);
+            if (data != null)
+            {
+                data.renderPostProcessing = !isUtilityCamera;
+                data.requiresDepthTexture = !isUtilityCamera;
+                data.requiresColorTexture = !isUtilityCamera;
+                data.volumeLayerMask = isUtilityCamera ? (LayerMask)0 : (LayerMask)(((int)data.volumeLayerMask) | 1);
+                EditorUtility.SetDirty(data);
+            }
+
+            camera.allowHDR = false;
+            camera.allowMSAA = !isUtilityCamera;
+            if (!isUtilityCamera)
+            {
+                camera.useOcclusionCulling = true;
+                camera.farClipPlane = Mathf.Min(camera.farClipPlane <= 0 ? 320f : camera.farClipPlane, 320f);
+            }
+
+            EditorUtility.SetDirty(camera);
+        }
+
+        changes.Add("HTrace mobile-low look enabled: global volume 0.85, 2 rays/10 steps/checkerboard/0.5 scale; UI/minimap cameras remain cheap.");
+        return changes;
+    }
+
+    private static IEnumerable<string> EnsureMobileFillLights(Scene scene)
+    {
+        var changes = new List<string>();
+        if (!scene.IsValid())
+            return changes;
+
+        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
+        var threeDRendererCount = CountRenderable3DGeometry(roots);
+
+        if (threeDRendererCount == 0)
+        {
+            var fillRoot = roots.FirstOrDefault(r => r && r.name == "XHero Mobile Fill Lights");
+            if (fillRoot)
+            {
+                fillRoot.SetActive(false);
+                EditorUtility.SetDirty(fillRoot);
+                return new[] { "Scene has no real 3D mesh/terrain geometry; disabled auto fill lights." };
+            }
+
+            return new[] { "Scene has no real 3D mesh/terrain geometry; skipped auto fill lights." };
+        }
+
+        var bounds = CalculateSceneRendererBounds(roots);
+        if (bounds.size.sqrMagnitude <= 0.01f)
+            return new[] { "Renderer bounds empty; skipped auto fill lights." };
+
+        var sceneNonDirectionalLights = roots
+            .SelectMany(r => r.GetComponentsInChildren<Light>(true))
+            .Where(l => l && l.type != LightType.Directional && l.isActiveAndEnabled && !IsXHeroAutoFillLight(l))
+            .ToArray();
+
+        var root = roots.FirstOrDefault(r => r.name == "XHero Mobile Fill Lights");
+        if (!root)
+        {
+            root = new GameObject("XHero Mobile Fill Lights");
+            SceneManager.MoveGameObjectToScene(root, scene);
+        }
+
+        // Mobile rule: create corner fill, but keep it cheap. No shadows, low range, per-object light cap still limits runtime cost.
+        var sceneMagnitude = bounds.size.magnitude;
+        var targetCount = sceneMagnitude > 170f ? 4 : sceneMagnitude > 95f ? 3 : 2;
+        if (sceneNonDirectionalLights.Length >= 6)
+            targetCount = Mathf.Min(targetCount, 3);
+        if (sceneNonDirectionalLights.Length >= 10)
+            targetCount = Mathf.Min(targetCount, 2);
+
+        var existing = root.GetComponentsInChildren<Light>(true)
+            .Where(l => l && IsXHeroAutoFillLight(l))
+            .OrderBy(l => l.name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var min = bounds.min;
+        var max = bounds.max;
+        var center = bounds.center;
+        var y = Mathf.Clamp(center.y + Mathf.Max(2.2f, bounds.extents.y * 0.22f), min.y + 1.8f, max.y + 4.5f);
+        var xInset = Mathf.Max(2f, bounds.size.x * 0.18f);
+        var zInset = Mathf.Max(2f, bounds.size.z * 0.18f);
+        var positions = new[]
+        {
+            new Vector3(min.x + xInset, y, min.z + zInset),
+            new Vector3(max.x - xInset, y, max.z - zInset),
+            new Vector3(min.x + xInset, y, max.z - zInset),
+            new Vector3(max.x - xInset, y, min.z + zInset)
+        };
+
+        var range = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * 0.30f, 16f, 34f);
+        var intensity = targetCount >= 4 ? 0.18f : targetCount == 3 ? 0.20f : 0.24f;
+
+        for (var i = 0; i < targetCount; i++)
+        {
+            Light fill = i < existing.Length ? existing[i] : null;
+            if (!fill)
+            {
+                var go = new GameObject("XHero Mobile Corner Fill " + (i + 1).ToString("00", CultureInfo.InvariantCulture));
+                go.transform.SetParent(root.transform, false);
+                fill = go.AddComponent<Light>();
+            }
+
+            fill.name = "XHero Mobile Corner Fill " + (i + 1).ToString("00", CultureInfo.InvariantCulture);
+            fill.transform.position = positions[i];
+            fill.type = LightType.Point;
+            fill.lightmapBakeType = LightmapBakeType.Mixed;
+            fill.shadows = LightShadows.None;
+            fill.range = range;
+            fill.intensity = intensity;
+            fill.useColorTemperature = true;
+            fill.colorTemperature = 6900f;
+            fill.color = new Color(0.96f, 0.99f, 1f, 1f);
+            fill.renderMode = LightRenderMode.ForceVertex;
+            fill.gameObject.SetActive(true);
+            fill.enabled = true;
+            EditorUtility.SetDirty(fill);
+            EditorUtility.SetDirty(fill.gameObject);
+        }
+
+        for (var i = targetCount; i < existing.Length; i++)
+        {
+            if (!existing[i])
+                continue;
+
+            existing[i].enabled = false;
+            existing[i].gameObject.SetActive(false);
+            EditorUtility.SetDirty(existing[i]);
+            EditorUtility.SetDirty(existing[i].gameObject);
+        }
+
+        root.SetActive(targetCount > 0);
+        EditorUtility.SetDirty(root);
+
+        if (targetCount > 0)
+            changes.Add($"Added/tuned {targetCount} cool-white no-shadow corner point fill light(s), range={range:F1}, intensity={intensity:F2}. Existing scene fill lights={sceneNonDirectionalLights.Length}.");
+        else
+            changes.Add($"Scene already has {sceneNonDirectionalLights.Length} active non-directional light(s); skipped extra corner fill lights to protect mobile FPS.");
+
+        return changes;
+    }
+
+    private static bool IsXHeroAutoFillLight(Light light)
+    {
+        if (!light)
+            return false;
+
+        return light.name.StartsWith("XHero Mobile Bounce Fill", StringComparison.OrdinalIgnoreCase)
+               || light.name.StartsWith("XHero Mobile Corner Fill", StringComparison.OrdinalIgnoreCase)
+               || (light.transform.parent && light.transform.parent.name == "XHero Mobile Fill Lights");
     }
 
     private static IEnumerable<string> ConfigureMobileLightingSettingsAsset()
@@ -1061,7 +1424,12 @@ public static class XHeroMobileSceneOptimizer
                 continue;
 
             var flags = GameObjectUtility.GetStaticEditorFlags(go);
-            var next = flags | StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
+            var next = flags | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
+
+            if (IsStaticBatchingSafe(go))
+                next |= StaticEditorFlags.BatchingStatic;
+            else
+                next &= ~StaticEditorFlags.BatchingStatic;
 
             if (!IsFoliageLike(go) && !IsWaterOrFxLike(go))
                 next |= StaticEditorFlags.ContributeGI | StaticEditorFlags.OccluderStatic;
@@ -1249,6 +1617,35 @@ public static class XHeroMobileSceneOptimizer
         return path + " " + prefabPath;
     }
 
+    private static bool IsStaticBatchingSafe(GameObject go)
+    {
+        if (!go)
+            return false;
+
+        var text = NormalizeSearchText(GetObjectSearchText(go));
+        return !StaticBatchingRiskyPathHints.Any(hint =>
+            text.IndexOf(NormalizeSearchText(hint), StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static bool IsGeneratedSplitScenePath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        var normalized = path.Replace('\\', '/');
+        return GeneratedScenePathHints.Any(hint =>
+            normalized.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static string NormalizeSearchText(string value)
+    {
+        return (value ?? string.Empty)
+            .Replace('\\', '/')
+            .Replace(" ", string.Empty)
+            .Replace("_", string.Empty)
+            .ToLowerInvariant();
+    }
+
     private static IEnumerable<string> DisableGpuiPrefabRendering(Scene scene)
     {
         var changes = new List<string>();
@@ -1281,6 +1678,60 @@ public static class XHeroMobileSceneOptimizer
         if (managers.Length == 0)
             changes.Add("No GPUI Prefab Manager found in scene.");
 
+        return changes;
+    }
+
+    private static IEnumerable<string> RemoveSceneGpuIPrefabComponents(Scene scene)
+    {
+        var changes = new List<string>();
+        if (!scene.IsValid())
+            return changes;
+
+        var removed = 0;
+        foreach (var component in scene.GetRootGameObjects()
+                     .SelectMany(r => r.GetComponentsInChildren<GPUIPrefab>(true))
+                     .Where(c => c)
+                     .ToArray())
+        {
+            UnityEngine.Object.DestroyImmediate(component, true);
+            removed++;
+        }
+
+        changes.Add(removed > 0
+            ? $"Removed {removed} scene GPUIPrefab component(s) so original MeshRenderer path is used."
+            : "No scene GPUIPrefab component found.");
+        return changes;
+    }
+
+    private static IEnumerable<string> DisableAutoFillLights(Scene scene)
+    {
+        var changes = new List<string>();
+        if (!scene.IsValid())
+            return changes;
+
+        var disabled = 0;
+        foreach (var root in scene.GetRootGameObjects()
+                     .Where(r => r && r.name == "XHero Mobile Fill Lights")
+                     .ToArray())
+        {
+            if (root.activeSelf)
+            {
+                root.SetActive(false);
+                disabled++;
+            }
+
+            foreach (var light in root.GetComponentsInChildren<Light>(true).Where(l => l))
+            {
+                light.enabled = false;
+                EditorUtility.SetDirty(light);
+            }
+
+            EditorUtility.SetDirty(root);
+        }
+
+        changes.Add(disabled > 0
+            ? $"Disabled {disabled} auto fill-light root(s) added by previous optimizer runs."
+            : "No active auto fill-light root found.");
         return changes;
     }
 
@@ -1350,9 +1801,11 @@ public static class XHeroMobileSceneOptimizer
     {
         var changes = new List<string>();
         var removed = 0;
+        var touchedPrefabs = 0;
 
-        foreach (var prefabPath in AutoGpuiPrototypePrefabPaths)
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
         {
+            var prefabPath = AssetDatabase.GUIDToAssetPath(guid);
             if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), prefabPath)))
                 continue;
 
@@ -1367,7 +1820,10 @@ public static class XHeroMobileSceneOptimizer
                 }
 
                 if (components.Length > 0)
+                {
                     PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                    touchedPrefabs++;
+                }
             }
             finally
             {
@@ -1376,9 +1832,9 @@ public static class XHeroMobileSceneOptimizer
         }
 
         if (removed > 0)
-            changes.Add($"Removed {removed} GPUIPrefab component(s) added by the previous unsafe auto-GPUI pass.");
+            changes.Add($"Removed {removed} GPUIPrefab component(s) from {touchedPrefabs} project prefab(s) to recover original MeshRenderer rendering.");
         else
-            changes.Add("No auto-added GPUIPrefab components found on the previous unsafe prototype prefabs.");
+            changes.Add("No GPUIPrefab components found in project prefabs.");
 
         return changes;
     }
@@ -1448,7 +1904,7 @@ public static class XHeroMobileSceneOptimizer
             {
                 foreach (var mat in renderer.sharedMaterials ?? Array.Empty<Material>())
                 {
-                    if (!mat || instancedMaterials.Contains(mat))
+                    if (!mat || instancedMaterials.Contains(mat) || IsRiskyInstancingMaterial(mat))
                         continue;
 
                     mat.enableInstancing = true;
@@ -1472,7 +1928,11 @@ public static class XHeroMobileSceneOptimizer
             if (!HasUnsafeLogicNearby(staticScope) && renderer.gameObject.isStatic)
             {
                 var flags = GameObjectUtility.GetStaticEditorFlags(renderer.gameObject);
-                var wanted = flags | StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
+                var wanted = flags | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
+                if (IsStaticBatchingSafe(renderer.gameObject))
+                    wanted |= StaticEditorFlags.BatchingStatic;
+                else
+                    wanted &= ~StaticEditorFlags.BatchingStatic;
                 if (flags != wanted)
                 {
                     GameObjectUtility.SetStaticEditorFlags(renderer.gameObject, wanted);
@@ -1495,6 +1955,31 @@ public static class XHeroMobileSceneOptimizer
     {
         var changes = new List<string>();
         var roots = scene.GetRootGameObjects();
+        var candidates = FindSafeGpuiPrefabRootCandidates(roots)
+            .Where(c => c.InstanceCount >= 6 && c.RendererCountPerInstance > 0)
+            .OrderByDescending(c => c.EstimatedMaterialSlots)
+            .ThenByDescending(c => c.InstanceCount)
+            .Take(18)
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            var removedEmptyManagers = 0;
+            foreach (var managerToRemove in roots
+                         .SelectMany(r => r.GetComponentsInChildren<GPUIPrefabManager>(true))
+                         .Where(m => m && m.name == "GPUI Prefab Manager - XHero Mobile" && m.GetPrototypeCount() == 0)
+                         .ToArray())
+            {
+                UnityEngine.Object.DestroyImmediate(managerToRemove.gameObject);
+                removedEmptyManagers++;
+            }
+
+            changes.Add(removedEmptyManagers > 0
+                ? $"Removed {removedEmptyManagers} empty auto GPUI manager(s); no safe repeated prefab candidates in this scene."
+                : "No safe repeated prefab candidates; skipped GPUI manager creation.");
+            return changes;
+        }
+
         var manager = FindOrCreateGpuiPrefabManager(scene, roots);
         if (!manager)
             return new[] { "GPUI Prefab Manager not available; skipped GPUI prefab optimization." };
@@ -1506,13 +1991,6 @@ public static class XHeroMobileSceneOptimizer
         changes.Add("GPUI Prefab Manager enabled and set to find prefab instances at initialization.");
 
         var profile = LoadOrCreateGpuiMobileProfile();
-        var candidates = FindSafeGpuiPrefabRootCandidates(roots)
-            .Where(c => c.InstanceCount >= 6 && c.RendererCountPerInstance > 0)
-            .OrderByDescending(c => c.EstimatedMaterialSlots)
-            .ThenByDescending(c => c.InstanceCount)
-            .Take(18)
-            .ToArray();
-
         var added = 0;
         var updated = 0;
         foreach (var candidate in candidates)
@@ -1662,29 +2140,29 @@ public static class XHeroMobileSceneOptimizer
             tonemapping = profile.Add<Tonemapping>(true);
         tonemapping.active = true;
         tonemapping.mode.overrideState = true;
-        tonemapping.mode.value = TonemappingMode.ACES;
+        tonemapping.mode.value = TonemappingMode.Neutral;
 
         if (!profile.TryGet(out ColorAdjustments color))
             color = profile.Add<ColorAdjustments>(true);
         color.active = true;
         color.postExposure.overrideState = true;
-        color.postExposure.value = 0.05f;
+        color.postExposure.value = 0.02f;
         color.contrast.overrideState = true;
-        color.contrast.value = 12f;
+        color.contrast.value = 2f;
         color.saturation.overrideState = true;
-        color.saturation.value = 6f;
+        color.saturation.value = 4f;
         color.colorFilter.overrideState = true;
-        color.colorFilter.value = new Color(1f, 0.985f, 0.95f, 1f);
+        color.colorFilter.value = Color.white;
 
         if (!profile.TryGet(out Bloom bloom))
             bloom = profile.Add<Bloom>(true);
         bloom.active = true;
         bloom.threshold.overrideState = true;
-        bloom.threshold.value = 0.92f;
+        bloom.threshold.value = 1.05f;
         bloom.intensity.overrideState = true;
-        bloom.intensity.value = 0.22f;
+        bloom.intensity.value = 0.08f;
         bloom.scatter.overrideState = true;
-        bloom.scatter.value = 0.58f;
+        bloom.scatter.value = 0.45f;
         bloom.highQualityFiltering.overrideState = true;
         bloom.highQualityFiltering.value = false;
         bloom.maxIterations.overrideState = true;
@@ -1694,9 +2172,9 @@ public static class XHeroMobileSceneOptimizer
             vignette = profile.Add<Vignette>(true);
         vignette.active = true;
         vignette.intensity.overrideState = true;
-        vignette.intensity.value = 0.11f;
+        vignette.intensity.value = 0.035f;
         vignette.smoothness.overrideState = true;
-        vignette.smoothness.value = 0.34f;
+        vignette.smoothness.value = 0.22f;
         vignette.rounded.overrideState = true;
         vignette.rounded.value = false;
 
@@ -1792,6 +2270,33 @@ public static class XHeroMobileSceneOptimizer
         parameter.value = value;
     }
 
+    private static int CountRenderable3DGeometry(GameObject[] roots)
+    {
+        if (roots == null || roots.Length == 0)
+            return 0;
+
+        var meshCount = roots
+            .SelectMany(r => r.GetComponentsInChildren<MeshRenderer>(true))
+            .Count(renderer =>
+            {
+                if (!renderer || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                    return false;
+
+                var meshFilter = renderer.GetComponent<MeshFilter>();
+                return meshFilter && meshFilter.sharedMesh && meshFilter.sharedMesh.vertexCount > 0;
+            });
+
+        var skinnedMeshCount = roots
+            .SelectMany(r => r.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            .Count(renderer => renderer && renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.sharedMesh && renderer.sharedMesh.vertexCount > 0);
+
+        var terrainCount = roots
+            .SelectMany(r => r.GetComponentsInChildren<Terrain>(true))
+            .Count(terrain => terrain && terrain.enabled && terrain.gameObject.activeInHierarchy && terrain.terrainData);
+
+        return meshCount + skinnedMeshCount + terrainCount;
+    }
+
     private static Bounds CalculateSceneRendererBounds(IEnumerable<GameObject> roots)
     {
         var initialized = false;
@@ -1806,6 +2311,23 @@ public static class XHeroMobileSceneOptimizer
             else
             {
                 bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        foreach (var terrain in roots.SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).Where(t => t && t.terrainData))
+        {
+            var terrainBounds = new Bounds(
+                terrain.transform.position + terrain.terrainData.bounds.center,
+                terrain.terrainData.bounds.size);
+
+            if (!initialized)
+            {
+                bounds = terrainBounds;
+                initialized = true;
+            }
+            else
+            {
+                bounds.Encapsulate(terrainBounds);
             }
         }
 

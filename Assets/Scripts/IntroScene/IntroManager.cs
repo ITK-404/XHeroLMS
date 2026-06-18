@@ -23,6 +23,11 @@ public class IntroManager : MonoBehaviour
     public RawImage videoRawImage;
 
     public RenderTexture videoRenderTexture;
+    public bool keepFinalVideoFrameUntilSceneExit = true;
+    public Color fallbackLoadingCoverColor = new Color(0.96f, 0.98f, 1f, 1f);
+    [SerializeField] private bool useRuntimeVideoOverlay = true;
+    [SerializeField] private int runtimeVideoTextureWidth = 1920;
+    [SerializeField] private int runtimeVideoTextureHeight = 1080;
 
     [Header("UI References")]
     public Image progressRing;
@@ -47,8 +52,14 @@ public class IntroManager : MonoBehaviour
     private bool videoStarted;
     private bool videoFailed;
     private bool videoFrameVisible;
+    
     private string videoFailReason = "";
     private Coroutine videoFrameWaitRoutine;
+    private Coroutine freezeAtIntroDurationRoutine;
+    private Image fallbackLoadingCover;
+    private RenderTexture runtimeVideoRenderTexture;
+    private RawImage runtimeVideoRawImage;
+    private AspectRatioFitter runtimeVideoAspectFitter;
 
     private float currentVisual;
     private float targetVisual;
@@ -59,6 +70,7 @@ public class IntroManager : MonoBehaviour
     private float monotonicTarget01;
     // Sync
     private float introStartRealtime;
+    private float videoPlayRealtime;
     private bool videoEnded;
 
     // Finish gate
@@ -75,7 +87,9 @@ public class IntroManager : MonoBehaviour
 private void Awake()
 {
     forceRefreshPersistentVideo = true;
-    HideVideoSurface();
+    NormalizeFallbackCoverColor();
+    EnsureVideoOverlaySurface();
+    PrepareVideoSurfaceForPlayback();
 
     if (failCanvasGroup != null)
     {
@@ -100,6 +114,7 @@ private void Awake()
             _preload = AddressablesPreload.Instance;
 
         introStartRealtime = Time.realtimeSinceStartup;
+        videoPlayRealtime = 0f;
         videoEnded = false;
         visualReached100 = false;
 
@@ -127,7 +142,7 @@ private void Awake()
 
     public void OnAboutToEnterMain()
     {
-        // hook optional
+        EnsureLoadingCoverVisible();
     }
 
     public void ForceProgress(float t01)
@@ -211,6 +226,7 @@ private void Awake()
             _preload.RequestRetry();
 
         introStartRealtime = Time.realtimeSinceStartup;
+        videoPlayRealtime = 0f;
         videoEnded = false;
         monotonicTarget01 = 0f;
         currentVisual = 0f;
@@ -223,12 +239,18 @@ private void Awake()
         videoFailed = false;
         videoFrameVisible = false;
         videoFailReason = "";
-        HideVideoSurface();
+        PrepareVideoSurfaceForPlayback();
 
         if (videoFrameWaitRoutine != null)
         {
             StopCoroutine(videoFrameWaitRoutine);
             videoFrameWaitRoutine = null;
+        }
+
+        if (freezeAtIntroDurationRoutine != null)
+        {
+            StopCoroutine(freezeAtIntroDurationRoutine);
+            freezeAtIntroDurationRoutine = null;
         }
 
         finishRequestedByBootFlow = false;
@@ -265,7 +287,7 @@ private void Awake()
             if (videoRawImage != null)
                 videoRawImage.texture = videoRenderTexture;
 
-            HideVideoSurface();
+            PrepareVideoSurfaceForPlayback();
 
             Debug.Log("[Intro] Video display mode = RenderTexture");
         }
@@ -285,7 +307,7 @@ private void Awake()
         videoFrameVisible = false;
         videoEnded = false;
         videoFailReason = "";
-        HideVideoSurface();
+        PrepareVideoSurfaceForPlayback();
 
         string persistentPath = Path.Combine(Application.persistentDataPath, streamingAssetsVideoName);
 
@@ -440,21 +462,24 @@ private void Awake()
 
         float prepareTimeout = Mathf.Max(1f, videoStartTimeout);
         float elapsed = 0f;
+        bool warnedSlowPrepare = false;
 
-        while (!videoPlayer.isPrepared && !videoFailed && elapsed < prepareTimeout)
+        while (!videoPlayer.isPrepared && !videoFailed)
         {
             elapsed += Time.unscaledDeltaTime;
+
+            if (!warnedSlowPrepare && elapsed >= prepareTimeout)
+            {
+                warnedSlowPrepare = true;
+                Debug.LogWarning($"[Intro] Video prepare is slower than {prepareTimeout:0.##}s. Keep waiting for the intro video instead of skipping it. URL={url}");
+            }
+
             yield return null;
         }
 
         if (videoFailed)
             yield break;
 
-        if (!videoPlayer.isPrepared)
-        {
-            FailVideo($"[Intro] Video prepare timeout ({prepareTimeout:0.##}s). URL={url}");
-            yield break;
-        }
 
         // Phòng khi prepareCompleted event không bắn đúng trên một số device.
         OnVideoPrepared(videoPlayer);
@@ -469,15 +494,22 @@ private void OnVideoPrepared(VideoPlayer vp)
 
     try
     {
-        HideVideoSurface();
+        PrepareVideoSurfaceForPlayback();
+        ApplyVideoAspectFromPlayer(vp);
 
         vp.Play();
+        videoPlayRealtime = Time.realtimeSinceStartup;
         videoStarted = true;
 
         if (videoFrameWaitRoutine != null)
             StopCoroutine(videoFrameWaitRoutine);
 
         videoFrameWaitRoutine = StartCoroutine(CoWaitForFirstVideoFrame(vp));
+
+        if (freezeAtIntroDurationRoutine != null)
+            StopCoroutine(freezeAtIntroDurationRoutine);
+
+        freezeAtIntroDurationRoutine = StartCoroutine(CoFreezeVideoAtIntroDuration(vp));
     }
     catch (System.Exception e)
     {
@@ -489,8 +521,9 @@ private void OnVideoPrepared(VideoPlayer vp)
     {
         float t = 0f;
         float timeout = Mathf.Max(1f, videoStartTimeout);
+        bool warnedSlowFirstFrame = false;
 
-        while (!videoFailed && !videoFrameVisible && t < timeout)
+        while (!videoFailed && !videoFrameVisible)
         {
             if (HasVisibleVideoFrame(vp))
             {
@@ -500,13 +533,41 @@ private void OnVideoPrepared(VideoPlayer vp)
             }
 
             t += Time.unscaledDeltaTime;
+
+            if (!warnedSlowFirstFrame && t >= timeout)
+            {
+                warnedSlowFirstFrame = true;
+                Debug.LogWarning($"[Intro] Video first frame is slower than {timeout:0.##}s. Keep waiting instead of hiding the intro video. url={(vp != null ? vp.url : "NULL")}");
+            }
+
             yield return null;
         }
 
         videoFrameWaitRoutine = null;
+    }
 
-        if (!videoFailed && !videoFrameVisible)
-            FailVideo($"[Intro] Video first frame timeout ({timeout:0.##}s). url={(vp != null ? vp.url : "NULL")}");
+    private IEnumerator CoFreezeVideoAtIntroDuration(VideoPlayer vp)
+    {
+        while (!videoFailed && !videoFrameVisible)
+            yield return null;
+
+        float holdStart = videoPlayRealtime > 0f ? videoPlayRealtime : Time.realtimeSinceStartup;
+
+        while (!videoFailed && !videoEnded &&
+               Time.realtimeSinceStartup - holdStart < Mathf.Max(0.01f, introDurationSec))
+        {
+            yield return null;
+        }
+
+        if (!videoFailed && !videoEnded)
+        {
+            Debug.Log("[Intro] Intro duration reached -> hold video frame until world load is ready.");
+            videoEnded = true;
+            FreezeAtLastFrame(vp);
+            KeepVideoSurfaceVisible();
+        }
+
+        freezeAtIntroDurationRoutine = null;
     }
 
     private bool HasVisibleVideoFrame(VideoPlayer vp)
@@ -514,10 +575,26 @@ private void OnVideoPrepared(VideoPlayer vp)
         if (vp == null || !vp.isPrepared)
             return false;
 
-        if (vp.texture == null && videoRenderTexture == null)
+        if (!UsesCameraVideoSurface(vp) && vp.texture == null && videoRenderTexture == null)
             return false;
 
         return vp.frame >= 0 || vp.time > 0.0;
+    }
+
+    private void ApplyVideoAspectFromPlayer(VideoPlayer vp)
+    {
+        if (vp == null || videoRawImage == null)
+            return;
+
+        AspectRatioFitter fitter = runtimeVideoAspectFitter != null
+            ? runtimeVideoAspectFitter
+            : videoRawImage.GetComponent<AspectRatioFitter>();
+
+        if (fitter == null || vp.width <= 0 || vp.height <= 0)
+            return;
+
+        fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        fitter.aspectRatio = (float)vp.width / vp.height;
     }
 
     private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
@@ -528,32 +605,101 @@ private void OnVideoPrepared(VideoPlayer vp)
         ShowVideoSurface();
     }
 
-    private void HideVideoSurface()
+    private bool EnsureVideoOverlaySurface()
     {
-        if (videoRawImage != null)
-            videoRawImage.enabled = false;
+        if (!useRuntimeVideoOverlay)
+            return videoRawImage != null && videoRenderTexture != null;
+
+        if (videoPlayer == null && videoRenderTexture == null)
+            return false;
 
         if (videoRenderTexture == null)
-            return;
-
-        RenderTexture previous = RenderTexture.active;
-
-        try
         {
-            if (!videoRenderTexture.IsCreated())
-                videoRenderTexture.Create();
+            int width = Mathf.Max(64, runtimeVideoTextureWidth > 0 ? runtimeVideoTextureWidth : Screen.width);
+            int height = Mathf.Max(64, runtimeVideoTextureHeight > 0 ? runtimeVideoTextureHeight : Screen.height);
 
-            RenderTexture.active = videoRenderTexture;
-            GL.Clear(true, true, Color.black);
+            runtimeVideoRenderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32)
+            {
+                name = "[Intro Runtime Video RT]",
+                useMipMap = false,
+                autoGenerateMips = false
+            };
+
+            runtimeVideoRenderTexture.Create();
+            videoRenderTexture = runtimeVideoRenderTexture;
         }
-        catch (System.Exception e)
+
+        if (videoRawImage == null)
         {
-            Debug.LogWarning("[Intro] Clear video RenderTexture failed: " + e);
+            Canvas canvas = FindIntroCanvas();
+
+            if (canvas == null)
+                return false;
+
+            GameObject surfaceObject = new GameObject("[Intro Runtime Video Surface]", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+            surfaceObject.transform.SetParent(canvas.transform, false);
+            surfaceObject.transform.SetAsFirstSibling();
+
+            RectTransform rect = surfaceObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            runtimeVideoRawImage = surfaceObject.GetComponent<RawImage>();
+            runtimeVideoRawImage.raycastTarget = false;
+            runtimeVideoRawImage.color = Color.white;
+            runtimeVideoRawImage.texture = videoRenderTexture;
+
+            runtimeVideoAspectFitter = surfaceObject.GetComponent<AspectRatioFitter>();
+            runtimeVideoAspectFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            runtimeVideoAspectFitter.aspectRatio = videoRenderTexture != null && videoRenderTexture.height > 0
+                ? (float)videoRenderTexture.width / videoRenderTexture.height
+                : 16f / 9f;
+
+            videoRawImage = runtimeVideoRawImage;
         }
-        finally
+
+        if (videoRawImage != null && videoRenderTexture != null)
         {
-            RenderTexture.active = previous;
+            videoRawImage.texture = videoRenderTexture;
+            videoRawImage.transform.SetAsFirstSibling();
+            EnsureParentsActive(videoRawImage.transform);
+            return true;
         }
+
+        return false;
+    }
+
+    private bool PrepareVideoSurfaceForPlayback()
+    {
+        if (UsesCameraVideoSurface(videoPlayer))
+        {
+            DisableFallbackLoadingCover();
+            return true;
+        }
+
+        EnsureVideoOverlaySurface();
+
+        if (videoRawImage == null)
+            return false;
+
+        bool hasOverlaySurface = EnsureVideoOverlaySurface();
+
+        if (hasOverlaySurface && videoRenderTexture != null)
+            videoRawImage.texture = videoRenderTexture;
+        else if (videoPlayer != null && videoPlayer.texture != null)
+            videoRawImage.texture = videoPlayer.texture;
+
+        EnsureParentsActive(videoRawImage.transform);
+        videoRawImage.transform.SetAsFirstSibling();
+        bool hasVideoSurface = videoRawImage.texture != null;
+        videoRawImage.enabled = hasVideoSurface;
+
+        if (hasVideoSurface)
+            DisableFallbackLoadingCover();
+
+        return hasVideoSurface;
     }
 
     private void ShowVideoSurface()
@@ -577,6 +723,7 @@ private void OnVideoPrepared(VideoPlayer vp)
         if (!surfaceVisible)
             return;
 
+        DisableFallbackLoadingCover();
         videoFrameVisible = true;
         Debug.Log("[Intro] Video first frame visible.");
     }
@@ -592,13 +739,19 @@ private void OnVideoPrepared(VideoPlayer vp)
     {
         try
         {
+            if (vp == null)
+                return;
+
             vp.Pause();
 
-            long last = (vp.frameCount > 0) ? (long)vp.frameCount - 1 : vp.frame;
-            if (last < 0) last = 0;
+            if (vp.frameCount > 0)
+            {
+                long last = (long)vp.frameCount - 1;
+                if (last < 0) last = 0;
+                vp.frame = last;
+            }
 
-            vp.frame = last;
-            vp.StepForward();
+            KeepVideoSurfaceVisible();
         }
         catch (System.Exception e)
         {
@@ -631,7 +784,7 @@ private void OnVideoPrepared(VideoPlayer vp)
         {
             bool isPrepared = videoPlayer != null && videoPlayer.isPrepared;
             string url = videoPlayer != null ? videoPlayer.url : "NULL";
-            FailVideo($"[Intro] Video frame timeout ({videoStartTimeout:0.##}s). isPrepared={isPrepared}, url={url}");
+            Debug.LogWarning($"[Intro] Video frame is slower than {videoStartTimeout:0.##}s. Keep waiting; do not skip or cover the intro video. isPrepared={isPrepared}, url={url}");
         }
     }
 
@@ -645,7 +798,7 @@ private void OnVideoPrepared(VideoPlayer vp)
         videoFailed = true;
         videoFailReason = reason;
 
-        HideVideoSurface();
+        EnsureLoadingCoverVisible();
 
         // Nếu fail video mà vẫn cho qua, coi như video ended để flow không bị giữ.
         if (skipVideoIfFail)
@@ -721,6 +874,8 @@ private void UpdateProgressFromPreload()
 
     private void ApplyVisual()
     {
+        EnsureLoadingCoverVisible();
+
         targetVisual = monotonicTarget01;
         currentVisual = Mathf.Clamp01(targetVisual);
         visualReached100 = currentVisual >= 1f;
@@ -740,6 +895,7 @@ private string GetStageText(float t01)
     {
         t01 = Mathf.Clamp01(t01);
 
+        EnsureLoadingCoverVisible();
         EnsureAssignedProgressUiVisible();
 
         if (textLoading != null)
@@ -754,9 +910,131 @@ private string GetStageText(float t01)
 
     private void EnsureAssignedProgressUiVisible()
     {
+        EnsureLoadingCoverVisible();
         EnsureUiBehaviourVisible(textLoading);
         EnsureUiBehaviourVisible(progressRing);
         EnsureUiBehaviourVisible(sliderUI);
+    }
+
+    private void EnsureLoadingCoverVisible()
+    {
+        if (!videoFailed && PrepareVideoSurfaceForPlayback())
+            return;
+
+        if (keepFinalVideoFrameUntilSceneExit && !videoFailed && videoFrameVisible)
+        {
+            KeepVideoSurfaceVisible();
+            return;
+        }
+
+        EnsureFallbackLoadingCover();
+    }
+
+    private void KeepVideoSurfaceVisible()
+    {
+        if (UsesCameraVideoSurface(videoPlayer))
+        {
+            DisableFallbackLoadingCover();
+            return;
+        }
+
+        if (videoRawImage == null)
+        {
+            EnsureFallbackLoadingCover();
+            return;
+        }
+
+        if (videoRenderTexture != null)
+            videoRawImage.texture = videoRenderTexture;
+        else if (videoPlayer != null && videoPlayer.texture != null)
+            videoRawImage.texture = videoPlayer.texture;
+
+        if (videoRawImage.texture == null)
+        {
+            EnsureFallbackLoadingCover();
+            return;
+        }
+
+        EnsureParentsActive(videoRawImage.transform);
+        videoRawImage.transform.SetAsFirstSibling();
+        videoRawImage.enabled = true;
+        DisableFallbackLoadingCover();
+    }
+
+    private void DisableFallbackLoadingCover()
+    {
+        if (fallbackLoadingCover != null)
+            fallbackLoadingCover.enabled = false;
+    }
+
+    private bool UsesCameraVideoSurface(VideoPlayer vp)
+    {
+        if (vp == null)
+            return false;
+
+        return vp.renderMode == VideoRenderMode.CameraFarPlane ||
+               vp.renderMode == VideoRenderMode.CameraNearPlane;
+    }
+
+    private void EnsureFallbackLoadingCover()
+    {
+        NormalizeFallbackCoverColor();
+
+        if (fallbackLoadingCover == null)
+        {
+            Canvas canvas = FindIntroCanvas();
+
+            if (canvas == null)
+                return;
+
+            GameObject coverObject = new GameObject("[Intro Loading Cover]", typeof(RectTransform), typeof(Image));
+            coverObject.transform.SetParent(canvas.transform, false);
+            coverObject.transform.SetAsFirstSibling();
+
+            RectTransform rect = coverObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            fallbackLoadingCover = coverObject.GetComponent<Image>();
+            fallbackLoadingCover.raycastTarget = false;
+        }
+
+        fallbackLoadingCover.color = fallbackLoadingCoverColor;
+        fallbackLoadingCover.enabled = true;
+        EnsureParentsActive(fallbackLoadingCover.transform);
+        fallbackLoadingCover.transform.SetAsFirstSibling();
+    }
+
+    private void NormalizeFallbackCoverColor()
+    {
+        if (fallbackLoadingCoverColor.a <= 0.001f)
+            fallbackLoadingCoverColor = new Color(0.96f, 0.98f, 1f, 1f);
+
+        if (fallbackLoadingCoverColor.r < 0.08f &&
+            fallbackLoadingCoverColor.g < 0.08f &&
+            fallbackLoadingCoverColor.b < 0.08f)
+        {
+            fallbackLoadingCoverColor = new Color(0.96f, 0.98f, 1f, 1f);
+        }
+    }
+
+    private Canvas FindIntroCanvas()
+    {
+        if (textLoading != null)
+            return textLoading.GetComponentInParent<Canvas>(true);
+
+        if (sliderUI != null)
+            return sliderUI.GetComponentInParent<Canvas>(true);
+
+        if (progressRing != null)
+            return progressRing.GetComponentInParent<Canvas>(true);
+
+        if (videoRawImage != null)
+            return videoRawImage.GetComponentInParent<Canvas>(true);
+
+        return GetComponentInChildren<Canvas>(true);
     }
 
     private void EnsureUiBehaviourVisible(Behaviour ui)
@@ -797,6 +1075,12 @@ private string GetStageText(float t01)
             videoFrameWaitRoutine = null;
         }
 
+        if (freezeAtIntroDurationRoutine != null)
+        {
+            StopCoroutine(freezeAtIntroDurationRoutine);
+            freezeAtIntroDurationRoutine = null;
+        }
+
         if (retryButton != null)
             retryButton.onClick.RemoveListener(OnRetryClicked);
 
@@ -806,6 +1090,13 @@ private string GetStageText(float t01)
             videoPlayer.prepareCompleted -= OnVideoPrepared;
             videoPlayer.loopPointReached -= OnVideoEndReached;
             videoPlayer.frameReady -= OnVideoFrameReady;
+        }
+
+        if (runtimeVideoRenderTexture != null)
+        {
+            runtimeVideoRenderTexture.Release();
+            Destroy(runtimeVideoRenderTexture);
+            runtimeVideoRenderTexture = null;
         }
     }
 
@@ -828,6 +1119,9 @@ public bool CanEnterMain
 
         // Chặn vào Main cho tới khi UI progress thật sự lên 100%.
         if (!visualReached100)
+            return false;
+
+        if (!videoFailed && !videoFrameVisible)
             return false;
 
         if (videoFailed && skipVideoIfFail)
