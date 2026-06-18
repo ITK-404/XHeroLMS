@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -463,7 +464,8 @@ public static class NewSceneAddressablesSplitter
 
             ApplyObjectSnapshot(go, transformSnapshot);
             ApplyTransformSnapshot(go.transform, transformSnapshot);
-            int clearedBatchingStaticCount = ClearBatchingStaticRecursive(go);
+
+            int clearedBatchingStaticCount = ClearBatchingStaticRecursive(parent != null ? parent : go);
 
             if (clearedBatchingStaticCount > 0)
             {
@@ -481,6 +483,9 @@ public static class NewSceneAddressablesSplitter
 
         if (!EditorSceneManager.SaveScene(lateScene, scenePath))
             throw new InvalidOperationException("Failed to save generated late scene: " + scenePath);
+
+        ScrubGeneratedSceneStaticBatchCacheYaml(scenePath);
+        AssetDatabase.ImportAsset(scenePath, ImportAssetOptions.ForceUpdate);
 
         generatedScenePaths.Add(scenePath);
         lateSceneKeys.Add(sceneName);
@@ -976,6 +981,32 @@ public static class NewSceneAddressablesSplitter
     private static void PatchGeneratedMainSceneYaml()
     {
         Debug.Log("[NewSceneSplit] Preserve scene mode: YAML skybox/occlusion patch is disabled.");
+        ScrubGeneratedSceneStaticBatchCacheYaml(GeneratedMainScenePath);
+    }
+
+    private static void ScrubGeneratedSceneStaticBatchCacheYaml(string scenePath)
+    {
+        if (string.IsNullOrWhiteSpace(scenePath))
+            return;
+
+        string absolutePath = ToAbsolutePath(scenePath);
+
+        if (!File.Exists(absolutePath))
+            return;
+
+        string yaml = File.ReadAllText(absolutePath);
+        string patched = Regex.Replace(
+            yaml,
+            @"(?m)^  m_StaticBatchInfo:\r?\n    firstSubMesh: -?\d+\r?\n    subMeshCount: -?\d+",
+            "  m_StaticBatchInfo:\n    firstSubMesh: 0\n    subMeshCount: 0");
+
+        patched = Regex.Replace(
+            patched,
+            @"(?m)^  m_StaticBatchRoot: \{fileID: -?\d+\}",
+            "  m_StaticBatchRoot: {fileID: 0}");
+
+        if (!string.Equals(yaml, patched, StringComparison.Ordinal))
+            File.WriteAllText(absolutePath, patched);
     }
 
     private static void RemoveEntries(AddressableAssetGroup group, Func<AddressableAssetEntry, bool> predicate)
@@ -1172,9 +1203,9 @@ public static class NewSceneAddressablesSplitter
         serialized.FindProperty("initialDelaySeconds").floatValue = 0f;
         serialized.FindProperty("delayBetweenScenesSeconds").floatValue = 0f;
         serialized.FindProperty("loadScenesDirectly").boolValue = true;
-        serialized.FindProperty("maxConcurrentSceneLoads").intValue = 6;
+        serialized.FindProperty("maxConcurrentSceneLoads").intValue = 3;
         serialized.FindProperty("loadCachedScenesWithoutDelay").boolValue = true;
-        serialized.FindProperty("cachedMaxConcurrentSceneLoads").intValue = 12;
+        serialized.FindProperty("cachedMaxConcurrentSceneLoads").intValue = 4;
         serialized.FindProperty("cachedDelayBetweenScenesSeconds").floatValue = 0f;
         serialized.FindProperty("cachedDependencyCheckTimeoutSeconds").floatValue = 3f;
         serialized.FindProperty("downloadDependenciesTogether").boolValue = false;
