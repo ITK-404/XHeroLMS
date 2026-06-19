@@ -1,6 +1,6 @@
 ﻿# XHero LMS URP Mobile Scene Optimization Report
 
-Generated: 2026-06-18 09:03:16
+Generated: 2026-06-18 17:24:06
 Mode: after safe one-click mobile repair
 Unity: 6000.2.6f2
 Active build target: Android
@@ -8,7 +8,7 @@ Active build target: Android
 ## Applied Changes
 - Safe one-click mobile repair/optimization pipeline: disable unsafe auto-GPUI/HTrace, restore stable lighting, keep SRP Batcher/static split safety, terrain/shadow culling, then New Scene split regeneration.
 - Mobile quality tuned: 2x MSAA, 35m shadows, 2 cascades, display buffer 32-bit.
-- Removed 3 GPUIPrefab component(s) from 3 project prefab(s) to recover original MeshRenderer rendering.
+- No GPUIPrefab components found in project prefabs.
 - Scene 'Assets/Scenes/Certificates Scene.unity':
 - Directional Light set to Mixed clean daylight 6800K, High soft shadows, 0.50 shadow strength.
 - RenderSettings balanced for fresh white mobile look: Skybox ambient 1.14, reflection 0.90, soft cool subtractive shadow color.
@@ -438,10 +438,10 @@ Quality realtime reflection probes: False
 ### LOD Candidates
 | Object | Verts | Approx tris LOD0 submesh | Bounds diag | Mesh |
 |---|---:|---:|---:|---|
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (1)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (2)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (3)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (1)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (2)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (3)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
 
 ### Collider Simplification Candidates
 - No MeshCollider above 1,200 vertices found.
@@ -492,10 +492,10 @@ Quality realtime reflection probes: False
 ### LOD Candidates
 | Object | Verts | Approx tris LOD0 submesh | Bounds diag | Mesh |
 |---|---:|---:|---:|---|
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (1)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (2)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
-| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (3)/Book 3D/Container/Sach | 4,143 | 5,502 | 5.07 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (1)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (2)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
+| Buy Course Canvas mobile/Container/Book Shelf Container/Book Shelf Scroll View mobile/Viewport/Content/Shelf Variant/Book Mobile Variant (3)/Book 3D/Container/Sach | 4,143 | 5,502 | 4.62 | Assets/Resources/Sach/Sach.fbx |
 
 ### Collider Simplification Candidates
 - No MeshCollider above 1,200 vertices found.
@@ -965,7 +965,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/New Scene.unity
 ### Scene Summary
 - Root objects: 40
-- GameObjects: 8418 active=4767 inactive=3651
+- GameObjects: 8420 active=4769 inactive=3651
 - Renderers: 4942 enabled+active=2175
 - MeshRenderers: 4911 SkinnedMeshRenderers: 0 Terrains: 4
 - Meshes: unique=184 approx rendered tris=7,894,161 verts=8,854,376
@@ -1415,7 +1415,7 @@ Potential duplicate material names:
 ## Scene: Assets/Scenes/phong_tuyen_sinh.unity
 ### Scene Summary
 - Root objects: 31
-- GameObjects: 2616 active=836 inactive=1780
+- GameObjects: 2618 active=838 inactive=1780
 - Renderers: 396 enabled+active=373
 - MeshRenderers: 370 SkinnedMeshRenderers: 0 Terrains: 0
 - Meshes: unique=199 approx rendered tris=982,788 verts=1,284,498

@@ -167,9 +167,13 @@ public static class NewSceneAddressablesSplitter
 
     private static readonly string[] InitialSharedUiPrefabPaths =
     {
+        "Assets/Shaders/Prefabs_UI/Login/CanvasLogin.prefab",
+        "Assets/Shaders/Prefabs_UI/Phong Tuyen SInh/PTS_ObjectManager.prefab",
         "Assets/Shaders/Prefabs_UI/Minimap_New/Plot Area UI.prefab",
         "Assets/Shaders/Prefabs_UI/Thanh Toan/Canvas Payment UI Canvas.prefab",
         "Assets/Shaders/Prefabs_UI/Minimap_New/Big Map UI.prefab",
+        "Assets/Shaders/Prefabs_UI/Login_Popup/Login Popup UI.prefab",
+        "Assets/Shaders/Prefabs_UI/Login_Popup/Success Login Popup UI Variant.prefab",
         "Assets/Shaders/Prefabs_UI/Login_Popup/Warning Login Popup UI Variant.prefab",
         "Assets/Shaders/Prefabs_UI/Login_Popup/Failed Login Popup UI Variant.prefab",
         "Assets/Shaders/Prefabs_UI/Minimap_New/Course Area UI.prefab",

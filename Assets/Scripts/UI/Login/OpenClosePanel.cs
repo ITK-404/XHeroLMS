@@ -28,15 +28,21 @@ public class OpenClosePanel : MonoBehaviour
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
     CursorGameManager cursorMgr;
+    static bool triedRestoreSession;
+    bool hasVisualState;
+    bool lastLoggedIn;
+    bool inputBlockedByThisPanel;
     
 
     void OnEnable()
     {
+        LoginController.OnLoginComplete -= HandleLoginComplete;
         LoginController.OnLoginComplete += HandleLoginComplete;
-        var controller = PlayerPanelUI.Instance.controllerUI;
+        var controller = GetPlayerController();
         // gán click handler an toàn
         if (controller != null)
         {
+            controller.OnLoginBtnClicked -= OnOpenButtonClicked;
             controller.OnLoginBtnClicked += OnOpenButtonClicked;
         }
         if (buttonClose != null)
@@ -51,15 +57,23 @@ public class OpenClosePanel : MonoBehaviour
     {
         LoginController.OnLoginComplete -= HandleLoginComplete;
 
-        var controller = PlayerPanelUI.Instance.controllerUI;
+        var controller = GetPlayerController();
         // gán click handler an toàn
         if (controller != null)
         {
-            controller.OnLoginBtnClicked += OnOpenButtonClicked;
+            controller.OnLoginBtnClicked -= OnOpenButtonClicked;
         }
         
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
+        if (inputBlockedByThisPanel)
+        {
+            InputBlocker.SetBlocked(false);
+            inputBlockedByThisPanel = false;
+        }
+
+        if (cursorMgr != null)
+            cursorMgr.SetUIOpen(false);
 
     }
 
@@ -73,10 +87,30 @@ public class OpenClosePanel : MonoBehaviour
 
         UpdateVisualState();
     }
+
+    void LateUpdate()
+    {
+        UpdateVisualState();
+    }
+
+    PlayerControllerUI GetPlayerController()
+    {
+        return PlayerPanelUI.Instance != null ? PlayerPanelUI.Instance.controllerUI : null;
+    }
     
     bool IsLoggedIn()
     {
+        TryRestoreSessionOnce();
         return TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken);
+    }
+
+    static void TryRestoreSessionOnce()
+    {
+        if (triedRestoreSession || TokenStore.IsAuthenticated)
+            return;
+
+        triedRestoreSession = true;
+        TokenStore.TryRestoreFromDisk();
     }
 
 
@@ -92,11 +126,16 @@ public class OpenClosePanel : MonoBehaviour
         bool loggedIn = IsLoggedIn();
 
         // Tự ẩn/hiện các nhóm UI nếu có cấu hình
-        ToggleGroup(showWhenLoggedIn, loggedIn);
-        ToggleGroup(showWhenLoggedOut, !loggedIn);
+        if (!hasVisualState || lastLoggedIn != loggedIn)
+        {
+            hasVisualState = true;
+            lastLoggedIn = loggedIn;
+            ToggleGroup(showWhenLoggedIn, loggedIn);
+            ToggleGroup(showWhenLoggedOut, !loggedIn);
+        }
 
         // Nếu đã login mà panel vẫn mở, đóng lại cho chắc
-        if (loggedIn && targetPanel && targetPanel.activeSelf)
+        if (loggedIn && IsPanelOpen())
             CloseUI();
     }
     
@@ -108,7 +147,11 @@ public class OpenClosePanel : MonoBehaviour
 
     void OnOpenButtonClicked()
     {
-        if (!IsLoggedIn())
+        if (IsLoggedIn())
+        {
+            CloseUI();
+        }
+        else
         {
             OpenUI();
         }
@@ -117,10 +160,27 @@ public class OpenClosePanel : MonoBehaviour
     // ====== Core UI open/close ======
     void OpenUI()
     {
+        if (IsLoggedIn())
+        {
+            CloseUI();
+            return;
+        }
+
         if (targetImage) targetImage.gameObject.SetActive(true);
         if (targetPanel) targetPanel.SetActive(true);
         if (cursorMgr) cursorMgr.SetUIOpen(true);
-        InputBlocker.SetBlocked(true);
+
+        if (!inputBlockedByThisPanel)
+        {
+            InputBlocker.SetBlocked(true);
+            inputBlockedByThisPanel = true;
+        }
+    }
+
+    bool IsPanelOpen()
+    {
+        return (targetPanel != null && targetPanel.activeSelf)
+               || (targetImage != null && targetImage.gameObject.activeSelf);
     }
 
     public void CloseUI()
@@ -128,6 +188,11 @@ public class OpenClosePanel : MonoBehaviour
         if (targetImage) targetImage.gameObject.SetActive(false);
         if (targetPanel) targetPanel.SetActive(false);
         if (cursorMgr) cursorMgr.SetUIOpen(false);
-        InputBlocker.SetBlocked(false);
+
+        if (inputBlockedByThisPanel)
+        {
+            InputBlocker.SetBlocked(false);
+            inputBlockedByThisPanel = false;
+        }
     }
 }

@@ -45,7 +45,11 @@ public static class InputBlocker
         return blockCount;
     }
 
-    public static void ClearBlock() => blockCount = 0;
+    public static void ClearBlock()
+    {
+        blockCount = 0;
+        UpdateInputState();
+    }
 }
 public class InputManager : Singleton<InputManager>
 {

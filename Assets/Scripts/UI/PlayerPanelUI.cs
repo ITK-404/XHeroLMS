@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 [DefaultExecutionOrder(-999)]
@@ -33,6 +34,11 @@ public class PlayerPanelUI : MonoBehaviour
     public GameObject pathfindPanel;
     public Button     exitPathBtn;
     public Action     OnClickTryExitAutoFindWay;
+    private static bool triedRestoreSession;
+    private const float LoginPanelGuardInterval = 0.25f;
+    private bool hasAuthState;
+    private bool lastAuthState;
+    private float nextLoginPanelGuardTime;
 
     // ──────────────────────────────────────────────
     // Unity lifecycle
@@ -40,24 +46,40 @@ public class PlayerPanelUI : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        TryRestoreSessionOnce();
 
-        defaultContainer.SetActive(true);
-        unLogginContainer.SetActive(true);
-        loginContainer.SetActive(false);
+        if (defaultContainer != null)
+            defaultContainer.SetActive(true);
 
-        if (TokenStore.IsAuthenticated)
-            ShowLoginUI();
-        else
-            LoginController.OnLoginComplete += ShowLoginUI;
+        LoginController.OnLoginComplete -= ShowLoginUI;
+        LoginController.OnLoginComplete += ShowLoginUI;
 
-        exitPathBtn.onClick.AddListener(TryExitAutoFinding);
+        RefreshAuthState(true);
+
+        if (exitPathBtn != null)
+            exitPathBtn.onClick.AddListener(TryExitAutoFinding);
+
         HidePathfinding();
+    }
+
+    private void OnEnable()
+    {
+        TryRestoreSessionOnce();
+        RefreshAuthState(true);
+    }
+
+    private void LateUpdate()
+    {
+        RefreshAuthState(false);
+        RunLoginPanelGuardIfNeeded();
     }
 
     private void OnDestroy()
     {
         LoginController.OnLoginComplete -= ShowLoginUI;
-        exitPathBtn.onClick.RemoveListener(TryExitAutoFinding);
+
+        if (exitPathBtn != null)
+            exitPathBtn.onClick.RemoveListener(TryExitAutoFinding);
     }
 
     // ──────────────────────────────────────────────
@@ -66,8 +88,10 @@ public class PlayerPanelUI : MonoBehaviour
 
     public void ShowLoginUI()
     {
-        loginContainer.SetActive(true);
-        unLogginContainer.SetActive(false);
+        hasAuthState = true;
+        lastAuthState = true;
+        SetAuthContainers(true);
+        CloseBlockingLoginPanels();
 
         // string baseUrl     = LmsStore.Instance.baseUrl?.TrimEnd('/');
         // string accessToken = TokenStore.AccessToken;
@@ -100,8 +124,12 @@ public class PlayerPanelUI : MonoBehaviour
 
     public void ShowUnLoginContainer(bool b)
     {
+        TryRestoreSessionOnce();
+
         if (TokenStore.IsAuthenticated) return;
-        unLogginContainer.SetActive(b);
+
+        if (unLogginContainer != null)
+            unLogginContainer.SetActive(b);
     }
 
     // ──────────────────────────────────────────────
@@ -122,7 +150,108 @@ public class PlayerPanelUI : MonoBehaviour
 
     public void HidePathfinding()
     {
-        pathfindPanel.SetActive(false);
-        playerInformation.gameObject.SetActive(true);
+        if (pathfindPanel != null)
+            pathfindPanel.SetActive(false);
+
+        if (playerInformation != null)
+            playerInformation.gameObject.SetActive(true);
+    }
+
+    private void RefreshAuthState(bool force)
+    {
+        bool loggedIn = HasAuthenticatedSession();
+
+        if (!force && hasAuthState && lastAuthState == loggedIn)
+            return;
+
+        hasAuthState = true;
+        lastAuthState = loggedIn;
+        SetAuthContainers(loggedIn);
+    }
+
+    private void SetAuthContainers(bool loggedIn)
+    {
+        if (loginContainer != null)
+            loginContainer.SetActive(loggedIn);
+
+        if (unLogginContainer != null)
+            unLogginContainer.SetActive(!loggedIn);
+
+        if (loggedIn)
+            CloseBlockingLoginPanels();
+    }
+
+    private static void TryRestoreSessionOnce()
+    {
+        if (triedRestoreSession || TokenStore.IsAuthenticated)
+            return;
+
+        triedRestoreSession = true;
+        TokenStore.TryRestoreFromDisk();
+    }
+
+    private void RunLoginPanelGuardIfNeeded()
+    {
+        if (!HasAuthenticatedSession())
+            return;
+
+        if (Time.unscaledTime < nextLoginPanelGuardTime)
+            return;
+
+        nextLoginPanelGuardTime = Time.unscaledTime + LoginPanelGuardInterval;
+        CloseBlockingLoginPanels();
+    }
+
+    private static bool HasAuthenticatedSession()
+    {
+        return TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken);
+    }
+
+    private static void CloseBlockingLoginPanels()
+    {
+        var panels = UnityEngine.Object.FindObjectsByType<OpenClosePanel>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < panels.Length; i++)
+        {
+            if (panels[i] != null)
+                panels[i].CloseUI();
+        }
+
+        var transforms = UnityEngine.Object.FindObjectsByType<Transform>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform root = transforms[i];
+            if (root == null || root.name != "CanvasLogin" || !IsLoadedSceneObject(root.gameObject))
+                continue;
+
+            Transform overlay = root.Find("Image");
+            if (overlay != null)
+                overlay.gameObject.SetActive(false);
+
+            SetDescendantsNamedActive(root, "UI", false);
+        }
+    }
+
+    private static bool IsLoadedSceneObject(GameObject obj)
+    {
+        Scene scene = obj.scene;
+        return scene.IsValid() && scene.isLoaded;
+    }
+
+    private static void SetDescendantsNamedActive(Transform root, string childName, bool active)
+    {
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == childName)
+                child.gameObject.SetActive(active);
+
+            SetDescendantsNamedActive(child, childName, active);
+        }
     }
 }

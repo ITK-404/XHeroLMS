@@ -55,11 +55,10 @@ public static class TokenStore
 
         // Chọn 1 trong 2 dòng dưới tùy field thật của response:
         // Password = auth.data.password;
-        Password = auth.data.user.password;
-
         if (auth.data.user != null)
         {
             var u = auth.data.user;
+            Password = u.password;
             UserID = u.id;
             Username = u.username;
             FullName = u.fullName;
@@ -73,6 +72,7 @@ public static class TokenStore
         }
         else
         {
+            Password = null;
             UserID = Username = FullName = Gender = Role = Email = Status = Avatar = ReferralCode = Jit = null;
         }
 
