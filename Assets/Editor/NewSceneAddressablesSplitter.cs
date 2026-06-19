@@ -24,6 +24,7 @@ public static class NewSceneAddressablesSplitter
     private const string LegacyLateSceneDirectory = "Assets/Scenes/New Scene_AddressableLate";
     private const string ReportDirectory = "Library/NewSceneAddressableSplit";
     private const string LoaderObjectName = "[New Scene Late Content Loader]";
+    private const string BoxLoadObjectName = "boxLoad";
 
     private const string MainGroupName = "Cloud_New Scene";
     private const string LegacyLateGroupPrefix = "Cloud_New Scene_Late_";
@@ -80,9 +81,11 @@ public static class NewSceneAddressablesSplitter
         "navmesh"
     };
 
-    private static readonly string[] AdditionalLateHierarchyPaths =
+    private static readonly string[] InitialMainHierarchyPaths =
     {
-        "Enviroment/ToaChanhDien_3toa"
+        BoxLoadObjectName,
+        "Enviroment/ToaChanhDien_3toa",
+        "Enviroment/NenSanhTruoc"
     };
 
     private static readonly string[][] PlannedEnvironmentLateBatches =
@@ -182,10 +185,6 @@ public static class NewSceneAddressablesSplitter
 
     private static readonly string[][] OrderedLateHierarchyBatches =
     {
-        new[]
-        {
-            "Enviroment/ToaChanhDien_3toa"
-        },
         new[]
         {
             "Enviroment/Tuong_Thanh"
@@ -322,6 +321,7 @@ public static class NewSceneAddressablesSplitter
         Scene generatedMainScene = EditorSceneManager.OpenScene(GeneratedMainScenePath, OpenSceneMode.Single);
         RemoveLoaderObject(generatedMainScene);
         ApplyGeneratedSceneOptimizations(generatedMainScene);
+        ConfigureInitialSceneShell(generatedMainScene);
 
         List<string> generatedScenePaths = new List<string> { GeneratedMainScenePath };
         List<string> lateSceneKeys = new List<string>();
@@ -332,6 +332,7 @@ public static class NewSceneAddressablesSplitter
         foreach (string[] batch in OrderedLateHierarchyBatches)
             SplitHierarchyPathBatch(generatedMainScene, batch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
+        SplitTerrainContent(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
         SplitAutomaticRootCandidates(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
         EnsureLateSceneLoader(generatedMainScene, lateSceneKeys);
@@ -409,6 +410,132 @@ public static class NewSceneAddressablesSplitter
         }
     }
 
+    private static void ConfigureInitialSceneShell(Scene scene)
+    {
+        GameObject boxLoad = FindByHierarchyPath(scene, BoxLoadObjectName);
+
+        if (boxLoad == null)
+        {
+            Debug.LogWarning("[NewSceneSplit] boxLoad was not found in generated scene. Mobile late-load cover will be unavailable.");
+            return;
+        }
+
+        if (boxLoad.activeSelf)
+            boxLoad.SetActive(false);
+
+        EditorUtility.SetDirty(boxLoad);
+    }
+
+    private static void SplitTerrainContent(
+        Scene generatedMainScene,
+        ref int nextLateIndex,
+        List<string> lateSceneKeys,
+        List<string> generatedScenePaths,
+        StringBuilder splitReport)
+    {
+        List<GameObject> terrainRoots = CollectTerrainMoveRoots(generatedMainScene);
+
+        if (terrainRoots.Count == 0)
+            return;
+
+        CreateLateSceneFromObjects(terrainRoots, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+
+        Debug.Log("[NewSceneSplit] Moved terrain content to late scenes: "
+                  + string.Join(", ", terrainRoots.Select(GetHierarchyPath)));
+    }
+
+    private static List<GameObject> CollectTerrainMoveRoots(Scene scene)
+    {
+        List<GameObject> result = new List<GameObject>();
+
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            foreach (Terrain terrain in root.GetComponentsInChildren<Terrain>(true))
+                AddTerrainMoveRoot(terrain.gameObject, scene, result);
+
+            foreach (TerrainCollider terrainCollider in root.GetComponentsInChildren<TerrainCollider>(true))
+                AddTerrainMoveRoot(terrainCollider.gameObject, scene, result);
+        }
+
+        return result
+            .OrderBy(GetHierarchyPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AddTerrainMoveRoot(GameObject terrainObject, Scene scene, List<GameObject> result)
+    {
+        if (terrainObject == null)
+            return;
+
+        GameObject moveRoot = GetTerrainMoveRoot(terrainObject, scene);
+
+        if (moveRoot == null)
+            return;
+
+        string movePath = GetHierarchyPath(moveRoot);
+
+        if (IsInitialMainHierarchyPath(movePath) || WouldMoveInitialMainHierarchy(moveRoot))
+        {
+            Debug.LogWarning("[NewSceneSplit] Terrain move skipped because it would include initial shell object: " + movePath);
+            return;
+        }
+
+        for (int i = result.Count - 1; i >= 0; i--)
+        {
+            GameObject existing = result[i];
+
+            if (existing == null)
+            {
+                result.RemoveAt(i);
+                continue;
+            }
+
+            if (moveRoot.transform.IsChildOf(existing.transform))
+                return;
+
+            if (existing.transform.IsChildOf(moveRoot.transform))
+                result.RemoveAt(i);
+        }
+
+        result.Add(moveRoot);
+    }
+
+    private static GameObject GetTerrainMoveRoot(GameObject terrainObject, Scene scene)
+    {
+        GameObject prefabRoot = PrefabUtility.GetNearestPrefabInstanceRoot(terrainObject);
+
+        if (IsValidTerrainMoveRoot(prefabRoot, scene))
+            return prefabRoot;
+
+        Transform current = terrainObject.transform;
+
+        while (current.parent != null && current.parent.parent != null)
+        {
+            GameObject parent = current.parent.gameObject;
+
+            if (WouldMoveInitialMainHierarchy(parent))
+                break;
+
+            current = current.parent;
+        }
+
+        return IsValidTerrainMoveRoot(current.gameObject, scene)
+            ? current.gameObject
+            : null;
+    }
+
+    private static bool IsValidTerrainMoveRoot(GameObject go, Scene scene)
+    {
+        if (go == null)
+            return false;
+
+        if (go.scene != scene)
+            return false;
+
+        string path = GetHierarchyPath(go);
+        return !IsInitialMainHierarchyPath(path) && !WouldMoveInitialMainHierarchy(go);
+    }
+
     private static void SplitHierarchyPathBatch(
         Scene generatedMainScene,
         IReadOnlyList<string> hierarchyPaths,
@@ -426,6 +553,14 @@ public static class NewSceneAddressablesSplitter
             if (go == null)
             {
                 Debug.LogWarning("[NewSceneSplit] Generated split object not found: " + hierarchyPath);
+                continue;
+            }
+
+            string currentPath = GetHierarchyPath(go);
+
+            if (IsInitialMainHierarchyPath(currentPath))
+            {
+                Debug.Log("[NewSceneSplit] Keeping initial shell object in main scene: " + currentPath);
                 continue;
             }
 
@@ -1098,6 +1233,13 @@ public static class NewSceneAddressablesSplitter
         }
 
         string normalizedName = Normalize(info.Name);
+        string hierarchyPath = GetHierarchyPath(info.GameObject);
+
+        if (IsInitialMainHierarchyPath(hierarchyPath))
+        {
+            reason = "initial shell";
+            return false;
+        }
 
         if (CriticalNameFragments.Any(fragment => normalizedName.Contains(fragment)))
         {
@@ -1217,6 +1359,10 @@ public static class NewSceneAddressablesSplitter
         serialized.FindProperty("showBlockingOverlayUntilLoaded").boolValue = false;
         serialized.FindProperty("blockingOverlayText").stringValue = "Dang dung the gioi...";
         serialized.FindProperty("minimumOverlaySeconds").floatValue = 0.1f;
+        serialized.FindProperty("controlBoxLoad").boolValue = true;
+        serialized.FindProperty("boxLoadObjectName").stringValue = BoxLoadObjectName;
+        serialized.FindProperty("boxLoadOnlyOnMobile").boolValue = true;
+        serialized.FindProperty("showBoxLoadOnlyWhenDependenciesMissing").boolValue = true;
 
         SerializedProperty sceneKeysProperty = serialized.FindProperty("sceneKeys");
         sceneKeysProperty.arraySize = lateSceneKeys.Count;
@@ -1653,6 +1799,46 @@ public static class NewSceneAddressablesSplitter
         }
 
         return string.Join("/", names);
+    }
+
+    private static bool IsInitialMainHierarchyPath(string hierarchyPath)
+    {
+        if (string.IsNullOrEmpty(hierarchyPath))
+            return false;
+
+        for (int i = 0; i < InitialMainHierarchyPaths.Length; i++)
+        {
+            string initialPath = InitialMainHierarchyPaths[i];
+
+            if (string.Equals(hierarchyPath, initialPath, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (hierarchyPath.StartsWith(initialPath + "/", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool WouldMoveInitialMainHierarchy(GameObject root)
+    {
+        if (root == null)
+            return false;
+
+        string rootPath = GetHierarchyPath(root);
+
+        for (int i = 0; i < InitialMainHierarchyPaths.Length; i++)
+        {
+            string initialPath = InitialMainHierarchyPaths[i];
+
+            if (string.Equals(rootPath, initialPath, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (initialPath.StartsWith(rootPath + "/", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string GetParentPath(string hierarchyPath)

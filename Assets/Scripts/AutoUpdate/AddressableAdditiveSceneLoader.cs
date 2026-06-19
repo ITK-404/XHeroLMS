@@ -29,6 +29,10 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     [SerializeField] private bool showBlockingOverlayUntilLoaded = true;
     [SerializeField] private string blockingOverlayText = "Dang dung the gioi...";
     [SerializeField] private float minimumOverlaySeconds = 0.1f;
+    [SerializeField] private bool controlBoxLoad = true;
+    [SerializeField] private string boxLoadObjectName = "boxLoad";
+    [SerializeField] private bool boxLoadOnlyOnMobile = true;
+    [SerializeField] private bool showBoxLoadOnlyWhenDependenciesMissing = true;
     [SerializeField] private List<string> sceneKeys = new List<string>();
 
     private bool _isLoading;
@@ -41,6 +45,9 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private int _failedSceneCount;
     private float _overlayShownAt;
     private GameObject _blockingOverlayRoot;
+    private GameObject _boxLoadObject;
+    private bool _boxLoadRequestedVisible;
+    private bool _boxLoadWarningLogged;
     private Scene _ownerScene;
 
     public bool IsLoading => _isLoading;
@@ -75,7 +82,13 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
     public void BeginLoad()
     {
-        if (_loadStarted || _isLoading || _loadComplete)
+        if (_loadComplete)
+        {
+            SetBoxLoadVisible(false);
+            return;
+        }
+
+        if (_loadStarted || _isLoading)
             return;
 
         _loadStarted = true;
@@ -123,6 +136,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         if (downloadDependenciesTogether)
         {
+            PrepareBoxLoadForPendingContent(keys.Count, false);
             yield return DownloadAndLoadTogetherRoutine(keys);
             FinishLoad();
             yield break;
@@ -133,8 +147,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             yield return new WaitForSecondsRealtime(initialDelaySeconds);
 
 #if ADDRESSABLES
+        PrepareBoxLoadForPendingContent(keys.Count, false);
+
         for (int i = 0; i < keys.Count; i++)
         {
+            RestoreRequestedBoxLoadVisibility();
             yield return LoadSingleSceneRoutine(keys[i]);
 
             if (delayBetweenScenesSeconds > 0f && i < keys.Count - 1)
@@ -165,6 +182,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private void FinishLoad()
     {
         EnsureOwnerSceneActive();
+        SetBoxLoadVisible(false);
 
         _isLoading = false;
         _loadComplete = true;
@@ -193,6 +211,129 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             Destroy(_blockingOverlayRoot);
 
         _blockingOverlayRoot = null;
+    }
+
+    private void PrepareBoxLoadForPendingContent(int pendingSceneCount, bool allDependenciesCached)
+    {
+        if (!controlBoxLoad)
+            return;
+
+        if (pendingSceneCount <= 0)
+        {
+            SetBoxLoadVisible(false);
+            return;
+        }
+
+        if (!ShouldShowBoxLoadOnThisPlatform())
+        {
+            SetBoxLoadVisible(false);
+            return;
+        }
+
+        if (showBoxLoadOnlyWhenDependenciesMissing && allDependenciesCached)
+        {
+            SetBoxLoadVisible(false);
+            return;
+        }
+
+        SetBoxLoadVisible(true);
+    }
+
+    private bool ShouldShowBoxLoadOnThisPlatform()
+    {
+        RuntimePlatform platform = Application.platform;
+
+        if (platform == RuntimePlatform.Android || platform == RuntimePlatform.IPhonePlayer)
+            return true;
+
+        return !boxLoadOnlyOnMobile;
+    }
+
+    private void SetBoxLoadVisible(bool visible)
+    {
+        if (!controlBoxLoad)
+            return;
+
+        _boxLoadRequestedVisible = visible;
+
+        GameObject boxLoad = ResolveBoxLoadObject(visible);
+
+        if (boxLoad == null)
+            return;
+
+        if (boxLoad.activeSelf == visible)
+            return;
+
+        boxLoad.SetActive(visible);
+
+        Debug.Log("[LateSceneLoader] " + (visible ? "Enabled" : "Disabled") + " boxLoad.");
+    }
+
+    private void RestoreRequestedBoxLoadVisibility()
+    {
+        if (_boxLoadRequestedVisible)
+            SetBoxLoadVisible(true);
+    }
+
+    private GameObject ResolveBoxLoadObject(bool logMissing)
+    {
+        if (_boxLoadObject != null)
+            return _boxLoadObject;
+
+        if (string.IsNullOrWhiteSpace(boxLoadObjectName))
+            return null;
+
+        if (!_ownerScene.IsValid() || !_ownerScene.isLoaded)
+            _ownerScene = gameObject.scene;
+
+        if (!_ownerScene.IsValid() || !_ownerScene.isLoaded)
+            return null;
+
+        foreach (GameObject root in _ownerScene.GetRootGameObjects())
+        {
+            if (string.Equals(root.name, boxLoadObjectName, StringComparison.Ordinal))
+            {
+                _boxLoadObject = root;
+                return _boxLoadObject;
+            }
+
+            Transform child = FindChildRecursive(root.transform, boxLoadObjectName);
+
+            if (child != null)
+            {
+                _boxLoadObject = child.gameObject;
+                return _boxLoadObject;
+            }
+        }
+
+        if (logMissing && !_boxLoadWarningLogged)
+        {
+            _boxLoadWarningLogged = true;
+            Debug.LogWarning("[LateSceneLoader] boxLoad object not found in scene: " + _ownerScene.name);
+        }
+
+        return null;
+    }
+
+    private static Transform FindChildRecursive(Transform root, string childName)
+    {
+        if (root == null)
+            return null;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+
+            if (string.Equals(child.name, childName, StringComparison.Ordinal))
+                return child;
+
+            Transform match = FindChildRecursive(child, childName);
+
+            if (match != null)
+                return match;
+        }
+
+        return null;
     }
 
     private void ShowBlockingOverlay()
@@ -299,8 +440,12 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         if (allDependenciesCached)
             Debug.Log("[LateSceneLoader] All late scene dependencies are cached. Loading cached scenes immediately.");
 
+        PrepareBoxLoadForPendingContent(keys.Count, allDependenciesCached);
+
         while (nextIndex < keys.Count || running.Count > 0)
         {
+            RestoreRequestedBoxLoadVisibility();
+
             while (nextIndex < keys.Count && running.Count < maxConcurrent)
             {
                 string key = keys[nextIndex++];
@@ -458,6 +603,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         while (states.Any(s => !s.LoadFinished))
         {
+            RestoreRequestedBoxLoadVisibility();
+
             bool startedSceneLoad = false;
 
             for (int i = 0; i < states.Count; i++)
