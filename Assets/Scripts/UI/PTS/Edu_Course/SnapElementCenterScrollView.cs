@@ -54,6 +54,8 @@ public partial class SnapElementCenterScrollView : MonoBehaviour
         Vector3 offset = center - targetItem.position;
         var targetPos = scrollRect.content.position + offset;
         var startPos = scrollRect.content.position;
+        
+        dragTween?.Kill();
         dragTween = DOVirtual.Vector3(startPos, targetPos, snapDuration, (pos) => { scrollRect.content.position = pos; })
             .SetEase(Ease.OutSine);
         
@@ -63,14 +65,21 @@ public partial class SnapElementCenterScrollView : MonoBehaviour
     private void LateUpdate()
     {
         float scrollHorizontalNormalize = scrollRect.horizontalNormalizedPosition;
-        bool isExpandToLimit = scrollHorizontalNormalize > 1.02f ||
-                               scrollHorizontalNormalize < - 0.02f;
+        float x = 1.005f;
+        float y = -0.005f;
+        bool isExpandToLimit = scrollHorizontalNormalize > x ||
+                               scrollHorizontalNormalize <  y;
         if (isExpandToLimit)
         {
             scrollRect.horizontalNormalizedPosition =
-                Mathf.Clamp(scrollHorizontalNormalize, -0.02f, 1.02f);
+                Mathf.Clamp(scrollHorizontalNormalize,  y, x);
         }
     }
 
     public float GetMagnitude() => scrollRect.velocity.magnitude;
+
+    public void StopDrag()
+    {
+        dragTween?.Kill();
+    }
 }

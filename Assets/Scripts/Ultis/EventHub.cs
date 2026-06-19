@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EventHub
@@ -28,4 +29,37 @@ public class EventHub
     {
         OnPlayerLogout?.Invoke();
     }
+}
+
+
+public interface ICommand { }
+
+public static class SignalBus
+{
+    private static readonly Dictionary<Type, List<object>> handlers = new();
+
+    public static void Subscribe<T>(Action<T> handler) where T : ICommand
+    {
+        var type = typeof(T);
+        if (!handlers.ContainsKey(type))
+            handlers[type] = new List<object>();
+        handlers[type].Add(handler);
+    }
+
+    public static void Unsubscribe<T>(Action<T> handler) where T : ICommand
+    {
+        var type = typeof(T);
+        if (handlers.ContainsKey(type))
+            handlers[type].Remove(handler);
+    }
+
+    public static void Send<T>(T command) where T : ICommand
+    {
+        var type = typeof(T);
+        if (!handlers.ContainsKey(type)) return;
+        foreach (var h in handlers[type])
+            (h as Action<T>)?.Invoke(command);
+    }
+
+    public static void Clear() => handlers.Clear();
 }
