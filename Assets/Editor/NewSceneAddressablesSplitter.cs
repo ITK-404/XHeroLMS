@@ -1671,7 +1671,7 @@ public static class NewSceneAddressablesSplitter
         serialized.FindProperty("downloadDependenciesTogether").boolValue = false;
         serialized.FindProperty("loadSceneAsSoonAsDependenciesReady").boolValue = true;
         serialized.FindProperty("showBlockingOverlayUntilLoaded").boolValue = false;
-        serialized.FindProperty("blockingOverlayText").stringValue = "Dang dung the gioi...";
+        serialized.FindProperty("blockingOverlayText").stringValue = "Đang dựng thế giới...";
         serialized.FindProperty("minimumOverlaySeconds").floatValue = 0.1f;
         serialized.FindProperty("controlBoxLoad").boolValue = true;
         serialized.FindProperty("boxLoadObjectName").stringValue = BoxLoadObjectName;

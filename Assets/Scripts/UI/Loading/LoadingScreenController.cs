@@ -373,7 +373,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         _lastActivatedAddressableSceneHandle = handle;
 
-        _loadingStatusOverride = "Hoan tat";
+        _loadingStatusOverride = "Hoàn tất";
         SetProgress(1f);
         _loadSucceeded = true;
     }
@@ -391,7 +391,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
         if (!waitForNewSceneLateContentBeforeReveal && !waitForCachedNewSceneLateContentBeforeReveal)
             yield break;
 
-        _loadingStatusOverride = "Dang dung the gioi";
+        _loadingStatusOverride = "Đang dựng thế giới";
         SetProgress(0.75f);
 
         AddressableAdditiveSceneLoader loader = null;
@@ -657,7 +657,7 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 
         Debug.Log($"[LoadingScreenController] Build scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        _loadingStatusOverride = "Hoan tat";
+        _loadingStatusOverride = "Hoàn tất";
         SetProgress(1f);
         _loadSucceeded = true;
     }

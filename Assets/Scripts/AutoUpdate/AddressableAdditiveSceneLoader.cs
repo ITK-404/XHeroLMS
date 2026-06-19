@@ -27,7 +27,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     [SerializeField] private bool downloadDependenciesTogether = true;
     [SerializeField] private bool loadSceneAsSoonAsDependenciesReady = true;
     [SerializeField] private bool showBlockingOverlayUntilLoaded = true;
-    [SerializeField] private string blockingOverlayText = "Dang dung the gioi...";
+    [SerializeField] private string blockingOverlayText = "Đang dựng thế giới...";
     [SerializeField] private float minimumOverlaySeconds = 0.1f;
     [SerializeField] private bool controlBoxLoad = true;
     [SerializeField] private string boxLoadObjectName = "boxLoad";
