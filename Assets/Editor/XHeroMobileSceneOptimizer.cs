@@ -5,27 +5,34 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using GPUInstancerPro;
-using GPUInstancerPro.PrefabModule;
-using HTraceSSGI.Scripts.Globals;
-using HTraceSSGI.Scripts.Infrastructure.URP;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 public static class XHeroMobileSceneOptimizer
 {
     private const string DefaultScene = "Assets/Scenes/New Scene.unity";
-    private const string MobileRpAssetPath = "Assets/Settings/Mobile_RPAsset.asset";
-    private const string MobileRendererPath = "Assets/Settings/Mobile_Renderer.asset";
-    private const string SceneLookProfilePath = "Assets/Settings/XHero_Mobile_CinematicLook.asset";
-    private const string GpuiMobileProfilePath = "Assets/Settings/XHero_GPUI_Mobile_Foliage_Profile.asset";
-    private const string NewSceneMobileLightingSettingsPath = "Assets/Settings/XHero_NewScene_MobileLighting.lighting";
-    private const string FullProjectReportPath = "XHero_Mobile_Full_Optimization_Report.md";
+    private const string FullProjectReportPath = "XHero_Mobile_Batch_FPS_Report.md";
+    private const string UniversalAdditionalCameraDataTypeName = "UnityEngine.Rendering.Universal.UniversalAdditionalCameraData";
+
+    private static readonly string[] CameraRenderOptionProperties =
+    {
+        "m_RenderShadows",
+        "m_RequiresDepthTextureOption",
+        "m_RequiresOpaqueTextureOption",
+        "m_RendererIndex",
+        "m_VolumeFrameworkUpdateModeOption",
+        "m_RenderPostProcessing",
+        "m_Antialiasing",
+        "m_AntialiasingQuality",
+        "m_StopNaN",
+        "m_Dithering",
+        "m_ClearDepth",
+        "m_AllowXRRendering"
+    };
 
     private static readonly string[] GeneratedScenePathHints =
     {
@@ -34,30 +41,17 @@ public static class XHeroMobileSceneOptimizer
         "/New Scene_AddressableLate/"
     };
 
-    private static readonly string[] AutoGpuiPrototypePrefabPaths =
+    private static readonly string[] DynamicNameHints =
     {
-        "Assets/Models_LMS_Mobile/Luat/tree_sen/ghep/Hoa Sen Group.prefab",
-        "Assets/Prefabs/Models/Bon Cay Sanh.prefab",
-        "Assets/Prefabs/Models/Tree/boncay sau.prefab",
-        "Assets/Prefabs/Cay Co Bon Hoa.prefab"
+        "player", "npc", "ui", "button", "trigger", "interact", "door", "quest", "timeline",
+        "cinemachine", "camera", "webview", "joystick", "controller", "handler", "loader",
+        "manager", "event", "anim", "vehicle", "character"
     };
 
     private static readonly string[] LogicComponentNameHints =
     {
-        "Handler", "Controller", "Trigger", "Interact", "Load", "Door", "NPC", "Quest", "Video",
-        "Timeline", "Cinemachine", "Astar", "Path", "Button", "UI"
-    };
-
-    private static readonly string[] GpuiSafePathHints =
-    {
-        "tree", "cay", "sen", "bui", "co", "grass", "hoa", "flower", "leaf", "la", "rock", "stone",
-        "foliage", "decor", "decoration", "prop", "trung_bay", "boncay", "khuon_vien"
-    };
-
-    private static readonly string[] GpuiUnsafePathHints =
-    {
-        "nha_t1", "/nha", "\\nha", "house", "player", "ui", "minimap", "trigger", "door", "room",
-        "npc", "quest", "video", "webview", "canvas"
+        "Handler", "Controller", "Trigger", "Interact", "Load", "Door", "NPC", "Quest",
+        "Timeline", "Cinemachine", "Astar", "Path", "Button", "UI", "WebView", "Input"
     };
 
     private static readonly string[] StaticBatchingRiskyPathHints =
@@ -66,14 +60,15 @@ public static class XHeroMobileSceneOptimizer
         "modelslms/toachanhdien"
     };
 
+    [MenuItem("Tools/XHero LMS/Optimization/Report Current Scene Batches/FPS")]
     public static void GenerateCurrentSceneReportMenu()
     {
         var scene = SceneManager.GetActiveScene().path;
         if (string.IsNullOrEmpty(scene))
             scene = DefaultScene;
 
-        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_Scene_Optimization_Report.md"));
-        GenerateReport(new[] { scene }, outPath, "manual");
+        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_Scene_Batch_FPS_Report.md"));
+        GenerateReport(new[] { scene }, outPath, "manual report");
         EditorUtility.RevealInFinder(outPath);
     }
 
@@ -82,18 +77,18 @@ public static class XHeroMobileSceneOptimizer
         ApplySafeMobileQualityPass(new[] { SceneManager.GetActiveScene().path }, null);
     }
 
-    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Optimize All Scenes AAA Mobile")]
+    [MenuItem("Tools/XHero LMS/Optimization/ONE CLICK - Safe Batches and FPS Only")]
     public static void ApplyOneClickMobileProjectOptimizationMenu()
     {
         var scenes = GetAllProjectScenePaths();
         var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + FullProjectReportPath));
-        ApplyOneClickDeepMobileProjectOptimization(scenes, outPath, false, true);
+        ApplyOneClickDeepMobileProjectOptimization(scenes, outPath, false, false);
         EditorUtility.RevealInFinder(outPath);
     }
 
     public static void ApplyNewSceneLightingQualityMenu()
     {
-        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_NewScene_Lighting_Quality_Report.md"));
+        var outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_NewScene_Batch_FPS_Report.md"));
         ApplyMobileLightingQualityPass(new[] { DefaultScene }, outPath, false);
         EditorUtility.RevealInFinder(outPath);
     }
@@ -103,40 +98,32 @@ public static class XHeroMobileSceneOptimizer
         var scenes = GetSceneArgs();
         var output = GetArg("-xheroOut");
         if (string.IsNullOrEmpty(output))
-            output = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_Scene_Optimization_Report.md"));
+            output = Path.GetFullPath(Path.Combine(Application.dataPath, "../XHero_Scene_Batch_FPS_Report.md"));
 
-        GenerateReport(scenes, output, "batch");
+        GenerateReport(scenes, output, "batch report");
     }
 
     public static void ApplySafeMobileQualityPassBatch()
     {
-        var scenes = GetSceneArgs();
-        var output = GetArg("-xheroOut");
-        ApplySafeMobileQualityPass(scenes, output);
+        ApplySafeMobileQualityPass(GetSceneArgs(), GetArg("-xheroOut"));
     }
 
     public static void ApplyFullMobileOptimizationPassBatch()
     {
-        var scenes = GetSceneArgs();
-        var output = GetArg("-xheroOut");
-        ApplyFullMobileOptimizationPass(scenes, output);
+        ApplyFullMobileOptimizationPass(GetSceneArgs(), GetArg("-xheroOut"));
     }
 
     public static void ApplyStableMobileRepairPassBatch()
     {
-        var scenes = GetSceneArgs();
-        var output = GetArg("-xheroOut");
-        ApplyStableMobileRepairPass(scenes, output);
+        ApplyStableMobileRepairPass(GetSceneArgs(), GetArg("-xheroOut"));
     }
 
     public static void ApplyMobileLightingQualityPassBatch()
     {
-        var scenes = GetSceneArgs();
-        var output = GetArg("-xheroOut");
         var bakeArg = GetArg("-xheroBake");
         var bakeNow = string.Equals(bakeArg, "true", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(bakeArg, "1", StringComparison.OrdinalIgnoreCase);
-        ApplyMobileLightingQualityPass(scenes, output, bakeNow);
+        ApplyMobileLightingQualityPass(GetSceneArgs(), GetArg("-xheroOut"), bakeNow);
     }
 
     public static void ApplyOneClickDeepMobileProjectOptimizationBatch()
@@ -145,6 +132,7 @@ public static class XHeroMobileSceneOptimizer
         var scenes = (string.IsNullOrWhiteSpace(explicitScenes) ? GetAllProjectScenePaths() : GetSceneArgs())
             .Where(path => !IsGeneratedSplitScenePath(path))
             .ToArray();
+
         var output = GetArg("-xheroOut");
         if (string.IsNullOrEmpty(output))
             output = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + FullProjectReportPath));
@@ -153,7 +141,301 @@ public static class XHeroMobileSceneOptimizer
         var bakeNow = string.Equals(bakeArg, "true", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(bakeArg, "1", StringComparison.OrdinalIgnoreCase);
 
-        ApplyOneClickDeepMobileProjectOptimization(scenes, output, bakeNow, true);
+        ApplyOneClickDeepMobileProjectOptimization(scenes, output, bakeNow, false);
+    }
+
+    private static void ApplySafeMobileQualityPass(string[] scenePaths, string outputPath)
+    {
+        ApplyBatchAndFpsOptimizationPass(scenePaths, outputPath, false, "safe batch/FPS pass");
+    }
+
+    private static void ApplyFullMobileOptimizationPass(string[] scenePaths, string outputPath)
+    {
+        ApplyBatchAndFpsOptimizationPass(scenePaths, outputPath, true, "full batch/FPS pass");
+    }
+
+    private static void ApplyStableMobileRepairPass(string[] scenePaths, string outputPath)
+    {
+        ApplyBatchAndFpsOptimizationPass(scenePaths, outputPath, false, "stable batch/FPS repair pass");
+    }
+
+    private static void ApplyMobileLightingQualityPass(string[] scenePaths, string outputPath, bool bakeNow)
+    {
+        var extraChanges = bakeNow
+            ? new[] { "Ignored -xheroBake: this optimizer no longer bakes or edits scene lighting." }
+            : null;
+        ApplyBatchAndFpsOptimizationPass(scenePaths, outputPath, false, "batch/FPS pass; old lighting entry point is deprecated", extraChanges);
+    }
+
+    private static void ApplyOneClickDeepMobileProjectOptimization(
+        string[] scenePaths,
+        string outputPath,
+        bool bakeNow,
+        bool regenerateNewSceneAddressables)
+    {
+        var extraChanges = new List<string>();
+        if (bakeNow)
+            extraChanges.Add("Ignored -xheroBake: this optimizer no longer bakes or edits scene lighting.");
+        if (regenerateNewSceneAddressables)
+            extraChanges.Add("Skipped scene splitting: this optimizer no longer calls NewSceneAddressablesSplitter.");
+
+        ApplyBatchAndFpsOptimizationPass(scenePaths, outputPath, true, "one-click safe batch/FPS pass", extraChanges);
+    }
+
+    private static void ApplyBatchAndFpsOptimizationPass(
+        string[] scenePaths,
+        string outputPath,
+        bool aggressive,
+        string mode,
+        IEnumerable<string> extraChanges = null)
+    {
+        scenePaths = NormalizeSceneList(scenePaths);
+
+        var changes = new List<string>
+        {
+            "Safe batch/FPS optimizer. It does not edit materials, shaders, prefab assets, GPUI components, HTrace, RenderSettings, lights, lightmaps, bake data, Addressables, scene splitting, QualitySettings, URP assets, or camera render options.",
+            "URP camera opaque/depth/post settings are snapshotted before optimization and restored after scene save.",
+            "Applied changes are limited to gameplay camera occlusion culling, conservative terrain distance clamps, renderer occlusion flags, and static batching flags only on objects already marked static."
+        };
+        if (extraChanges != null)
+            changes.AddRange(extraChanges);
+
+        foreach (var scenePath in scenePaths)
+        {
+            if (!SceneFileExists(scenePath))
+            {
+                changes.Add($"Skipped missing scene: {scenePath}");
+                continue;
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            var cameraRenderOptions = CaptureCameraRenderOptions(scene);
+            var sceneChanges = new List<string>();
+            sceneChanges.AddRange(ApplyCameraOcclusionCulling(scene));
+            sceneChanges.AddRange(ApplyTerrainFpsBudget(scene, aggressive));
+            sceneChanges.AddRange(ApplyRendererOcclusionAndStaticBatching(scene));
+            sceneChanges.AddRange(RestoreCameraRenderOptions(cameraRenderOptions));
+
+            if (sceneChanges.Count == 0)
+            {
+                changes.Add($"Scene '{scenePath}': no safe writable optimization needed.");
+                continue;
+            }
+
+            changes.Add($"Scene '{scenePath}':");
+            changes.AddRange(sceneChanges.Select(change => "  " + change));
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        if (!string.IsNullOrEmpty(outputPath))
+        {
+            GenerateReport(scenePaths, outputPath, "after " + mode, changes);
+        }
+        else
+        {
+            Debug.Log("[XHeroMobileSceneOptimizer] Applied " + mode + ":\n" + string.Join("\n", changes));
+        }
+    }
+
+    private static IEnumerable<string> ApplyCameraOcclusionCulling(Scene scene)
+    {
+        var changed = 0;
+        foreach (var camera in GetSceneComponents<Camera>(scene))
+        {
+            if (!camera || IsUtilityCamera(camera) || camera.useOcclusionCulling)
+                continue;
+
+            camera.useOcclusionCulling = true;
+            EditorUtility.SetDirty(camera);
+            changed++;
+        }
+
+        if (changed > 0)
+            return new[] { $"Enabled camera occlusion culling on {changed} gameplay camera(s)." };
+        return Array.Empty<string>();
+    }
+
+    private static List<CameraRenderOptionsSnapshot> CaptureCameraRenderOptions(Scene scene)
+    {
+        var snapshots = new List<CameraRenderOptionsSnapshot>();
+        foreach (var camera in GetSceneComponents<Camera>(scene))
+        {
+            var cameraData = GetUniversalAdditionalCameraData(camera);
+            if (!cameraData)
+                continue;
+
+            var snapshot = new CameraRenderOptionsSnapshot(cameraData);
+            var so = new SerializedObject(cameraData);
+            foreach (var propertyPath in CameraRenderOptionProperties)
+            {
+                var property = so.FindProperty(propertyPath);
+                if (property == null)
+                    continue;
+
+                if (property.propertyType == SerializedPropertyType.Boolean)
+                    snapshot.BooleanValues[propertyPath] = property.boolValue;
+                else if (property.propertyType == SerializedPropertyType.Integer)
+                    snapshot.IntValues[propertyPath] = property.intValue;
+                else if (property.propertyType == SerializedPropertyType.Enum)
+                    snapshot.EnumValues[propertyPath] = property.enumValueIndex;
+            }
+
+            snapshots.Add(snapshot);
+        }
+
+        return snapshots;
+    }
+
+    private static IEnumerable<string> RestoreCameraRenderOptions(IEnumerable<CameraRenderOptionsSnapshot> snapshots)
+    {
+        var restored = 0;
+        foreach (var snapshot in snapshots)
+        {
+            if (!snapshot.CameraData)
+                continue;
+
+            var so = new SerializedObject(snapshot.CameraData);
+            var changed = false;
+
+            foreach (var pair in snapshot.BooleanValues)
+            {
+                var property = so.FindProperty(pair.Key);
+                if (property == null || property.propertyType != SerializedPropertyType.Boolean || property.boolValue == pair.Value)
+                    continue;
+
+                property.boolValue = pair.Value;
+                changed = true;
+            }
+
+            foreach (var pair in snapshot.IntValues)
+            {
+                var property = so.FindProperty(pair.Key);
+                if (property == null || property.propertyType != SerializedPropertyType.Integer || property.intValue == pair.Value)
+                    continue;
+
+                property.intValue = pair.Value;
+                changed = true;
+            }
+
+            foreach (var pair in snapshot.EnumValues)
+            {
+                var property = so.FindProperty(pair.Key);
+                if (property == null || property.propertyType != SerializedPropertyType.Enum || property.enumValueIndex == pair.Value)
+                    continue;
+
+                property.enumValueIndex = pair.Value;
+                changed = true;
+            }
+
+            if (!changed)
+                continue;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(snapshot.CameraData);
+            restored++;
+        }
+
+        if (restored > 0)
+            return new[] { $"Restored URP camera render options on {restored} camera(s); opaque/depth/post settings are preserved." };
+
+        return Array.Empty<string>();
+    }
+
+    private static Component GetUniversalAdditionalCameraData(Camera camera)
+    {
+        if (!camera)
+            return null;
+
+        return camera.GetComponents<Component>()
+            .FirstOrDefault(component => component && component.GetType().FullName == UniversalAdditionalCameraDataTypeName);
+    }
+
+    private static IEnumerable<string> ApplyTerrainFpsBudget(Scene scene, bool aggressive)
+    {
+        var changes = new List<string>();
+        var terrains = GetSceneComponents<Terrain>(scene).Where(t => t && t.terrainData).ToArray();
+        if (terrains.Length == 0)
+            return changes;
+
+        var changed = 0;
+        foreach (var terrain in terrains)
+        {
+            var before = TerrainBudget.From(terrain);
+            var target = aggressive
+                ? new TerrainBudget(16f, 260f, 75f, 0.75f, 900f)
+                : new TerrainBudget(12f, 320f, 95f, 0.85f, 1100f);
+
+            terrain.heightmapPixelError = Mathf.Max(terrain.heightmapPixelError, target.PixelError);
+            terrain.basemapDistance = Mathf.Min(terrain.basemapDistance, target.BasemapDistance);
+            terrain.detailObjectDistance = Mathf.Min(terrain.detailObjectDistance, target.DetailDistance);
+            terrain.detailObjectDensity = Mathf.Min(terrain.detailObjectDensity, target.DetailDensity);
+            terrain.treeDistance = Mathf.Min(terrain.treeDistance, target.TreeDistance);
+
+            var after = TerrainBudget.From(terrain);
+            if (!before.Equals(after))
+            {
+                EditorUtility.SetDirty(terrain);
+                changed++;
+            }
+        }
+
+        if (changed > 0)
+            changes.Add($"Clamped terrain FPS budgets on {changed} terrain(s) without changing terrain materials/shaders/render path.");
+        return changes;
+    }
+
+    private static IEnumerable<string> ApplyRendererOcclusionAndStaticBatching(Scene scene)
+    {
+        var changes = new List<string>();
+        var renderers = GetSceneComponents<Renderer>(scene)
+            .Where(r => r && r.enabled && r.gameObject.activeInHierarchy && !(r is SkinnedMeshRenderer))
+            .ToArray();
+
+        var occlusionFlagged = 0;
+        var staticBatchFlagged = 0;
+
+        foreach (var renderer in renderers)
+        {
+            if (!renderer.allowOcclusionWhenDynamic)
+            {
+                renderer.allowOcclusionWhenDynamic = true;
+                EditorUtility.SetDirty(renderer);
+                occlusionFlagged++;
+            }
+
+            if (!renderer.gameObject.isStatic || !IsStaticBatchingSafe(renderer.gameObject))
+                continue;
+
+            var flags = GameObjectUtility.GetStaticEditorFlags(renderer.gameObject);
+            var wanted = flags | StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic;
+            if (wanted == flags)
+                continue;
+
+            GameObjectUtility.SetStaticEditorFlags(renderer.gameObject, wanted);
+            EditorUtility.SetDirty(renderer.gameObject);
+            staticBatchFlagged++;
+        }
+
+        if (occlusionFlagged > 0)
+            changes.Add($"Enabled renderer occlusion allowance on {occlusionFlagged} renderer(s).");
+        if (staticBatchFlagged > 0)
+            changes.Add($"Ensured static batching/occlusion flags on {staticBatchFlagged} renderer object(s) that were already static.");
+
+        return changes;
+    }
+
+    private static string[] NormalizeSceneList(string[] scenePaths)
+    {
+        return (scenePaths == null || scenePaths.Length == 0 ? GetAllProjectScenePaths() : scenePaths)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path.Trim().Replace('\\', '/'))
+            .Where(path => !IsGeneratedSplitScenePath(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string[] GetSceneArgs()
@@ -178,7 +460,6 @@ public static class XHeroMobileSceneOptimizer
 
         return Directory.GetFiles(scenesRoot, "*.unity", SearchOption.AllDirectories)
             .Select(path => "Assets" + path.Substring(Application.dataPath.Length).Replace('\\', '/'))
-            .Where(path => !path.Contains("/HTraceSSGI/", StringComparison.OrdinalIgnoreCase))
             .Where(path => !IsGeneratedSplitScenePath(path))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
@@ -197,1342 +478,79 @@ public static class XHeroMobileSceneOptimizer
         return null;
     }
 
-    private static void ApplySafeMobileQualityPass(string[] scenePaths, string outputPath)
+    private static bool SceneFileExists(string scenePath)
     {
-        var changes = new List<string>();
-
-        changes.AddRange(ApplyProjectMobileSettings());
-        changes.AddRange(ApplyMobileRendererSettings());
-        changes.AddRange(ApplyMobileRpAssetSettings());
-
-        foreach (var scenePath in scenePaths)
-        {
-            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
-                continue;
-
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            changes.AddRange(ApplySceneLook(scene));
-            changes.AddRange(EnsureMobileFillLights(scene));
-            EditorSceneManager.SaveScene(scene);
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (!string.IsNullOrEmpty(outputPath))
-        {
-            GenerateReport(scenePaths, outputPath, "after safe mobile pass", changes);
-        }
-        else
-        {
-            Debug.Log("[XHeroMobileSceneOptimizer] Applied safe mobile quality pass:\n" + string.Join("\n", changes));
-        }
+        if (string.IsNullOrWhiteSpace(scenePath))
+            return false;
+        return File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath));
     }
 
-    private static void ApplyFullMobileOptimizationPass(string[] scenePaths, string outputPath)
+    private static bool IsGeneratedSplitScenePath(string path)
     {
-        var changes = new List<string>();
-
-        changes.AddRange(ApplyProjectMobileSettings(true));
-        changes.AddRange(ApplyMobileRendererSettings(true));
-        changes.AddRange(ApplyMobileRpAssetSettings(true));
-
-        foreach (var scenePath in scenePaths)
-        {
-            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
-                continue;
-
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            changes.Add($"Scene '{scenePath}':");
-            changes.AddRange(ApplySceneLook(scene, true));
-            changes.AddRange(EnsureMobileFillLights(scene));
-            changes.AddRange(ApplyTerrainMobileSettings(scene));
-            changes.AddRange(ApplyRendererMobileCulling(scene));
-            changes.AddRange(ApplyGpuiPrefabOptimization(scene));
-            EditorSceneManager.SaveScene(scene);
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (!string.IsNullOrEmpty(outputPath))
-        {
-            GenerateReport(scenePaths, outputPath, "after full HTrace + GPUI mobile pass", changes);
-        }
-        else
-        {
-            Debug.Log("[XHeroMobileSceneOptimizer] Applied full mobile optimization pass:\n" + string.Join("\n", changes));
-        }
+        var normalized = (path ?? string.Empty).Replace('\\', '/');
+        return GeneratedScenePathHints.Any(hint => normalized.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
-    private static void ApplyStableMobileRepairPass(string[] scenePaths, string outputPath)
+    private static T[] GetSceneComponents<T>(Scene scene) where T : Component
     {
-        var changes = new List<string>
-        {
-            "Stable recovery pass: HTrace, GPUI prefab rendering, HDR/post stack, and bulk material instancing are disabled by default until each group is visually verified."
-        };
+        if (!scene.IsValid() || !scene.isLoaded)
+            return Array.Empty<T>();
 
-        changes.AddRange(ApplyProjectMobileSettings());
-        changes.AddRange(ApplyStableMobileRpAssetSettings());
-        changes.AddRange(ApplyStableMobileRendererSettings());
-        changes.AddRange(RemoveAutoGpuiPrefabComponents());
-
-        foreach (var scenePath in scenePaths)
-        {
-            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
-                continue;
-
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            changes.Add($"Scene '{scenePath}':");
-            changes.AddRange(ApplyStableSceneRendering(scene));
-            changes.AddRange(DisableGpuiPrefabRendering(scene));
-            changes.AddRange(DisableRiskyMaterialInstancing(scene));
-            EditorSceneManager.SaveScene(scene);
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (!string.IsNullOrEmpty(outputPath))
-        {
-            GenerateReport(scenePaths, outputPath, "after stable mobile repair pass", changes);
-        }
-        else
-        {
-            Debug.Log("[XHeroMobileSceneOptimizer] Applied stable mobile repair pass:\n" + string.Join("\n", changes));
-        }
-    }
-
-    private static void ApplyMobileLightingQualityPass(string[] scenePaths, string outputPath, bool bakeNow)
-    {
-        var changes = new List<string>
-        {
-            "Mobile lighting quality pass: better main-light shadows, mixed lighting bake prep, HTrace/GPUI remain disabled."
-        };
-
-        changes.AddRange(ApplyProjectMobileLightingQualitySettings());
-        changes.AddRange(ApplyMobileLightingQualityRpAssetSettings());
-        changes.AddRange(ApplyStableMobileRendererSettings());
-
-        foreach (var scenePath in scenePaths)
-        {
-            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
-                continue;
-
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            changes.Add($"Scene '{scenePath}':");
-            changes.AddRange(ApplyMobileQualityLighting(scene));
-            changes.AddRange(EnsureMobileFillLights(scene));
-            changes.AddRange(PrepareStaticEnvironmentForMobileBake(scene));
-            changes.AddRange(OptimizeMobileShadowCasters(scene));
-            EditorSceneManager.SaveScene(scene);
-
-            if (bakeNow)
-                changes.AddRange(TryBakeActiveSceneLighting(scene));
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (!string.IsNullOrEmpty(outputPath))
-        {
-            GenerateReport(scenePaths, outputPath, bakeNow ? "after mobile lighting quality pass + bake attempt" : "after mobile lighting quality pass", changes);
-        }
-        else
-        {
-            Debug.Log("[XHeroMobileSceneOptimizer] Applied mobile lighting quality pass:\n" + string.Join("\n", changes));
-        }
-    }
-
-    private static void ApplyOneClickDeepMobileProjectOptimization(
-        string[] scenePaths,
-        string outputPath,
-        bool bakeNow,
-        bool regenerateNewSceneAddressables)
-    {
-        scenePaths = (scenePaths == null || scenePaths.Length == 0 ? GetAllProjectScenePaths() : scenePaths)
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Where(path => !IsGeneratedSplitScenePath(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+        return scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<T>(true))
+            .Where(component => component)
             .ToArray();
-
-        var changes = new List<string>
-        {
-            "Safe one-click mobile repair/optimization pipeline: disable unsafe auto-GPUI/HTrace, restore stable lighting, keep SRP Batcher/static split safety, terrain/shadow culling, then New Scene split regeneration."
-        };
-
-        changes.AddRange(ApplyProjectMobileSettings());
-        changes.AddRange(ApplyStableMobileRpAssetSettings());
-        changes.AddRange(ApplyStableMobileRendererSettings());
-        changes.AddRange(RemoveAutoGpuiPrefabComponents());
-
-        foreach (var scenePath in scenePaths)
-        {
-            if (string.IsNullOrWhiteSpace(scenePath) || !File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
-                continue;
-
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            changes.Add($"Scene '{scenePath}':");
-            changes.AddRange(ApplyMobileQualityLighting(scene));
-            changes.AddRange(EnsureMobileFillLights(scene));
-            changes.AddRange(PrepareStaticEnvironmentForMobileBake(scene));
-            changes.AddRange(ApplyTerrainMobileSettings(scene));
-            changes.AddRange(DisableGpuiPrefabRendering(scene));
-            changes.AddRange(RemoveSceneGpuIPrefabComponents(scene));
-            changes.AddRange(ApplyRendererMobileCulling(scene));
-            changes.AddRange(OptimizeMobileShadowCasters(scene));
-            changes.AddRange(DisableRiskyMaterialInstancing(scene));
-            EditorSceneManager.SaveScene(scene);
-
-            if (bakeNow)
-                changes.AddRange(TryBakeActiveSceneLighting(scene));
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (regenerateNewSceneAddressables && scenePaths.Any(path => string.Equals(path, DefaultScene, StringComparison.OrdinalIgnoreCase)))
-        {
-            NewSceneAddressablesSplitter.RegenerateCloudNewSceneGroup();
-            changes.Add("Regenerated mesh-safe Bundle_NewScene split after optimizer pass so generated scenes inherit current lighting/post/HTrace settings.");
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        if (!string.IsNullOrEmpty(outputPath))
-        {
-            GenerateReport(scenePaths, outputPath, bakeNow ? "after safe one-click mobile repair + bake attempt" : "after safe one-click mobile repair", changes);
-        }
-        else
-        {
-            Debug.Log("[XHeroMobileSceneOptimizer] Applied deep one-click mobile optimization:\n" + string.Join("\n", changes));
-        }
     }
 
-    private static IEnumerable<string> ApplyProjectMobileSettings(bool aggressive = false)
+    private static bool IsStaticBatchingSafe(GameObject go)
     {
-        var changes = new List<string>();
-
-        var current = QualitySettings.GetQualityLevel();
-        if (current != 0)
-        {
-            QualitySettings.SetQualityLevel(0, false);
-            changes.Add("Set active quality level to Mobile (index 0).");
-        }
-
-        QualitySettings.vSyncCount = 0;
-        QualitySettings.antiAliasing = 2;
-        QualitySettings.shadowDistance = aggressive ? 28f : 35f;
-        QualitySettings.shadowCascades = 2;
-        QualitySettings.shadowResolution = UnityEngine.ShadowResolution.Medium;
-        QualitySettings.softParticles = false;
-        QualitySettings.realtimeReflectionProbes = false;
-        QualitySettings.streamingMipmapsActive = true;
-        QualitySettings.lodBias = aggressive ? 0.75f : 1f;
-        QualitySettings.maximumLODLevel = 0;
-
-        PlayerSettings.use32BitDisplayBuffer = true;
-
-        changes.Add(aggressive
-            ? "Mobile quality/performance tuned: 2x MSAA, 28m shadows, 2 cascades, LOD bias 0.75, streaming mipmaps."
-            : "Mobile quality tuned: 2x MSAA, 35m shadows, 2 cascades, display buffer 32-bit.");
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyMobileRpAssetSettings(bool aggressive = false)
-    {
-        var changes = new List<string>();
-        var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(MobileRpAssetPath);
-        if (!asset)
-            return new[] { "Mobile_RPAsset not found; skipped URP asset tuning." };
-
-        var so = new SerializedObject(asset);
-        SetBool(so, "m_UseSRPBatcher", true, changes, "SRP Batcher enabled.");
-        SetBool(so, "m_MixedLightingSupported", true, changes, "Mixed lighting support enabled.");
-        SetBool(so, "m_RequireDepthTexture", true, changes, "Depth texture kept on for SSAO/post.");
-        SetBool(so, "m_RequireOpaqueTexture", true, changes, "Opaque texture kept on because project already uses screen/decal effects.");
-        SetBool(so, "m_SupportsHDR", true, changes, "HDR enabled on Mobile RP asset for neutral bloom quality.");
-        SetInt(so, "m_MSAA", 2, changes, "MSAA kept at 2x.");
-        SetFloat(so, "m_RenderScale", aggressive ? 0.75f : 0.8f, changes, aggressive ? "Render scale set to 0.75 for mobile FPS headroom." : "Render scale kept at 0.80 for mobile performance.");
-        SetInt(so, "m_MainLightShadowmapResolution", 1024, changes, "Main light shadowmap set to 1024 for cleaner outdoor shadows.");
-        SetFloat(so, "m_ShadowDistance", aggressive ? 28f : 35f, changes, aggressive ? "URP shadow distance set to 28m for mobile cost control." : "URP shadow distance set to 35m for mobile cost control.");
-        SetInt(so, "m_ShadowCascadeCount", 2, changes, "URP shadow cascades kept at 2.");
-        SetFloat(so, "m_Cascade2Split", 0.28f, changes, "2-cascade split adjusted to 0.28 for stronger near shadows.");
-        SetInt(so, "m_AdditionalLightsPerObjectLimit", aggressive ? 1 : 2, changes, aggressive ? "Additional lights per object limited to 1 for mobile." : "Additional lights per object limited to 2 for mobile.");
-        SetBool(so, "m_AdditionalLightShadowsSupported", false, changes, "Additional light shadows kept disabled on mobile.");
-        SetBool(so, "m_SoftShadowsSupported", true, changes, "Soft shadows kept enabled.");
-        SetInt(so, "m_SoftShadowQuality", 1, changes, "Soft shadow quality set to Low/fast.");
-        SetBool(so, "m_SupportsDynamicBatching", false, changes, "Dynamic batching disabled to favor SRP Batcher.");
-
-        so.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(asset);
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyProjectMobileLightingQualitySettings()
-    {
-        var changes = new List<string>();
-
-        var current = QualitySettings.GetQualityLevel();
-        if (current != 0)
-        {
-            QualitySettings.SetQualityLevel(0, false);
-            changes.Add("Set active quality level to Mobile (index 0).");
-        }
-
-        QualitySettings.vSyncCount = 0;
-        QualitySettings.antiAliasing = 2;
-        QualitySettings.shadowDistance = 28f;
-        QualitySettings.shadowCascades = 2;
-        QualitySettings.shadowResolution = UnityEngine.ShadowResolution.High;
-        QualitySettings.softParticles = false;
-        QualitySettings.realtimeReflectionProbes = false;
-        QualitySettings.streamingMipmapsActive = true;
-        QualitySettings.lodBias = 1f;
-        QualitySettings.maximumLODLevel = 0;
-
-        PlayerSettings.use32BitDisplayBuffer = true;
-
-        changes.Add("Mobile quality lighting tuned: 2x MSAA, 28m shadow distance, 2 cascades, high main shadow quality target.");
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyStableMobileRpAssetSettings()
-    {
-        var changes = new List<string>();
-        var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(MobileRpAssetPath);
-        if (!asset)
-            return new[] { "Mobile_RPAsset not found; skipped stable URP repair." };
-
-        var so = new SerializedObject(asset);
-        SetBool(so, "m_UseSRPBatcher", true, changes, "SRP Batcher enabled.");
-        SetBool(so, "m_MixedLightingSupported", true, changes, "Mixed lighting support enabled.");
-        SetBool(so, "m_RequireDepthTexture", true, changes, "Depth texture restored to project baseline.");
-        SetBool(so, "m_RequireOpaqueTexture", true, changes, "Opaque texture restored to project baseline.");
-        SetBool(so, "m_SupportsHDR", false, changes, "HDR disabled for stable mobile baseline and lower GPU cost.");
-        SetInt(so, "m_MSAA", 2, changes, "MSAA kept at 2x.");
-        SetFloat(so, "m_RenderScale", 0.8f, changes, "Render scale restored to 0.80 stable baseline.");
-        SetInt(so, "m_MainLightShadowmapResolution", 1024, changes, "Main light shadowmap kept at 1024.");
-        SetFloat(so, "m_ShadowDistance", 35f, changes, "URP shadow distance restored to 35m stable baseline.");
-        SetInt(so, "m_ShadowCascadeCount", 2, changes, "URP shadow cascades kept at 2.");
-        SetFloat(so, "m_Cascade2Split", 0.28f, changes, "2-cascade split kept at 0.28.");
-        SetInt(so, "m_AdditionalLightsPerObjectLimit", 2, changes, "Additional lights per object restored to 2.");
-        SetBool(so, "m_AdditionalLightShadowsSupported", false, changes, "Additional light shadows disabled on mobile.");
-        SetBool(so, "m_SoftShadowsSupported", true, changes, "Soft shadows kept enabled.");
-        SetInt(so, "m_SoftShadowQuality", 1, changes, "Soft shadow quality kept Low.");
-        SetBool(so, "m_SupportsDynamicBatching", false, changes, "Dynamic batching disabled to favor SRP Batcher.");
-
-        so.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(asset);
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyMobileLightingQualityRpAssetSettings()
-    {
-        var changes = new List<string>();
-        var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(MobileRpAssetPath);
-        if (!asset)
-            return new[] { "Mobile_RPAsset not found; skipped quality shadow tuning." };
-
-        var so = new SerializedObject(asset);
-        SetBool(so, "m_UseSRPBatcher", true, changes, "SRP Batcher enabled.");
-        SetBool(so, "m_MixedLightingSupported", true, changes, "Mixed lighting support enabled for baked/static depth.");
-        SetBool(so, "m_RequireDepthTexture", true, changes, "Depth texture kept for project camera effects.");
-        SetBool(so, "m_RequireOpaqueTexture", true, changes, "Opaque texture kept for project screen/decal effects.");
-        SetBool(so, "m_SupportsHDR", false, changes, "HDR kept disabled for mobile stability.");
-        SetInt(so, "m_MSAA", 2, changes, "MSAA kept at 2x.");
-        SetFloat(so, "m_RenderScale", 0.8f, changes, "Render scale kept at 0.80.");
-        SetInt(so, "m_MainLightShadowmapResolution", 2048, changes, "Main light shadowmap raised to 2048 to reduce blocky shadows.");
-        SetFloat(so, "m_ShadowDistance", 28f, changes, "Shadow distance reduced to 28m so 2048 shadows stay sharp without raising batches.");
-        SetInt(so, "m_ShadowCascadeCount", 2, changes, "URP shadow cascades kept at 2 for mobile.");
-        SetFloat(so, "m_Cascade2Split", 0.22f, changes, "2-cascade split set to 0.22 for a sharper near-player cascade.");
-        SetInt(so, "m_AdditionalLightsPerObjectLimit", 2, changes, "Additional lights per object limited to 2 so neutral corner fill lights can work without opening the floodgate.");
-        SetBool(so, "m_AdditionalLightShadowsSupported", false, changes, "Additional light shadows disabled to keep GPU cost stable.");
-        SetBool(so, "m_SoftShadowsSupported", true, changes, "Soft shadows enabled.");
-        SetInt(so, "m_SoftShadowQuality", 2, changes, "Soft shadow quality set to Medium.");
-        SetBool(so, "m_SupportsDynamicBatching", false, changes, "Dynamic batching disabled to favor SRP Batcher/static batching.");
-
-        so.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(asset);
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyMobileRendererSettings(bool enableHTrace = false)
-    {
-        var changes = new List<string>();
-        var renderer = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(MobileRendererPath);
-        if (!renderer)
-            return new[] { "Mobile_Renderer not found; skipped renderer feature tuning." };
-
-        var rendererSo = new SerializedObject(renderer);
-
-        var features = rendererSo.FindProperty("m_RendererFeatures");
-        var hasSsao = false;
-        var hasHTrace = false;
-        if (features != null)
-        {
-            for (var i = 0; i < features.arraySize; i++)
-            {
-                var feature = features.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererFeature;
-                if (feature != null && feature.GetType().Name.IndexOf("ScreenSpaceAmbientOcclusion", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    hasSsao = true;
-                    if (enableHTrace)
-                        SetFeatureActive(feature, false, changes, "Disabled URP SSAO because HTrace SSGI now provides the mobile screen-space depth pass.");
-                    else
-                        ConfigureSsao(feature, changes);
-                }
-
-                if (feature is HTraceSSGIRendererFeature htraceFeature)
-                {
-                    hasHTrace = true;
-                    ConfigureHTraceRendererFeature(htraceFeature, changes);
-                }
-            }
-        }
-
-        if (enableHTrace && !hasHTrace)
-        {
-            var htrace = ScriptableObject.CreateInstance<HTraceSSGIRendererFeature>();
-            htrace.name = "HTraceSSGI_MobileLow";
-            AssetDatabase.AddObjectToAsset(htrace, renderer);
-            ConfigureHTraceRendererFeature(htrace, changes);
-
-            rendererSo.Update();
-            features = rendererSo.FindProperty("m_RendererFeatures");
-            if (features != null)
-            {
-                features.InsertArrayElementAtIndex(features.arraySize);
-                features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = htrace;
-                changes.Add("Added HTrace SSGI renderer feature to Mobile_Renderer.");
-            }
-        }
-
-        if (!enableHTrace && !hasSsao)
-        {
-            var ssaoType = Type.GetType("UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion, Unity.RenderPipelines.Universal.Runtime");
-            if (ssaoType != null)
-            {
-                var ssao = ScriptableObject.CreateInstance(ssaoType) as ScriptableRendererFeature;
-                ssao.name = "ScreenSpaceAmbientOcclusion_MobileLow";
-                AssetDatabase.AddObjectToAsset(ssao, renderer);
-                ConfigureSsao(ssao, changes);
-
-                rendererSo.Update();
-                features = rendererSo.FindProperty("m_RendererFeatures");
-                if (features != null)
-                {
-                    features.InsertArrayElementAtIndex(features.arraySize);
-                    features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = ssao;
-                    changes.Add("Added low-cost SSAO feature to Mobile_Renderer.");
-                }
-            }
-            else
-            {
-                changes.Add("Could not locate URP ScreenSpaceAmbientOcclusion type; skipped SSAO add.");
-            }
-        }
-
-        rendererSo.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(renderer);
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyStableMobileRendererSettings()
-    {
-        var changes = new List<string>();
-        var renderer = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(MobileRendererPath);
-        if (!renderer)
-            return new[] { "Mobile_Renderer not found; skipped stable renderer feature repair." };
-
-        var rendererSo = new SerializedObject(renderer);
-        var features = rendererSo.FindProperty("m_RendererFeatures");
-        var disabledHTrace = 0;
-        var disabledSsao = 0;
-
-        if (features != null)
-        {
-            for (var i = 0; i < features.arraySize; i++)
-            {
-                var feature = features.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererFeature;
-                if (!feature)
-                    continue;
-
-                if (feature is HTraceSSGIRendererFeature htraceFeature)
-                {
-                    htraceFeature.UseVolumes = false;
-                    SetFeatureActive(feature, false, changes, "HTrace renderer feature disabled for stable mobile baseline.");
-                    disabledHTrace++;
-                    continue;
-                }
-
-                if (feature.GetType().Name.IndexOf("ScreenSpaceAmbientOcclusion", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    SetFeatureActive(feature, false, changes, "SSAO renderer feature disabled for stable mobile baseline.");
-                    disabledSsao++;
-                }
-            }
-        }
-
-        rendererSo.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(renderer);
-
-        if (disabledHTrace == 0)
-            changes.Add("No HTrace renderer feature was active to disable.");
-        if (disabledSsao == 0)
-            changes.Add("No SSAO renderer feature was active to disable.");
-
-        return changes;
-    }
-
-    private static void ConfigureHTraceRendererFeature(HTraceSSGIRendererFeature feature, ICollection<string> changes)
-    {
-        if (!feature)
-            return;
-
-        feature.UseVolumes = true;
-        SetFeatureActive(feature, true, changes, "HTrace SSGI renderer feature active and volume-driven.");
-        EditorUtility.SetDirty(feature);
-    }
-
-    private static void SetFeatureActive(ScriptableRendererFeature feature, bool active, ICollection<string> changes, string label)
-    {
-        if (!feature)
-            return;
-
-        var so = new SerializedObject(feature);
-        SetBool(so, "m_Active", active, changes, label);
-        so.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(feature);
-    }
-
-    private static void ConfigureSsao(UnityEngine.Object ssao, ICollection<string> changes)
-    {
-        if (!ssao)
-            return;
-
-        var so = new SerializedObject(ssao);
-        SetBool(so, "m_Active", true, changes, "Mobile SSAO active.");
-        var settings = so.FindProperty("m_Settings");
-        if (settings != null)
-        {
-            SetRelativeInt(settings, "AOMethod", 1);
-            SetRelativeBool(settings, "Downsample", true);
-            SetRelativeBool(settings, "AfterOpaque", false);
-            SetRelativeInt(settings, "Source", 1);
-            SetRelativeInt(settings, "NormalSamples", 1);
-            SetRelativeFloat(settings, "Intensity", 0.22f);
-            SetRelativeFloat(settings, "DirectLightingStrength", 0.18f);
-            SetRelativeFloat(settings, "Radius", 0.18f);
-            SetRelativeInt(settings, "Samples", 1);
-            SetRelativeInt(settings, "BlurQuality", 0);
-            SetRelativeFloat(settings, "Falloff", 75f);
-        }
-
-        so.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(ssao);
-        changes.Add("Configured SSAO: downsampled, low samples, 0.22 intensity, 0.18 radius for softer non-dirty corners.");
-    }
-
-    private static IEnumerable<string> ApplySceneLook(Scene scene, bool enableHTrace = false)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects();
-        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).ToArray();
-        var directional = lights.FirstOrDefault(l => l && l.type == LightType.Directional);
-        if (directional)
-        {
-            Undo.RecordObject(directional, "XHero Mobile Directional Light");
-            directional.lightmapBakeType = LightmapBakeType.Mixed;
-            directional.shadows = LightShadows.Soft;
-            directional.shadowResolution = LightShadowResolution.Medium;
-            directional.shadowStrength = 0.62f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.48f : directional.intensity, 1.32f, 1.62f);
-            directional.useColorTemperature = true;
-            directional.colorTemperature = 6500f;
-            directional.color = Color.white;
-            EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light tuned to mixed, fresh white 6500K, soft medium shadows, 0.62 shadow strength.");
-        }
-
-        RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = enableHTrace ? 0.92f : 1.04f;
-        RenderSettings.reflectionIntensity = Mathf.Clamp(RenderSettings.reflectionIntensity <= 0 ? 0.65f : RenderSettings.reflectionIntensity, 0.6f, 0.9f);
-        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-        RenderSettings.defaultReflectionResolution = 128;
-        changes.Add(enableHTrace
-            ? "RenderSettings kept Skybox ambient/reflection, ambient intensity 0.92 for HTrace blend, reflection resolution 128."
-            : "RenderSettings kept Skybox ambient/reflection, ambient intensity 1.04, reflection resolution 128.");
-
-        var volume = FindOrCreateGlobalVolume(roots);
-        volume.isGlobal = true;
-        volume.priority = 20f;
-        volume.weight = 1f;
-        volume.sharedProfile = LoadOrCreateLookProfile();
-        EditorUtility.SetDirty(volume);
-        changes.Add("Global Volume 'XHero Mobile Cinematic Look' assigned to scene with neutral fresh-white color/bloom/vignette.");
-        if (enableHTrace)
-            ConfigureHTraceVolume(volume.sharedProfile, changes);
-
-        foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)))
-        {
-            var data = camera.GetUniversalAdditionalCameraData();
-            if (data != null)
-            {
-                var isUtilityCamera = IsUtilityCamera(camera);
-                data.renderPostProcessing = !isUtilityCamera;
-                data.requiresDepthTexture = !isUtilityCamera;
-                data.requiresColorTexture = !isUtilityCamera;
-                data.volumeLayerMask = isUtilityCamera ? (LayerMask)0 : (LayerMask)(((int)data.volumeLayerMask) | 1);
-                if (!isUtilityCamera)
-                {
-                    data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-                    data.antialiasingQuality = AntialiasingQuality.Low;
-                }
-
-                EditorUtility.SetDirty(data);
-            }
-
-            if (IsUtilityCamera(camera))
-            {
-                camera.allowHDR = false;
-                camera.allowMSAA = false;
-            }
-            else
-            {
-                camera.useOcclusionCulling = true;
-                camera.farClipPlane = Mathf.Min(camera.farClipPlane <= 0 ? 320f : camera.farClipPlane, 320f);
-            }
-
-            EditorUtility.SetDirty(camera);
-        }
-
-        changes.Add(enableHTrace
-            ? "URP camera data: HTrace/post/depth/color enabled only on world cameras; UI/minimap volume/depth/color/post kept off."
-            : "URP camera data: post-processing/SMAA enabled only on world cameras; UI/minimap post kept off.");
-
-        var reflectionProbes = roots.SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).ToArray();
-        if (reflectionProbes.Length == 0)
-        {
-            var bounds = CalculateSceneRendererBounds(roots);
-            if (bounds.size.sqrMagnitude > 0.01f)
-            {
-                var go = new GameObject("XHero Baked Reflection Probe");
-                SceneManager.MoveGameObjectToScene(go, scene);
-                go.transform.position = bounds.center + Vector3.up * Mathf.Min(2f, bounds.extents.y * 0.2f);
-                var probe = go.AddComponent<ReflectionProbe>();
-                probe.mode = ReflectionProbeMode.Baked;
-                probe.refreshMode = ReflectionProbeRefreshMode.OnAwake;
-                probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-                probe.resolution = 128;
-                probe.intensity = 0.7f;
-                probe.boxProjection = true;
-                probe.size = new Vector3(Mathf.Max(10f, bounds.size.x), Mathf.Max(6f, bounds.size.y), Mathf.Max(10f, bounds.size.z));
-                probe.center = Vector3.zero;
-                changes.Add("Added one baked box-projected Reflection Probe fitted to renderer bounds.");
-            }
-        }
-        else
-        {
-            foreach (var probe in reflectionProbes)
-            {
-                probe.refreshMode = ReflectionProbeRefreshMode.OnAwake;
-                probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-                probe.resolution = Mathf.Clamp(probe.resolution, 64, 128);
-                probe.intensity = Mathf.Clamp(probe.intensity, 0.55f, 0.9f);
-                EditorUtility.SetDirty(probe);
-            }
-
-            changes.Add($"Tuned {reflectionProbes.Length} reflection probe(s): baked/on-awake friendly resolution and intensity clamp.");
-        }
-
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyStableSceneRendering(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects();
-        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).ToArray();
-        var directional = lights.FirstOrDefault(l => l && l.type == LightType.Directional);
-        if (directional)
-        {
-            Undo.RecordObject(directional, "XHero Stable Directional Light");
-            directional.lightmapBakeType = LightmapBakeType.Realtime;
-            directional.shadows = LightShadows.Soft;
-            directional.shadowResolution = LightShadowResolution.Medium;
-            directional.shadowStrength = 0.50f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.24f, 1.48f);
-            directional.useColorTemperature = true;
-            directional.colorTemperature = 6800f;
-            directional.color = new Color(0.97f, 0.995f, 1f, 1f);
-            EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light restored to clean fresh daylight, softer contrast, and non-yellow neutral-cool tint.");
-        }
-
-        RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = 1.14f;
-        RenderSettings.reflectionIntensity = 0.90f;
-        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-        RenderSettings.defaultReflectionResolution = 128;
-        RenderSettings.subtractiveShadowColor = new Color(0.70f, 0.74f, 0.82f, 1f);
-        changes.Add("RenderSettings restored to white-fresh Skybox ambient 1.14, reflection 0.90, and softer cool shadow color.");
-
-        var disabledVolumes = 0;
-        foreach (var volume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v))
-        {
-            var profilePath = volume.sharedProfile ? AssetDatabase.GetAssetPath(volume.sharedProfile) : string.Empty;
-            if (volume.name == "XHero Mobile Cinematic Look" || string.Equals(profilePath, SceneLookProfilePath, StringComparison.OrdinalIgnoreCase))
-            {
-                DisableHTraceInProfile(volume.sharedProfile, changes);
-                volume.weight = 0f;
-                volume.enabled = false;
-                volume.gameObject.SetActive(false);
-                EditorUtility.SetDirty(volume);
-                disabledVolumes++;
-            }
-            else
-            {
-                DisableHTraceInProfile(volume.sharedProfile, changes);
-            }
-        }
-
-        var lookProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(SceneLookProfilePath);
-        DisableHTraceInProfile(lookProfile, changes);
-
-        if (disabledVolumes > 0)
-            changes.Add($"Disabled {disabledVolumes} XHero cinematic/HTrace volume object(s).");
-
-        var removedProbeCount = 0;
-        foreach (var probe in roots.SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).Where(p => p && p.name == "XHero Baked Reflection Probe").ToArray())
-        {
-            UnityEngine.Object.DestroyImmediate(probe.gameObject);
-            removedProbeCount++;
-        }
-
-        if (removedProbeCount > 0)
-        {
-            changes.Add($"Removed {removedProbeCount} reflection probe(s) created by the optimizer.");
-            roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        }
-
-        foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)))
-        {
-            var data = camera.GetUniversalAdditionalCameraData();
-            var isUtilityCamera = IsUtilityCamera(camera);
-            if (data != null)
-            {
-                data.renderPostProcessing = false;
-                data.requiresDepthTexture = !isUtilityCamera;
-                data.requiresColorTexture = !isUtilityCamera;
-                data.volumeLayerMask = isUtilityCamera ? (LayerMask)0 : data.volumeLayerMask;
-                EditorUtility.SetDirty(data);
-            }
-
-            camera.allowHDR = false;
-            camera.allowMSAA = !isUtilityCamera;
-            if (!isUtilityCamera)
-            {
-                camera.useOcclusionCulling = true;
-                camera.farClipPlane = Mathf.Min(camera.farClipPlane <= 0 ? 320f : camera.farClipPlane, 320f);
-            }
-
-            EditorUtility.SetDirty(camera);
-        }
-
-        changes.Add("Camera post/HDR disabled for stable baseline; world cameras keep depth/color, UI/minimap stays cheap.");
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyMobileQualityLighting(Scene scene, bool preserveHTraceProfile = false)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Where(l => l).ToArray();
-        var directional = lights.FirstOrDefault(l => l.type == LightType.Directional);
-        if (directional)
-        {
-            Undo.RecordObject(directional, "XHero Mobile Quality Directional Light");
-            directional.lightmapBakeType = LightmapBakeType.Mixed;
-            directional.shadows = LightShadows.Soft;
-            directional.shadowResolution = LightShadowResolution.High;
-            directional.shadowStrength = 0.50f;
-            directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.24f, 1.48f);
-            directional.useColorTemperature = true;
-            directional.colorTemperature = 6800f;
-            directional.color = new Color(0.97f, 0.995f, 1f, 1f);
-            RenderSettings.sun = directional;
-            EditorUtility.SetDirty(directional);
-            changes.Add("Directional Light set to Mixed clean daylight 6800K, High soft shadows, 0.50 shadow strength.");
-        }
-        else
-        {
-            changes.Add("No Directional Light found; skipped main light quality tuning.");
-        }
-
-        RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = 1.14f;
-        RenderSettings.reflectionIntensity = 0.90f;
-        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-        RenderSettings.defaultReflectionResolution = 128;
-        RenderSettings.subtractiveShadowColor = new Color(0.70f, 0.74f, 0.82f, 1f);
-        changes.Add("RenderSettings balanced for fresh white mobile look: Skybox ambient 1.14, reflection 0.90, soft cool subtractive shadow color.");
-
-        if (preserveHTraceProfile)
-        {
-            changes.Add("HTrace profile preserved for the dedicated mobile-low HTrace pass.");
-        }
-        else
-        {
-            foreach (var volume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v))
-                DisableHTraceInProfile(volume.sharedProfile, changes);
-
-            var lookProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(SceneLookProfilePath);
-            DisableHTraceInProfile(lookProfile, changes);
-        }
-
-        foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
-        {
-            var data = camera.GetUniversalAdditionalCameraData();
-            var isUtilityCamera = IsUtilityCamera(camera);
-            if (data != null)
-            {
-                data.renderPostProcessing = false;
-                data.requiresDepthTexture = !isUtilityCamera;
-                data.requiresColorTexture = false;
-                data.volumeLayerMask = isUtilityCamera ? (LayerMask)0 : data.volumeLayerMask;
-                EditorUtility.SetDirty(data);
-            }
-
-            camera.allowHDR = false;
-            camera.allowMSAA = !isUtilityCamera;
-            if (!isUtilityCamera)
-            {
-                camera.useOcclusionCulling = true;
-                camera.farClipPlane = Mathf.Min(camera.farClipPlane <= 0 ? 320f : camera.farClipPlane, 320f);
-            }
-
-            EditorUtility.SetDirty(camera);
-        }
-
-        changes.Add("Cameras kept HDR/post off; world cameras keep depth and occlusion culling.");
-        changes.AddRange(ConfigureMobileLightingSettingsAsset());
-        changes.AddRange(EnsureMobileReflectionProbe(scene, roots));
-        changes.AddRange(EnsureMobileLightProbeGrid(scene, roots));
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyAutomaticSceneLightingBalance(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        var threeDGeometryCount = CountRenderable3DGeometry(roots);
-        if (threeDGeometryCount == 0)
-            return new[] { "Scene has no real 3D mesh/terrain geometry; skipped 3D lighting balance." };
-
-        var bounds = CalculateSceneRendererBounds(roots);
-        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Where(l => l).ToArray();
-        var directional = lights.FirstOrDefault(l => l.type == LightType.Directional);
-        if (!directional)
-        {
-            var go = new GameObject("XHero Auto Sun");
-            SceneManager.MoveGameObjectToScene(go, scene);
-            directional = go.AddComponent<Light>();
-            directional.type = LightType.Directional;
-            changes.Add("Added Directional Light 'XHero Auto Sun'.");
-        }
-
-        directional.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
-        directional.lightmapBakeType = LightmapBakeType.Mixed;
-        directional.shadows = LightShadows.Soft;
-        directional.shadowResolution = LightShadowResolution.High;
-        directional.shadowStrength = 0.60f;
-        directional.intensity = Mathf.Clamp(directional.intensity <= 0.01f ? 1.42f : directional.intensity, 1.28f, 1.58f);
-        directional.useColorTemperature = true;
-        directional.colorTemperature = 6500f;
-        directional.color = Color.white;
-        RenderSettings.sun = directional;
-        EditorUtility.SetDirty(directional);
-
-        RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = bounds.size.sqrMagnitude > 0.01f ? 1.02f : 1.04f;
-        RenderSettings.reflectionIntensity = 0.78f;
-        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-        RenderSettings.defaultReflectionResolution = 128;
-        RenderSettings.subtractiveShadowColor = new Color(0.58f, 0.62f, 0.70f, 1f);
-
-        changes.Add("Balanced scene lighting: mixed fresh white sun, 1.02 sky ambient, 0.78 sky reflection, cool subtractive shadows.");
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyHTraceMobileLowLook(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        var threeDRendererCount = CountRenderable3DGeometry(roots);
-
-        if (threeDRendererCount == 0)
-        {
-            foreach (var htraceVolume in roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).Where(v => v && v.name == "XHero Mobile Cinematic Look"))
-            {
-                htraceVolume.weight = 0f;
-                htraceVolume.enabled = false;
-                htraceVolume.gameObject.SetActive(false);
-                EditorUtility.SetDirty(htraceVolume);
-            }
-
-            foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
-            {
-                var data = camera.GetUniversalAdditionalCameraData();
-                if (data != null)
-                {
-                    data.renderPostProcessing = false;
-                    data.requiresDepthTexture = false;
-                    data.requiresColorTexture = false;
-                    EditorUtility.SetDirty(data);
-                }
-
-                camera.allowHDR = false;
-                EditorUtility.SetDirty(camera);
-            }
-
-            changes.Add("Scene has no real 3D mesh/terrain geometry; HTrace/post/depth/color disabled for UI-only performance.");
-            return changes;
-        }
-
-        var volume = FindOrCreateGlobalVolume(roots);
-        SceneManager.MoveGameObjectToScene(volume.gameObject, scene);
-        volume.gameObject.SetActive(true);
-        volume.enabled = true;
-        volume.isGlobal = true;
-        volume.priority = 20f;
-        volume.weight = 0.85f;
-        volume.sharedProfile = LoadOrCreateLookProfile();
-        ConfigureHTraceVolume(volume.sharedProfile, changes);
-        EditorUtility.SetDirty(volume);
-
-        RenderSettings.ambientMode = AmbientMode.Skybox;
-        RenderSettings.ambientIntensity = 0.92f;
-        RenderSettings.reflectionIntensity = 0.78f;
-        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-        RenderSettings.defaultReflectionResolution = 128;
-
-        foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).Where(c => c))
-        {
-            var data = camera.GetUniversalAdditionalCameraData();
-            var isUtilityCamera = IsUtilityCamera(camera);
-            if (data != null)
-            {
-                data.renderPostProcessing = !isUtilityCamera;
-                data.requiresDepthTexture = !isUtilityCamera;
-                data.requiresColorTexture = !isUtilityCamera;
-                data.volumeLayerMask = isUtilityCamera ? (LayerMask)0 : (LayerMask)(((int)data.volumeLayerMask) | 1);
-                EditorUtility.SetDirty(data);
-            }
-
-            camera.allowHDR = false;
-            camera.allowMSAA = !isUtilityCamera;
-            if (!isUtilityCamera)
-            {
-                camera.useOcclusionCulling = true;
-                camera.farClipPlane = Mathf.Min(camera.farClipPlane <= 0 ? 320f : camera.farClipPlane, 320f);
-            }
-
-            EditorUtility.SetDirty(camera);
-        }
-
-        changes.Add("HTrace mobile-low look enabled: global volume 0.85, 2 rays/10 steps/checkerboard/0.5 scale; UI/minimap cameras remain cheap.");
-        return changes;
-    }
-
-    private static IEnumerable<string> EnsureMobileFillLights(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        var threeDRendererCount = CountRenderable3DGeometry(roots);
-
-        if (threeDRendererCount == 0)
-        {
-            var fillRoot = roots.FirstOrDefault(r => r && r.name == "XHero Mobile Fill Lights");
-            if (fillRoot)
-            {
-                fillRoot.SetActive(false);
-                EditorUtility.SetDirty(fillRoot);
-                return new[] { "Scene has no real 3D mesh/terrain geometry; disabled auto fill lights." };
-            }
-
-            return new[] { "Scene has no real 3D mesh/terrain geometry; skipped auto fill lights." };
-        }
-
-        var bounds = CalculateSceneRendererBounds(roots);
-        if (bounds.size.sqrMagnitude <= 0.01f)
-            return new[] { "Renderer bounds empty; skipped auto fill lights." };
-
-        var sceneNonDirectionalLights = roots
-            .SelectMany(r => r.GetComponentsInChildren<Light>(true))
-            .Where(l => l && l.type != LightType.Directional && l.isActiveAndEnabled && !IsXHeroAutoFillLight(l))
-            .ToArray();
-
-        var root = roots.FirstOrDefault(r => r.name == "XHero Mobile Fill Lights");
-        if (!root)
-        {
-            root = new GameObject("XHero Mobile Fill Lights");
-            SceneManager.MoveGameObjectToScene(root, scene);
-        }
-
-        // Mobile rule: create corner fill, but keep it cheap. No shadows, low range, per-object light cap still limits runtime cost.
-        var sceneMagnitude = bounds.size.magnitude;
-        var targetCount = sceneMagnitude > 170f ? 4 : sceneMagnitude > 95f ? 3 : 2;
-        if (sceneNonDirectionalLights.Length >= 6)
-            targetCount = Mathf.Min(targetCount, 3);
-        if (sceneNonDirectionalLights.Length >= 10)
-            targetCount = Mathf.Min(targetCount, 2);
-
-        var existing = root.GetComponentsInChildren<Light>(true)
-            .Where(l => l && IsXHeroAutoFillLight(l))
-            .OrderBy(l => l.name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        var min = bounds.min;
-        var max = bounds.max;
-        var center = bounds.center;
-        var y = Mathf.Clamp(center.y + Mathf.Max(2.2f, bounds.extents.y * 0.22f), min.y + 1.8f, max.y + 4.5f);
-        var xInset = Mathf.Max(2f, bounds.size.x * 0.18f);
-        var zInset = Mathf.Max(2f, bounds.size.z * 0.18f);
-        var positions = new[]
-        {
-            new Vector3(min.x + xInset, y, min.z + zInset),
-            new Vector3(max.x - xInset, y, max.z - zInset),
-            new Vector3(min.x + xInset, y, max.z - zInset),
-            new Vector3(max.x - xInset, y, min.z + zInset)
-        };
-
-        var range = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * 0.30f, 16f, 34f);
-        var intensity = targetCount >= 4 ? 0.18f : targetCount == 3 ? 0.20f : 0.24f;
-
-        for (var i = 0; i < targetCount; i++)
-        {
-            Light fill = i < existing.Length ? existing[i] : null;
-            if (!fill)
-            {
-                var go = new GameObject("XHero Mobile Corner Fill " + (i + 1).ToString("00", CultureInfo.InvariantCulture));
-                go.transform.SetParent(root.transform, false);
-                fill = go.AddComponent<Light>();
-            }
-
-            fill.name = "XHero Mobile Corner Fill " + (i + 1).ToString("00", CultureInfo.InvariantCulture);
-            fill.transform.position = positions[i];
-            fill.type = LightType.Point;
-            fill.lightmapBakeType = LightmapBakeType.Mixed;
-            fill.shadows = LightShadows.None;
-            fill.range = range;
-            fill.intensity = intensity;
-            fill.useColorTemperature = true;
-            fill.colorTemperature = 6900f;
-            fill.color = new Color(0.96f, 0.99f, 1f, 1f);
-            fill.renderMode = LightRenderMode.ForceVertex;
-            fill.gameObject.SetActive(true);
-            fill.enabled = true;
-            EditorUtility.SetDirty(fill);
-            EditorUtility.SetDirty(fill.gameObject);
-        }
-
-        for (var i = targetCount; i < existing.Length; i++)
-        {
-            if (!existing[i])
-                continue;
-
-            existing[i].enabled = false;
-            existing[i].gameObject.SetActive(false);
-            EditorUtility.SetDirty(existing[i]);
-            EditorUtility.SetDirty(existing[i].gameObject);
-        }
-
-        root.SetActive(targetCount > 0);
-        EditorUtility.SetDirty(root);
-
-        if (targetCount > 0)
-            changes.Add($"Added/tuned {targetCount} cool-white no-shadow corner point fill light(s), range={range:F1}, intensity={intensity:F2}. Existing scene fill lights={sceneNonDirectionalLights.Length}.");
-        else
-            changes.Add($"Scene already has {sceneNonDirectionalLights.Length} active non-directional light(s); skipped extra corner fill lights to protect mobile FPS.");
-
-        return changes;
-    }
-
-    private static bool IsXHeroAutoFillLight(Light light)
-    {
-        if (!light)
+        if (!go || HasUnsafeLogicNearby(go))
             return false;
 
-        return light.name.StartsWith("XHero Mobile Bounce Fill", StringComparison.OrdinalIgnoreCase)
-               || light.name.StartsWith("XHero Mobile Corner Fill", StringComparison.OrdinalIgnoreCase)
-               || (light.transform.parent && light.transform.parent.name == "XHero Mobile Fill Lights");
-    }
-
-    private static IEnumerable<string> ConfigureMobileLightingSettingsAsset()
-    {
-        var changes = new List<string>();
-        var settings = AssetDatabase.LoadAssetAtPath<LightingSettings>(NewSceneMobileLightingSettingsPath);
-        if (!settings)
-        {
-            settings = new LightingSettings();
-            AssetDatabase.CreateAsset(settings, NewSceneMobileLightingSettingsPath);
-            changes.Add("Created mobile LightingSettings asset for New Scene.");
-        }
-
-        var so = new SerializedObject(settings);
-        SetBool(so, "m_EnableBakedLightmaps", true, changes, "Baked lightmaps enabled.");
-        SetBool(so, "m_EnableRealtimeLightmaps", false, changes, "Realtime GI disabled for mobile.");
-        SetBool(so, "m_RealtimeEnvironmentLighting", true, changes, "Realtime environment lighting kept enabled for sky consistency.");
-        SetFloat(so, "m_BounceScale", 1f, changes, "Lighting bounce scale set to 1.");
-        SetFloat(so, "m_AlbedoBoost", 1f, changes, "Lighting albedo boost set to 1.");
-        SetFloat(so, "m_IndirectOutputScale", 1f, changes, "Indirect output scale set to 1.");
-        SetInt(so, "m_BakeBackend", 1, changes, "Progressive CPU lightmapper selected for stable batchmode baking.");
-        SetInt(so, "m_LightmapMaxSize", 1024, changes, "Lightmap max size set to 1024 for mobile memory.");
-        SetFloat(so, "m_BakeResolution", 18f, changes, "Lightmap bake resolution set to 18 texels/unit for mobile.");
-        SetInt(so, "m_Padding", 2, changes, "Lightmap padding set to 2.");
-        SetInt(so, "m_LightmapCompression", 3, changes, "Lightmap compression enabled.");
-        SetBool(so, "m_AO", true, changes, "Baked AO enabled for depth.");
-        SetFloat(so, "m_AOMaxDistance", 1.25f, changes, "Baked AO max distance set to 1.25.");
-        SetFloat(so, "m_CompAOExponent", 0.7f, changes, "Baked AO indirect strength set to 0.7.");
-        SetFloat(so, "m_CompAOExponentDirect", 0.25f, changes, "Baked AO direct strength set to 0.25.");
-        SetInt(so, "m_MixedBakeMode", 2, changes, "Mixed lighting mode set to Shadowmask where supported.");
-        SetInt(so, "m_LightmapsBakeMode", 1, changes, "Directional lightmaps kept enabled.");
-        SetInt(so, "m_FilterMode", 1, changes, "Lightmap filtering enabled.");
-        SetFloat(so, "m_RealtimeResolution", 1f, changes, "Realtime GI resolution set low.");
-        SetInt(so, "m_PVRDirectSampleCount", 24, changes, "Direct light samples set to 24.");
-        SetInt(so, "m_PVRSampleCount", 256, changes, "Indirect light samples set to 256.");
-        SetInt(so, "m_PVREnvironmentSampleCount", 128, changes, "Environment samples set to 128.");
-        SetInt(so, "m_PVRBounces", 2, changes, "Indirect bounces set to 2.");
-        SetInt(so, "m_PVRMinBounces", 1, changes, "Minimum bounces set to 1.");
-        SetInt(so, "m_PVRFilteringMode", 1, changes, "Lightmap filtering mode set to auto/fast.");
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        Lightmapping.giWorkflowMode = Lightmapping.GIWorkflowMode.OnDemand;
-        Lightmapping.lightingSettings = settings;
-        EditorUtility.SetDirty(settings);
-        changes.Add("Assigned XHero_NewScene_MobileLighting.lighting to the active scene.");
-        return changes;
-    }
-
-    private static IEnumerable<string> EnsureMobileReflectionProbe(Scene scene, GameObject[] roots)
-    {
-        var changes = new List<string>();
-        var bounds = CalculateSceneRendererBounds(roots);
-        if (bounds.size.sqrMagnitude <= 0.01f)
-            return new[] { "Renderer bounds empty; skipped reflection probe fit." };
-
-        var probes = roots.SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).Where(p => p).ToArray();
-        var probe = probes.FirstOrDefault(p => p.name == "XHero Mobile Baked Reflection Probe");
-        if (!probe)
-        {
-            var go = new GameObject("XHero Mobile Baked Reflection Probe");
-            SceneManager.MoveGameObjectToScene(go, scene);
-            probe = go.AddComponent<ReflectionProbe>();
-            changes.Add("Added one baked box-projected mobile reflection probe.");
-        }
-
-        probe.mode = ReflectionProbeMode.Baked;
-        probe.refreshMode = ReflectionProbeRefreshMode.OnAwake;
-        probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-        probe.resolution = 128;
-        probe.intensity = 0.68f;
-        probe.boxProjection = true;
-        probe.transform.position = bounds.center + Vector3.up * Mathf.Min(2.5f, bounds.extents.y * 0.18f);
-        probe.center = Vector3.zero;
-        probe.size = new Vector3(Mathf.Max(12f, bounds.size.x), Mathf.Max(8f, bounds.size.y), Mathf.Max(12f, bounds.size.z));
-        EditorUtility.SetDirty(probe);
-        return changes.Count > 0 ? changes : new[] { "Updated existing XHero mobile reflection probe." };
-    }
-
-    private static IEnumerable<string> EnsureMobileLightProbeGrid(Scene scene, GameObject[] roots)
-    {
-        var changes = new List<string>();
-        if (roots.SelectMany(r => r.GetComponentsInChildren<LightProbeGroup>(true)).Any(g => g))
-            return new[] { "Existing LightProbeGroup found; kept as-is." };
-
-        var bounds = CalculateSceneRendererBounds(roots);
-        if (bounds.size.sqrMagnitude <= 0.01f)
-            return new[] { "Renderer bounds empty; skipped light probe grid." };
-
-        var go = new GameObject("XHero Mobile Light Probe Grid");
-        SceneManager.MoveGameObjectToScene(go, scene);
-        go.transform.position = Vector3.zero;
-        var group = go.AddComponent<LightProbeGroup>();
-        var positions = new List<Vector3>();
-        var min = bounds.min;
-        var max = bounds.max;
-        var y0 = Mathf.Max(min.y + 1.2f, bounds.center.y - bounds.extents.y * 0.35f);
-        var y1 = Mathf.Min(max.y - 0.5f, y0 + 5f);
-
-        for (var xi = 0; xi < 3; xi++)
-        {
-            for (var zi = 0; zi < 3; zi++)
-            {
-                var x = Mathf.Lerp(min.x, max.x, xi / 2f);
-                var z = Mathf.Lerp(min.z, max.z, zi / 2f);
-                positions.Add(new Vector3(x, y0, z));
-                positions.Add(new Vector3(x, y1, z));
-            }
-        }
-
-        group.probePositions = positions.ToArray();
-        EditorUtility.SetDirty(group);
-        changes.Add("Added sparse 18-point LightProbeGroup for dynamic objects/player lighting.");
-        return changes;
-    }
-
-    private static IEnumerable<string> PrepareStaticEnvironmentForMobileBake(Scene scene)
-    {
-        var roots = scene.GetRootGameObjects().Where(r => r).ToArray();
-        var environmentRoots = roots
-            .Where(r => string.Equals(r.name, "Enviroment", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(r.name, "Environment", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        if (environmentRoots.Length == 0)
-            environmentRoots = roots.Where(r => !HasDynamicOrLogicComponentForLighting(r)).ToArray();
-
-        var changed = 0;
-        var contributeGi = 0;
-        var batching = 0;
-
-        foreach (var transform in environmentRoots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t))
-        {
-            var go = transform.gameObject;
-            if (!IsStaticLightingCandidate(go))
-                continue;
-
-            var flags = GameObjectUtility.GetStaticEditorFlags(go);
-            var next = flags | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
-
-            if (IsStaticBatchingSafe(go))
-                next |= StaticEditorFlags.BatchingStatic;
-            else
-                next &= ~StaticEditorFlags.BatchingStatic;
-
-            if (!IsFoliageLike(go) && !IsWaterOrFxLike(go))
-                next |= StaticEditorFlags.ContributeGI | StaticEditorFlags.OccluderStatic;
-
-            if (next == flags)
-                continue;
-
-            GameObjectUtility.SetStaticEditorFlags(go, next);
-            EditorUtility.SetDirty(go);
-            changed++;
-            if ((next & StaticEditorFlags.ContributeGI) != 0)
-                contributeGi++;
-            if ((next & StaticEditorFlags.BatchingStatic) != 0)
-                batching++;
-        }
-
-        return new[]
-        {
-            $"Prepared static environment for mobile bake: changed={changed}, batchingStatic={batching}, contributeGI={contributeGi}."
-        };
-    }
-
-    private static IEnumerable<string> OptimizeMobileShadowCasters(Scene scene)
-    {
-        var disabled = 0;
-        var renderers = scene.GetRootGameObjects()
-            .Where(r => r)
-            .SelectMany(r => r.GetComponentsInChildren<Renderer>(true))
-            .Where(r => r && r.enabled)
-            .ToArray();
-
-        foreach (var renderer in renderers)
-        {
-            if (!ShouldDisableRealtimeShadowCaster(renderer))
-                continue;
-
-            if (renderer.shadowCastingMode == ShadowCastingMode.Off && !renderer.receiveShadows)
-                continue;
-
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            EditorUtility.SetDirty(renderer);
-            disabled++;
-        }
-
-        return new[] { $"Disabled realtime shadows on {disabled} tiny/transparent/VFX renderer(s) to keep 2048 main shadows affordable." };
-    }
-
-    private static IEnumerable<string> TryBakeActiveSceneLighting(Scene scene)
-    {
-        var changes = new List<string>();
-        try
-        {
-            Lightmapping.giWorkflowMode = Lightmapping.GIWorkflowMode.OnDemand;
-            Lightmapping.ClearLightingDataAsset();
-            var ok = Lightmapping.Bake();
-            changes.Add(ok
-                ? $"Lighting bake completed for '{scene.path}'."
-                : $"Lighting bake returned false for '{scene.path}'. Open Lighting window for details.");
-            EditorSceneManager.SaveScene(scene);
-        }
-        catch (Exception ex)
-        {
-            changes.Add("Lighting bake failed: " + ex.GetType().Name + " - " + ex.Message);
-        }
-
-        return changes;
-    }
-
-    private static bool IsStaticLightingCandidate(GameObject go)
-    {
-        if (!go || HasDynamicOrLogicComponentForLighting(go))
+        var text = NormalizeSearchText(GetHierarchyPath(go.transform) + " " + GetPrefabPath(go));
+        if (ContainsAny(text, DynamicNameHints) || ContainsAny(text, StaticBatchingRiskyPathHints))
             return false;
 
-        return go.GetComponent<Renderer>() || go.GetComponent<MeshFilter>() || go.GetComponent<Terrain>() || go.GetComponent<Collider>();
+        var renderer = go.GetComponent<Renderer>();
+        if (!renderer || renderer is SkinnedMeshRenderer)
+            return false;
+
+        return GetMeshFromRenderer(renderer) != null;
     }
 
-    private static bool HasDynamicOrLogicComponentForLighting(GameObject go)
+    private static bool HasUnsafeLogicNearby(GameObject go)
     {
-        foreach (var component in go.GetComponents<Component>())
+        if (!go)
+            return true;
+
+        var root = PrefabUtility.GetNearestPrefabInstanceRoot(go);
+        var scope = root ? root : go;
+        var transforms = scope.GetComponentsInChildren<Transform>(true);
+        foreach (var transform in transforms)
         {
-            if (!component)
-                return true;
-
-            if (component is Transform || component is MeshRenderer || component is MeshFilter ||
-                component is Terrain || component is TerrainCollider ||
-                component is BoxCollider || component is SphereCollider || component is CapsuleCollider || component is MeshCollider ||
-                component is LODGroup || component is ReflectionProbe)
-            {
+            if (!transform)
                 continue;
-            }
 
-            if (component is Animator || component is Animation || component is Rigidbody || component is CharacterController ||
-                component is Camera || component is Light || component is ParticleSystem || component is AudioSource ||
-                component is Canvas || component is EventSystem)
-            {
+            var searchText = NormalizeSearchText(GetHierarchyPath(transform) + " " + transform.name);
+            if (ContainsAny(searchText, DynamicNameHints))
                 return true;
-            }
 
-            if (component is MonoBehaviour)
+            var components = transform.GetComponents<Component>();
+            foreach (var component in components)
             {
-                var name = component.GetType().Name;
-                if (LogicComponentNameHints.Any(h => name.IndexOf(h, StringComparison.OrdinalIgnoreCase) >= 0))
+                if (!component)
+                    continue;
+
+                if (IsSafeStaticComponent(component))
+                    continue;
+
+                var typeName = component.GetType().Name;
+                if (LogicComponentNameHints.Any(hint => typeName.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
+                    return true;
+
+                if (component is Animator || component is Rigidbody || component is Rigidbody2D ||
+                    component is Camera || component is Canvas || component is EventSystem ||
+                    component is ParticleSystem || component is AudioSource)
                     return true;
             }
         }
@@ -1540,873 +558,120 @@ public static class XHeroMobileSceneOptimizer
         return false;
     }
 
-    private static bool ShouldDisableRealtimeShadowCaster(Renderer renderer)
+    private static bool IsSafeStaticComponent(Component component)
     {
-        if (!renderer || renderer is SkinnedMeshRenderer)
-            return false;
-
-        if (renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
-            return true;
-
-        var maxSize = Mathf.Max(renderer.bounds.size.x, Mathf.Max(renderer.bounds.size.y, renderer.bounds.size.z));
-        if (maxSize < 0.35f)
-            return true;
-
-        if (IsWaterOrFxLike(renderer.gameObject))
-            return true;
-
-        if (IsFoliageLike(renderer.gameObject) && maxSize < 1.25f)
-            return true;
-
-        foreach (var material in renderer.sharedMaterials ?? Array.Empty<Material>())
-        {
-            if (!material)
-                continue;
-
-            var shaderName = material.shader ? material.shader.name : string.Empty;
-            var materialPath = AssetDatabase.GetAssetPath(material);
-            if (material.renderQueue >= 3000 ||
-                shaderName.IndexOf("Particle", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                shaderName.IndexOf("Water", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                materialPath.IndexOf("/Tazo_fx/", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                materialPath.IndexOf("/Vefects/", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                materialPath.IndexOf("/Water/", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return component is Transform ||
+               component is MeshFilter ||
+               component is MeshRenderer ||
+               component is BoxCollider ||
+               component is SphereCollider ||
+               component is CapsuleCollider ||
+               component is MeshCollider ||
+               component is LODGroup ||
+               component is Terrain ||
+               component is TerrainCollider ||
+               component is Light ||
+               component is ReflectionProbe;
     }
 
-    private static bool IsFoliageLike(GameObject go)
+    private static bool IsUtilityCamera(Camera camera)
     {
-        var text = GetObjectSearchText(go);
-        return text.IndexOf("tree", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("cay", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("grass", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("foliage", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("leaf", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("la_", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("hoa", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("sen", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("bui", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("/co_", StringComparison.OrdinalIgnoreCase) >= 0;
+        if (!camera)
+            return true;
+
+        if (camera.targetTexture)
+            return true;
+
+        var name = NormalizeSearchText(GetHierarchyPath(camera.transform));
+        return name.Contains("ui") ||
+               name.Contains("minimap") ||
+               name.Contains("preview") ||
+               name.Contains("webview") ||
+               name.Contains("rendertexture") ||
+               name.Contains("overlay");
     }
 
-    private static bool IsWaterOrFxLike(GameObject go)
+    private static Mesh GetMeshFromRenderer(Renderer renderer)
     {
-        var text = GetObjectSearchText(go);
-        return text.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("nuoc", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("vfx", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("fx", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("particle", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("splash", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               text.IndexOf("caustic", StringComparison.OrdinalIgnoreCase) >= 0;
+        if (!renderer)
+            return null;
+
+        var meshFilter = renderer.GetComponent<MeshFilter>();
+        if (meshFilter && meshFilter.sharedMesh)
+            return meshFilter.sharedMesh;
+
+        var skinned = renderer as SkinnedMeshRenderer;
+        return skinned ? skinned.sharedMesh : null;
     }
 
-    private static string GetObjectSearchText(GameObject go)
+    private static string GetPrefabPath(GameObject go)
     {
         if (!go)
             return string.Empty;
 
-        var path = GetHierarchyPath(go.transform);
-        var prefab = PrefabUtility.GetCorrespondingObjectFromSource(go);
-        var prefabPath = prefab ? AssetDatabase.GetAssetPath(prefab) : string.Empty;
-        return path + " " + prefabPath;
+        var path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(go);
+        return string.IsNullOrEmpty(path) ? AssetDatabase.GetAssetPath(go) : path;
     }
 
-    private static bool IsStaticBatchingSafe(GameObject go)
+    private static string GetHierarchyPath(Transform transform)
     {
-        if (!go)
-            return false;
+        if (!transform)
+            return string.Empty;
 
-        var text = NormalizeSearchText(GetObjectSearchText(go));
-        return !StaticBatchingRiskyPathHints.Any(hint =>
-            text.IndexOf(NormalizeSearchText(hint), StringComparison.OrdinalIgnoreCase) >= 0);
-    }
+        var names = new Stack<string>();
+        var current = transform;
+        while (current)
+        {
+            names.Push(current.name);
+            current = current.parent;
+        }
 
-    private static bool IsGeneratedSplitScenePath(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-            return false;
-
-        var normalized = path.Replace('\\', '/');
-        return GeneratedScenePathHints.Any(hint =>
-            normalized.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0);
+        return string.Join("/", names);
     }
 
     private static string NormalizeSearchText(string value)
     {
-        return (value ?? string.Empty)
-            .Replace('\\', '/')
-            .Replace(" ", string.Empty)
-            .Replace("_", string.Empty)
-            .ToLowerInvariant();
+        return (value ?? string.Empty).Replace('\\', '/').ToLowerInvariant();
     }
 
-    private static IEnumerable<string> DisableGpuiPrefabRendering(Scene scene)
+    private static bool ContainsAny(string value, IEnumerable<string> needles)
     {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var managers = scene.GetRootGameObjects()
-            .SelectMany(r => r.GetComponentsInChildren<GPUIPrefabManager>(true))
-            .Where(m => m)
-            .ToArray();
-
-        foreach (var manager in managers)
-        {
-            var prototypeCount = manager.GetPrototypeCount();
-            for (var i = prototypeCount - 1; i >= 0; i--)
-            {
-                var prototype = manager.GetPrototype(i);
-                if (prototype != null)
-                    prototype.isEnabled = false;
-                manager.RemovePrototypeAtIndex(i);
-            }
-
-            manager.isFindInstancesAtInitialization = false;
-            manager.enabled = false;
-            manager.gameObject.SetActive(false);
-            EditorUtility.SetDirty(manager);
-            changes.Add($"Disabled GPUI Prefab Manager '{manager.name}' and cleared {prototypeCount} prototype(s).");
-        }
-
-        if (managers.Length == 0)
-            changes.Add("No GPUI Prefab Manager found in scene.");
-
-        return changes;
-    }
-
-    private static IEnumerable<string> RemoveSceneGpuIPrefabComponents(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var removed = 0;
-        foreach (var component in scene.GetRootGameObjects()
-                     .SelectMany(r => r.GetComponentsInChildren<GPUIPrefab>(true))
-                     .Where(c => c)
-                     .ToArray())
-        {
-            UnityEngine.Object.DestroyImmediate(component, true);
-            removed++;
-        }
-
-        changes.Add(removed > 0
-            ? $"Removed {removed} scene GPUIPrefab component(s) so original MeshRenderer path is used."
-            : "No scene GPUIPrefab component found.");
-        return changes;
-    }
-
-    private static IEnumerable<string> DisableAutoFillLights(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var disabled = 0;
-        foreach (var root in scene.GetRootGameObjects()
-                     .Where(r => r && r.name == "XHero Mobile Fill Lights")
-                     .ToArray())
-        {
-            if (root.activeSelf)
-            {
-                root.SetActive(false);
-                disabled++;
-            }
-
-            foreach (var light in root.GetComponentsInChildren<Light>(true).Where(l => l))
-            {
-                light.enabled = false;
-                EditorUtility.SetDirty(light);
-            }
-
-            EditorUtility.SetDirty(root);
-        }
-
-        changes.Add(disabled > 0
-            ? $"Disabled {disabled} auto fill-light root(s) added by previous optimizer runs."
-            : "No active auto fill-light root found.");
-        return changes;
-    }
-
-    private static IEnumerable<string> DisableRiskyMaterialInstancing(Scene scene)
-    {
-        var changes = new List<string>();
-        if (!scene.IsValid())
-            return changes;
-
-        var disabled = 0;
-        var touched = new HashSet<Material>();
-        var renderers = scene.GetRootGameObjects()
-            .Where(r => r)
-            .SelectMany(r => r.GetComponentsInChildren<Renderer>(true))
-            .Where(r => r)
-            .ToArray();
-
-        foreach (var renderer in renderers)
-        {
-            foreach (var material in renderer.sharedMaterials ?? Array.Empty<Material>())
-            {
-                if (!material || !material.enableInstancing || !touched.Add(material))
-                    continue;
-
-                if (!IsRiskyInstancingMaterial(material))
-                    continue;
-
-                material.enableInstancing = false;
-                EditorUtility.SetDirty(material);
-                disabled++;
-            }
-        }
-
-        if (disabled > 0)
-            changes.Add($"Disabled instancing on {disabled} risky ShaderGraph/custom/legacy material(s).");
-        else
-            changes.Add("No risky ShaderGraph/custom/legacy material instancing found to disable.");
-
-        return changes;
-    }
-
-    private static bool IsRiskyInstancingMaterial(Material material)
-    {
-        var shaderName = material.shader ? material.shader.name : string.Empty;
-        var path = AssetDatabase.GetAssetPath(material).Replace('\\', '/');
-
-        if (shaderName.StartsWith("Universal Render Pipeline/Nature/SpeedTree", StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (shaderName.Equals("Universal Render Pipeline/Lit", StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (shaderName.Equals("Universal Render Pipeline/Simple Lit", StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (shaderName.Equals("Universal Render Pipeline/Particles/Unlit", StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        return shaderName.StartsWith("Shader Graphs/", StringComparison.OrdinalIgnoreCase)
-            || shaderName.StartsWith("Legacy Shaders/", StringComparison.OrdinalIgnoreCase)
-            || shaderName.StartsWith("Vefects/", StringComparison.OrdinalIgnoreCase)
-            || shaderName.IndexOf("Autodesk", StringComparison.OrdinalIgnoreCase) >= 0
-            || path.IndexOf("/HDRI_Captures/", StringComparison.OrdinalIgnoreCase) >= 0
-            || path.IndexOf("/Tazo_fx/", StringComparison.OrdinalIgnoreCase) >= 0
-            || path.IndexOf("/Water/", StringComparison.OrdinalIgnoreCase) >= 0
-            || path.IndexOf("com.distantlands.lumen", StringComparison.OrdinalIgnoreCase) >= 0;
-    }
-
-    private static IEnumerable<string> RemoveAutoGpuiPrefabComponents()
-    {
-        var changes = new List<string>();
-        var removed = 0;
-        var touchedPrefabs = 0;
-
-        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
-        {
-            var prefabPath = AssetDatabase.GUIDToAssetPath(guid);
-            if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), prefabPath)))
-                continue;
-
-            var root = PrefabUtility.LoadPrefabContents(prefabPath);
-            try
-            {
-                var components = root.GetComponentsInChildren<GPUIPrefab>(true);
-                foreach (var component in components)
-                {
-                    UnityEngine.Object.DestroyImmediate(component, true);
-                    removed++;
-                }
-
-                if (components.Length > 0)
-                {
-                    PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-                    touchedPrefabs++;
-                }
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        if (removed > 0)
-            changes.Add($"Removed {removed} GPUIPrefab component(s) from {touchedPrefabs} project prefab(s) to recover original MeshRenderer rendering.");
-        else
-            changes.Add("No GPUIPrefab components found in project prefabs.");
-
-        return changes;
-    }
-
-    private static void DisableHTraceInProfile(VolumeProfile profile, ICollection<string> changes)
-    {
-        if (!profile || !profile.TryGet(out HTraceSSGIVolume htrace))
-            return;
-
-        htrace.active = false;
-        SetVolumeParameter(htrace.Enable, false);
-        EditorUtility.SetDirty(htrace);
-        EditorUtility.SetDirty(profile);
-        changes.Add($"Disabled HTrace volume component in profile '{AssetDatabase.GetAssetPath(profile)}'.");
-    }
-
-    private static IEnumerable<string> ApplyTerrainMobileSettings(Scene scene)
-    {
-        var changes = new List<string>();
-        var terrains = scene.GetRootGameObjects()
-            .SelectMany(r => r.GetComponentsInChildren<Terrain>(true))
-            .Where(t => t)
-            .ToArray();
-
-        foreach (var terrain in terrains)
-        {
-            terrain.heightmapPixelError = Mathf.Max(terrain.heightmapPixelError, 6f);
-            terrain.basemapDistance = Mathf.Min(terrain.basemapDistance <= 0 ? 350f : terrain.basemapDistance, 350f);
-            terrain.detailObjectDistance = Mathf.Min(terrain.detailObjectDistance <= 0 ? 45f : terrain.detailObjectDistance, 45f);
-            terrain.detailObjectDensity = Mathf.Min(terrain.detailObjectDensity <= 0 ? 0.65f : terrain.detailObjectDensity, 0.65f);
-            terrain.treeDistance = Mathf.Min(terrain.treeDistance <= 0 ? 420f : terrain.treeDistance, 420f);
-            terrain.treeBillboardDistance = Mathf.Min(terrain.treeBillboardDistance <= 0 ? 55f : terrain.treeBillboardDistance, 55f);
-            terrain.treeCrossFadeLength = Mathf.Clamp(terrain.treeCrossFadeLength, 5f, 12f);
-            terrain.treeMaximumFullLODCount = Mathf.Min(terrain.treeMaximumFullLODCount <= 0 ? 24 : terrain.treeMaximumFullLODCount, 24);
-            EditorUtility.SetDirty(terrain);
-        }
-
-        if (terrains.Length > 0)
-            changes.Add($"Tuned {terrains.Length} terrain(s): pixel error 6+, detail 45m, tree 420m, billboard 55m, max full LOD trees 24.");
-
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyRendererMobileCulling(Scene scene)
-    {
-        var changes = new List<string>();
-        var renderers = scene.GetRootGameObjects()
-            .SelectMany(r => r.GetComponentsInChildren<MeshRenderer>(true))
-            .Where(r => r && r.enabled && r.gameObject.activeInHierarchy)
-            .ToArray();
-
-        var instancedMaterials = new HashSet<Material>();
-        var shadowOptimized = 0;
-        var staticFlagged = 0;
-
-        foreach (var renderer in renderers)
-        {
-            var mesh = GetMeshFromRenderer(renderer);
-            if (!mesh)
-                continue;
-
-            var prefabRoot = PrefabUtility.GetNearestPrefabInstanceRoot(renderer.gameObject);
-            var pathText = GetRendererSourceText(renderer);
-            var decorative = IsDecorativePath(pathText);
-
-            if (decorative)
-            {
-                foreach (var mat in renderer.sharedMaterials ?? Array.Empty<Material>())
-                {
-                    if (!mat || instancedMaterials.Contains(mat) || IsRiskyInstancingMaterial(mat))
-                        continue;
-
-                    mat.enableInstancing = true;
-                    EditorUtility.SetDirty(mat);
-                    instancedMaterials.Add(mat);
-                }
-            }
-
-            if (decorative && mesh.vertexCount <= 3500 && renderer.bounds.size.y <= 5f)
-            {
-                if (renderer.shadowCastingMode != ShadowCastingMode.Off || renderer.receiveShadows)
-                {
-                    renderer.shadowCastingMode = ShadowCastingMode.Off;
-                    renderer.receiveShadows = false;
-                    EditorUtility.SetDirty(renderer);
-                    shadowOptimized++;
-                }
-            }
-
-            var staticScope = prefabRoot ? prefabRoot : renderer.gameObject;
-            if (!HasUnsafeLogicNearby(staticScope) && renderer.gameObject.isStatic)
-            {
-                var flags = GameObjectUtility.GetStaticEditorFlags(renderer.gameObject);
-                var wanted = flags | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic;
-                if (IsStaticBatchingSafe(renderer.gameObject))
-                    wanted |= StaticEditorFlags.BatchingStatic;
-                else
-                    wanted &= ~StaticEditorFlags.BatchingStatic;
-                if (flags != wanted)
-                {
-                    GameObjectUtility.SetStaticEditorFlags(renderer.gameObject, wanted);
-                    staticFlagged++;
-                }
-            }
-        }
-
-        if (instancedMaterials.Count > 0)
-            changes.Add($"Enabled GPU instancing on {instancedMaterials.Count} decorative material(s).");
-        if (shadowOptimized > 0)
-            changes.Add($"Disabled realtime shadows on {shadowOptimized} small decorative renderer(s).");
-        if (staticFlagged > 0)
-            changes.Add($"Ensured batching/occludee/reflection-probe static flags on {staticFlagged} already-static renderer object(s).");
-
-        return changes;
-    }
-
-    private static IEnumerable<string> ApplyGpuiPrefabOptimization(Scene scene)
-    {
-        var changes = new List<string>();
-        var roots = scene.GetRootGameObjects();
-        var candidates = FindSafeGpuiPrefabRootCandidates(roots)
-            .Where(c => c.InstanceCount >= 6 && c.RendererCountPerInstance > 0)
-            .OrderByDescending(c => c.EstimatedMaterialSlots)
-            .ThenByDescending(c => c.InstanceCount)
-            .Take(18)
-            .ToArray();
-
-        if (candidates.Length == 0)
-        {
-            var removedEmptyManagers = 0;
-            foreach (var managerToRemove in roots
-                         .SelectMany(r => r.GetComponentsInChildren<GPUIPrefabManager>(true))
-                         .Where(m => m && m.name == "GPUI Prefab Manager - XHero Mobile" && m.GetPrototypeCount() == 0)
-                         .ToArray())
-            {
-                UnityEngine.Object.DestroyImmediate(managerToRemove.gameObject);
-                removedEmptyManagers++;
-            }
-
-            changes.Add(removedEmptyManagers > 0
-                ? $"Removed {removedEmptyManagers} empty auto GPUI manager(s); no safe repeated prefab candidates in this scene."
-                : "No safe repeated prefab candidates; skipped GPUI manager creation.");
-            return changes;
-        }
-
-        var manager = FindOrCreateGpuiPrefabManager(scene, roots);
-        if (!manager)
-            return new[] { "GPUI Prefab Manager not available; skipped GPUI prefab optimization." };
-
-        manager.gameObject.SetActive(true);
-        manager.enabled = true;
-        manager.isFindInstancesAtInitialization = true;
-        EditorUtility.SetDirty(manager);
-        changes.Add("GPUI Prefab Manager enabled and set to find prefab instances at initialization.");
-
-        var profile = LoadOrCreateGpuiMobileProfile();
-        var added = 0;
-        var updated = 0;
-        foreach (var candidate in candidates)
-        {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(candidate.PrefabPath);
-            if (!prefab || PrefabUtility.GetPrefabAssetType(prefab) == PrefabAssetType.Model)
-                continue;
-
-            var gpuiPrefab = GPUIPrefabUtility.AddOrGetComponentToPrefab<GPUIPrefab>(prefab);
-            if (!gpuiPrefab)
-            {
-                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(candidate.PrefabPath);
-                gpuiPrefab = prefab ? prefab.GetComponent<GPUIPrefab>() : null;
-            }
-
-            if (!gpuiPrefab)
-                continue;
-
-            gpuiPrefab.GetPrefabID();
-            EditorUtility.SetDirty(prefab);
-
-            var prototypeIndex = GetPrototypeIndexByPrefabPath(manager, candidate.PrefabPath);
-            if (prototypeIndex < 0)
-            {
-                prototypeIndex = manager.AddPrototype(prefab, profile);
-                if (prototypeIndex >= 0)
-                {
-                    ConfigureGpuiPrototype(manager.GetPrototype(prototypeIndex), candidate);
-                    added++;
-                    changes.Add($"GPUI prototype added: {candidate.PrefabPath} instances={candidate.InstanceCount} estimatedSlots={candidate.EstimatedMaterialSlots}.");
-                }
-            }
-            else
-            {
-                var prototype = manager.GetPrototype(prototypeIndex);
-                if (prototype != null)
-                {
-                    prototype.profile = profile;
-                    ConfigureGpuiPrototype(prototype, candidate);
-                    updated++;
-                }
-            }
-        }
-
-        EditorUtility.SetDirty(manager);
-        changes.Add($"GPUI prefab optimization complete: added={added}, updated={updated}, safe candidates scanned={candidates.Length}.");
-        return changes;
-    }
-
-    private static GPUIPrefabManager FindOrCreateGpuiPrefabManager(Scene scene, GameObject[] roots)
-    {
-        var manager = roots.SelectMany(r => r.GetComponentsInChildren<GPUIPrefabManager>(true)).FirstOrDefault(m => m);
-        if (manager)
-            return manager;
-
-        var go = new GameObject("GPUI Prefab Manager - XHero Mobile");
-        SceneManager.MoveGameObjectToScene(go, scene);
-        return go.AddComponent<GPUIPrefabManager>();
-    }
-
-    private static GPUIProfile LoadOrCreateGpuiMobileProfile()
-    {
-        var profile = AssetDatabase.LoadAssetAtPath<GPUIProfile>(GpuiMobileProfilePath);
-        if (!profile)
-        {
-            profile = ScriptableObject.CreateInstance<GPUIProfile>();
-            AssetDatabase.CreateAsset(profile, GpuiMobileProfilePath);
-        }
-
-        profile.isShadowCasting = false;
-        profile.isDistanceCulling = true;
-        profile.isFrustumCulling = true;
-        profile.isOcclusionCulling = true;
-        profile.isShadowDistanceCulling = true;
-        profile.isShadowFrustumCulling = false;
-        profile.isShadowOcclusionCulling = false;
-        profile.isLODCrossFade = false;
-        profile.isCalculateInstancingBounds = false;
-        profile.minCullingDistance = 0f;
-        profile.minMaxDistance = new Vector2(0f, 220f);
-        profile.frustumOffset = 0.05f;
-        profile.occlusionAccuracy = 1;
-        profile.occlusionOffset = 0.00025f;
-        profile.occlusionOffsetSizeMultiplier = 0.25f;
-        profile.minShadowCullingDistance = 12f;
-        profile.customShadowDistance = 24f;
-        profile.lodBiasAdjustment = 0.7f;
-        profile.maximumLODLevel = 0;
-        profile.enablePerObjectMotionVectors = false;
-        profile.lightProbeSetting = GPUILightProbeSetting.Off;
-        EditorUtility.SetDirty(profile);
-        return profile;
-    }
-
-    private static void ConfigureGpuiPrototype(GPUIPrototype prototype, GpuiPrefabRootCandidate candidate)
-    {
-        if (prototype == null)
-            return;
-
-        prototype.isEnabled = true;
-        prototype.isGenerateBillboard = false;
-        prototype.isBillboardReplaceLODCulled = true;
-        prototype.billboardDistance = 0.82f;
-        prototype.name = Path.GetFileNameWithoutExtension(candidate.PrefabPath);
-    }
-
-    private static int GetPrototypeIndexByPrefabPath(GPUIPrefabManager manager, string prefabPath)
-    {
-        if (!manager)
-            return -1;
-
-        for (var i = 0; i < manager.GetPrototypeCount(); i++)
-        {
-            var prototype = manager.GetPrototype(i);
-            if (prototype?.prefabObject && string.Equals(AssetDatabase.GetAssetPath(prototype.prefabObject), prefabPath, StringComparison.OrdinalIgnoreCase))
-                return i;
-        }
-
-        return -1;
-    }
-
-    private static Volume FindOrCreateGlobalVolume(GameObject[] roots)
-    {
-        var existing = roots
-            .SelectMany(r => r.GetComponentsInChildren<Volume>(true))
-            .FirstOrDefault(v => v && v.name == "XHero Mobile Cinematic Look");
-
-        if (existing)
-            return existing;
-
-        var go = new GameObject("XHero Mobile Cinematic Look");
-        return go.AddComponent<Volume>();
-    }
-
-    private static VolumeProfile LoadOrCreateLookProfile()
-    {
-        var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(SceneLookProfilePath);
-        if (!profile)
-        {
-            profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            AssetDatabase.CreateAsset(profile, SceneLookProfilePath);
-        }
-
-        CompactVolumeProfile(profile);
-
-        if (!profile.TryGet(out Tonemapping tonemapping))
-            tonemapping = profile.Add<Tonemapping>(true);
-        tonemapping.active = true;
-        tonemapping.mode.overrideState = true;
-        tonemapping.mode.value = TonemappingMode.Neutral;
-
-        if (!profile.TryGet(out ColorAdjustments color))
-            color = profile.Add<ColorAdjustments>(true);
-        color.active = true;
-        color.postExposure.overrideState = true;
-        color.postExposure.value = 0.02f;
-        color.contrast.overrideState = true;
-        color.contrast.value = 2f;
-        color.saturation.overrideState = true;
-        color.saturation.value = 4f;
-        color.colorFilter.overrideState = true;
-        color.colorFilter.value = Color.white;
-
-        if (!profile.TryGet(out Bloom bloom))
-            bloom = profile.Add<Bloom>(true);
-        bloom.active = true;
-        bloom.threshold.overrideState = true;
-        bloom.threshold.value = 1.05f;
-        bloom.intensity.overrideState = true;
-        bloom.intensity.value = 0.08f;
-        bloom.scatter.overrideState = true;
-        bloom.scatter.value = 0.45f;
-        bloom.highQualityFiltering.overrideState = true;
-        bloom.highQualityFiltering.value = false;
-        bloom.maxIterations.overrideState = true;
-        bloom.maxIterations.value = 4;
-
-        if (!profile.TryGet(out Vignette vignette))
-            vignette = profile.Add<Vignette>(true);
-        vignette.active = true;
-        vignette.intensity.overrideState = true;
-        vignette.intensity.value = 0.035f;
-        vignette.smoothness.overrideState = true;
-        vignette.smoothness.value = 0.22f;
-        vignette.rounded.overrideState = true;
-        vignette.rounded.value = false;
-
-        PersistVolumeProfileComponents(profile);
-        EditorUtility.SetDirty(profile);
-        return profile;
-    }
-
-    private static void ConfigureHTraceVolume(VolumeProfile profile, ICollection<string> changes)
-    {
-        if (!profile)
-            return;
-
-        if (!profile.TryGet(out HTraceSSGIVolume htrace))
-            htrace = profile.Add<HTraceSSGIVolume>(true);
-
-        htrace.active = true;
-        SetVolumeParameter(htrace.Enable, true);
-        SetVolumeParameter(htrace.DebugMode, HTraceSSGI.Scripts.Globals.DebugMode.None);
-        SetVolumeParameter(htrace.HBuffer, HBuffer.Multi);
-        SetVolumeParameter(htrace.FallbackType, FallbackType.Sky);
-        SetVolumeParameter(htrace.SkyIntensity, 0.28f);
-        SetVolumeParameter(htrace.ViewBias, 0.08f);
-        SetVolumeParameter(htrace.NormalBias, 0.28f);
-        SetVolumeParameter(htrace.SamplingNoise, 0.12f);
-        SetVolumeParameter(htrace.IntensityMultiplier, 0.75f);
-        SetVolumeParameter(htrace.DenoiseFallback, true);
-        SetVolumeParameter(htrace.MetallicIndirectFallback, true);
-        SetVolumeParameter(htrace.AmbientOverride, false);
-        SetVolumeParameter(htrace.Multibounce, false);
-
-        SetVolumeParameter(htrace.BackfaceLighting, 0.12f);
-        SetVolumeParameter(htrace.MaxRayLength, 22f);
-        SetVolumeParameter(htrace.ThicknessMode, ThicknessMode.Relative);
-        SetVolumeParameter(htrace.Thickness, 0.42f);
-        SetVolumeParameter(htrace.Intensity, 0.62f);
-        SetVolumeParameter(htrace.Falloff, 0.55f);
-
-        SetVolumeParameter(htrace.RayCount, 2);
-        SetVolumeParameter(htrace.StepCount, 10);
-        SetVolumeParameter(htrace.RefineIntersection, false);
-        SetVolumeParameter(htrace.FullResolutionDepth, false);
-        SetVolumeParameter(htrace.Checkerboard, true);
-        SetVolumeParameter(htrace.RenderScale, 0.5f);
-
-        SetVolumeParameter(htrace.BrightnessClamp, BrightnessClamp.Manual);
-        SetVolumeParameter(htrace.MaxValueBrightnessClamp, 5.5f);
-        SetVolumeParameter(htrace.MaxDeviationBrightnessClamp, 2.2f);
-        SetVolumeParameter(htrace.HalfStepValidation, true);
-        SetVolumeParameter(htrace.SpatialOcclusionValidation, false);
-        SetVolumeParameter(htrace.TemporalLightingValidation, true);
-        SetVolumeParameter(htrace.TemporalOcclusionValidation, true);
-        SetVolumeParameter(htrace.SpatialRadius, 0.72f);
-        SetVolumeParameter(htrace.Adaptivity, 0.82f);
-        SetVolumeParameter(htrace.RecurrentBlur, true);
-        SetVolumeParameter(htrace.FireflySuppression, true);
-        SetVolumeParameter(htrace.ShowBowels, false);
-
-        PersistVolumeProfileComponents(profile);
-        EditorUtility.SetDirty(profile);
-        changes.Add("Configured HTrace SSGI mobile-low volume: 2 rays, 10 steps, checkerboard, 0.5 render scale, sky fallback, no ambient override.");
-    }
-
-    private static void CompactVolumeProfile(VolumeProfile profile)
-    {
-        if (!profile || profile.components == null || !profile.components.Any(c => !c))
-            return;
-
-        profile.components.RemoveAll(c => !c);
-        EditorUtility.SetDirty(profile);
-    }
-
-    private static void PersistVolumeProfileComponents(VolumeProfile profile)
-    {
-        if (!profile)
-            return;
-
-        var profilePath = AssetDatabase.GetAssetPath(profile);
-        foreach (var component in profile.components.Where(c => c))
-        {
-            component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
-            if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(component)) && !string.IsNullOrEmpty(profilePath))
-                AssetDatabase.AddObjectToAsset(component, profile);
-            EditorUtility.SetDirty(component);
-        }
-
-        EditorUtility.SetDirty(profile);
-    }
-
-    private static void SetVolumeParameter<T>(VolumeParameter<T> parameter, T value)
-    {
-        parameter.overrideState = true;
-        parameter.value = value;
-    }
-
-    private static int CountRenderable3DGeometry(GameObject[] roots)
-    {
-        if (roots == null || roots.Length == 0)
-            return 0;
-
-        var meshCount = roots
-            .SelectMany(r => r.GetComponentsInChildren<MeshRenderer>(true))
-            .Count(renderer =>
-            {
-                if (!renderer || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
-                    return false;
-
-                var meshFilter = renderer.GetComponent<MeshFilter>();
-                return meshFilter && meshFilter.sharedMesh && meshFilter.sharedMesh.vertexCount > 0;
-            });
-
-        var skinnedMeshCount = roots
-            .SelectMany(r => r.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            .Count(renderer => renderer && renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.sharedMesh && renderer.sharedMesh.vertexCount > 0);
-
-        var terrainCount = roots
-            .SelectMany(r => r.GetComponentsInChildren<Terrain>(true))
-            .Count(terrain => terrain && terrain.enabled && terrain.gameObject.activeInHierarchy && terrain.terrainData);
-
-        return meshCount + skinnedMeshCount + terrainCount;
-    }
-
-    private static Bounds CalculateSceneRendererBounds(IEnumerable<GameObject> roots)
-    {
-        var initialized = false;
-        var bounds = new Bounds();
-        foreach (var renderer in roots.SelectMany(r => r.GetComponentsInChildren<Renderer>(true)).Where(r => r && r.enabled))
-        {
-            if (!initialized)
-            {
-                bounds = renderer.bounds;
-                initialized = true;
-            }
-            else
-            {
-                bounds.Encapsulate(renderer.bounds);
-            }
-        }
-
-        foreach (var terrain in roots.SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).Where(t => t && t.terrainData))
-        {
-            var terrainBounds = new Bounds(
-                terrain.transform.position + terrain.terrainData.bounds.center,
-                terrain.terrainData.bounds.size);
-
-            if (!initialized)
-            {
-                bounds = terrainBounds;
-                initialized = true;
-            }
-            else
-            {
-                bounds.Encapsulate(terrainBounds);
-            }
-        }
-
-        return bounds;
-    }
-
-    private static void SetBool(SerializedObject so, string path, bool value, ICollection<string> changes, string label)
-    {
-        var prop = so.FindProperty(path);
-        if (prop == null || prop.boolValue == value)
-            return;
-        prop.boolValue = value;
-        changes.Add(label);
-    }
-
-    private static void SetInt(SerializedObject so, string path, int value, ICollection<string> changes, string label)
-    {
-        var prop = so.FindProperty(path);
-        if (prop == null || prop.intValue == value)
-            return;
-        prop.intValue = value;
-        changes.Add(label);
-    }
-
-    private static void SetFloat(SerializedObject so, string path, float value, ICollection<string> changes, string label)
-    {
-        var prop = so.FindProperty(path);
-        if (prop == null || Mathf.Approximately(prop.floatValue, value))
-            return;
-        prop.floatValue = value;
-        changes.Add(label);
-    }
-
-    private static void SetRelativeBool(SerializedProperty parent, string path, bool value)
-    {
-        var prop = parent.FindPropertyRelative(path);
-        if (prop != null) prop.boolValue = value;
-    }
-
-    private static void SetRelativeInt(SerializedProperty parent, string path, int value)
-    {
-        var prop = parent.FindPropertyRelative(path);
-        if (prop != null) prop.intValue = value;
-    }
-
-    private static void SetRelativeFloat(SerializedProperty parent, string path, float value)
-    {
-        var prop = parent.FindPropertyRelative(path);
-        if (prop != null) prop.floatValue = value;
+        var normalized = NormalizeSearchText(value);
+        return needles.Any(needle => normalized.IndexOf(NormalizeSearchText(needle), StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
     private static void GenerateReport(string[] scenePaths, string outputPath, string mode, IEnumerable<string> appliedChanges = null)
     {
-        var sb = new StringBuilder(32768);
-        sb.AppendLine("# XHero LMS URP Mobile Scene Optimization Report");
+        scenePaths = NormalizeSceneList(scenePaths);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# XHero Mobile Batch/FPS Report");
         sb.AppendLine();
         sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"Mode: {mode}");
-        sb.AppendLine($"Unity: {Application.unityVersion}");
-        sb.AppendLine($"Active build target: {EditorUserBuildSettings.activeBuildTarget}");
+        sb.AppendLine();
+        sb.AppendLine("## Safety Contract");
+        sb.AppendLine("- Does not edit materials, shaders, prefab assets, GPUI components, HTrace, lighting, bake data, Addressables, generated split scenes, QualitySettings, URP assets, or camera render options.");
+        sb.AppendLine("- URP camera opaque/depth/post settings are snapshotted before optimization and restored after scene save.");
+        sb.AppendLine("- Writes only conservative scene-level FPS flags: gameplay camera occlusion, terrain distance clamps, renderer occlusion allowance, and static batching flags on objects that are already static.");
         sb.AppendLine();
 
         if (appliedChanges != null)
         {
             sb.AppendLine("## Applied Changes");
             foreach (var change in appliedChanges)
-                sb.AppendLine($"- {change}");
+                sb.AppendLine("- " + change);
             sb.AppendLine();
         }
 
-        AppendProjectPipelineReport(sb);
-        AppendHTraceStatus(sb);
+        AppendProjectReport(sb);
 
         foreach (var scenePath in scenePaths)
         {
-            if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), scenePath)))
+            if (!SceneFileExists(scenePath))
             {
                 sb.AppendLine($"## Scene: {scenePath}");
-                sb.AppendLine("Scene file not found.");
+                sb.AppendLine("Missing scene file.");
                 sb.AppendLine();
                 continue;
             }
@@ -2415,576 +680,107 @@ public static class XHeroMobileSceneOptimizer
             AppendSceneReport(sb, scene);
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
         File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
-        Debug.Log($"[XHeroMobileSceneOptimizer] Report written: {outputPath}");
+        Debug.Log("[XHeroMobileSceneOptimizer] Report written: " + outputPath);
     }
 
-    private static void AppendProjectPipelineReport(StringBuilder sb)
+    private static void AppendProjectReport(StringBuilder sb)
     {
-        sb.AppendLine("## URP / Quality Baseline");
-        sb.AppendLine($"Quality level: {QualitySettings.names[QualitySettings.GetQualityLevel()]} ({QualitySettings.GetQualityLevel()})");
-        sb.AppendLine("Static batching project flag: use Player Settings UI; scene renderer static flags are reported below.");
-        sb.AppendLine("Dynamic batching project flag: controlled in URP asset below.");
-        sb.AppendLine($"Quality shadow distance: {QualitySettings.shadowDistance.ToString("0.##", CultureInfo.InvariantCulture)}");
-        sb.AppendLine($"Quality anti-aliasing: {QualitySettings.antiAliasing}");
-        sb.AppendLine($"Quality realtime reflection probes: {QualitySettings.realtimeReflectionProbes}");
+        sb.AppendLine("## Project Settings Snapshot");
+        var qualityIndex = QualitySettings.GetQualityLevel();
+        var qualityName = QualitySettings.names.Length > qualityIndex ? QualitySettings.names[qualityIndex] : qualityIndex.ToString(CultureInfo.InvariantCulture);
+        sb.AppendLine($"- Quality level: {qualityName} ({qualityIndex})");
+        sb.AppendLine($"- VSync: {QualitySettings.vSyncCount}");
+        sb.AppendLine($"- Anti-aliasing: {QualitySettings.antiAliasing}");
+        sb.AppendLine($"- Streaming mipmaps: {QualitySettings.streamingMipmapsActive}");
+        sb.AppendLine($"- LOD bias: {QualitySettings.lodBias.ToString("0.###", CultureInfo.InvariantCulture)}");
+
+        var rp = GraphicsSettings.defaultRenderPipeline;
+        sb.AppendLine($"- Active render pipeline asset: {(rp ? AssetDatabase.GetAssetPath(rp) : "built-in/null")}");
+        sb.AppendLine("- Snapshot only. This optimizer does not write ProjectSettings or URP assets.");
         sb.AppendLine();
-
-        var mobileAsset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(MobileRpAssetPath);
-        AppendSerializedAssetValues(sb, "Mobile_RPAsset", mobileAsset, new[]
-        {
-            "m_UseSRPBatcher", "m_SupportsDynamicBatching", "m_RenderScale", "m_SupportsHDR",
-            "m_MSAA", "m_RequireDepthTexture", "m_RequireOpaqueTexture", "m_MainLightShadowmapResolution",
-            "m_ShadowDistance", "m_ShadowCascadeCount", "m_AdditionalLightsPerObjectLimit",
-            "m_AdditionalLightShadowsSupported", "m_SoftShadowsSupported", "m_SoftShadowQuality"
-        });
-
-        var renderer = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(MobileRendererPath);
-        sb.AppendLine("### Mobile Renderer Features");
-        if (renderer)
-        {
-            var so = new SerializedObject(renderer);
-            var features = so.FindProperty("m_RendererFeatures");
-            if (features != null && features.arraySize > 0)
-            {
-                for (var i = 0; i < features.arraySize; i++)
-                {
-                    var feature = features.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererFeature;
-                    sb.AppendLine(feature
-                        ? $"- {feature.name} ({feature.GetType().Name}) active={feature.isActive}"
-                        : "- <missing feature reference>");
-                }
-            }
-            else
-            {
-                sb.AppendLine("- None");
-            }
-        }
-        else
-        {
-            sb.AppendLine("- Mobile renderer asset not found.");
-        }
-
-        sb.AppendLine();
-    }
-
-    private static void AppendSerializedAssetValues(StringBuilder sb, string title, UnityEngine.Object asset, IEnumerable<string> propertyPaths)
-    {
-        sb.AppendLine($"### {title}");
-        if (!asset)
-        {
-            sb.AppendLine("- Asset not found.");
-            sb.AppendLine();
-            return;
-        }
-
-        var so = new SerializedObject(asset);
-        foreach (var path in propertyPaths)
-        {
-            var prop = so.FindProperty(path);
-            if (prop == null)
-                continue;
-
-            sb.AppendLine($"- {path}: {SerializedValueToString(prop)}");
-        }
-
-        sb.AppendLine();
-    }
-
-    private static string SerializedValueToString(SerializedProperty prop)
-    {
-        return prop.propertyType switch
-        {
-            SerializedPropertyType.Boolean => prop.boolValue.ToString(),
-            SerializedPropertyType.Integer => prop.intValue.ToString(CultureInfo.InvariantCulture),
-            SerializedPropertyType.Enum => prop.enumValueIndex >= 0 && prop.enumDisplayNames != null && prop.enumValueIndex < prop.enumDisplayNames.Length
-                ? prop.enumDisplayNames[prop.enumValueIndex]
-                : prop.intValue.ToString(CultureInfo.InvariantCulture),
-            SerializedPropertyType.Float => prop.floatValue.ToString("0.###", CultureInfo.InvariantCulture),
-            SerializedPropertyType.ObjectReference => prop.objectReferenceValue ? AssetDatabase.GetAssetPath(prop.objectReferenceValue) : "null",
-            _ => prop.ToString()
-        };
-    }
-
-    private static void AppendHTraceStatus(StringBuilder sb)
-    {
-        sb.AppendLine("## HTrace SSGI Status");
-        var htraceRoot = Path.Combine(Application.dataPath, "HTraceSSGI");
-        var htraceScripts = Path.Combine(htraceRoot, "Scripts");
-        var htraceResources = Path.Combine(htraceRoot, "Resources");
-        sb.AppendLine($"- Assets/HTraceSSGI exists: {Directory.Exists(htraceRoot)}");
-        sb.AppendLine($"- Scripts folder exists: {Directory.Exists(htraceScripts)}");
-        sb.AppendLine($"- Resources folder exists: {Directory.Exists(htraceResources)}");
-        sb.AppendLine("- Renderer feature detected in Mobile_Renderer: " + RendererHasFeatureName(MobileRendererPath, "HTrace"));
-        sb.AppendLine("- Mobile use: feature should be active + volume-driven; XHero tool configures HTrace in the scene Volume at low-cost mobile settings.");
-        sb.AppendLine();
-    }
-
-    private static bool RendererHasFeatureName(string rendererPath, string namePart)
-    {
-        var renderer = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(rendererPath);
-        if (!renderer)
-            return false;
-
-        var so = new SerializedObject(renderer);
-        var features = so.FindProperty("m_RendererFeatures");
-        if (features == null)
-            return false;
-
-        for (var i = 0; i < features.arraySize; i++)
-        {
-            var feature = features.GetArrayElementAtIndex(i).objectReferenceValue;
-            if (feature && feature.GetType().Name.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-        }
-
-        return false;
     }
 
     private static void AppendSceneReport(StringBuilder sb, Scene scene)
     {
-        sb.AppendLine($"## Scene: {scene.path}");
         var roots = scene.GetRootGameObjects();
-        var allTransforms = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToArray();
-        var allObjects = allTransforms.Select(t => t.gameObject).ToArray();
-        var renderers = roots.SelectMany(r => r.GetComponentsInChildren<Renderer>(true)).ToArray();
-        var enabledRenderers = renderers.Where(r => r && r.enabled && r.gameObject.activeInHierarchy).ToArray();
-        var lights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).ToArray();
-        var cameras = roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true)).ToArray();
-        var volumes = roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).ToArray();
-        var reflectionProbes = roots.SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).ToArray();
-        var lightProbeGroups = roots.SelectMany(r => r.GetComponentsInChildren<LightProbeGroup>(true)).ToArray();
-        var lodGroups = roots.SelectMany(r => r.GetComponentsInChildren<LODGroup>(true)).ToArray();
-        var colliders = roots.SelectMany(r => r.GetComponentsInChildren<Collider>(true)).ToArray();
-        var gpuiPrefabManagers = roots.SelectMany(r => r.GetComponentsInChildren<GPUIPrefabManager>(true)).ToArray();
+        var renderers = roots.SelectMany(root => root.GetComponentsInChildren<Renderer>(true)).Where(r => r).ToArray();
+        var enabledRenderers = renderers.Where(r => r.enabled && r.gameObject.activeInHierarchy).ToArray();
+        var meshRenderers = enabledRenderers.OfType<MeshRenderer>().ToArray();
+        var skinnedRenderers = enabledRenderers.OfType<SkinnedMeshRenderer>().ToArray();
+        var terrains = roots.SelectMany(root => root.GetComponentsInChildren<Terrain>(true)).Where(t => t).ToArray();
+        var cameras = roots.SelectMany(root => root.GetComponentsInChildren<Camera>(true)).Where(c => c).ToArray();
 
-        var meshStats = CollectMeshStats(enabledRenderers);
-        var materialSlotCount = enabledRenderers.Sum(r => r.sharedMaterials?.Length ?? 0);
-        var materialCount = enabledRenderers.SelectMany(r => r.sharedMaterials ?? Array.Empty<Material>()).Where(m => m).Distinct().Count();
-        var meshCount = enabledRenderers.Select(GetMeshFromRenderer).Where(m => m).Distinct().Count();
-        var staticBatchingCount = enabledRenderers.Count(r => (GameObjectUtility.GetStaticEditorFlags(r.gameObject) & StaticEditorFlags.BatchingStatic) != 0);
-        var instancingMatCount = enabledRenderers
+        var materialSlots = enabledRenderers.Sum(r => r.sharedMaterials == null ? 0 : r.sharedMaterials.Length);
+        var uniqueMaterials = enabledRenderers
             .SelectMany(r => r.sharedMaterials ?? Array.Empty<Material>())
-            .Where(m => m && m.enableInstancing)
+            .Where(m => m)
             .Distinct()
             .Count();
-
-        sb.AppendLine("### Scene Summary");
-        sb.AppendLine($"- Root objects: {roots.Length}");
-        sb.AppendLine($"- GameObjects: {allObjects.Length} active={allObjects.Count(o => o.activeInHierarchy)} inactive={allObjects.Count(o => !o.activeInHierarchy)}");
-        sb.AppendLine($"- Renderers: {renderers.Length} enabled+active={enabledRenderers.Length}");
-        sb.AppendLine($"- MeshRenderers: {renderers.OfType<MeshRenderer>().Count()} SkinnedMeshRenderers: {renderers.OfType<SkinnedMeshRenderer>().Count()} Terrains: {roots.SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).Count()}");
-        sb.AppendLine($"- Meshes: unique={meshCount} approx rendered tris={meshStats.triangles:N0} verts={meshStats.vertices:N0}");
-        sb.AppendLine($"- Material slots approx draw submissions before batching: {materialSlotCount:N0}; unique materials={materialCount:N0}; instancing-enabled materials={instancingMatCount:N0}");
-        sb.AppendLine($"- Static batching flagged renderers: {staticBatchingCount:N0}/{enabledRenderers.Length:N0}");
-        sb.AppendLine("- Actual draw calls/batches: not available in Unity batchmode; use Game view Stats or Frame Debugger on device after opening this report.");
-        sb.AppendLine();
-
-        sb.AppendLine("### Lighting / Probes");
-        sb.AppendLine($"- Lights: total={lights.Length}, active={lights.Count(l => l && l.isActiveAndEnabled)}, realtime={lights.Count(l => l && l.lightmapBakeType == LightmapBakeType.Realtime)}, mixed={lights.Count(l => l && l.lightmapBakeType == LightmapBakeType.Mixed)}, baked={lights.Count(l => l && l.lightmapBakeType == LightmapBakeType.Baked)}");
-        foreach (var group in lights.Where(l => l).GroupBy(l => l.type))
-            sb.AppendLine($"- {group.Key}: {group.Count()}");
-        foreach (var l in lights.Where(l => l && l.isActiveAndEnabled).Take(12))
-            sb.AppendLine($"  - {GetHierarchyPath(l.transform)} type={l.type} mode={l.lightmapBakeType} intensity={l.intensity:0.###} shadows={l.shadows} range={l.range:0.##}");
-        sb.AppendLine($"- ReflectionProbes: {reflectionProbes.Length}");
-        sb.AppendLine($"- LightProbeGroups: {lightProbeGroups.Length}, probe count={lightProbeGroups.Sum(g => g.probePositions?.Length ?? 0):N0}");
-        sb.AppendLine($"- Ambient mode={RenderSettings.ambientMode}, ambientIntensity={RenderSettings.ambientIntensity:0.###}, reflectionIntensity={RenderSettings.reflectionIntensity:0.###}, skybox={(RenderSettings.skybox ? AssetDatabase.GetAssetPath(RenderSettings.skybox) : "null")}");
-        sb.AppendLine();
-
-        sb.AppendLine("### Cameras / Volumes");
-        foreach (var camera in cameras)
-        {
-            var data = camera.GetUniversalAdditionalCameraData();
-            sb.AppendLine($"- Camera {GetHierarchyPath(camera.transform)} active={camera.isActiveAndEnabled} post={(data ? data.renderPostProcessing.ToString() : "n/a")} depth={(data ? data.requiresDepthTexture.ToString() : "n/a")} color={(data ? data.requiresColorTexture.ToString() : "n/a")} hdr={camera.allowHDR} msaa={camera.allowMSAA}");
-        }
-        foreach (var volume in volumes)
-        {
-            var profile = volume.sharedProfile ? volume.sharedProfile : volume.profile;
-            var profileLabel = profile ? AssetDatabase.GetAssetPath(profile) : "null";
-            if (profile && string.IsNullOrWhiteSpace(profileLabel))
-                profileLabel = profile.name;
-
-            sb.AppendLine($"- Volume {GetHierarchyPath(volume.transform)} active={volume.isActiveAndEnabled} global={volume.isGlobal} weight={volume.weight:0.##} profile={profileLabel}");
-            if (profile && profile.TryGet(out HTraceSSGIVolume htrace))
-                sb.AppendLine($"  - HTrace enabled={htrace.Enable.value} active={htrace.active} rays={htrace.RayCount.value} steps={htrace.StepCount.value} scale={htrace.RenderScale.value:0.##} checkerboard={htrace.Checkerboard.value} intensity={htrace.Intensity.value:0.##}");
-        }
-        sb.AppendLine();
-
-        sb.AppendLine("### GPU Instancer Pro");
-        if (gpuiPrefabManagers.Length == 0)
-        {
-            sb.AppendLine("- No GPUIPrefabManager in scene.");
-        }
-        else
-        {
-            foreach (var manager in gpuiPrefabManagers)
-            {
-                var so = new SerializedObject(manager);
-                var prototypes = so.FindProperty("_prototypes");
-                sb.AppendLine($"- {GetHierarchyPath(manager.transform)} active={manager.gameObject.activeInHierarchy} enabled={manager.enabled} prototypes={(prototypes != null ? prototypes.arraySize : -1)} findAtInit={manager.isFindInstancesAtInitialization}");
-            }
-        }
-
-        var gpuiPrefabs = roots.SelectMany(r => r.GetComponentsInChildren<GPUIPrefab>(true)).ToArray();
-        sb.AppendLine($"- GPUIPrefab components in scene hierarchy: {gpuiPrefabs.Length}");
-        var treeManagerCount = roots.SelectMany(r => r.GetComponentsInChildren<Component>(true)).Count(c => c && c.GetType().FullName == "GPUInstancerPro.TerrainModule.GPUITreeManager");
-        var terrainManagerCount = roots.SelectMany(r => r.GetComponentsInChildren<Component>(true)).Count(c => c && c.GetType().FullName == "GPUInstancerPro.TerrainModule.GPUITerrainBuiltin");
-        sb.AppendLine($"- GPUI Tree Managers: {treeManagerCount}; GPUI Terrain components: {terrainManagerCount}");
-        sb.AppendLine();
-
-        AppendGpuiPrefabPrototypeReport(sb, roots, gpuiPrefabManagers);
-        AppendInstancingCandidates(sb, enabledRenderers);
-        AppendLodCandidates(sb, enabledRenderers, lodGroups);
-        AppendColliderCandidates(sb, colliders);
-        AppendMaterialShaderReport(sb, enabledRenderers);
-    }
-
-    private static void AppendGpuiPrefabPrototypeReport(StringBuilder sb, GameObject[] roots, GPUIPrefabManager[] managers)
-    {
-        sb.AppendLine("### GPUI Prefab Prototype Status");
-        if (managers.Length > 0)
-        {
-            foreach (var manager in managers.Where(m => m))
-            {
-                for (var i = 0; i < manager.GetPrototypeCount(); i++)
-                {
-                    var prototype = manager.GetPrototype(i);
-                    var path = prototype?.prefabObject ? AssetDatabase.GetAssetPath(prototype.prefabObject) : "";
-                    var instances = CountPrefabInstancesInScene(roots, path);
-                    sb.AppendLine($"- {GetHierarchyPath(manager.transform)} prototype[{i}] enabled={prototype?.isEnabled} prefab={path} estimatedSceneInstances={instances}");
-                }
-            }
-        }
-
-        var candidates = FindSafeGpuiPrefabRootCandidates(roots)
-            .OrderByDescending(c => c.EstimatedMaterialSlots)
-            .ThenByDescending(c => c.InstanceCount)
-            .Take(20)
-            .ToArray();
-
-        if (candidates.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("| Candidate prefab | Instances | Renderers/instance | Estimated material slots | Estimated verts |");
-            sb.AppendLine("|---|---:|---:|---:|---:|");
-            foreach (var c in candidates)
-                sb.AppendLine($"| {Escape(c.PrefabPath)} | {c.InstanceCount} | {c.RendererCountPerInstance} | {c.EstimatedMaterialSlots:N0} | {c.EstimatedVerts:N0} |");
-        }
-        else
-        {
-            sb.AppendLine("- No safe repeated decorative prefab root candidates found.");
-        }
-
-        sb.AppendLine();
-    }
-
-    private static int CountPrefabInstancesInScene(GameObject[] roots, string prefabPath)
-    {
-        if (string.IsNullOrWhiteSpace(prefabPath))
-            return 0;
-
-        return roots
-            .SelectMany(r => r.GetComponentsInChildren<Transform>(true))
-            .Select(t => PrefabUtility.GetNearestPrefabInstanceRoot(t.gameObject))
-            .Where(r => r && r.activeInHierarchy)
+        var uniqueMeshes = enabledRenderers
+            .Select(GetMeshFromRenderer)
+            .Where(m => m)
             .Distinct()
-            .Count(root =>
-            {
-                var source = PrefabUtility.GetCorrespondingObjectFromSource(root);
-                return source && string.Equals(AssetDatabase.GetAssetPath(source), prefabPath, StringComparison.OrdinalIgnoreCase);
-            });
-    }
-
-    private static (long vertices, long triangles) CollectMeshStats(IEnumerable<Renderer> renderers)
-    {
-        long vertices = 0;
-        long triangles = 0;
-        foreach (var renderer in renderers)
+            .Count();
+        var staticBatchingReady = meshRenderers.Count(r =>
         {
-            var mesh = GetMeshFromRenderer(renderer);
-            if (!mesh)
-                continue;
+            var flags = GameObjectUtility.GetStaticEditorFlags(r.gameObject);
+            return (flags & StaticEditorFlags.BatchingStatic) != 0;
+        });
 
-            vertices += mesh.vertexCount;
-            for (var i = 0; i < mesh.subMeshCount; i++)
-                triangles += mesh.GetIndexCount(i) / 3;
-        }
+        sb.AppendLine($"## Scene: {scene.path}");
+        sb.AppendLine("### Summary");
+        sb.AppendLine($"- Renderers: total={renderers.Length:N0}, enabled={enabledRenderers.Length:N0}, mesh={meshRenderers.Length:N0}, skinned={skinnedRenderers.Length:N0}");
+        sb.AppendLine($"- Material slots: {materialSlots:N0}; unique materials={uniqueMaterials:N0}; unique meshes={uniqueMeshes:N0}");
+        sb.AppendLine($"- Static batching flagged mesh renderers: {staticBatchingReady:N0}/{meshRenderers.Length:N0}");
+        sb.AppendLine($"- Terrains: {terrains.Length:N0}; cameras={cameras.Length:N0}");
+        sb.AppendLine();
 
-        return (vertices, triangles);
+        AppendCameraReport(sb, cameras);
+        AppendTerrainReport(sb, terrains);
+        AppendShaderReport(sb, enabledRenderers);
+        AppendBatchCandidateReport(sb, enabledRenderers);
+        AppendLodCandidateReport(sb, enabledRenderers);
+        sb.AppendLine();
     }
 
-    private static Mesh GetMeshFromRenderer(Renderer renderer)
+    private static void AppendCameraReport(StringBuilder sb, Camera[] cameras)
     {
-        if (!renderer)
-            return null;
-        if (renderer is SkinnedMeshRenderer smr)
-            return smr.sharedMesh;
-        var mf = renderer.GetComponent<MeshFilter>();
-        return mf ? mf.sharedMesh : null;
-    }
-
-    private static void AppendInstancingCandidates(StringBuilder sb, Renderer[] enabledRenderers)
-    {
-        sb.AppendLine("### Safe GPU Instancer / GPU Instancing Candidates");
-        var candidates = enabledRenderers
-            .Where(r => r is MeshRenderer && GetMeshFromRenderer(r) && !HasUnsafeLogicNearby(r.gameObject))
-            .GroupBy(GetInstancingKey)
-            .Select(g => CandidateGroup.From(g))
-            .Where(g => g.Count >= 5)
-            .OrderByDescending(g => g.Count)
-            .ThenByDescending(g => g.TotalMaterialSlots)
-            .Take(30)
-            .ToArray();
-
-        if (candidates.Length == 0)
+        sb.AppendLine("### Cameras");
+        if (cameras.Length == 0)
         {
-            sb.AppendLine("- No safe repeated MeshRenderer groups above threshold 5. Existing terrain/tree GPUI is likely the main win.");
+            sb.AppendLine("- No cameras found.");
             sb.AppendLine();
             return;
         }
 
-        sb.AppendLine("| Count | Material slots | Mesh | Material | Prefab | Instancing | Note |");
-        sb.AppendLine("|---:|---:|---|---|---|---|---|");
-        foreach (var c in candidates)
+        foreach (var camera in cameras.OrderBy(c => GetHierarchyPath(c.transform), StringComparer.OrdinalIgnoreCase))
         {
-            sb.AppendLine($"| {c.Count} | {c.TotalMaterialSlots} | {Escape(c.MeshName)} | {Escape(c.MaterialName)} | {Escape(c.PrefabPath)} | {c.MaterialInstancingEnabled} | {Escape(c.Note)} |");
+            sb.AppendLine($"- {Escape(GetHierarchyPath(camera.transform))}: occlusion={camera.useOcclusionCulling}, utility={IsUtilityCamera(camera)}, targetTexture={(camera.targetTexture ? camera.targetTexture.name : "null")}");
         }
-
         sb.AppendLine();
     }
 
-    private static string GetInstancingKey(Renderer renderer)
+    private static void AppendTerrainReport(StringBuilder sb, Terrain[] terrains)
     {
-        var mesh = GetMeshFromRenderer(renderer);
-        var meshPath = mesh ? AssetDatabase.GetAssetPath(mesh) : "";
-        var materials = renderer.sharedMaterials ?? Array.Empty<Material>();
-        var matKeys = string.Join("|", materials.Select(m => m ? AssetDatabase.GetAssetPath(m) + "#" + m.GetInstanceID() : "null"));
-        var prefab = PrefabUtility.GetCorrespondingObjectFromSource(renderer.gameObject);
-        var prefabPath = prefab ? AssetDatabase.GetAssetPath(prefab) : "";
-        return $"{meshPath}|{mesh?.GetInstanceID()}|{matKeys}|{prefabPath}";
-    }
-
-    private static bool HasUnsafeLogicNearby(GameObject go)
-    {
-        var root = PrefabUtility.GetNearestPrefabInstanceRoot(go);
-        var scope = root ? root : go.transform.root.gameObject;
-        var components = scope.GetComponentsInChildren<Component>(true);
-        foreach (var component in components)
+        sb.AppendLine("### Terrains");
+        if (terrains.Length == 0)
         {
-            if (!component)
-                continue;
-            var t = component.GetType();
-            if (t == typeof(Transform) || t == typeof(MeshRenderer) || t == typeof(MeshFilter) ||
-                t == typeof(BoxCollider) || t == typeof(SphereCollider) || t == typeof(CapsuleCollider) ||
-                t == typeof(MeshCollider) || t == typeof(LODGroup) || t == typeof(GPUIPrefab))
-                continue;
-
-            if (component is MonoBehaviour)
-            {
-                var name = t.Name;
-                if (LogicComponentNameHints.Any(h => name.IndexOf(h, StringComparison.OrdinalIgnoreCase) >= 0))
-                    return true;
-            }
-
-            if (component is Animator || component is Rigidbody || component is CharacterController)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static IEnumerable<GpuiPrefabRootCandidate> FindSafeGpuiPrefabRootCandidates(GameObject[] roots)
-    {
-        var prefabRoots = roots
-            .SelectMany(r => r.GetComponentsInChildren<Transform>(true))
-            .Select(t => PrefabUtility.GetNearestPrefabInstanceRoot(t.gameObject))
-            .Where(r => r && r.activeInHierarchy)
-            .Distinct()
-            .Select(root =>
-            {
-                var source = PrefabUtility.GetCorrespondingObjectFromSource(root);
-                var path = source ? AssetDatabase.GetAssetPath(source) : "";
-                return new { Root = root, Source = source, Path = path };
-            })
-            .Where(x => x.Source && !string.IsNullOrWhiteSpace(x.Path) && x.Path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        foreach (var group in prefabRoots.GroupBy(x => x.Path, StringComparer.OrdinalIgnoreCase))
-        {
-            var instances = group.Select(x => x.Root).Distinct().ToArray();
-            var source = group.First().Source;
-            var pathText = group.Key + " " + source.name;
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(group.Key);
-            if (!prefab || !IsSafeGpuiPrefabPath(pathText) || HasUnsafeLogicForGpui(prefab))
-                continue;
-
-            var renderers = instances
-                .SelectMany(i => i.GetComponentsInChildren<MeshRenderer>(true))
-                .Where(r => r && r.enabled)
-                .ToArray();
-            if (renderers.Length == 0)
-                continue;
-
-            var rendererCountPerInstance = Mathf.Max(1, Mathf.RoundToInt(renderers.Length / (float)instances.Length));
-            var materialSlots = renderers.Sum(r => r.sharedMaterials?.Length ?? 0);
-            var verts = renderers.Sum(r => GetMeshFromRenderer(r) ? GetMeshFromRenderer(r).vertexCount : 0);
-            yield return new GpuiPrefabRootCandidate
-            {
-                PrefabPath = group.Key,
-                PrefabName = source.name,
-                InstanceCount = instances.Length,
-                RendererCountPerInstance = rendererCountPerInstance,
-                EstimatedMaterialSlots = materialSlots,
-                EstimatedVerts = verts
-            };
-        }
-    }
-
-    private static bool HasUnsafeLogicForGpui(GameObject scope)
-    {
-        foreach (var component in scope.GetComponentsInChildren<Component>(true))
-        {
-            if (!component)
-                return true;
-
-            var t = component.GetType();
-            if (t == typeof(Transform) || t == typeof(MeshRenderer) || t == typeof(MeshFilter) ||
-                t == typeof(BoxCollider) || t == typeof(SphereCollider) || t == typeof(CapsuleCollider) ||
-                t == typeof(MeshCollider) || t == typeof(LODGroup) || t == typeof(GPUIPrefab) ||
-                t.Name == "Tree" || t.Name == "BillboardRenderer" || t.Name == "GPUIOptionalRenderer")
-                continue;
-
-            if (component is Animator || component is Rigidbody || component is CharacterController)
-                return true;
-
-            if (component is MonoBehaviour)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static string GetRendererSourceText(Renderer renderer)
-    {
-        var mesh = GetMeshFromRenderer(renderer);
-        var prefab = PrefabUtility.GetCorrespondingObjectFromSource(renderer.gameObject);
-        var prefabRoot = PrefabUtility.GetNearestPrefabInstanceRoot(renderer.gameObject);
-        var parts = new[]
-        {
-            renderer.name,
-            renderer.sharedMaterial ? renderer.sharedMaterial.name : "",
-            renderer.sharedMaterial ? AssetDatabase.GetAssetPath(renderer.sharedMaterial) : "",
-            mesh ? mesh.name : "",
-            mesh ? AssetDatabase.GetAssetPath(mesh) : "",
-            prefab ? AssetDatabase.GetAssetPath(prefab) : "",
-            prefabRoot ? prefabRoot.name : ""
-        };
-
-        return string.Join(" ", parts);
-    }
-
-    private static bool IsDecorativePath(string value)
-    {
-        return ContainsAny(value, GpuiSafePathHints) && !ContainsAny(value, GpuiUnsafePathHints);
-    }
-
-    private static bool IsSafeGpuiPrefabPath(string value)
-    {
-        return IsDecorativePath(value);
-    }
-
-    private static bool ContainsAny(string value, IEnumerable<string> needles)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        foreach (var needle in needles)
-        {
-            if (value.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static void AppendLodCandidates(StringBuilder sb, Renderer[] enabledRenderers, LODGroup[] existingLods)
-    {
-        sb.AppendLine("### LOD Candidates");
-        var withLod = new HashSet<GameObject>(existingLods.Where(l => l).Select(l => l.gameObject));
-        var candidates = enabledRenderers
-            .Where(r => r is MeshRenderer && GetMeshFromRenderer(r) && !HasLodInParents(r.transform))
-            .Select(r =>
-            {
-                var mesh = GetMeshFromRenderer(r);
-                return new
-                {
-                    Renderer = r,
-                    Mesh = mesh,
-                    Verts = mesh.vertexCount,
-                    Tris = mesh.subMeshCount > 0 ? mesh.GetIndexCount(0) / 3 : 0,
-                    Bounds = r.bounds.size.magnitude
-                };
-            })
-            .Where(x => x.Verts >= 1500 || x.Bounds >= 12f)
-            .OrderByDescending(x => x.Verts)
-            .Take(25)
-            .ToArray();
-
-        if (candidates.Length == 0)
-        {
-            sb.AppendLine("- No obvious high-vertex/no-LOD MeshRenderer candidates found.");
+            sb.AppendLine("- No terrains found.");
             sb.AppendLine();
             return;
         }
 
-        sb.AppendLine("| Object | Verts | Approx tris LOD0 submesh | Bounds diag | Mesh |");
-        sb.AppendLine("|---|---:|---:|---:|---|");
-        foreach (var c in candidates)
-            sb.AppendLine($"| {Escape(GetHierarchyPath(c.Renderer.transform))} | {c.Verts:N0} | {c.Tris:N0} | {c.Bounds:0.##} | {Escape(AssetDatabase.GetAssetPath(c.Mesh))} |");
-        sb.AppendLine();
-    }
-
-    private static bool HasLodInParents(Transform transform)
-    {
-        while (transform)
+        foreach (var terrain in terrains.OrderBy(t => GetHierarchyPath(t.transform), StringComparer.OrdinalIgnoreCase))
         {
-            if (transform.GetComponent<LODGroup>())
-                return true;
-            transform = transform.parent;
-        }
-
-        return false;
-    }
-
-    private static void AppendColliderCandidates(StringBuilder sb, Collider[] colliders)
-    {
-        sb.AppendLine("### Collider Simplification Candidates");
-        var candidates = colliders
-            .OfType<MeshCollider>()
-            .Where(c => c && c.sharedMesh && c.sharedMesh.vertexCount >= 1200)
-            .OrderByDescending(c => c.sharedMesh.vertexCount)
-            .Take(25)
-            .ToArray();
-
-        if (candidates.Length == 0)
-        {
-            sb.AppendLine("- No MeshCollider above 1,200 vertices found.");
-            sb.AppendLine();
-            return;
-        }
-
-        sb.AppendLine("| Object | Mesh collider verts | Convex | Mesh | Recommendation |");
-        sb.AppendLine("|---|---:|---|---|---|");
-        foreach (var c in candidates)
-        {
-            var recommendation = c.GetComponent<Rigidbody>() ? "Keep or use convex/simple compound if moving." : "Replace with Box/Capsule/compound collider if player collision can be approximate.";
-            sb.AppendLine($"| {Escape(GetHierarchyPath(c.transform))} | {c.sharedMesh.vertexCount:N0} | {c.convex} | {Escape(AssetDatabase.GetAssetPath(c.sharedMesh))} | {Escape(recommendation)} |");
+            sb.AppendLine(
+                "- " + Escape(GetHierarchyPath(terrain.transform)) +
+                $": pixelError={terrain.heightmapPixelError:0.##}, basemap={terrain.basemapDistance:0.#}, detailDistance={terrain.detailObjectDistance:0.#}, detailDensity={terrain.detailObjectDensity:0.##}, treeDistance={terrain.treeDistance:0.#}, instanced={terrain.drawInstanced}");
         }
         sb.AppendLine();
     }
 
-    private static void AppendMaterialShaderReport(StringBuilder sb, Renderer[] enabledRenderers)
+    private static void AppendShaderReport(StringBuilder sb, Renderer[] enabledRenderers)
     {
         sb.AppendLine("### Materials / Shaders");
         var materials = enabledRenderers
@@ -2993,141 +789,224 @@ public static class XHeroMobileSceneOptimizer
             .Distinct()
             .ToArray();
 
-        var shaderGroups = materials
-            .GroupBy(m => m.shader ? m.shader.name : "<missing>")
-            .OrderByDescending(g => g.Count())
-            .Take(25)
-            .ToArray();
-
-        sb.AppendLine("| Shader | Material count | Instancing materials | Note |");
-        sb.AppendLine("|---|---:|---:|---|");
-        foreach (var group in shaderGroups)
+        if (materials.Length == 0)
         {
-            var shader = group.Key;
-            var note = shader.StartsWith("Universal Render Pipeline/", StringComparison.OrdinalIgnoreCase) ||
-                       shader.StartsWith("Shader Graphs/", StringComparison.OrdinalIgnoreCase) ||
-                       shader.StartsWith("GPUInstancerPro/", StringComparison.OrdinalIgnoreCase)
-                ? "URP/GPUI friendly"
-                : "Review SRP Batcher compatibility and mobile cost";
-            sb.AppendLine($"| {Escape(shader)} | {group.Count()} | {group.Count(m => m.enableInstancing)} | {Escape(note)} |");
-        }
-
-        var duplicateNameGroups = materials
-            .GroupBy(m => NormalizeMaterialName(m.name))
-            .Where(g => g.Count() >= 2)
-            .OrderByDescending(g => g.Count())
-            .Take(20)
-            .ToArray();
-
-        if (duplicateNameGroups.Length > 0)
-        {
+            sb.AppendLine("- No materials found on enabled renderers.");
             sb.AppendLine();
-            sb.AppendLine("Potential duplicate material names:");
-            foreach (var group in duplicateNameGroups)
-                sb.AppendLine($"- {Escape(group.Key)}: {group.Count()} materials");
+            return;
         }
 
+        sb.AppendLine("| Shader | Material count | Note |");
+        sb.AppendLine("| --- | ---: | --- |");
+        foreach (var group in materials.GroupBy(GetShaderName).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var note = GetShaderNote(group.Key);
+            sb.AppendLine($"| {Escape(group.Key)} | {group.Count()} | {Escape(note)} |");
+        }
         sb.AppendLine();
     }
 
-    private static string NormalizeMaterialName(string name)
+    private static void AppendBatchCandidateReport(StringBuilder sb, Renderer[] enabledRenderers)
     {
-        if (string.IsNullOrEmpty(name))
-            return "";
+        sb.AppendLine("### Batch Reduction Candidates");
+        var groups = enabledRenderers
+            .Where(r => r && !(r is SkinnedMeshRenderer) && GetMeshFromRenderer(r))
+            .GroupBy(GetBatchKey)
+            .Select(CandidateGroup.From)
+            .Where(g => g.Count >= 3)
+            .OrderByDescending(g => g.TotalMaterialSlots)
+            .ThenByDescending(g => g.Count)
+            .Take(30)
+            .ToArray();
 
-        var n = name.Replace(" (Instance)", "");
-        while (n.EndsWith(")") && n.LastIndexOf(" (", StringComparison.Ordinal) >= 0)
+        if (groups.Length == 0)
         {
-            var idx = n.LastIndexOf(" (", StringComparison.Ordinal);
-            var suffix = n.Substring(idx + 2, n.Length - idx - 3);
-            if (!int.TryParse(suffix, out _))
-                break;
-            n = n.Substring(0, idx);
+            sb.AppendLine("- No repeated mesh/material groups large enough to report.");
+            sb.AppendLine();
+            return;
         }
 
-        return n;
+        sb.AppendLine("| Count | Material slots | Static ready | Mesh | Materials | Example | Recommendation |");
+        sb.AppendLine("| ---: | ---: | --- | --- | --- | --- | --- |");
+        foreach (var group in groups)
+        {
+            sb.AppendLine($"| {group.Count} | {group.TotalMaterialSlots} | {group.StaticReady} | {Escape(group.MeshName)} | {Escape(group.MaterialNames)} | {Escape(group.ExamplePath)} | {Escape(group.Recommendation)} |");
+        }
+        sb.AppendLine();
     }
 
-    private static string GetHierarchyPath(Transform transform)
+    private static void AppendLodCandidateReport(StringBuilder sb, Renderer[] enabledRenderers)
     {
-        if (!transform)
-            return "";
+        sb.AppendLine("### LOD Candidates");
+        var candidates = enabledRenderers
+            .Where(r => r && !(r is SkinnedMeshRenderer) && !HasLodInParents(r.transform))
+            .Select(r => new { Renderer = r, Mesh = GetMeshFromRenderer(r) })
+            .Where(x => x.Mesh && x.Mesh.vertexCount >= 2500)
+            .OrderByDescending(x => x.Mesh.vertexCount)
+            .Take(25)
+            .ToArray();
 
-        var stack = new Stack<string>();
-        while (transform)
+        if (candidates.Length == 0)
         {
-            stack.Push(transform.name);
-            transform = transform.parent;
+            sb.AppendLine("- No large no-LOD mesh renderers found.");
+            sb.AppendLine();
+            return;
         }
 
-        return string.Join("/", stack);
+        sb.AppendLine("| Vertices | Renderer | Mesh | Note |");
+        sb.AppendLine("| ---: | --- | --- | --- |");
+        foreach (var candidate in candidates)
+        {
+            sb.AppendLine($"| {candidate.Mesh.vertexCount:N0} | {Escape(GetHierarchyPath(candidate.Renderer.transform))} | {Escape(candidate.Mesh.name)} | Add LODGroup or mesh simplification manually. |");
+        }
+        sb.AppendLine();
     }
 
-    private static bool IsUtilityCamera(Camera camera)
+    private static string GetShaderName(Material material)
     {
-        if (!camera)
-            return false;
+        if (!material)
+            return "<null material>";
+        if (!material.shader)
+            return "<missing shader>";
+        return material.shader.name;
+    }
 
-        var path = GetHierarchyPath(camera.transform);
-        return path.IndexOf("UI", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               path.IndexOf("Minimap", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               path.IndexOf("Topdown", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               (path.IndexOf("Map", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                path.IndexOf("Camera", StringComparison.OrdinalIgnoreCase) >= 0);
+    private static string GetShaderNote(string shaderName)
+    {
+        if (string.IsNullOrEmpty(shaderName) ||
+            shaderName.Equals("<missing shader>", StringComparison.OrdinalIgnoreCase) ||
+            shaderName.IndexOf("InternalErrorShader", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "ERROR: will render pink. Restore/fix the material shader before optimizing.";
+
+        if (shaderName.StartsWith("Universal Render Pipeline/", StringComparison.OrdinalIgnoreCase) ||
+            shaderName.StartsWith("Shader Graphs/", StringComparison.OrdinalIgnoreCase))
+            return "OK";
+
+        return "Verify mobile/URP compatibility.";
+    }
+
+    private static string GetBatchKey(Renderer renderer)
+    {
+        var mesh = GetMeshFromRenderer(renderer);
+        var meshPath = mesh ? AssetDatabase.GetAssetPath(mesh) : string.Empty;
+        var meshId = string.IsNullOrEmpty(meshPath) && mesh ? mesh.name : meshPath;
+        var materials = renderer.sharedMaterials ?? Array.Empty<Material>();
+        var materialKey = string.Join("|", materials.Select(m =>
+        {
+            if (!m)
+                return "<null>";
+            var path = AssetDatabase.GetAssetPath(m);
+            return string.IsNullOrEmpty(path) ? m.name : path;
+        }));
+
+        return meshId + "::" + materialKey;
+    }
+
+    private static bool HasLodInParents(Transform transform)
+    {
+        var current = transform;
+        while (current)
+        {
+            if (current.GetComponent<LODGroup>())
+                return true;
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private static string Escape(string value)
     {
-        if (string.IsNullOrEmpty(value))
-            return "";
-        return value.Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");
+        return (value ?? string.Empty).Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");
+    }
+
+    private struct TerrainBudget : IEquatable<TerrainBudget>
+    {
+        public readonly float PixelError;
+        public readonly float BasemapDistance;
+        public readonly float DetailDistance;
+        public readonly float DetailDensity;
+        public readonly float TreeDistance;
+
+        public TerrainBudget(float pixelError, float basemapDistance, float detailDistance, float detailDensity, float treeDistance)
+        {
+            PixelError = pixelError;
+            BasemapDistance = basemapDistance;
+            DetailDistance = detailDistance;
+            DetailDensity = detailDensity;
+            TreeDistance = treeDistance;
+        }
+
+        public static TerrainBudget From(Terrain terrain)
+        {
+            return new TerrainBudget(
+                terrain.heightmapPixelError,
+                terrain.basemapDistance,
+                terrain.detailObjectDistance,
+                terrain.detailObjectDensity,
+                terrain.treeDistance);
+        }
+
+        public bool Equals(TerrainBudget other)
+        {
+            return Mathf.Approximately(PixelError, other.PixelError) &&
+                   Mathf.Approximately(BasemapDistance, other.BasemapDistance) &&
+                   Mathf.Approximately(DetailDistance, other.DetailDistance) &&
+                   Mathf.Approximately(DetailDensity, other.DetailDensity) &&
+                   Mathf.Approximately(TreeDistance, other.TreeDistance);
+        }
     }
 
     private sealed class CandidateGroup
     {
         public int Count;
         public int TotalMaterialSlots;
+        public bool StaticReady;
         public string MeshName;
-        public string MaterialName;
-        public string PrefabPath;
-        public bool MaterialInstancingEnabled;
-        public string Note;
+        public string MaterialNames;
+        public string ExamplePath;
+        public string Recommendation;
 
         public static CandidateGroup From(IGrouping<string, Renderer> group)
         {
-            var renderers = group.ToArray();
-            var first = renderers[0];
+            var renderers = group.Where(r => r).ToArray();
+            var first = renderers.First();
             var mesh = GetMeshFromRenderer(first);
-            var material = first.sharedMaterial;
-            var prefab = PrefabUtility.GetCorrespondingObjectFromSource(first.gameObject);
-            var prefabPath = prefab ? AssetDatabase.GetAssetPath(prefab) : "";
-            var hasGpuiPrefab = renderers.Any(r =>
+            var allStaticReady = renderers.All(r =>
             {
-                var root = PrefabUtility.GetNearestPrefabInstanceRoot(r.gameObject);
-                return root && root.GetComponent<GPUIPrefab>();
+                var flags = GameObjectUtility.GetStaticEditorFlags(r.gameObject);
+                return (flags & StaticEditorFlags.BatchingStatic) != 0;
             });
+            var materialNames = first.sharedMaterials == null
+                ? string.Empty
+                : string.Join(", ", first.sharedMaterials.Where(m => m).Select(m => m.name).Distinct());
 
             return new CandidateGroup
             {
                 Count = renderers.Length,
-                TotalMaterialSlots = renderers.Sum(r => r.sharedMaterials?.Length ?? 0),
-                MeshName = mesh ? mesh.name : "",
-                MaterialName = material ? $"{material.name} [{AssetDatabase.GetAssetPath(material)}]" : "",
-                PrefabPath = prefabPath,
-                MaterialInstancingEnabled = renderers.SelectMany(r => r.sharedMaterials ?? Array.Empty<Material>()).Where(m => m).All(m => m.enableInstancing),
-                Note = hasGpuiPrefab ? "Has GPUIPrefab on prefab root; verify manager prototype active." : "Safe candidate only if object is decorative/static."
+                TotalMaterialSlots = renderers.Sum(r => r.sharedMaterials == null ? 0 : r.sharedMaterials.Length),
+                StaticReady = allStaticReady,
+                MeshName = mesh ? mesh.name : "<missing mesh>",
+                MaterialNames = materialNames,
+                ExamplePath = GetHierarchyPath(first.transform),
+                Recommendation = allStaticReady
+                    ? "Should batch through Unity static batching if materials are compatible."
+                    : "Mark only verified non-moving environment objects static, then rerun."
             };
         }
     }
 
-    private sealed class GpuiPrefabRootCandidate
+    private sealed class CameraRenderOptionsSnapshot
     {
-        public string PrefabPath;
-        public string PrefabName;
-        public int InstanceCount;
-        public int RendererCountPerInstance;
-        public int EstimatedMaterialSlots;
-        public int EstimatedVerts;
+        public readonly Component CameraData;
+        public readonly Dictionary<string, bool> BooleanValues = new Dictionary<string, bool>();
+        public readonly Dictionary<string, int> IntValues = new Dictionary<string, int>();
+        public readonly Dictionary<string, int> EnumValues = new Dictionary<string, int>();
+
+        public CameraRenderOptionsSnapshot(Component cameraData)
+        {
+            CameraData = cameraData;
+        }
     }
 }
 #endif
