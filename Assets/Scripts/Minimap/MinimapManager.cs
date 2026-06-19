@@ -21,6 +21,8 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private GameObject blockedImg;
 
     public Action<bool> OnMinimapActiveAction;
+    private bool minimapBlockedByBoxLoad;
+
     private void Awake()
     {
         blockedImg.gameObject.SetActive(false);
@@ -35,6 +37,8 @@ public class MinimapManager : MonoBehaviour
         plotHandlerUI.OnShowFindCourseAction += ShowFindCourseUI;
 
         findCourseHandler.OnCloseFindCourseAction += HideFindCourseUI;
+        AddressableAdditiveSceneLoader.BoxLoadVisibilityChanged += OnBoxLoadVisibilityChanged;
+        SetMinimapBlockedByBoxLoad(AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible);
     }
     
     private void OnDestroy()
@@ -48,6 +52,7 @@ public class MinimapManager : MonoBehaviour
         plotHandlerUI.OnShowFindCourseAction -= ShowFindCourseUI;
         
         findCourseHandler.OnCloseFindCourseAction -= HideFindCourseUI;
+        AddressableAdditiveSceneLoader.BoxLoadVisibilityChanged -= OnBoxLoadVisibilityChanged;
 
     }
 
@@ -135,6 +140,13 @@ public class MinimapManager : MonoBehaviour
     
     public void ToggleOnMinimap()
     {
+        if (minimapBlockedByBoxLoad || AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            SetMinimapBlockedByBoxLoad(true);
+            Debug.Log("[Minimap] Minimap is blocked while boxLoad is visible.");
+            return;
+        }
+
         Debug.Log($"Toggle vao minimap camera");
         // UpdateState(true);
         player.transform.rotation = Quaternion.Euler(0, 180, 0);
@@ -166,6 +178,22 @@ public class MinimapManager : MonoBehaviour
             circularScrollView.Hide();
             findCourseHandler.Hide();
         }
+    }
+
+    private void OnBoxLoadVisibilityChanged(bool isVisible)
+    {
+        SetMinimapBlockedByBoxLoad(isVisible);
+    }
+
+    private void SetMinimapBlockedByBoxLoad(bool blocked)
+    {
+        minimapBlockedByBoxLoad = blocked;
+
+        if (minimapUI != null)
+            minimapUI.SetTurnOnInteractable(!blocked);
+
+        if (blocked && TeleMapController._mapActive)
+            ToggleOffMinimap();
     }
 }
 

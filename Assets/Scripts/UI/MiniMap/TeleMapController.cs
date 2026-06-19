@@ -41,6 +41,14 @@ public class TeleMapController : MonoBehaviour
 
     void Update()
     {
+        if (AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            if (_mapActive)
+                ToggleMap(false);
+
+            return;
+        }
+
         if (IsBlendingCamera() || BuildingCameraManager.Instance.IsFocus())
         {
             return;
@@ -70,7 +78,15 @@ public class TeleMapController : MonoBehaviour
             return;
         }
 
-        _mapActive = force.HasValue ? force.Value : !_mapActive;
+        bool targetActive = force.HasValue ? force.Value : !_mapActive;
+
+        if (targetActive && AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            Debug.Log("[TeleMap] Map is blocked while boxLoad is visible.");
+            return;
+        }
+
+        _mapActive = targetActive;
         mapCamera.gameObject.SetActive(_mapActive);
 
         if (_mapActive)

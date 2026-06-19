@@ -157,6 +157,14 @@ public class OpenClosePanel : MonoBehaviour
         }
     }
 
+    public void OpenFromExternalLoginButton()
+    {
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        OnOpenButtonClicked();
+    }
+
     // ====== Core UI open/close ======
     void OpenUI()
     {

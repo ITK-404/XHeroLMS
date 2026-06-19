@@ -15,6 +15,11 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 [DisallowMultipleComponent]
 public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 {
+    private static readonly HashSet<int> BoxLoadVisibleOwners = new HashSet<int>();
+
+    public static bool IsAnyBoxLoadVisible => BoxLoadVisibleOwners.Count > 0;
+    public static event Action<bool> BoxLoadVisibilityChanged;
+
     [SerializeField] private bool loadOnStart = true;
     [SerializeField] private float initialDelaySeconds = 0.75f;
     [SerializeField] private float delayBetweenScenesSeconds = 0.1f;
@@ -78,6 +83,16 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     {
         if (loadOnStart)
             BeginLoad();
+    }
+
+    private void OnDisable()
+    {
+        SetBoxLoadOwnerVisible(false);
+    }
+
+    private void OnDestroy()
+    {
+        SetBoxLoadOwnerVisible(false);
     }
 
     public void BeginLoad()
@@ -252,21 +267,38 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private void SetBoxLoadVisible(bool visible)
     {
         if (!controlBoxLoad)
+        {
+            SetBoxLoadOwnerVisible(false);
             return;
+        }
 
         _boxLoadRequestedVisible = visible;
 
         GameObject boxLoad = ResolveBoxLoadObject(visible);
 
         if (boxLoad == null)
+        {
+            SetBoxLoadOwnerVisible(false);
             return;
+        }
 
-        if (boxLoad.activeSelf == visible)
-            return;
+        if (boxLoad.activeSelf != visible)
+        {
+            boxLoad.SetActive(visible);
+            Debug.Log("[LateSceneLoader] " + (visible ? "Enabled" : "Disabled") + " boxLoad.");
+        }
 
-        boxLoad.SetActive(visible);
+        SetBoxLoadOwnerVisible(boxLoad.activeInHierarchy);
+    }
 
-        Debug.Log("[LateSceneLoader] " + (visible ? "Enabled" : "Disabled") + " boxLoad.");
+    private void SetBoxLoadOwnerVisible(bool visible)
+    {
+        bool changed = visible
+            ? BoxLoadVisibleOwners.Add(GetInstanceID())
+            : BoxLoadVisibleOwners.Remove(GetInstanceID());
+
+        if (changed)
+            BoxLoadVisibilityChanged?.Invoke(IsAnyBoxLoadVisible);
     }
 
     private void RestoreRequestedBoxLoadVisibility()
