@@ -11,6 +11,7 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
@@ -25,20 +26,26 @@ public static class NewSceneAddressablesSplitter
     private const string ReportDirectory = "Library/NewSceneAddressableSplit";
     private const string LoaderObjectName = "[New Scene Late Content Loader]";
     private const string BoxLoadObjectName = "boxLoad";
+    private const string FirstEntryReadyMarkerName = "[New Scene First Entry Ready]";
+    private const string EnvironmentRootPath = "Enviroment";
 
     private const string MainGroupName = "Cloud_New Scene";
     private const string LegacyLateGroupPrefix = "Cloud_New Scene_Late_";
     private const string LegacyInitialUiGroupName = "Cloud_New Scene_Initial_UI";
     private const string GeneratedMainAddress = "New Scene";
     private const string CloudLabel = "cloud";
+    private const string MainLabel = "new_scene_entry";
     private const string LateLabel = "new_scene_late";
     private const string InitialLabel = "new_scene_initial";
     private const string SharedLabel = "new_scene_shared";
+    private const string LateSharedLabel = "new_scene_late_shared";
 
     private const int MaxConcurrentWebRequests = 8;
     private const long MaxGroupBytes = 50L * 1024L * 1024L;
     private const long MinCandidateBytes = 2L * 1024L * 1024L;
-    private const long SharedDependencyMinBytes = 5L * 1024L * 1024L;
+    private const long MinEnvironmentChildLateBytes = 256L * 1024L;
+    private const long SharedDependencyMinBytes = 256L * 1024L;
+    private const long SharedDependencyMinDuplicateSavingsBytes = 1L * 1024L * 1024L;
 
     private static readonly string[] LateAssetPathPrefixes =
     {
@@ -46,9 +53,20 @@ public static class NewSceneAddressablesSplitter
         "Assets/Models_LMS_Mobile/",
         "Assets/GD_SanhTruoc/",
         "Assets/Prefabs/Models/",
+        "Assets/Prefabs/KY MON DON GIAP/",
         "Assets/mountain/",
+        "Assets/tex/",
+        "Assets/Model/Tree/",
+        "Assets/Grass/",
+        "Assets/Vefects/",
+        "Assets/Tazo_fx/",
         "Assets/khutrungbayvatpham_TTB/",
         "Assets/Ky Mon Don Giap/"
+    };
+
+    private static readonly string[] GeneratedOnlyDiscardRootNames =
+    {
+        "testttt"
     };
 
     private static readonly string[] CriticalNameFragments =
@@ -84,8 +102,10 @@ public static class NewSceneAddressablesSplitter
     private static readonly string[] InitialMainHierarchyPaths =
     {
         BoxLoadObjectName,
-        "Enviroment/ToaChanhDien_3toa",
-        "Enviroment/NenSanhTruoc"
+        "Enviroment/NenSanhTruoc",
+        "Enviroment/MB_Nen_Sau (1)",
+        "Blocker sanh sau",
+        "Blocker sanh truoc"
     };
 
     private static readonly string[][] PlannedEnvironmentLateBatches =
@@ -203,6 +223,10 @@ public static class NewSceneAddressablesSplitter
         },
         new[]
         {
+            "Enviroment/ToaChanhDien_3toa"
+        },
+        new[]
+        {
             "Enviroment/Upper House"
         },
         new[]
@@ -307,6 +331,24 @@ public static class NewSceneAddressablesSplitter
         Debug.Log("[NewSceneSplit] Regenerated Cloud_New Scene group and built Addressables.");
     }
 
+    public static void LogNewSceneDownloadBudget()
+    {
+        Addressables.InitializeAsync().WaitForCompletion();
+
+        LogDownloadBudgetForKey(GeneratedMainAddress);
+        LogDownloadBudgetForKey("New Scene Late 01");
+        LogDownloadBudgetForKey(MainLabel);
+        LogDownloadBudgetForKey(LateLabel);
+    }
+
+    private static void LogDownloadBudgetForKey(object key)
+    {
+        var sizeHandle = Addressables.GetDownloadSizeAsync(key);
+        long bytes = sizeHandle.WaitForCompletion();
+        Addressables.Release(sizeHandle);
+        Debug.Log("[NewSceneSplit] Download budget key=" + key + ", size=" + FormatBytes(bytes));
+    }
+
     public static void RegenerateCloudNewSceneGroup()
     {
         EnsureReportDirectory();
@@ -320,6 +362,7 @@ public static class NewSceneAddressablesSplitter
 
         Scene generatedMainScene = EditorSceneManager.OpenScene(GeneratedMainScenePath, OpenSceneMode.Single);
         RemoveLoaderObject(generatedMainScene);
+        RemoveGeneratedOnlyDiscardRoots(generatedMainScene);
         ApplyGeneratedSceneOptimizations(generatedMainScene);
         ConfigureInitialSceneShell(generatedMainScene);
 
@@ -329,9 +372,12 @@ public static class NewSceneAddressablesSplitter
         splitReport.AppendLine("scene_key\tgameobject_path");
 
         int nextLateIndex = 1;
+        CreateFirstEntryReadyScene(ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+
         foreach (string[] batch in OrderedLateHierarchyBatches)
             SplitHierarchyPathBatch(generatedMainScene, batch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
+        SplitRemainingEnvironmentVisualContent(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
         SplitTerrainContent(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
         SplitAutomaticRootCandidates(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
@@ -344,7 +390,7 @@ public static class NewSceneAddressablesSplitter
         AssetDatabase.ImportAsset(GeneratedMainScenePath, ImportAssetOptions.ForceUpdate);
 
         List<string> initialUiDependencyPaths = CollectInitialUiDependencyPaths();
-        List<string> sharedGeneratedDependencyPaths =
+        SharedGeneratedDependencySelection sharedGeneratedDependencyPaths =
             CollectSharedGeneratedDependencyPaths(generatedScenePaths, initialUiDependencyPaths);
 
         RegisterGeneratedAddressables(
@@ -424,6 +470,88 @@ public static class NewSceneAddressablesSplitter
             boxLoad.SetActive(false);
 
         EditorUtility.SetDirty(boxLoad);
+    }
+
+    private static void SplitRemainingEnvironmentVisualContent(
+        Scene generatedMainScene,
+        ref int nextLateIndex,
+        List<string> lateSceneKeys,
+        List<string> generatedScenePaths,
+        StringBuilder splitReport)
+    {
+        GameObject environment = FindByHierarchyPath(generatedMainScene, EnvironmentRootPath);
+
+        if (environment == null)
+            return;
+
+        List<RootInfo> candidates = environment.transform
+            .Cast<Transform>()
+            .Select(t => BuildRootInfo(t.gameObject))
+            .Where(info => ShouldMoveEnvironmentChild(info, out _))
+            .OrderByDescending(info => info.EstimatedBytes)
+            .ToList();
+
+        foreach (List<RootInfo> batch in BuildBatches(candidates))
+        {
+            List<GameObject> objects = batch
+                .Where(info => info.GameObject != null)
+                .Select(info => info.GameObject)
+                .ToList();
+
+            CreateLateSceneFromObjects(objects, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+        }
+    }
+
+    private static bool ShouldMoveEnvironmentChild(RootInfo info, out string reason)
+    {
+        if (info.GameObject == null)
+        {
+            reason = "missing object";
+            return false;
+        }
+
+        string hierarchyPath = GetHierarchyPath(info.GameObject);
+
+        if (IsInitialMainHierarchyPath(hierarchyPath) || WouldMoveInitialMainHierarchy(info.GameObject))
+        {
+            reason = "initial shell";
+            return false;
+        }
+
+        string normalizedName = Normalize(info.Name);
+
+        if (CriticalNameFragments.Any(fragment => normalizedName.Contains(fragment)))
+        {
+            reason = "critical name";
+            return false;
+        }
+
+        if (info.EstimatedBytes < MinEnvironmentChildLateBytes)
+        {
+            reason = "small";
+            return false;
+        }
+
+        if (!info.HasRenderer)
+        {
+            reason = "no renderer";
+            return false;
+        }
+
+        if (info.HasCriticalUnityComponent)
+        {
+            reason = "critical Unity component";
+            return false;
+        }
+
+        if (!info.UsesLateAssetPath)
+        {
+            reason = "not visual-path content";
+            return false;
+        }
+
+        reason = "remaining environment visual";
+        return true;
     }
 
     private static void SplitTerrainContent(
@@ -569,6 +697,34 @@ public static class NewSceneAddressablesSplitter
         }
 
         CreateLateSceneFromObjects(objects, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+    }
+
+    private static void CreateFirstEntryReadyScene(
+        ref int nextLateIndex,
+        List<string> lateSceneKeys,
+        List<string> generatedScenePaths,
+        StringBuilder splitReport)
+    {
+        string sceneName = "New Scene Late " + nextLateIndex.ToString("00", CultureInfo.InvariantCulture);
+        string scenePath = GeneratedSceneDirectory + "/" + sceneName + ".unity";
+        nextLateIndex++;
+
+        Scene markerScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        GameObject marker = new GameObject(FirstEntryReadyMarkerName);
+        SceneManager.MoveGameObjectToScene(marker, markerScene);
+
+        if (!EditorSceneManager.SaveScene(markerScene, scenePath))
+            throw new InvalidOperationException("Failed to save generated first-entry marker scene: " + scenePath);
+
+        AssetDatabase.ImportAsset(scenePath, ImportAssetOptions.ForceUpdate);
+
+        generatedScenePaths.Add(scenePath);
+        lateSceneKeys.Add(sceneName);
+
+        splitReport.Append(sceneName);
+        splitReport.Append('\t');
+        splitReport.Append(FirstEntryReadyMarkerName);
+        splitReport.AppendLine();
     }
 
     private static void CreateLateSceneFromObjects(
@@ -878,13 +1034,17 @@ public static class NewSceneAddressablesSplitter
             .ToList();
     }
 
-    private static List<string> CollectSharedGeneratedDependencyPaths(
+    private static SharedGeneratedDependencySelection CollectSharedGeneratedDependencyPaths(
         List<string> generatedScenePaths,
         List<string> initialUiDependencyPaths)
     {
         HashSet<string> excludedPaths = new HashSet<string>(
             initialUiDependencyPaths ?? Enumerable.Empty<string>(),
             StringComparer.OrdinalIgnoreCase);
+
+        HashSet<string> mainSceneDependencies = generatedScenePaths.Count > 0
+            ? new HashSet<string>(AssetDatabase.GetDependencies(generatedScenePaths[0], true), StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         Dictionary<string, int> sceneReferenceCounts =
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -907,47 +1067,119 @@ public static class NewSceneAddressablesSplitter
             }
         }
 
-        List<string> sharedPaths = sceneReferenceCounts
+        List<SharedDependencyInfo> sharedDependencies = sceneReferenceCounts
             .Where(pair => pair.Value >= 2)
-            .Select(pair => pair.Key)
-            .OrderByDescending(GetAssetFileBytes)
-            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Select(pair => new SharedDependencyInfo(pair.Key, pair.Value, GetAssetFileBytes(pair.Key)))
+            .Where(info => ShouldPromoteSharedDependency(info))
+            .OrderByDescending(info => info.DuplicateSavingsBytes)
+            .ThenByDescending(info => info.AssetBytes)
+            .ThenBy(info => info.AssetPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        List<SharedDependencyInfo> initialSharedDependencies = sharedDependencies
+            .Where(info => mainSceneDependencies.Contains(info.AssetPath))
+            .ToList();
+
+        List<SharedDependencyInfo> lateOnlySharedDependencies = sharedDependencies
+            .Where(info => !mainSceneDependencies.Contains(info.AssetPath))
+            .ToList();
+
+        SharedGeneratedDependencySelection selection = new SharedGeneratedDependencySelection();
+        selection.InitialSharedPaths.AddRange(initialSharedDependencies.Select(info => info.AssetPath));
+        selection.LateOnlySharedPaths.AddRange(lateOnlySharedDependencies.Select(info => info.AssetPath));
+
+        List<string> sharedPaths = sharedDependencies
+            .Select(info => info.AssetPath)
             .ToList();
 
         long totalBytes = sharedPaths.Sum(GetAssetFileBytes);
+        long estimatedDuplicateSavingsBytes = sharedDependencies.Sum(info => info.DuplicateSavingsBytes);
+        long initialSharedBytes = initialSharedDependencies.Sum(info => info.AssetBytes);
+        long lateOnlySharedBytes = lateOnlySharedDependencies.Sum(info => info.AssetBytes);
 
         Debug.Log("[NewSceneSplit] Shared generated dependencies: "
                   + sharedPaths.Count
                   + " assets, approx "
-                  + FormatBytes(totalBytes));
+                  + FormatBytes(totalBytes)
+                  + ", estimated duplicate savings "
+                  + FormatBytes(estimatedDuplicateSavingsBytes)
+                  + ". Initial-required: "
+                  + selection.InitialSharedPaths.Count
+                  + " assets / "
+                  + FormatBytes(initialSharedBytes)
+                  + ". Late-only: "
+                  + selection.LateOnlySharedPaths.Count
+                  + " assets / "
+                  + FormatBytes(lateOnlySharedBytes));
 
-        return sharedPaths;
+        WriteSharedDependencyReport(sharedDependencies, "shared_generated_dependencies.tsv");
+        WriteSharedDependencyReport(initialSharedDependencies, "shared_initial_dependencies.tsv");
+        WriteSharedDependencyReport(lateOnlySharedDependencies, "shared_late_only_dependencies.tsv");
+
+        return selection;
+    }
+
+    private static void WriteSharedDependencyReport(List<SharedDependencyInfo> sharedDependencies, string fileName)
+    {
+        StringBuilder report = new StringBuilder();
+        report.AppendLine("asset_path\treference_count\tasset_bytes\testimated_duplicate_savings_bytes");
+
+        foreach (SharedDependencyInfo info in sharedDependencies)
+        {
+            report.Append(EscapeTsv(info.AssetPath));
+            report.Append('\t');
+            report.Append(info.ReferenceCount.ToString(CultureInfo.InvariantCulture));
+            report.Append('\t');
+            report.Append(info.AssetBytes.ToString(CultureInfo.InvariantCulture));
+            report.Append('\t');
+            report.Append(info.DuplicateSavingsBytes.ToString(CultureInfo.InvariantCulture));
+            report.AppendLine();
+        }
+
+        File.WriteAllText(
+            Path.Combine(Directory.GetCurrentDirectory(), Path.Combine(ReportDirectory, fileName)),
+            report.ToString());
+    }
+
+    private static bool ShouldPromoteSharedDependency(SharedDependencyInfo info)
+    {
+        if (info.AssetBytes <= 0L)
+            return false;
+
+        return info.AssetBytes >= SharedDependencyMinBytes
+               || info.DuplicateSavingsBytes >= SharedDependencyMinDuplicateSavingsBytes;
     }
 
     private static void RegisterGeneratedAddressables(
         List<string> generatedScenePaths,
         List<string> lateSceneKeys,
         List<string> initialUiDependencyPaths,
-        List<string> sharedGeneratedDependencyPaths)
+        SharedGeneratedDependencySelection sharedGeneratedDependencyPaths)
     {
         AddressableAssetSettings settings = GetAddressableSettings();
         ConfigureGlobalAddressableRuntimeSettings(settings);
 
         AddressableAssetGroup mainGroup = GetOrCreateGroup(settings, MainGroupName);
-        ConfigureRemoteGroup(settings, mainGroup, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+        ConfigureRemoteGroup(settings, mainGroup, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
         SetCloudSharedPacking(BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
 
         settings.AddLabel(CloudLabel, false);
+        settings.AddLabel(MainLabel, false);
         settings.AddLabel(LateLabel, false);
         settings.AddLabel(InitialLabel, false);
         settings.AddLabel(SharedLabel, false);
+        settings.AddLabel(LateSharedLabel, false);
+        RemoveStaleLateNumberedLabels(settings, lateSceneKeys.Count);
 
         RemoveEntries(mainGroup, entry =>
             string.Equals(entry.address, GeneratedMainAddress, StringComparison.OrdinalIgnoreCase)
             || entry.address.StartsWith("New Scene Late ", StringComparison.OrdinalIgnoreCase)
+            || entry.labels.Contains(CloudLabel)
+            || entry.labels.Contains(MainLabel)
             || entry.labels.Contains(LateLabel)
             || entry.labels.Contains(InitialLabel)
             || entry.labels.Contains(SharedLabel)
+            || entry.labels.Contains(LateSharedLabel)
             || IsGeneratedAssetPath(AssetDatabase.GUIDToAssetPath(entry.guid)));
 
         for (int i = 0; i < generatedScenePaths.Count; i++)
@@ -955,9 +1187,13 @@ public static class NewSceneAddressablesSplitter
             string scenePath = generatedScenePaths[i];
             string sceneAddress = i == 0 ? GeneratedMainAddress : lateSceneKeys[i - 1];
             AddressableAssetEntry entry = CreateOrMoveEntry(settings, mainGroup, scenePath, sceneAddress);
-            entry.SetLabel(CloudLabel, true, false, true);
+            ClearGeneratedEntryLabels(entry);
 
-            if (i > 0)
+            if (i == 0)
+            {
+                entry.SetLabel(MainLabel, true, false, true);
+            }
+            else
             {
                 string numberedLabel = LateLabel + "_" + i.ToString("00", CultureInfo.InvariantCulture);
                 settings.AddLabel(numberedLabel, false);
@@ -976,11 +1212,32 @@ public static class NewSceneAddressablesSplitter
                 assetPath,
                 string.IsNullOrEmpty(previousAddress) ? assetPath : previousAddress);
 
-            entry.SetLabel(CloudLabel, true, false, true);
+            ClearGeneratedEntryLabels(entry);
             entry.SetLabel(InitialLabel, true, false, true);
         }
 
-        foreach (string assetPath in sharedGeneratedDependencyPaths)
+        RegisterSharedGeneratedDependencyEntries(
+            settings,
+            mainGroup,
+            sharedGeneratedDependencyPaths.InitialSharedPaths,
+            SharedLabel);
+
+        RegisterSharedGeneratedDependencyEntries(
+            settings,
+            mainGroup,
+            sharedGeneratedDependencyPaths.LateOnlySharedPaths,
+            LateSharedLabel);
+
+        settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
+    }
+
+    private static void RegisterSharedGeneratedDependencyEntries(
+        AddressableAssetSettings settings,
+        AddressableAssetGroup mainGroup,
+        IEnumerable<string> assetPaths,
+        string label)
+    {
+        foreach (string assetPath in assetPaths)
         {
             string guid = AssetDatabase.AssetPathToGUID(assetPath);
 
@@ -991,11 +1248,63 @@ public static class NewSceneAddressablesSplitter
                 continue;
 
             AddressableAssetEntry entry = CreateOrMoveEntry(settings, mainGroup, assetPath, assetPath);
-            entry.SetLabel(CloudLabel, true, false, true);
-            entry.SetLabel(SharedLabel, true, false, true);
+            ClearGeneratedEntryLabels(entry);
+            entry.SetLabel(label, true, false, true);
         }
+    }
 
-        settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
+    private static void ClearGeneratedEntryLabels(AddressableAssetEntry entry)
+    {
+        if (entry == null)
+            return;
+
+        foreach (string label in entry.labels.ToList())
+        {
+            if (IsGeneratedNewSceneLabel(label))
+                entry.SetLabel(label, false, false, true);
+        }
+    }
+
+    private static bool IsGeneratedNewSceneLabel(string label)
+    {
+        if (string.IsNullOrEmpty(label))
+            return false;
+
+        return string.Equals(label, CloudLabel, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(label, MainLabel, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(label, LateLabel, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(label, InitialLabel, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(label, SharedLabel, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(label, LateSharedLabel, StringComparison.OrdinalIgnoreCase)
+               || label.StartsWith(LateLabel + "_", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RemoveStaleLateNumberedLabels(AddressableAssetSettings settings, int currentLateSceneCount)
+    {
+        if (settings == null)
+            return;
+
+        string numberedPrefix = LateLabel + "_";
+        List<string> labels = settings.GetLabels();
+
+        foreach (string label in labels.ToList())
+        {
+            if (string.IsNullOrEmpty(label)
+                || !label.StartsWith(numberedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string numberText = label.Substring(numberedPrefix.Length);
+
+            if (!int.TryParse(numberText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int labelIndex))
+                continue;
+
+            if (labelIndex <= currentLateSceneCount)
+                continue;
+
+            settings.RemoveLabel(label, false);
+        }
     }
 
     private static void RegisterAuthoringSceneAsAddressable()
@@ -1007,20 +1316,25 @@ public static class NewSceneAddressablesSplitter
         ConfigureRemoteGroup(settings, mainGroup, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
 
         settings.AddLabel(CloudLabel, false);
+        settings.AddLabel(MainLabel, false);
 
         string authoringGuid = AssetDatabase.AssetPathToGUID(AuthoringScenePath);
         RemoveEntries(mainGroup, entry =>
             !string.Equals(entry.guid, authoringGuid, StringComparison.OrdinalIgnoreCase)
             && (string.Equals(entry.address, GeneratedMainAddress, StringComparison.OrdinalIgnoreCase)
                 || entry.address.StartsWith("New Scene Late ", StringComparison.OrdinalIgnoreCase)
+                || entry.labels.Contains(CloudLabel)
+                || entry.labels.Contains(MainLabel)
                 || entry.labels.Contains(LateLabel)
                 || entry.labels.Contains(InitialLabel)
                 || entry.labels.Contains(SharedLabel)
+                || entry.labels.Contains(LateSharedLabel)
                 || IsGeneratedAssetPath(AssetDatabase.GUIDToAssetPath(entry.guid))));
 
         AddressableAssetEntry authoringEntry = settings.CreateOrMoveEntry(authoringGuid, mainGroup, false, false);
         authoringEntry.address = GeneratedMainAddress;
-        authoringEntry.SetLabel(CloudLabel, true, false, true);
+        ClearGeneratedEntryLabels(authoringEntry);
+        authoringEntry.SetLabel(MainLabel, true, false, true);
 
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, authoringEntry, true, true);
     }
@@ -1495,6 +1809,18 @@ public static class NewSceneAddressablesSplitter
             UnityEngine.Object.DestroyImmediate(root);
     }
 
+    private static void RemoveGeneratedOnlyDiscardRoots(Scene scene)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects().ToList())
+        {
+            if (!GeneratedOnlyDiscardRootNames.Any(name => string.Equals(root.name, name, StringComparison.Ordinal)))
+                continue;
+
+            Debug.Log("[NewSceneSplit] Removed generated-only discard root from main scene: " + root.name);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
     private static void ConfigureRemoteGroup(
         AddressableAssetSettings settings,
         AddressableAssetGroup group,
@@ -1659,7 +1985,7 @@ public static class NewSceneAddressablesSplitter
             return false;
         }
 
-        return GetAssetFileBytes(path) >= SharedDependencyMinBytes;
+        return true;
     }
 
     private static long GetAssetFileBytes(string assetPath)
@@ -1877,6 +2203,27 @@ public static class NewSceneAddressablesSplitter
         public bool UsesLateAssetPath;
         public bool MoveCandidate;
         public string Reason;
+    }
+
+    private sealed class SharedDependencyInfo
+    {
+        public SharedDependencyInfo(string assetPath, int referenceCount, long assetBytes)
+        {
+            AssetPath = assetPath;
+            ReferenceCount = referenceCount;
+            AssetBytes = assetBytes;
+        }
+
+        public string AssetPath { get; }
+        public int ReferenceCount { get; }
+        public long AssetBytes { get; }
+        public long DuplicateSavingsBytes => AssetBytes * Math.Max(0, ReferenceCount - 1);
+    }
+
+    private sealed class SharedGeneratedDependencySelection
+    {
+        public readonly List<string> InitialSharedPaths = new List<string>();
+        public readonly List<string> LateOnlySharedPaths = new List<string>();
     }
 
     private sealed class TransformSnapshot

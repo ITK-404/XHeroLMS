@@ -59,6 +59,10 @@ public class BootFlow : MonoBehaviour
     [Header("Scene Dependency Download Recovery")]
     private bool downloadSceneDependenciesInBootFlow = true;
 
+    private long firstNewSceneLatePrepareBudgetBytes = 2L * 1024L * 1024L;
+
+    private float firstNewSceneLateEntryGateTimeoutSeconds = 2f;
+
     private int sceneDownloadMaxRetries = 3;
 
     private float sceneDownloadRetryDelaySeconds = 1.5f;
@@ -277,6 +281,13 @@ public class BootFlow : MonoBehaviour
                 }
 
                 string[] dependencyKeys = BuildSceneDependencyPrepareKeys(_resolvedMainSceneKey, lateWorldFullyCached);
+
+                yield return CoClampFirstNewScenePrepareKeys(
+                    _resolvedMainSceneKey,
+                    lateWorldFullyCached,
+                    dependencyKeys,
+                    result => dependencyKeys = result
+                );
 
                 yield return CoPrepareSceneDependenciesWithPreload(
                     dependencyKeys,
@@ -513,6 +524,59 @@ public class BootFlow : MonoBehaviour
         return new[] { sceneKey };
     }
 
+    private IEnumerator CoClampFirstNewScenePrepareKeys(
+        string sceneKey,
+        bool lateWorldFullyCached,
+        string[] dependencyKeys,
+        Action<string[]> onDone)
+    {
+        if (!prepareNewSceneLateContentBeforeEnter ||
+            lateWorldFullyCached ||
+            !SceneNameAliases.IsNewSceneFamily(sceneKey) ||
+            dependencyKeys == null ||
+            dependencyKeys.Length <= 1)
+        {
+            onDone?.Invoke(dependencyKeys ?? new[] { sceneKey });
+            yield break;
+        }
+
+        long firstLateBytes = -1;
+        bool sizeOk = false;
+
+        yield return CoGetDownloadSize(
+            NewSceneFirstLateSceneKey,
+            result =>
+            {
+                firstLateBytes = result;
+                sizeOk = true;
+            }
+        );
+
+        if (!sizeOk)
+        {
+            Debug.LogWarning("[BootFlow] Cannot check first New Scene late size. Keep original prepare keys.");
+            onDone?.Invoke(dependencyKeys);
+            yield break;
+        }
+
+        if (firstLateBytes > firstNewSceneLatePrepareBudgetBytes)
+        {
+            Debug.LogWarning("[BootFlow] First New Scene late key is too large before entry. "
+                             + "key="
+                             + NewSceneFirstLateSceneKey
+                             + ", size="
+                             + FormatBytes(firstLateBytes)
+                             + ", budget="
+                             + FormatBytes(firstNewSceneLatePrepareBudgetBytes)
+                             + ". Enter after main scene; late loader will continue in background.");
+
+            onDone?.Invoke(new[] { sceneKey });
+            yield break;
+        }
+
+        onDone?.Invoke(dependencyKeys);
+    }
+
     private IEnumerator CoCheckNewSceneLateWorldCached(Action<bool> onDone)
     {
         if (preload == null)
@@ -593,11 +657,25 @@ public class BootFlow : MonoBehaviour
         if (lateLoader != null)
         {
             lateLoader.BeginLoad();
+            float firstLateGateTimer = 0f;
 
             while (!IsRequiredLateContentReady(lateLoader, waitForAllLateContent))
             {
                 if (intro != null)
                     intro.SetBootProgress01(Mathf.Lerp(0.86f, 0.99f, Mathf.Clamp01(lateLoader.Progress01)));
+
+                if (!waitForAllLateContent && firstNewSceneLateEntryGateTimeoutSeconds > 0f)
+                {
+                    firstLateGateTimer += Time.unscaledDeltaTime;
+
+                    if (firstLateGateTimer >= firstNewSceneLateEntryGateTimeoutSeconds)
+                    {
+                        Debug.LogWarning("[BootFlow] First New Scene late gate timeout after "
+                                         + firstNewSceneLateEntryGateTimeoutSeconds
+                                         + "s. Enter now; late loader keeps loading in background.");
+                        break;
+                    }
+                }
 
                 yield return null;
             }
@@ -1247,6 +1325,24 @@ public class BootFlow : MonoBehaviour
         {
             // ignore
         }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double kb = 1024d;
+        const double mb = kb * 1024d;
+        const double gb = mb * 1024d;
+
+        if (bytes >= gb)
+            return (bytes / gb).ToString("0.##") + " GB";
+
+        if (bytes >= mb)
+            return (bytes / mb).ToString("0.##") + " MB";
+
+        if (bytes >= kb)
+            return (bytes / kb).ToString("0.##") + " KB";
+
+        return bytes + " B";
     }
 #endif
 }
