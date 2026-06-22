@@ -2,9 +2,11 @@
 using Pathfinding;
 using System;
 using System.Collections;
+using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class PointClickSystem : MonoBehaviour
 {
@@ -57,6 +59,35 @@ public class PointClickSystem : MonoBehaviour
     public float maxPitch = 60f;
 
     private bool rotateWhenMove = false;
+
+    private const string WarZoneObjectName = "WarZone";
+    private const string WarZoneNoticeMessage = "Phía trước là cấm địa còn đang phong ấn, tạm thời chưa thể tiến vào.";
+    private const float WarZoneRetreatDistance = 3f;
+    private const float WarZoneRetreatSpeedMultiplier = 0.85f;
+    private const float WarZoneRetreatRotationLerpSpeed = 0.8f;
+    private const float WarZoneNoticeVisibleSeconds = 3f;
+    private const float WarZoneNoticeY = -80f;
+    private const float WarZoneNoticeHiddenY = -132f;
+    private const float WarZoneNoticeIdleY = -86f;
+    private const int WarZoneNoticeSortingOrder = 32761;
+
+    private bool isInWarZone = false;
+    private bool isWarZoneRetreating = false;
+    private bool warZoneRetreatNeedsTriggerExit = false;
+    private int warZoneTriggerContactCount = 0;
+    private Vector3 lastSafePosition;
+    private Vector3 previousSafePosition;
+    private Vector3 warZoneRetreatStartPosition;
+    private Vector3 warZoneRetreatDirection;
+    private Vector3 lastMoveDirection = Vector3.forward;
+    private GameObject warZoneNoticeRoot;
+    private CanvasGroup warZoneNoticeCanvasGroup;
+    private RectTransform warZoneNoticePanelRect;
+    private Sequence warZoneNoticeShowTween;
+    private Sequence warZoneNoticeHideTween;
+    private Tween warZoneNoticeIdleTween;
+    private bool warZoneNoticeActive = false;
+    private float warZoneNoticeTimer = 0f;
     
     private void Awake()
     {
@@ -71,6 +102,19 @@ public class PointClickSystem : MonoBehaviour
 
         if (ai != null)
             defaultSpeed = ai.maxSpeed;
+
+        SetSafePosition(transform.position);
+        warZoneRetreatStartPosition = transform.position;
+    }
+
+    private void OnDisable()
+    {
+        isInWarZone = false;
+        isWarZoneRetreating = false;
+        warZoneRetreatNeedsTriggerExit = false;
+        warZoneTriggerContactCount = 0;
+        warZoneNoticeTimer = 0f;
+        HideWarZoneNotice(true);
     }
 
     private bool IsBlendingCamera()
@@ -82,6 +126,8 @@ public class PointClickSystem : MonoBehaviour
 
     void Update()
     {
+        HandleWarZoneNoticeTimer();
+
         if (TeleMapController._mapActive)
         {
             protectionTimer = .5f;
@@ -114,6 +160,12 @@ public class PointClickSystem : MonoBehaviour
             verticalVelocity += gravity * gravityMultiplier * Time.deltaTime;
         }
 
+        if (isWarZoneRetreating)
+        {
+            HandleWarZoneRetreat();
+            return;
+        }
+
         float h = 0; // A/D
         float v = 0; // W/S
         //h = Input.GetAxisRaw("Horizontal") + rotateLeftRightCamera.vertical; // A/D
@@ -142,6 +194,7 @@ public class PointClickSystem : MonoBehaviour
 
             // combine horizontal movement with vertical velocity
             Vector3 horizontal = forwardMove * moveSpeed;
+            RememberMoveDirection(horizontal);
             Vector3 totalMove = horizontal + Vector3.up * verticalVelocity;
             characterController.Move(totalMove * Time.deltaTime);
 
@@ -150,6 +203,7 @@ public class PointClickSystem : MonoBehaviour
         else
         {
             // when AI is moving the transform, still apply vertical movement for gravity
+            RememberMoveDirection(ai != null ? ai.velocity : Vector3.zero);
             characterController.Move(Vector3.up * (verticalVelocity * Time.deltaTime));
         }
 
@@ -208,6 +262,8 @@ public class PointClickSystem : MonoBehaviour
             rotateWhenMove = false;
             HandleClickMoveRotation();
         }
+
+        CacheSafePosition();
     }
 
     private void HandleClickMoveRotation()
@@ -625,6 +681,360 @@ public class PointClickSystem : MonoBehaviour
 
         Debug.Log("Đã tới vị trí ngồi");
         callback?.Invoke();
+    }
+
+    // thông báo Trigger
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (IsWarZone(other))
+        {
+            warZoneTriggerContactCount++;
+            isInWarZone = true;
+            StartWarZoneRetreat(other);
+        }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (!IsWarZone(other))
+            return;
+
+        isInWarZone = true;
+
+        if (!isWarZoneRetreating)
+        {
+            if (warZoneTriggerContactCount <= 0)
+                warZoneTriggerContactCount = 1;
+
+            StartWarZoneRetreat(other);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!IsWarZone(other))
+            return;
+
+        warZoneTriggerContactCount = Mathf.Max(0, warZoneTriggerContactCount - 1);
+        isInWarZone = warZoneTriggerContactCount > 0;
+
+        if (isWarZoneRetreating)
+        {
+            return;
+        }
+
+        if (!isInWarZone)
+        {
+            SetSafePosition(transform.position);
+        }
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit != null && IsWarZone(hit.collider))
+            StartWarZoneRetreat(hit.collider);
+    }
+
+    private bool IsWarZone(Collider collider)
+    {
+        if (collider == null)
+            return false;
+
+        Transform current = collider.transform;
+        while (current != null)
+        {
+            if (string.Equals(current.name, WarZoneObjectName, StringComparison.Ordinal))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    private void StartWarZoneRetreat(Collider warZoneCollider)
+    {
+        if (isWarZoneRetreating)
+            return;
+
+        isInWarZone = true;
+        isWarZoneRetreating = true;
+        warZoneRetreatNeedsTriggerExit = warZoneCollider != null && warZoneCollider.isTrigger;
+        isClickMoving = false;
+        rotateWhenMove = false;
+
+        transform.DOKill();
+        HideMoveVfx();
+        StopWaitToMoveChair();
+
+        warZoneRetreatStartPosition = transform.position;
+
+        warZoneRetreatDirection = lastSafePosition - transform.position;
+        warZoneRetreatDirection.y = 0f;
+
+        if (warZoneRetreatDirection.sqrMagnitude < 0.001f)
+            warZoneRetreatDirection = -lastMoveDirection;
+
+        warZoneRetreatDirection.y = 0f;
+
+        if (warZoneRetreatDirection.sqrMagnitude < 0.001f)
+            warZoneRetreatDirection = -transform.forward;
+
+        warZoneRetreatDirection.Normalize();
+
+        if (ai != null)
+        {
+            ai.destination = transform.position;
+            ai.isStopped = true;
+            ai.canMove = false;
+        }
+
+        ShowWarZoneNotice();
+    }
+
+    private void HandleWarZoneRetreat()
+    {
+        Vector3 moveDirection = warZoneRetreatDirection;
+        float maxMoveDistance = moveSpeed * WarZoneRetreatSpeedMultiplier * Time.deltaTime;
+        Vector3 horizontalMove = moveDirection * maxMoveDistance;
+
+        Vector3 verticalMove = Vector3.up * (verticalVelocity * Time.deltaTime);
+        if (characterController != null && characterController.enabled)
+        {
+            characterController.Move(horizontalMove + verticalMove);
+        }
+        else
+        {
+            transform.position += horizontalMove + verticalMove;
+        }
+
+        Quaternion targetRot = Quaternion.LookRotation(moveDirection, Vector3.up);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, WarZoneRetreatRotationLerpSpeed * Time.deltaTime);
+
+        Vector3 retreatedDistance = transform.position - warZoneRetreatStartPosition;
+        retreatedDistance.y = 0f;
+
+        float retreatProgress = Vector3.Dot(retreatedDistance, warZoneRetreatDirection);
+        bool retreatedFarEnough = retreatProgress >= WarZoneRetreatDistance;
+        bool clearedWarZone = !warZoneRetreatNeedsTriggerExit || !isInWarZone;
+        if (retreatedFarEnough && clearedWarZone)
+        {
+            FinishWarZoneRetreat();
+        }
+    }
+
+    private void FinishWarZoneRetreat()
+    {
+        isWarZoneRetreating = false;
+        isInWarZone = false;
+        warZoneRetreatNeedsTriggerExit = false;
+        warZoneTriggerContactCount = 0;
+        isClickMoving = false;
+        rotateWhenMove = false;
+
+        if (ai != null)
+        {
+            ai.destination = transform.position;
+            ai.canMove = false;
+            ai.isStopped = true;
+        }
+
+        SetSafePosition(transform.position);
+        HideMoveVfx();
+    }
+
+    private void ShowWarZoneNotice()
+    {
+        warZoneNoticeActive = true;
+        warZoneNoticeTimer = WarZoneNoticeVisibleSeconds;
+
+        if (warZoneNoticeRoot != null)
+        {
+            warZoneNoticeRoot.SetActive(true);
+            PlayWarZoneNoticeShowAnimation();
+            return;
+        }
+
+        warZoneNoticeRoot = new GameObject("~WarZoneNoticeCanvas", typeof(Canvas), typeof(CanvasScaler));
+
+        var canvas = warZoneNoticeRoot.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = WarZoneNoticeSortingOrder;
+
+        var scaler = warZoneNoticeRoot.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        warZoneNoticeCanvasGroup = warZoneNoticeRoot.AddComponent<CanvasGroup>();
+        warZoneNoticeCanvasGroup.interactable = false;
+        warZoneNoticeCanvasGroup.blocksRaycasts = false;
+
+        var panel = new GameObject("Notice", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline));
+        panel.transform.SetParent(warZoneNoticeRoot.transform, false);
+
+        warZoneNoticePanelRect = panel.GetComponent<RectTransform>();
+        warZoneNoticePanelRect.anchorMin = new Vector2(0.5f, 1f);
+        warZoneNoticePanelRect.anchorMax = new Vector2(0.5f, 1f);
+        warZoneNoticePanelRect.pivot = new Vector2(0.5f, 1f);
+        warZoneNoticePanelRect.anchoredPosition = new Vector2(0f, WarZoneNoticeY);
+        warZoneNoticePanelRect.sizeDelta = new Vector2(1120f, 118f);
+
+        var panelImage = panel.GetComponent<Image>();
+        panelImage.color = new Color(0.055f, 0.04f, 0.025f, 0.92f);
+        panelImage.raycastTarget = false;
+
+        var panelOutline = panel.GetComponent<Outline>();
+        panelOutline.effectColor = new Color(0.95f, 0.68f, 0.22f, 0.72f);
+        panelOutline.effectDistance = new Vector2(2f, -2f);
+        panelOutline.useGraphicAlpha = false;
+
+        var textObject = new GameObject("Message", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(panel.transform, false);
+
+        var textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(32f, 16f);
+        textRect.offsetMax = new Vector2(-32f, -16f);
+
+        var messageText = textObject.GetComponent<TextMeshProUGUI>();
+        messageText.text = WarZoneNoticeMessage;
+        messageText.alignment = TextAlignmentOptions.Center;
+        messageText.color = new Color(1f, 0.9f, 0.62f, 1f);
+        messageText.fontSize = 30f;
+        messageText.fontStyle = FontStyles.Bold;
+        messageText.textWrappingMode = TextWrappingModes.Normal;
+        messageText.raycastTarget = false;
+
+        PlayWarZoneNoticeShowAnimation();
+    }
+
+    private void HideWarZoneNotice(bool immediate = false)
+    {
+        if (!warZoneNoticeActive && warZoneNoticeRoot == null)
+            return;
+
+        warZoneNoticeActive = false;
+        warZoneNoticeTimer = 0f;
+
+        if (immediate || warZoneNoticeRoot == null || warZoneNoticeCanvasGroup == null || warZoneNoticePanelRect == null)
+        {
+            KillWarZoneNoticeTweens();
+            DestroyWarZoneNoticeObject();
+            return;
+        }
+
+        warZoneNoticeShowTween?.Kill();
+        warZoneNoticeShowTween = null;
+        warZoneNoticeIdleTween?.Kill();
+        warZoneNoticeIdleTween = null;
+        warZoneNoticeHideTween?.Kill();
+
+        warZoneNoticeHideTween = DOTween.Sequence();
+        warZoneNoticeHideTween
+            .Join(warZoneNoticeCanvasGroup.DOFade(0f, 0.22f).SetEase(Ease.InSine))
+            .Join(warZoneNoticePanelRect.DOAnchorPosY(WarZoneNoticeHiddenY, 0.28f).SetEase(Ease.InSine))
+            .Join(warZoneNoticePanelRect.DOScale(new Vector3(0.94f, 0.88f, 1f), 0.24f).SetEase(Ease.InSine))
+            .OnComplete(() =>
+            {
+                DestroyWarZoneNoticeObject();
+                warZoneNoticeHideTween = null;
+            });
+    }
+
+    private void HandleWarZoneNoticeTimer()
+    {
+        if (!warZoneNoticeActive || isInWarZone || isWarZoneRetreating)
+            return;
+
+        warZoneNoticeTimer -= Time.deltaTime;
+        if (warZoneNoticeTimer <= 0f)
+            HideWarZoneNotice();
+    }
+
+    private void PlayWarZoneNoticeShowAnimation()
+    {
+        if (warZoneNoticeRoot == null || warZoneNoticeCanvasGroup == null || warZoneNoticePanelRect == null)
+            return;
+
+        warZoneNoticeShowTween?.Kill();
+        warZoneNoticeHideTween?.Kill();
+        warZoneNoticeIdleTween?.Kill();
+        warZoneNoticeShowTween = null;
+        warZoneNoticeHideTween = null;
+        warZoneNoticeIdleTween = null;
+
+        warZoneNoticeCanvasGroup.alpha = 0f;
+        warZoneNoticePanelRect.anchoredPosition = new Vector2(0f, WarZoneNoticeHiddenY);
+        warZoneNoticePanelRect.localScale = new Vector3(0.92f, 0.86f, 1f);
+
+        warZoneNoticeShowTween = DOTween.Sequence();
+        warZoneNoticeShowTween
+            .Join(warZoneNoticeCanvasGroup.DOFade(1f, 0.18f).SetEase(Ease.OutSine))
+            .Join(warZoneNoticePanelRect.DOAnchorPosY(WarZoneNoticeY, 0.42f).SetEase(Ease.OutBack))
+            .Join(warZoneNoticePanelRect.DOScale(Vector3.one, 0.34f).SetEase(Ease.OutBack))
+            .OnComplete(() =>
+            {
+                warZoneNoticeShowTween = null;
+                PlayWarZoneNoticeIdleAnimation();
+            });
+    }
+
+    private void PlayWarZoneNoticeIdleAnimation()
+    {
+        if (warZoneNoticePanelRect == null)
+            return;
+
+        warZoneNoticeIdleTween?.Kill();
+        warZoneNoticeIdleTween = warZoneNoticePanelRect
+            .DOAnchorPosY(WarZoneNoticeIdleY, 1.05f)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo);
+    }
+
+    private void KillWarZoneNoticeTweens()
+    {
+        warZoneNoticeShowTween?.Kill();
+        warZoneNoticeHideTween?.Kill();
+        warZoneNoticeIdleTween?.Kill();
+        warZoneNoticeShowTween = null;
+        warZoneNoticeHideTween = null;
+        warZoneNoticeIdleTween = null;
+    }
+
+    private void DestroyWarZoneNoticeObject()
+    {
+        if (warZoneNoticeRoot != null)
+            Destroy(warZoneNoticeRoot);
+
+        warZoneNoticeRoot = null;
+        warZoneNoticeCanvasGroup = null;
+        warZoneNoticePanelRect = null;
+    }
+
+    private void RememberMoveDirection(Vector3 direction)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.001f)
+            lastMoveDirection = direction.normalized;
+    }
+
+    private void CacheSafePosition()
+    {
+        if (isInWarZone || isWarZoneRetreating)
+            return;
+
+        lastSafePosition = previousSafePosition;
+        previousSafePosition = transform.position;
+    }
+
+    private void SetSafePosition(Vector3 position)
+    {
+        lastSafePosition = position;
+        previousSafePosition = position;
     }
 
     private void OnDrawGizmos()

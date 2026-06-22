@@ -38,6 +38,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     [SerializeField] private string boxLoadObjectName = "boxLoad";
     [SerializeField] private bool boxLoadOnlyOnMobile = true;
     [SerializeField] private bool showBoxLoadOnlyWhenDependenciesMissing = true;
+    [SerializeField] private bool updateTimeLineSceneText = true;
     [SerializeField] private List<string> sceneKeys = new List<string>();
 
     private bool _isLoading;
@@ -50,10 +51,20 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private int _failedSceneCount;
     private float _overlayShownAt;
     private GameObject _blockingOverlayRoot;
+    private Text _blockingOverlayStatusText;
     private GameObject _boxLoadObject;
+    private TimeLine_Scene _timeLineScene;
+    private bool _timeLineSceneLookupDone;
     private bool _boxLoadRequestedVisible;
     private bool _boxLoadWarningLogged;
     private Scene _ownerScene;
+    private long _downloadedDependencyBytes;
+    private long _totalDependencyBytes;
+    private float _downloadProgress01;
+    private float _overallProgress01;
+    private string _loadingText = "Đang kiểm tra tài nguyên: 0%";
+
+    private const float DownloadProgressWeight = 0.7f;
 
     public bool IsLoading => _isLoading;
     public bool IsComplete => _loadComplete && !_isLoading;
@@ -62,11 +73,18 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     public int FailedSceneCount => _failedSceneCount;
     public bool CacheStateKnown => _cacheStateKnown;
     public bool AllDependenciesCached => _allDependenciesCached;
+    public long BytesDownloadedApprox => _downloadedDependencyBytes;
+    public long BytesToDownload => _totalDependencyBytes;
+    public float DownloadProgress01 => _downloadProgress01;
+    public string LoadingText => _loadingText;
 
     public float Progress01
     {
         get
         {
+            if (_isLoading)
+                return Mathf.Clamp01(_overallProgress01);
+
             if (_totalSceneCount <= 0)
                 return IsComplete ? 1f : 0f;
 
@@ -184,6 +202,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _totalSceneCount = Mathf.Max(0, totalSceneCount);
         _loadedSceneCount = 0;
         _failedSceneCount = 0;
+        _downloadedDependencyBytes = 0;
+        _totalDependencyBytes = 0;
+        _downloadProgress01 = 0f;
+        _overallProgress01 = 0f;
+        SetLoadingStatus("Đang kiểm tra tài nguyên", 0f);
     }
 
     private void MarkSceneLoadFinished(bool success)
@@ -197,6 +220,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private void FinishLoad()
     {
         EnsureOwnerSceneActive();
+        SetLoadingStatus("Hoàn tất", 1f, _totalDependencyBytes, _totalDependencyBytes);
         SetBoxLoadVisible(false);
 
         _isLoading = false;
@@ -226,6 +250,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             Destroy(_blockingOverlayRoot);
 
         _blockingOverlayRoot = null;
+        _blockingOverlayStatusText = null;
     }
 
     private void PrepareBoxLoadForPendingContent(int pendingSceneCount, bool allDependenciesCached)
@@ -411,17 +436,21 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
 
-        Text text = textObject.GetComponent<Text>();
-        text.text = blockingOverlayText;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        text.fontSize = 34;
-        text.raycastTarget = false;
+        _blockingOverlayStatusText = textObject.GetComponent<Text>();
+        _blockingOverlayStatusText.text = string.IsNullOrEmpty(_loadingText)
+            ? blockingOverlayText
+            : _loadingText;
+        _blockingOverlayStatusText.alignment = TextAnchor.MiddleCenter;
+        _blockingOverlayStatusText.color = Color.white;
+        _blockingOverlayStatusText.fontSize = 34;
+        _blockingOverlayStatusText.raycastTarget = false;
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         if (font != null)
-            text.font = font;
+            _blockingOverlayStatusText.font = font;
+
+        ApplyLoadingTextToUi();
     }
 
     private void EnsureOwnerSceneActive()
@@ -436,6 +465,112 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         if (!activeScene.IsValid() || activeScene != _ownerScene)
             SceneManager.SetActiveScene(_ownerScene);
+    }
+
+    private void SetLoadingStatus(string phase, float progress01, long downloadedBytes = -1L, long totalBytes = -1L)
+    {
+        progress01 = Mathf.Clamp01(progress01);
+        _overallProgress01 = Mathf.Max(_overallProgress01, progress01);
+
+        if (totalBytes > 0L)
+        {
+            downloadedBytes = ClampLong(downloadedBytes < 0L ? 0L : downloadedBytes, 0L, totalBytes);
+            _totalDependencyBytes = Math.Max(_totalDependencyBytes, totalBytes);
+            _downloadedDependencyBytes = ClampLong(
+                Math.Max(_downloadedDependencyBytes, downloadedBytes),
+                0L,
+                _totalDependencyBytes);
+            _downloadProgress01 = Mathf.Clamp01((float)_downloadedDependencyBytes / Math.Max(1L, _totalDependencyBytes));
+            _loadingText = $"{phase}: {Mathf.FloorToInt(_overallProgress01 * 100f)}% ({FormatBytes(_downloadedDependencyBytes)}/{FormatBytes(_totalDependencyBytes)})";
+        }
+        else
+        {
+            _loadingText = $"{phase}: {Mathf.FloorToInt(_overallProgress01 * 100f)}%";
+        }
+
+        ApplyLoadingTextToUi();
+    }
+
+    private void ApplyLoadingTextToUi()
+    {
+        if (_blockingOverlayStatusText != null)
+            _blockingOverlayStatusText.text = string.IsNullOrEmpty(_loadingText) ? blockingOverlayText : _loadingText;
+
+        TimeLine_Scene timeLineScene = ResolveTimeLineScene();
+
+        if (timeLineScene != null)
+            timeLineScene.SetLineText(_loadingText);
+    }
+
+    private TimeLine_Scene ResolveTimeLineScene()
+    {
+        if (!updateTimeLineSceneText)
+            return null;
+
+        if (_timeLineScene != null)
+            return _timeLineScene;
+
+        if (_timeLineSceneLookupDone)
+            return null;
+
+        TimeLine_Scene[] candidates =
+            FindObjectsByType<TimeLine_Scene>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        if (candidates == null || candidates.Length == 0)
+        {
+            _timeLineSceneLookupDone = true;
+            return null;
+        }
+
+        if (!_ownerScene.IsValid() || !_ownerScene.isLoaded)
+            _ownerScene = gameObject.scene;
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            TimeLine_Scene candidate = candidates[i];
+
+            if (candidate == null)
+                continue;
+
+            if (_ownerScene.IsValid() && candidate.gameObject.scene == _ownerScene)
+            {
+                _timeLineScene = candidate;
+                _timeLineSceneLookupDone = true;
+                return _timeLineScene;
+            }
+        }
+
+        _timeLineScene = candidates[0];
+        _timeLineSceneLookupDone = true;
+        return _timeLineScene;
+    }
+
+    private static long ClampLong(long value, long min, long max)
+    {
+        if (value < min)
+            return min;
+
+        if (value > max)
+            return max;
+
+        return value;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024L)
+            return $"{bytes} B";
+
+        double kb = bytes / 1024.0;
+        if (kb < 1024.0)
+            return $"{kb:0.##} KB";
+
+        double mb = kb / 1024.0;
+        if (mb < 1024.0)
+            return $"{mb:0.##} MB";
+
+        double gb = mb / 1024.0;
+        return $"{gb:0.##} GB";
     }
 
 #if ADDRESSABLES
@@ -473,6 +608,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             Debug.Log("[LateSceneLoader] All late scene dependencies are cached. Loading cached scenes immediately.");
 
         PrepareBoxLoadForPendingContent(keys.Count, allDependenciesCached);
+        SetLoadingStatus(
+            allDependenciesCached ? "Đang giải nén tài nguyên" : "Đang tải gói tài nguyên",
+            Progress01,
+            _downloadedDependencyBytes,
+            _totalDependencyBytes);
 
         while (nextIndex < keys.Count || running.Count > 0)
         {
@@ -528,11 +668,69 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                 completedAny = true;
             }
 
+            UpdateDirectLoadProgress(running, allDependenciesCached);
+
             if (completedAny && sceneDelay > 0f)
                 yield return new WaitForSecondsRealtime(sceneDelay);
             else
                 yield return null;
         }
+    }
+
+    private void UpdateDirectLoadProgress(List<RunningSceneLoad> running, bool allDependenciesCached)
+    {
+        float completedWork = _loadedSceneCount + _failedSceneCount;
+        long downloadedBytes = 0L;
+        long totalBytes = 0L;
+        bool hasActiveDownload = false;
+
+        for (int i = 0; i < running.Count; i++)
+        {
+            RunningSceneLoad load = running[i];
+
+            if (!load.Handle.IsValid())
+                continue;
+
+            completedWork += Mathf.Clamp01(load.Handle.PercentComplete);
+
+            DownloadStatus status = default;
+            bool hasStatus = false;
+
+            try
+            {
+                status = load.Handle.GetDownloadStatus();
+                hasStatus = status.TotalBytes > 0L;
+            }
+            catch
+            {
+                hasStatus = false;
+            }
+
+            if (!hasStatus)
+                continue;
+
+            downloadedBytes += ClampLong(status.DownloadedBytes, 0L, status.TotalBytes);
+            totalBytes += status.TotalBytes;
+
+            if (status.DownloadedBytes < status.TotalBytes)
+                hasActiveDownload = true;
+        }
+
+        if (totalBytes <= 0L && _totalDependencyBytes > 0L)
+        {
+            totalBytes = _totalDependencyBytes;
+            downloadedBytes = _downloadedDependencyBytes;
+        }
+
+        float progress01 = _totalSceneCount > 0
+            ? Mathf.Clamp01(completedWork / _totalSceneCount)
+            : Progress01;
+
+        string phase = (!allDependenciesCached && hasActiveDownload)
+            ? "Đang tải gói tài nguyên"
+            : "Đang giải nén tài nguyên";
+
+        SetLoadingStatus(phase, progress01, downloadedBytes, totalBytes);
     }
 
     private IEnumerator CheckAllDependenciesCached(List<string> keys, Action<bool> onDone)
@@ -565,6 +763,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         while (waiting)
         {
+            SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
             timer += Time.unscaledDeltaTime;
             waiting = false;
 
@@ -607,6 +806,15 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         }
 
         ReleaseSizeHandles(handles);
+        _totalDependencyBytes = Math.Max(0L, remainingBytes);
+        _downloadedDependencyBytes = 0L;
+        _downloadProgress01 = remainingBytes <= 0L ? 1f : 0f;
+
+        SetLoadingStatus(
+            remainingBytes > 0L ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
+            Progress01,
+            0L,
+            remainingBytes);
 
         if (failed)
         {
@@ -620,6 +828,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private IEnumerator DownloadAndLoadTogetherRoutine(List<string> keys)
     {
         List<LateSceneState> states = new List<LateSceneState>(keys.Count);
+
+        yield return CacheTotalDependencySize(keys);
 
         for (int i = 0; i < keys.Count; i++)
         {
@@ -636,6 +846,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         while (states.Any(s => !s.LoadFinished))
         {
             RestoreRequestedBoxLoadVisibility();
+            UpdateDownloadGroupProgress(states);
 
             bool startedSceneLoad = false;
 
@@ -679,12 +890,156 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                 yield return null;
         }
 
+        UpdateDownloadGroupProgress(states);
+
         for (int i = 0; i < states.Count; i++)
             ReleaseDownloadHandle(states[i]);
     }
 
+    private IEnumerator CacheTotalDependencySize(List<string> keys)
+    {
+        _totalDependencyBytes = 0L;
+        _downloadedDependencyBytes = 0L;
+        _downloadProgress01 = 0f;
+        SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
+
+        if (keys == null || keys.Count == 0)
+            yield break;
+
+        List<AsyncOperationHandle<long>> handles = new List<AsyncOperationHandle<long>>(keys.Count);
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            try
+            {
+                handles.Add(Addressables.GetDownloadSizeAsync(keys[i]));
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LateSceneLoader] Cannot get dependency size for " + keys[i] + ": " + e.Message);
+            }
+        }
+
+        bool waiting = true;
+        float timer = 0f;
+
+        while (waiting)
+        {
+            SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
+            waiting = false;
+            timer += Time.unscaledDeltaTime;
+
+            for (int i = 0; i < handles.Count; i++)
+            {
+                if (handles[i].IsValid() && !handles[i].IsDone)
+                {
+                    waiting = true;
+                    break;
+                }
+            }
+
+            if (cachedDependencyCheckTimeoutSeconds > 0f &&
+                timer >= cachedDependencyCheckTimeoutSeconds)
+            {
+                Debug.LogWarning("[LateSceneLoader] Dependency size check timed out. Continue without exact total bytes.");
+                ReleaseSizeHandles(handles);
+                SetLoadingStatus("Đang tải gói tài nguyên", Progress01);
+                yield break;
+            }
+
+            if (waiting)
+                yield return null;
+        }
+
+        long totalBytes = 0L;
+
+        for (int i = 0; i < handles.Count; i++)
+        {
+            AsyncOperationHandle<long> handle = handles[i];
+
+            if (!handle.IsValid() || handle.Status != AsyncOperationStatus.Succeeded)
+                continue;
+
+            totalBytes += Math.Max(0L, handle.Result);
+        }
+
+        ReleaseSizeHandles(handles);
+
+        _totalDependencyBytes = totalBytes;
+        _downloadedDependencyBytes = 0L;
+        _downloadProgress01 = totalBytes <= 0L ? 1f : 0f;
+
+        SetLoadingStatus(
+            totalBytes > 0L ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
+            Progress01,
+            0L,
+            totalBytes);
+    }
+
+    private void UpdateDownloadGroupProgress(List<LateSceneState> states)
+    {
+        if (states == null || states.Count == 0)
+            return;
+
+        long downloadedBytes = 0L;
+        long totalBytes = 0L;
+        float downloadProgressSum = 0f;
+        int downloadProgressCount = 0;
+        bool hasActiveDownload = false;
+
+        for (int i = 0; i < states.Count; i++)
+        {
+            LateSceneState state = states[i];
+
+            UpdateLateSceneDownloadMetrics(state);
+
+            if (state.TotalBytes > 0L)
+            {
+                totalBytes += state.TotalBytes;
+                downloadedBytes += ClampLong(state.DownloadedBytes, 0L, state.TotalBytes);
+            }
+
+            downloadProgressSum += Mathf.Clamp01(state.DownloadProgress01);
+            downloadProgressCount++;
+
+            if (!state.DownloadFinished)
+                hasActiveDownload = true;
+        }
+
+        if (totalBytes <= 0L && _totalDependencyBytes > 0L)
+        {
+            totalBytes = _totalDependencyBytes;
+
+            float average01 = downloadProgressCount > 0
+                ? Mathf.Clamp01(downloadProgressSum / downloadProgressCount)
+                : _downloadProgress01;
+
+            downloadedBytes = (long)(totalBytes * average01);
+        }
+
+        float download01 = totalBytes > 0L
+            ? Mathf.Clamp01((float)downloadedBytes / totalBytes)
+            : (downloadProgressCount > 0 ? Mathf.Clamp01(downloadProgressSum / downloadProgressCount) : 0f);
+
+        float completedScene01 = _totalSceneCount > 0
+            ? Mathf.Clamp01((float)(_loadedSceneCount + _failedSceneCount) / _totalSceneCount)
+            : 0f;
+
+        float progress01 = hasActiveDownload
+            ? Mathf.Lerp(0f, DownloadProgressWeight, download01)
+            : Mathf.Lerp(DownloadProgressWeight, 1f, completedScene01);
+
+        SetLoadingStatus(
+            hasActiveDownload ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
+            progress01,
+            downloadedBytes,
+            Math.Max(totalBytes, _totalDependencyBytes));
+    }
+
     private void UpdateDownloadState(LateSceneState state)
     {
+        UpdateLateSceneDownloadMetrics(state);
+
         if (!state.DownloadHandle.IsValid())
         {
             state.DownloadFinished = true;
@@ -699,6 +1054,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         if (state.DownloadHandle.Status == AsyncOperationStatus.Succeeded)
         {
+            state.DownloadProgress01 = 1f;
+
+            if (state.TotalBytes > 0L)
+                state.DownloadedBytes = state.TotalBytes;
+
             Debug.Log("[LateSceneLoader] Dependency download ready: " + state.Key);
             return;
         }
@@ -709,6 +1069,30 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         Debug.LogWarning("[LateSceneLoader] Dependency download failed, will try scene load directly. key="
                          + state.Key + ", error=" + error);
+    }
+
+    private void UpdateLateSceneDownloadMetrics(LateSceneState state)
+    {
+        if (state == null || state.DownloadFinished || !state.DownloadHandle.IsValid())
+            return;
+
+        try
+        {
+            DownloadStatus status = state.DownloadHandle.GetDownloadStatus();
+
+            if (status.TotalBytes > 0L)
+            {
+                state.TotalBytes = Math.Max(state.TotalBytes, status.TotalBytes);
+                state.DownloadedBytes = ClampLong(status.DownloadedBytes, 0L, status.TotalBytes);
+                state.DownloadProgress01 = Mathf.Clamp01((float)state.DownloadedBytes / status.TotalBytes);
+                return;
+            }
+        }
+        catch
+        {
+        }
+
+        state.DownloadProgress01 = Mathf.Clamp01(state.DownloadHandle.PercentComplete);
     }
 
     private IEnumerator LoadSingleSceneRoutine(string key)
@@ -730,7 +1114,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         AsyncOperationHandle<SceneInstance> handle =
             Addressables.LoadSceneAsync(key, LoadSceneMode.Additive, true);
 
-        yield return handle;
+        while (handle.IsValid() && !handle.IsDone)
+        {
+            UpdateSceneHandleProgress(handle);
+            yield return null;
+        }
 
         if (!handle.IsValid() || handle.Status != AsyncOperationStatus.Succeeded)
         {
@@ -746,6 +1134,47 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _loadedSceneHandles.Add(handle);
         EnsureOwnerSceneActive();
         MarkSceneLoadFinished(true);
+        SetLoadingStatus("Đang giải nén tài nguyên", Progress01, _downloadedDependencyBytes, _totalDependencyBytes);
+    }
+
+    private void UpdateSceneHandleProgress(AsyncOperationHandle<SceneInstance> handle)
+    {
+        if (!handle.IsValid())
+            return;
+
+        long downloadedBytes = _downloadedDependencyBytes;
+        long totalBytes = _totalDependencyBytes;
+        bool hasActiveDownload = false;
+
+        try
+        {
+            DownloadStatus status = handle.GetDownloadStatus();
+
+            if (status.TotalBytes > 0L)
+            {
+                totalBytes = Math.Max(totalBytes, status.TotalBytes);
+                downloadedBytes = Math.Max(downloadedBytes, ClampLong(status.DownloadedBytes, 0L, status.TotalBytes));
+                hasActiveDownload = status.DownloadedBytes < status.TotalBytes;
+            }
+        }
+        catch
+        {
+        }
+
+        float sceneWork = _loadedSceneCount + _failedSceneCount + Mathf.Clamp01(handle.PercentComplete);
+        float scene01 = _totalSceneCount > 0
+            ? Mathf.Clamp01(sceneWork / _totalSceneCount)
+            : Mathf.Clamp01(handle.PercentComplete);
+
+        float progress01 = totalBytes > 0L && !hasActiveDownload
+            ? Mathf.Lerp(DownloadProgressWeight, 1f, scene01)
+            : scene01;
+
+        SetLoadingStatus(
+            hasActiveDownload ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
+            progress01,
+            downloadedBytes,
+            totalBytes);
     }
 
     private List<string> BuildUniquePendingSceneKeys()
@@ -789,6 +1218,9 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     {
         public string Key;
         public AsyncOperationHandle DownloadHandle;
+        public long DownloadedBytes;
+        public long TotalBytes;
+        public float DownloadProgress01;
         public bool DownloadFinished;
         public bool DownloadReleased;
         public bool LoadFinished;
