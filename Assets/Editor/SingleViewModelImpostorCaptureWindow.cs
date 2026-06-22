@@ -9,11 +9,9 @@ using System.IO;
 
 public sealed class SingleViewModelImpostorCaptureWindow : EditorWindow
 {
-    private const string DefaultOutputFolder = "Assets/SingleViewImpostor/Generated";
-    private const string ShaderName = "Custom/Impostor/URP_AlphaBillboard";
-    private const string ShaderPathA = "Assets/SingleViewImpostor/Shaders/URP_AlphaBillboard.shader";
-    private const string ShaderPathB = "Assets/SixSideImpostor/Shaders/URP_AlphaBillboard.shader";
-    private const int CaptureLayer = 31;
+private const string DefaultOutputFolder = "Assets/SingleViewImpostor/Generated";
+private const string ShaderName = "Universal Render Pipeline/Unlit";
+private const int CaptureLayer = 31;
 
     private GameObject _sourceModel;
     private string _outputFolder = DefaultOutputFolder;
@@ -492,26 +490,20 @@ public sealed class SingleViewModelImpostorCaptureWindow : EditorWindow
         }
     }
 
-    private Shader FindShader()
-    {
-        Shader shader = Shader.Find(ShaderName);
-        if (shader != null)
-            return shader;
+private Shader FindShader()
+{
+    Shader shader = Shader.Find(ShaderName);
+    if (shader != null)
+        return shader;
 
-        AssetDatabase.ImportAsset(ShaderPathA);
-        AssetDatabase.ImportAsset(ShaderPathB);
+    AssetDatabase.Refresh();
 
-        shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPathA);
-        if (shader != null)
-            return shader;
+    shader = Shader.Find(ShaderName);
+    if (shader != null)
+        return shader;
 
-        shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPathB);
-        if (shader != null)
-            return shader;
-
-        AssetDatabase.Refresh();
-        return Shader.Find(ShaderName);
-    }
+    return null;
+}
 
     private Camera CreateToolCamera()
     {
@@ -717,21 +709,60 @@ public sealed class SingleViewModelImpostorCaptureWindow : EditorWindow
         return cropped;
     }
 
-    private Material CreateMaterial(Shader shader, Texture2D texture, string materialPath)
-    {
-        Material material = new Material(shader)
-        {
-            name = Path.GetFileNameWithoutExtension(materialPath)
-        };
+private Material CreateMaterial(Shader shader, Texture2D texture, string materialPath)
+{
+    shader = Shader.Find("Universal Render Pipeline/Unlit");
 
-        material.SetTexture("_MainTex", texture);
-        material.SetColor("_Tint", Color.white);
-        material.SetFloat("_UseAlphaClip", _useAlphaClip ? 1f : 0f);
-        material.SetFloat("_AlphaCutoff", 0.05f);
-        AssetDatabase.CreateAsset(material, materialPath);
-        AssetDatabase.SaveAssets();
-        return material;
+    if (shader == null)
+    {
+        Debug.LogError("[SingleViewImpostor] Cannot find shader: Universal Render Pipeline/Unlit");
+        return null;
     }
+
+    Material material = new Material(shader)
+    {
+        name = Path.GetFileNameWithoutExtension(materialPath)
+    };
+
+    // Base Map
+    if (material.HasProperty("_BaseMap"))
+        material.SetTexture("_BaseMap", texture);
+
+    // Fallback
+    if (material.HasProperty("_MainTex"))
+        material.SetTexture("_MainTex", texture);
+
+    // Base Color
+    if (material.HasProperty("_BaseColor"))
+        material.SetColor("_BaseColor", Color.white);
+
+    if (material.HasProperty("_Color"))
+        material.SetColor("_Color", Color.white);
+
+    // Alpha Clipping ON
+    if (material.HasProperty("_AlphaClip"))
+        material.SetFloat("_AlphaClip", 1f);
+
+    if (material.HasProperty("_Cutoff"))
+        material.SetFloat("_Cutoff", 0.05f);
+
+    material.EnableKeyword("_ALPHATEST_ON");
+
+    // Two sided
+    if (material.HasProperty("_Cull"))
+        material.SetFloat("_Cull", (float)CullMode.Off);
+
+    material.renderQueue = (int)RenderQueue.AlphaTest;
+    material.SetOverrideTag("RenderType", "TransparentCutout");
+
+    Debug.Log("[SingleViewImpostor] Created material shader = " + material.shader.name);
+
+    AssetDatabase.CreateAsset(material, materialPath);
+    AssetDatabase.SaveAssets();
+    AssetDatabase.Refresh();
+
+    return material;
+}
 
     private void CreatePrefab(string prefabPath, Material material, Vector2 worldSize)
     {
