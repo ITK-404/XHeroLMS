@@ -60,7 +60,7 @@ public class PointClickSystem : MonoBehaviour
 
     private bool rotateWhenMove = false;
 
-    private const string WarZoneObjectName = "WarZone";
+    private const string WarZoneObjectName = "WarnZone";
     private const string WarZoneNoticeMessage = "Phía trước là cấm địa còn đang phong ấn, tạm thời chưa thể tiến vào.";
     private const float WarZoneRetreatDistance = 3f;
     private const float WarZoneRetreatSpeedMultiplier = 0.85f;

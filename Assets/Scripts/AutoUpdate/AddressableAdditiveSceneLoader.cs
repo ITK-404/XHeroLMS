@@ -62,7 +62,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private long _totalDependencyBytes;
     private float _downloadProgress01;
     private float _overallProgress01;
-    private string _loadingText = "Đang kiểm tra tài nguyên: 0%";
+    private string _loadingText = "0%";
 
     private const float DownloadProgressWeight = 0.7f;
 
@@ -206,7 +206,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _totalDependencyBytes = 0;
         _downloadProgress01 = 0f;
         _overallProgress01 = 0f;
-        SetLoadingStatus("Đang kiểm tra tài nguyên", 0f);
+        SetLoadingStatus(0f);
     }
 
     private void MarkSceneLoadFinished(bool success)
@@ -220,7 +220,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private void FinishLoad()
     {
         EnsureOwnerSceneActive();
-        SetLoadingStatus("Hoàn tất", 1f, _totalDependencyBytes, _totalDependencyBytes);
+        SetLoadingStatus(1f, _totalDependencyBytes, _totalDependencyBytes);
         SetBoxLoadVisible(false);
 
         _isLoading = false;
@@ -467,7 +467,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             SceneManager.SetActiveScene(_ownerScene);
     }
 
-    private void SetLoadingStatus(string phase, float progress01, long downloadedBytes = -1L, long totalBytes = -1L)
+    private void SetLoadingStatus(float progress01, long downloadedBytes = -1L, long totalBytes = -1L)
     {
         progress01 = Mathf.Clamp01(progress01);
         _overallProgress01 = Mathf.Max(_overallProgress01, progress01);
@@ -481,11 +481,11 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                 0L,
                 _totalDependencyBytes);
             _downloadProgress01 = Mathf.Clamp01((float)_downloadedDependencyBytes / Math.Max(1L, _totalDependencyBytes));
-            _loadingText = $"{phase}: {Mathf.FloorToInt(_overallProgress01 * 100f)}% ({FormatBytes(_downloadedDependencyBytes)}/{FormatBytes(_totalDependencyBytes)})";
+            _loadingText = $"{Mathf.FloorToInt(_overallProgress01 * 100f)}% ({FormatBytes(_downloadedDependencyBytes)}/{FormatBytes(_totalDependencyBytes)})";
         }
         else
         {
-            _loadingText = $"{phase}: {Mathf.FloorToInt(_overallProgress01 * 100f)}%";
+            _loadingText = $"{Mathf.FloorToInt(_overallProgress01 * 100f)}%";
         }
 
         ApplyLoadingTextToUi();
@@ -608,11 +608,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             Debug.Log("[LateSceneLoader] All late scene dependencies are cached. Loading cached scenes immediately.");
 
         PrepareBoxLoadForPendingContent(keys.Count, allDependenciesCached);
-        SetLoadingStatus(
-            allDependenciesCached ? "Đang giải nén tài nguyên" : "Đang tải gói tài nguyên",
-            Progress01,
-            _downloadedDependencyBytes,
-            _totalDependencyBytes);
+        SetLoadingStatus(Progress01, _downloadedDependencyBytes, _totalDependencyBytes);
 
         while (nextIndex < keys.Count || running.Count > 0)
         {
@@ -682,7 +678,6 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         float completedWork = _loadedSceneCount + _failedSceneCount;
         long downloadedBytes = 0L;
         long totalBytes = 0L;
-        bool hasActiveDownload = false;
 
         for (int i = 0; i < running.Count; i++)
         {
@@ -711,9 +706,6 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
             downloadedBytes += ClampLong(status.DownloadedBytes, 0L, status.TotalBytes);
             totalBytes += status.TotalBytes;
-
-            if (status.DownloadedBytes < status.TotalBytes)
-                hasActiveDownload = true;
         }
 
         if (totalBytes <= 0L && _totalDependencyBytes > 0L)
@@ -726,11 +718,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             ? Mathf.Clamp01(completedWork / _totalSceneCount)
             : Progress01;
 
-        string phase = (!allDependenciesCached && hasActiveDownload)
-            ? "Đang tải gói tài nguyên"
-            : "Đang giải nén tài nguyên";
-
-        SetLoadingStatus(phase, progress01, downloadedBytes, totalBytes);
+        SetLoadingStatus(progress01, downloadedBytes, totalBytes);
     }
 
     private IEnumerator CheckAllDependenciesCached(List<string> keys, Action<bool> onDone)
@@ -763,7 +751,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         while (waiting)
         {
-            SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
+            SetLoadingStatus(Progress01);
             timer += Time.unscaledDeltaTime;
             waiting = false;
 
@@ -810,11 +798,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _downloadedDependencyBytes = 0L;
         _downloadProgress01 = remainingBytes <= 0L ? 1f : 0f;
 
-        SetLoadingStatus(
-            remainingBytes > 0L ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
-            Progress01,
-            0L,
-            remainingBytes);
+        SetLoadingStatus(Progress01, 0L, remainingBytes);
 
         if (failed)
         {
@@ -901,7 +885,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _totalDependencyBytes = 0L;
         _downloadedDependencyBytes = 0L;
         _downloadProgress01 = 0f;
-        SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
+        SetLoadingStatus(Progress01);
 
         if (keys == null || keys.Count == 0)
             yield break;
@@ -925,7 +909,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 
         while (waiting)
         {
-            SetLoadingStatus("Đang kiểm tra tài nguyên", Progress01);
+            SetLoadingStatus(Progress01);
             waiting = false;
             timer += Time.unscaledDeltaTime;
 
@@ -943,7 +927,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             {
                 Debug.LogWarning("[LateSceneLoader] Dependency size check timed out. Continue without exact total bytes.");
                 ReleaseSizeHandles(handles);
-                SetLoadingStatus("Đang tải gói tài nguyên", Progress01);
+                SetLoadingStatus(Progress01);
                 yield break;
             }
 
@@ -969,11 +953,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _downloadedDependencyBytes = 0L;
         _downloadProgress01 = totalBytes <= 0L ? 1f : 0f;
 
-        SetLoadingStatus(
-            totalBytes > 0L ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
-            Progress01,
-            0L,
-            totalBytes);
+        SetLoadingStatus(Progress01, 0L, totalBytes);
     }
 
     private void UpdateDownloadGroupProgress(List<LateSceneState> states)
@@ -1029,11 +1009,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             ? Mathf.Lerp(0f, DownloadProgressWeight, download01)
             : Mathf.Lerp(DownloadProgressWeight, 1f, completedScene01);
 
-        SetLoadingStatus(
-            hasActiveDownload ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
-            progress01,
-            downloadedBytes,
-            Math.Max(totalBytes, _totalDependencyBytes));
+        SetLoadingStatus(progress01, downloadedBytes, Math.Max(totalBytes, _totalDependencyBytes));
     }
 
     private void UpdateDownloadState(LateSceneState state)
@@ -1134,7 +1110,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _loadedSceneHandles.Add(handle);
         EnsureOwnerSceneActive();
         MarkSceneLoadFinished(true);
-        SetLoadingStatus("Đang giải nén tài nguyên", Progress01, _downloadedDependencyBytes, _totalDependencyBytes);
+        SetLoadingStatus(Progress01, _downloadedDependencyBytes, _totalDependencyBytes);
     }
 
     private void UpdateSceneHandleProgress(AsyncOperationHandle<SceneInstance> handle)
@@ -1170,11 +1146,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
             ? Mathf.Lerp(DownloadProgressWeight, 1f, scene01)
             : scene01;
 
-        SetLoadingStatus(
-            hasActiveDownload ? "Đang tải gói tài nguyên" : "Đang giải nén tài nguyên",
-            progress01,
-            downloadedBytes,
-            totalBytes);
+        SetLoadingStatus(progress01, downloadedBytes, totalBytes);
     }
 
     private List<string> BuildUniquePendingSceneKeys()
