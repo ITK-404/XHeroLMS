@@ -13,8 +13,8 @@ Shader "Custom/Impostor/URP_AlphaBillboard"
         Tags
         {
             "RenderPipeline" = "UniversalPipeline"
-            "RenderType" = "Transparent"
-            "Queue" = "Transparent"
+            "RenderType" = "Opaque"
+            "Queue" = "Opaque"
             "IgnoreProjector" = "True"
         }
 
