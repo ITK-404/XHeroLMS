@@ -378,10 +378,10 @@ public class PointClickSystem : MonoBehaviour
                 return;
             }
 
-            if (TryHandleMoveToHouse(ray))
-            {
-                return;
-            }
+            // if (TryHandleMoveToHouse(ray))
+            // {
+            //     return;
+            // }
 
             if (TryMoveTest(ray))
             {
