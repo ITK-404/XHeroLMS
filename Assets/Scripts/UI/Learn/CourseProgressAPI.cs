@@ -15,6 +15,7 @@ public class CourseProgressAPI : MonoBehaviour
 
     private Dictionary<string, int> lessonProgressDictionary = new();
     private CustomPrivateData privateRoot;
+    public bool HasProgressData { get; private set; }
 
     private void Awake()
     {
@@ -37,10 +38,28 @@ public class CourseProgressAPI : MonoBehaviour
 
     public IEnumerator GetProgressCourseCoroutine()
     {
+        HasProgressData = false;
+        lessonProgressDictionary.Clear();
+
+        if (LmsStore.Instance != null)
+            baseUrl = LmsStore.Instance.baseUrl;
+
         var accessToken = TokenStore.AccessToken;
 
         Debug.Log($"[CourseProgressAPI] baseUrl = {baseUrl}");
         Debug.Log($"[CourseProgressAPI] token = {(string.IsNullOrEmpty(accessToken) ? "EMPTY" : accessToken.Substring(0, 20) + "...")}");
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[CourseProgressAPI] baseUrl rỗng, không thể lấy progress.");
+            yield break;
+        }
+
+        if (string.IsNullOrWhiteSpace(courseID))
+        {
+            Debug.LogError("[CourseProgressAPI] courseID rỗng, không thể lấy progress.");
+            yield break;
+        }
 
         string url = $"{baseUrl.TrimEnd('/')}/users/lms/courses/get-progress-learn/{courseID}";
         Debug.Log($"[CourseProgressAPI] URL = {url}");
@@ -112,6 +131,7 @@ public class CourseProgressAPI : MonoBehaviour
         }
 
         Debug.Log($"[CourseProgressAPI] Loaded {lessonProgressDictionary.Count} lesson progress entries.");
+        HasProgressData = true;
     }
 
     public int GetLessonProgress(string lessonID)

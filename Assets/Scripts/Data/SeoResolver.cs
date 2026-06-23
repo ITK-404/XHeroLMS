@@ -218,9 +218,9 @@ public static class SeoResolver
             }
         }
 
-        // fetch private
-        if (LmsStore.Instance.GetPrivate(courseId) == null)
-            yield return LmsStore.Instance.FetchPrivateIfExpired(courseId);
+        // fetch private. FetchPrivateIfExpired tự bỏ qua khi cache còn hạn;
+        // nếu cache hết hạn mà request lỗi, private cũ vẫn còn để UI không bị trống.
+        yield return LmsStore.Instance.FetchPrivateIfExpired(courseId);
 
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
