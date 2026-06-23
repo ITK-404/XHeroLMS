@@ -10,8 +10,11 @@ using UnityEngine.UI;
 
 public class PointClickSystem : MonoBehaviour
 {
+    public event Action<bool> OnPathStopped;
+
     public CinemachineBrain brain;
     IAstarAI ai;
+    private Seeker seeker;
     private Vector3 lastPickPosition;
     public float debugRadius = 1;
     public LayerMask groundLayerMask;
@@ -36,6 +39,21 @@ public class PointClickSystem : MonoBehaviour
     private float minDistanceFromTarget = 3f; // khoảng cách tối thiểu
     private float rotationLerpSpeed = 2f; // độ mượt xoay
 
+    [Header("Pathfinding")]
+    [SerializeField] private bool constrainAiInsideGraph = true;
+    [SerializeField] private bool searchPathImmediately = true;
+    [SerializeField, Min(0.2f)] private float maxWaypointLookahead = 0.9f;
+    [SerializeField, Min(0.25f)] private float maxDestinationSnapDistance = 3f;
+    [SerializeField, Range(8, 32)] private int clickDestinationAngleSamples = 16;
+    [SerializeField, Range(1, 6)] private int clickDestinationDistanceSamples = 4;
+    [SerializeField, Min(0.1f)] private float destinationPreferenceWeight = 0.35f;
+    [SerializeField, Min(0.1f)] private float arrivalStopDistance = 0.5f;
+    [SerializeField, Min(0.2f)] private float stuckStopSeconds = 1.25f;
+    [SerializeField, Min(0.05f)] private float stationaryRadius = 0.5f;
+    [SerializeField, Min(0.2f)] private float stationaryStopSeconds = 1.5f;
+    [SerializeField, Min(0.01f)] private float progressEpsilon = 0.05f;
+    [SerializeField, Min(0f)] private float minPathAgeBeforeStop = 0.15f;
+
     private bool isClickMoving = false;
 
     public bool IsClickMoving
@@ -59,6 +77,14 @@ public class PointClickSystem : MonoBehaviour
     public float maxPitch = 60f;
 
     private bool rotateWhenMove = false;
+    private bool hasActiveMoveDestination = false;
+    private bool lastPathStopWasArrival = false;
+    private Vector3 activeMoveDestination;
+    private Vector3 activeMoveStationaryAnchor;
+    private float bestActiveMoveMetric = float.PositiveInfinity;
+    private float activeMoveStuckTimer = 0f;
+    private float activeMoveStationaryTimer = 0f;
+    private float activeMoveStartRealtime = 0f;
 
     private const string WarZoneObjectName = "WarnZone";
     private const string WarZoneNoticeMessage = "Phía trước là cấm địa còn đang phong ấn, tạm thời chưa thể tiến vào.";
@@ -98,10 +124,15 @@ public class PointClickSystem : MonoBehaviour
     void OnEnable()
     {
         ai = GetComponent<IAstarAI>();
+        seeker = GetComponent<Seeker>();
         characterController = GetComponent<CharacterController>();
 
         if (ai != null)
             defaultSpeed = ai.maxSpeed;
+
+        ConfigureAstarAgent();
+        SetAstarAgentIdle(true);
+        ClearActiveMoveTracking(false);
 
         SetSafePosition(transform.position);
         warZoneRetreatStartPosition = transform.position;
@@ -114,6 +145,7 @@ public class PointClickSystem : MonoBehaviour
         warZoneRetreatNeedsTriggerExit = false;
         warZoneTriggerContactCount = 0;
         warZoneNoticeTimer = 0f;
+        ClearActiveMoveTracking(false);
         HideWarZoneNotice(true);
     }
 
@@ -127,6 +159,7 @@ public class PointClickSystem : MonoBehaviour
     void Update()
     {
         HandleWarZoneNoticeTimer();
+        UpdatePathCompletionGuard();
 
         if (TeleMapController._mapActive)
         {
@@ -182,12 +215,10 @@ public class PointClickSystem : MonoBehaviour
         {
             // Điều khiển bằng phím => tắt AI + tắt click-move
             if (ai != null)
-            {
-                ai.isStopped = true;
-                ai.canMove = false;
-            }
+                SetAstarAgentIdle(true);
 
             rotateWhenMove = false;
+            ClearActiveMoveTracking(false);
 
             isClickMoving = false;
             HideMoveVfx(); // VFX
@@ -212,7 +243,7 @@ public class PointClickSystem : MonoBehaviour
         bool isRotationActive = delta.magnitude > 0.1f;
         if (delta != Vector2.zero)
         {
-            float multiplier = config != null ? 1 : config.rotationMultiplier;
+            float multiplier = config != null ? config.rotationMultiplier : 1f;
             float horizontalRotation = delta.x * rotationTouchSpeed * Time.deltaTime * multiplier;
             transform.Rotate(0, horizontalRotation, 0);
 
@@ -232,7 +263,7 @@ public class PointClickSystem : MonoBehaviour
                 camTransform.localEulerAngles = euler;
             }
         }
-        else if (Mathf.Abs(h) > 0.1f && ai.isStopped && ai.canMove == false)
+        else if (Mathf.Abs(h) > 0.1f && ai != null && ai.isStopped && ai.canMove == false)
         {
             if (isRotationActive || TouchRotationView.IsLooking)
             {
@@ -252,7 +283,7 @@ public class PointClickSystem : MonoBehaviour
         // Vừa đi vừa xoay mượt về phía điểm đã click
         
 
-        if (rotateWhenMove && ai.canMove && ai.reachedDestination == false)
+        if (rotateWhenMove && ai != null && ai.canMove && ai.reachedDestination == false)
         {
             // Debug.Log($"Velocity {ai.velocity}");
             RotateToVelocity();
@@ -291,8 +322,7 @@ public class PointClickSystem : MonoBehaviour
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f)
         {
-            isClickMoving = false;
-            HideMoveVfx(); // VFX
+            StopActivePath(true);
             return;
         }
 
@@ -306,10 +336,7 @@ public class PointClickSystem : MonoBehaviour
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
         if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
         {
-            rotateWhenMove = false;
-
-            isClickMoving = false;
-            HideMoveVfx(); // VFX
+            StopActivePath(true);
         }
     }
 
@@ -383,9 +410,6 @@ public class PointClickSystem : MonoBehaviour
                 Vector3 hitPoint = groundHit.point;
                 lookTargetWorldPos = hitPoint; // xoay nhìn vào đây
 
-                // Spawn / move VFX tới điểm click
-                ShowMoveVfx(hitPoint); // VFX
-
                 // Tính hướng từ player tới điểm click (trên mặt phẳng XZ)
                 Vector3 toTarget = hitPoint - transform.position;
                 toTarget.y = 0f;
@@ -394,11 +418,7 @@ public class PointClickSystem : MonoBehaviour
                 {
                     // Nếu gần như trùng nhau, chỉ xoay nhẹ về phía đó
                     isClickMoving = true;
-                    if (ai != null)
-                    {
-                        ai.isStopped = true;
-                        ai.canMove = false;
-                    }
+                    StopActivePath(true);
 
                     return;
                 }
@@ -412,19 +432,22 @@ public class PointClickSystem : MonoBehaviour
                 // Giữ y hiện tại của player
                 desiredPos.y = transform.position.y;
 
-                // Snap vào node gần nhất của A* để tránh đi vào chỗ không walkable
-                Vector3 finalDestination = desiredPos;
-                if (AstarPath.active != null)
+                if (!TryResolveClickDestination(hitPoint, desiredPos, out Vector3 finalDestination))
                 {
-                    var node = AstarPath.active.GetNearest(desiredPos);
-                    finalDestination = (Vector3)node.position;
+                    Debug.LogWarning($"[PointClick] Không tìm được đường hợp lệ tới điểm click: {hitPoint}");
+                    HideMoveVfx();
+                    isClickMoving = false;
+                    return;
                 }
 
-                if (ai != null)
+                // Spawn / move VFX tới điểm click
+                ShowMoveVfx(hitPoint); // VFX
+
+                if (!MoveAgentToResolvedDestination(finalDestination))
                 {
-                    ai.isStopped = false;
-                    ai.canMove = true;
-                    ai.destination = finalDestination;
+                    HideMoveVfx();
+                    isClickMoving = false;
+                    return;
                 }
 
                 // Bật chế độ vừa đi vừa xoay
@@ -435,6 +458,335 @@ public class PointClickSystem : MonoBehaviour
                 Debug.Log("Không bắn dính mặt đất rồi");
             }
         }
+    }
+
+    private void ConfigureAstarAgent()
+    {
+        if (ai is AIPath aiPath)
+        {
+            if (constrainAiInsideGraph)
+                aiPath.constrainInsideGraph = true;
+
+            if (maxWaypointLookahead > 0f && aiPath.pickNextWaypointDist > maxWaypointLookahead)
+                aiPath.pickNextWaypointDist = maxWaypointLookahead;
+        }
+    }
+
+    private void SetAstarAgentIdle(bool clearPath)
+    {
+        if (ai == null)
+            return;
+
+        ai.destination = transform.position;
+        ai.canSearch = false;
+        ai.isStopped = true;
+        ai.canMove = false;
+
+        if (clearPath)
+            ai.SetPath(null);
+    }
+
+    private bool TryResolveClickDestination(Vector3 hitPoint, Vector3 preferredDestination, out Vector3 finalDestination)
+    {
+        if (AstarPath.active == null)
+        {
+            finalDestination = preferredDestination;
+            return true;
+        }
+
+        if (!TryGetStartNode(out GraphNode startNode))
+        {
+            finalDestination = default;
+            return false;
+        }
+
+        bool found = false;
+        float bestScore = float.PositiveInfinity;
+        Vector3 bestDestination = default;
+
+        EvaluateDestinationCandidate(preferredDestination, preferredDestination, startNode, ref found, ref bestScore, ref bestDestination);
+        EvaluateDestinationCandidate(hitPoint, preferredDestination, startNode, ref found, ref bestScore, ref bestDestination);
+
+        Vector3 preferredOffsetDirection = preferredDestination - hitPoint;
+        preferredOffsetDirection.y = 0f;
+        if (preferredOffsetDirection.sqrMagnitude < 0.001f)
+            preferredOffsetDirection = transform.position - hitPoint;
+
+        preferredOffsetDirection.y = 0f;
+        if (preferredOffsetDirection.sqrMagnitude < 0.001f)
+            preferredOffsetDirection = -transform.forward;
+
+        preferredOffsetDirection.Normalize();
+
+        float minDistance = Mathf.Max(0.25f, minDistanceFromTarget);
+        float maxDistance = Mathf.Max(minDistance, Vector3.Distance(FlattenXZ(hitPoint), FlattenXZ(preferredDestination)));
+        int distanceSamples = Mathf.Max(1, clickDestinationDistanceSamples);
+        int angleSamples = Mathf.Max(8, clickDestinationAngleSamples);
+
+        for (int distanceIndex = 0; distanceIndex < distanceSamples; distanceIndex++)
+        {
+            float t = distanceSamples == 1 ? 1f : distanceIndex / (float)(distanceSamples - 1);
+            float distance = Mathf.Lerp(minDistance, maxDistance, t);
+
+            for (int angleIndex = 0; angleIndex < angleSamples; angleIndex++)
+            {
+                float angle = 360f * angleIndex / angleSamples;
+                Vector3 offsetDirection = Quaternion.AngleAxis(angle, Vector3.up) * preferredOffsetDirection;
+                Vector3 candidate = hitPoint + offsetDirection * distance;
+                candidate.y = preferredDestination.y;
+
+                EvaluateDestinationCandidate(candidate, preferredDestination, startNode, ref found, ref bestScore, ref bestDestination);
+            }
+        }
+
+        finalDestination = bestDestination;
+        return found;
+    }
+
+    private bool TryResolveReachableDestination(Vector3 requestedDestination, out Vector3 finalDestination)
+    {
+        if (AstarPath.active == null)
+        {
+            finalDestination = requestedDestination;
+            return true;
+        }
+
+        if (!TryGetStartNode(out GraphNode startNode))
+        {
+            finalDestination = default;
+            return false;
+        }
+
+        bool found = false;
+        float bestScore = float.PositiveInfinity;
+        Vector3 bestDestination = default;
+
+        EvaluateDestinationCandidate(requestedDestination, requestedDestination, startNode, ref found, ref bestScore, ref bestDestination);
+
+        finalDestination = bestDestination;
+        return found;
+    }
+
+    private void EvaluateDestinationCandidate(
+        Vector3 candidate,
+        Vector3 preferredDestination,
+        GraphNode startNode,
+        ref bool found,
+        ref float bestScore,
+        ref Vector3 bestDestination)
+    {
+        if (!TryGetReachableNearest(candidate, startNode, out NNInfo nearest))
+            return;
+
+        float snapDistance = Vector3.Distance(FlattenXZ(candidate), FlattenXZ(nearest.position));
+        if (snapDistance > maxDestinationSnapDistance)
+            return;
+
+        float travelDistance = Vector3.Distance(FlattenXZ(transform.position), FlattenXZ(nearest.position));
+        float preferenceDistance = Vector3.Distance(FlattenXZ(preferredDestination), FlattenXZ(nearest.position));
+        float score = travelDistance + preferenceDistance * Mathf.Max(0.01f, destinationPreferenceWeight) + snapDistance;
+
+        if (score >= bestScore)
+            return;
+
+        found = true;
+        bestScore = score;
+        bestDestination = nearest.position;
+    }
+
+    private bool TryGetStartNode(out GraphNode startNode)
+    {
+        startNode = null;
+
+        if (AstarPath.active == null)
+            return false;
+
+        NNConstraint constraint = BuildNearestNodeConstraint(null);
+        NNInfo nearest = AstarPath.active.GetNearest(transform.position, constraint);
+        startNode = nearest.node;
+
+        return startNode != null && startNode.Walkable;
+    }
+
+    private bool TryGetReachableNearest(Vector3 position, GraphNode startNode, out NNInfo nearest)
+    {
+        nearest = default;
+
+        if (AstarPath.active == null)
+            return false;
+
+        NNConstraint constraint = BuildNearestNodeConstraint(startNode);
+        nearest = AstarPath.active.GetNearest(position, constraint);
+
+        return nearest.node != null &&
+               nearest.node.Walkable &&
+               (startNode == null || PathUtilities.IsPathPossible(startNode, nearest.node));
+    }
+
+    private NNConstraint BuildNearestNodeConstraint(GraphNode startNode)
+    {
+        NNConstraint constraint = NNConstraint.Default;
+        constraint.distanceXZ = true;
+
+        if (seeker != null)
+        {
+            constraint.tags = seeker.traversableTags;
+            constraint.graphMask = seeker.graphMask;
+        }
+
+        if (startNode != null)
+        {
+            constraint.constrainArea = true;
+            constraint.area = (int)startNode.Area;
+        }
+
+        return constraint;
+    }
+
+    private bool MoveAgentToResolvedDestination(Vector3 destination)
+    {
+        if (ai == null)
+            return false;
+
+        ai.isStopped = false;
+        ai.canMove = true;
+        ai.canSearch = !searchPathImmediately;
+        ai.destination = destination;
+
+        hasActiveMoveDestination = true;
+        lastPathStopWasArrival = false;
+        activeMoveDestination = destination;
+        activeMoveStationaryAnchor = transform.position;
+        bestActiveMoveMetric = float.PositiveInfinity;
+        activeMoveStuckTimer = 0f;
+        activeMoveStationaryTimer = 0f;
+        activeMoveStartRealtime = Time.realtimeSinceStartup;
+
+        if (searchPathImmediately)
+            ai.SearchPath();
+
+        return true;
+    }
+
+    private void UpdatePathCompletionGuard()
+    {
+        if (!hasActiveMoveDestination || ai == null)
+            return;
+
+        if (!ai.canMove || ai.isStopped)
+        {
+            ClearActiveMoveTracking(false);
+            return;
+        }
+
+        if (Time.realtimeSinceStartup - activeMoveStartRealtime < minPathAgeBeforeStop)
+            return;
+
+        if (HasArrivedAtActiveDestination())
+        {
+            StopActivePath(true);
+            return;
+        }
+
+        if (ShouldStopBecauseStationary())
+        {
+            StopActivePath(HasArrivedAtActiveDestination());
+            return;
+        }
+
+        if (ai.pathPending)
+            return;
+
+        float metric = GetActiveMoveMetric();
+        if (bestActiveMoveMetric - metric > progressEpsilon)
+        {
+            bestActiveMoveMetric = metric;
+            activeMoveStuckTimer = 0f;
+            return;
+        }
+
+        activeMoveStuckTimer += Time.deltaTime;
+        if (activeMoveStuckTimer >= stuckStopSeconds)
+        {
+            StopActivePath(false);
+        }
+    }
+
+    private bool HasArrivedAtActiveDestination()
+    {
+        if (lastPathStopWasArrival)
+            return true;
+
+        if (!hasActiveMoveDestination || ai == null)
+            return false;
+
+        float horizontalDistance = Vector3.Distance(FlattenXZ(transform.position), FlattenXZ(activeMoveDestination));
+        if (horizontalDistance <= arrivalStopDistance)
+            return true;
+
+        float remainingDistance = ai.remainingDistance;
+        if (IsUsableDistance(remainingDistance) && remainingDistance <= arrivalStopDistance)
+            return true;
+
+        return ai.reachedDestination && horizontalDistance <= arrivalStopDistance;
+    }
+
+    private bool ShouldStopBecauseStationary()
+    {
+        float movedDistance = Vector3.Distance(FlattenXZ(transform.position), FlattenXZ(activeMoveStationaryAnchor));
+        if (movedDistance > stationaryRadius)
+        {
+            activeMoveStationaryAnchor = transform.position;
+            activeMoveStationaryTimer = 0f;
+            return false;
+        }
+
+        activeMoveStationaryTimer += Time.deltaTime;
+        return activeMoveStationaryTimer >= stationaryStopSeconds;
+    }
+
+    private float GetActiveMoveMetric()
+    {
+        if (ai != null && IsUsableDistance(ai.remainingDistance))
+            return ai.remainingDistance;
+
+        return Vector3.Distance(FlattenXZ(transform.position), FlattenXZ(activeMoveDestination));
+    }
+
+    private static bool IsUsableDistance(float distance)
+    {
+        return !float.IsNaN(distance) && !float.IsInfinity(distance);
+    }
+
+    private void StopActivePath(bool arrived)
+    {
+        bool wasActive = hasActiveMoveDestination || isClickMoving || rotateWhenMove;
+
+        ClearActiveMoveTracking(arrived);
+        isClickMoving = false;
+        rotateWhenMove = false;
+        SetAstarAgentIdle(true);
+
+        HideMoveVfx();
+
+        if (wasActive)
+            OnPathStopped?.Invoke(arrived);
+    }
+
+    private void ClearActiveMoveTracking(bool arrived)
+    {
+        hasActiveMoveDestination = false;
+        lastPathStopWasArrival = arrived;
+        activeMoveStuckTimer = 0f;
+        activeMoveStationaryTimer = 0f;
+        activeMoveStationaryAnchor = transform.position;
+        bestActiveMoveMetric = float.PositiveInfinity;
+    }
+
+    private static Vector3 FlattenXZ(Vector3 value)
+    {
+        value.y = 0f;
+        return value;
     }
 
     private bool TryHandleMoveStair(Ray ray)
@@ -465,23 +817,23 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    public void MoveToPosition(Vector3 position, bool _rotateWhenMove = true)
+    public bool MoveToPosition(Vector3 position, bool _rotateWhenMove = true)
     {
         transform.DOKill();
-        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
 
-        Vector3 groundPos = (Vector3)node.position;
-
-        if (ai != null)
+        if (!TryResolveReachableDestination(position, out Vector3 groundPos))
         {
-            ai.isStopped = false;
-            ai.canMove = true;
-            ai.destination = groundPos;
+            Debug.LogWarning($"[PointClick] Không tìm được đường hợp lệ tới vị trí: {position}");
+            return false;
         }
+
+        if (!MoveAgentToResolvedDestination(groundPos))
+            return false;
 
         lastPickPosition = groundPos;
 
         rotateWhenMove = _rotateWhenMove;
+        return true;
     }
     
     private bool TryHandleMoveToHouse(Ray ray)
@@ -529,12 +881,14 @@ public class PointClickSystem : MonoBehaviour
         {
             ai.isStopped = true;
             ai.canMove = false;
+            ai.canSearch = false;
 
             ai.Teleport(groundPos);
         }
 
         lastPickPosition = groundPos;
         isClickMoving = false;
+        ClearActiveMoveTracking(false);
         HideMoveVfx(); // VFX
         Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
 
@@ -552,6 +906,7 @@ public class PointClickSystem : MonoBehaviour
         {
             ai.isStopped = true;
             ai.canMove = false;
+            ai.canSearch = false;
 
             ai.Teleport(groundPos);
             ai.rotation = hitTransform.rotation;
@@ -559,6 +914,7 @@ public class PointClickSystem : MonoBehaviour
 
         lastPickPosition = groundPos;
         isClickMoving = false;
+        ClearActiveMoveTracking(false);
         HideMoveVfx(); // VFX
         Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
 
@@ -624,6 +980,18 @@ public class PointClickSystem : MonoBehaviour
             
         }
         StopWaitToMoveChair();
+
+        // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
+        isClickMoving = false;
+        HideMoveVfx(); // VFX
+
+        // moving logic
+        Debug.Log("Đánh dính check point");
+
+        var position = chairCheckPoint.spriteCheckPoint.transform.position;
+        if (!MoveToPosition(position))
+            return false;
+
         waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
         {
             Debug.Log("Hiện UI Xem bước chân");
@@ -634,16 +1002,6 @@ public class PointClickSystem : MonoBehaviour
             //TutorialHandler.Instance.ShowStep(1);
         }));
 
-        // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
-        isClickMoving = false;
-        HideMoveVfx(); // VFX
-
-        // moving logic
-        StopWaitToMoveChair();
-        Debug.Log("Đánh dính check point");
-
-        var position = chairCheckPoint.spriteCheckPoint.transform.position;
-        MoveToPosition(position);
         return true;
     }
     
@@ -671,8 +1029,11 @@ public class PointClickSystem : MonoBehaviour
         if (ai == null)
             yield break;
 
-        while (!ai.reachedDestination)
+        while (!HasArrivedAtActiveDestination())
         {
+            if (!hasActiveMoveDestination && !lastPathStopWasArrival)
+                yield break;
+
             RotateToVelocity();
             yield return null;
         }
@@ -788,8 +1149,11 @@ public class PointClickSystem : MonoBehaviour
             ai.destination = transform.position;
             ai.isStopped = true;
             ai.canMove = false;
+            ai.canSearch = false;
+            ai.SetPath(null);
         }
 
+        ClearActiveMoveTracking(false);
         ShowWarZoneNotice();
     }
 
@@ -838,8 +1202,11 @@ public class PointClickSystem : MonoBehaviour
             ai.destination = transform.position;
             ai.canMove = false;
             ai.isStopped = true;
+            ai.canSearch = false;
+            ai.SetPath(null);
         }
 
+        ClearActiveMoveTracking(false);
         SetSafePosition(transform.position);
         HideMoveVfx();
     }
@@ -1070,10 +1437,6 @@ public class PointClickSystem : MonoBehaviour
 
     public void StopMoving()
     {
-        if (ai != null)
-        {
-            ai.canMove = false;
-            ai.isStopped = true;
-        }
+        StopActivePath(false);
     }
 }
