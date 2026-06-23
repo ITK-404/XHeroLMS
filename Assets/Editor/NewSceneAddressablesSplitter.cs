@@ -576,10 +576,13 @@ public static class NewSceneAddressablesSplitter
         if (terrainRoots.Count == 0)
             return;
 
-        CreateLateSceneFromObjects(terrainRoots, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
+        List<GameObject> terrainBatch = new List<GameObject>(terrainRoots);
+        AddGpuiTerrainManagersForTerrainRoots(generatedMainScene, terrainRoots, terrainBatch);
+
+        CreateLateSceneFromObjects(terrainBatch, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
         Debug.Log("[NewSceneSplit] Moved terrain content to late scenes: "
-                  + string.Join(", ", terrainRoots.Select(GetHierarchyPath)));
+                  + string.Join(", ", terrainBatch.Select(GetHierarchyPath)));
     }
 
     private static List<GameObject> CollectTerrainMoveRoots(Scene scene)
@@ -660,6 +663,147 @@ public static class NewSceneAddressablesSplitter
         return IsValidTerrainMoveRoot(current.gameObject, scene)
             ? current.gameObject
             : null;
+    }
+
+    private static void AddGpuiTerrainManagersForTerrainRoots(
+        Scene scene,
+        IReadOnlyList<GameObject> terrainRoots,
+        List<GameObject> moveRoots)
+    {
+        if (terrainRoots == null || terrainRoots.Count == 0)
+            return;
+
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            foreach (MonoBehaviour component in root.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (component == null || !IsGpuiTerrainManagerComponent(component))
+                    continue;
+
+                if (!ReferencesAnyTerrainRoot(component, terrainRoots))
+                    continue;
+
+                GameObject managerRoot = GetGpuiManagerMoveRoot(component, scene);
+
+                if (managerRoot == null)
+                    continue;
+
+                if (AddRelatedMoveRoot(moveRoots, managerRoot))
+                {
+                    Debug.Log("[NewSceneSplit] Moved GPUI terrain manager with terrain late scene: "
+                              + GetHierarchyPath(managerRoot));
+                }
+            }
+        }
+    }
+
+    private static bool IsGpuiTerrainManagerComponent(MonoBehaviour component)
+    {
+        Type componentType = component.GetType();
+        string fullName = componentType.FullName ?? string.Empty;
+
+        if (!fullName.StartsWith("GPUInstancerPro.", StringComparison.Ordinal))
+            return false;
+
+        SerializedObject serialized = new SerializedObject(component);
+        return serialized.FindProperty("_gpuiTerrains") != null;
+    }
+
+    private static bool ReferencesAnyTerrainRoot(MonoBehaviour manager, IReadOnlyList<GameObject> terrainRoots)
+    {
+        SerializedObject serialized = new SerializedObject(manager);
+        SerializedProperty terrainReferences = serialized.FindProperty("_gpuiTerrains");
+
+        if (terrainReferences == null || !terrainReferences.isArray)
+            return false;
+
+        for (int i = 0; i < terrainReferences.arraySize; i++)
+        {
+            UnityEngine.Object reference = terrainReferences.GetArrayElementAtIndex(i).objectReferenceValue;
+            GameObject referencedGameObject = GetReferencedGameObject(reference);
+
+            if (referencedGameObject != null && IsUnderAnyRoot(referencedGameObject, terrainRoots))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static GameObject GetReferencedGameObject(UnityEngine.Object reference)
+    {
+        if (reference == null)
+            return null;
+
+        if (reference is GameObject gameObject)
+            return gameObject;
+
+        if (reference is Component component)
+            return component.gameObject;
+
+        return null;
+    }
+
+    private static bool IsUnderAnyRoot(GameObject gameObject, IReadOnlyList<GameObject> roots)
+    {
+        foreach (GameObject root in roots)
+        {
+            if (root == null)
+                continue;
+
+            if (gameObject == root || gameObject.transform.IsChildOf(root.transform))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static GameObject GetGpuiManagerMoveRoot(MonoBehaviour manager, Scene scene)
+    {
+        GameObject managerObject = manager.gameObject;
+
+        if (managerObject == null || managerObject.scene != scene)
+            return null;
+
+        if (IsValidTerrainMoveRoot(managerObject, scene))
+            return managerObject;
+
+        Debug.LogWarning("[NewSceneSplit] GPUI terrain manager was kept in main scene because moving it would include initial shell object: "
+                         + GetHierarchyPath(managerObject));
+        return null;
+    }
+
+    private static bool AddRelatedMoveRoot(List<GameObject> moveRoots, GameObject moveRoot)
+    {
+        if (moveRoot == null)
+            return false;
+
+        string movePath = GetHierarchyPath(moveRoot);
+
+        if (IsInitialMainHierarchyPath(movePath) || WouldMoveInitialMainHierarchy(moveRoot))
+        {
+            Debug.LogWarning("[NewSceneSplit] Related terrain move skipped because it would include initial shell object: " + movePath);
+            return false;
+        }
+
+        for (int i = moveRoots.Count - 1; i >= 0; i--)
+        {
+            GameObject existing = moveRoots[i];
+
+            if (existing == null)
+            {
+                moveRoots.RemoveAt(i);
+                continue;
+            }
+
+            if (moveRoot.transform.IsChildOf(existing.transform))
+                return false;
+
+            if (existing.transform.IsChildOf(moveRoot.transform))
+                moveRoots.RemoveAt(i);
+        }
+
+        moveRoots.Add(moveRoot);
+        return true;
     }
 
     private static bool IsValidTerrainMoveRoot(GameObject go, Scene scene)
