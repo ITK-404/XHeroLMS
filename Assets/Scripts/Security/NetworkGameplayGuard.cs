@@ -79,10 +79,7 @@ public class NetworkGameplayGuard : MonoBehaviour
     private Coroutine returnRoutine;
     private Coroutine resumeRoutine;
 
-    private bool cachedTapToCancel;
-    private bool hasCachedTapToCancel;
-
-private bool ownsInputBlockerLock;
+    private bool ownsInputBlockerLock;
 
     private void Awake()
     {
@@ -243,8 +240,6 @@ private void HandleOnline()
         ownsLoadingUI = false;
     }
 
-    RestoreLoadingTapToCancel();
-
     if (shouldRecoverBootFlow)
         TryRecoverBootFlowWhenOnline();
 
@@ -349,7 +344,6 @@ private void HandleOnline()
 private void ShowWeakNetworkPopup()
 {
     LockGameplayInputByNetwork();
-    LockLoadingTapToCancel();
 
     DestroyCurrentNetworkPopupIfAny();
 
@@ -371,7 +365,6 @@ private void ShowWeakNetworkPopup()
 private void ShowFatalNetworkPopup()
 {
     LockGameplayInputByNetwork();
-    LockLoadingTapToCancel();
 
     DestroyCurrentNetworkPopupIfAny();
 
@@ -646,26 +639,6 @@ private void UnlockGameplayInputByNetwork()
 
     Debug.Log("[NetworkGameplayGuard] Gameplay input unlocked after network restored.");
 }
-
-    private void LockLoadingTapToCancel()
-    {
-        if (!hasCachedTapToCancel)
-        {
-            cachedTapToCancel = LoadingUI.tapToCancel;
-            hasCachedTapToCancel = true;
-        }
-
-        LoadingUI.tapToCancel = false;
-    }
-
-    private void RestoreLoadingTapToCancel()
-    {
-        if (!hasCachedTapToCancel)
-            return;
-
-        LoadingUI.tapToCancel = cachedTapToCancel;
-        hasCachedTapToCancel = false;
-    }
 
     private void DestroyCurrentNetworkPopupIfAny()
     {

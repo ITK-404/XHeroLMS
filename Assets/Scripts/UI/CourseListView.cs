@@ -150,8 +150,6 @@ public class CourseListView : MonoBehaviour
     private bool _proxyBufferGuardPaused;
     private bool _standUpPausedVideo;
     private bool _videoFirstFrameLoading;
-    private bool _cachedVideoLoadingTapToCancel;
-    private bool _hasCachedVideoLoadingTapToCancel;
     private string _videoFirstFrameLoadingUrl;
     private int _videoFirstFrameLoadingToken;
     private long _lastProxyRangeBoostStart = -1L;
@@ -1045,13 +1043,6 @@ private void OnDisable()
 
         if (ShouldShowVideoFirstFrameLoading())
         {
-            if (!_hasCachedVideoLoadingTapToCancel)
-            {
-                _cachedVideoLoadingTapToCancel = LoadingUI.tapToCancel;
-                _hasCachedVideoLoadingTapToCancel = true;
-            }
-
-            LoadingUI.tapToCancel = false;
             LoadingUI.Show();
         }
     }
@@ -1071,12 +1062,6 @@ private void OnDisable()
         if (ShouldShowVideoFirstFrameLoading())
         {
             LoadingUI.Hide();
-
-            if (_hasCachedVideoLoadingTapToCancel)
-            {
-                LoadingUI.tapToCancel = _cachedVideoLoadingTapToCancel;
-                _hasCachedVideoLoadingTapToCancel = false;
-            }
         }
     }
 
