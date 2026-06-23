@@ -494,11 +494,23 @@ private void OnDisable()
 
     public void BuildListUI(LmsCoursePrivate p)
     {
+        if (p == null)
+        {
+            Debug.LogWarning("[CourseListView] BuildListUI skipped because course data is null.");
+            return;
+        }
+
+        if (content == null || headerPrefab == null || itemPrefab == null)
+        {
+            Debug.LogError("[CourseListView] Missing content/headerPrefab/itemPrefab reference.");
+            return;
+        }
+
         _videoLessons.Clear();
 
         Debug.Log("Bắt đầu hiển thị danh sách bài học");
 
-        ChapterUIManager.Instance.ClearList();
+        ChapterUIManager.Instance?.ClearList();
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
 
@@ -522,7 +534,7 @@ private void OnDisable()
                     headerChapter = Instantiate(headerPrefab, content);
                     headerChapter.titleName.text = $"{chapTitle}";
                     headerChapter.chapterID = ch._id;
-                    ChapterUIManager.Instance.AddToList(headerChapter);
+                    ChapterUIManager.Instance?.AddToList(headerChapter);
                 }
 
                 if (headerChapter == null)
@@ -592,8 +604,9 @@ private void OnDisable()
             headerFinal.chapterID = null;
             headerFinal.SetFinalExam();
 
-            ChapterUIManager.Instance.AddToList(headerFinal);
-            ChapterUIManager.Instance.finalExamChapter = headerFinal;
+            ChapterUIManager.Instance?.AddToList(headerFinal);
+            if (ChapterUIManager.Instance != null)
+                ChapterUIManager.Instance.finalExamChapter = headerFinal;
 
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
             finalItem.titleTMP.text = finalExamItemTitle;
@@ -607,7 +620,7 @@ private void OnDisable()
             headerFinal.AddToList(finalItem);
         }
 
-        ChapterUIManager.Instance.UpdateLessonProgress();
+        ChapterUIManager.Instance?.UpdateLessonProgress();
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)content);
 
