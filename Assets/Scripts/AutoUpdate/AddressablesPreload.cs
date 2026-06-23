@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -274,11 +275,11 @@ public class AddressablesPreload : MonoBehaviour
             yield break;
         }
 
-        BeginNewLoadingSession();
+        BeginNewLoadingSession(ShouldPreserveProgressForPrepareSession());
 
         while (_catalogRunning != null)
         {
-            SetPrepareText(Mathf.Max(0.01f, DownloadPercent01));
+            SetPrepareText(DownloadPercent01);
             yield return null;
         }
 
@@ -368,11 +369,11 @@ public class AddressablesPreload : MonoBehaviour
 
         key = key.Trim();
 
-        BeginNewLoadingSession();
+        BeginNewLoadingSession(ShouldPreserveProgressForPrepareSession());
 
         while (_catalogRunning != null)
         {
-            SetPrepareText(Mathf.Max(0.01f, DownloadPercent01));
+            SetPrepareText(DownloadPercent01);
             yield return null;
         }
 
@@ -1457,7 +1458,7 @@ public class AddressablesPreload : MonoBehaviour
 
         NetworkSpeedBytesPerSecond = 0;
 
-        SetPrepareText(0.01f);
+        SetCheckingResourceText();
     }
 
     private IEnumerator HttpProbeGet(string url, int readBytes)
@@ -1534,8 +1535,18 @@ public class AddressablesPreload : MonoBehaviour
         }
     }
 
-    private void BeginNewLoadingSession()
+    private bool ShouldPreserveProgressForPrepareSession()
     {
+        if (HasFailed || DownloadPercent01 <= 0f)
+            return false;
+
+        return _catalogRunning != null || Stage == PreloadStage.CatalogReady;
+    }
+
+    private void BeginNewLoadingSession(bool preserveCurrentProgress = false)
+    {
+        float startProgress01 = preserveCurrentProgress ? Mathf.Clamp01(DownloadPercent01) : 0f;
+
         int phaseBefore = LoadingPhaseId;
         SetStage(PreloadStage.None);
 
@@ -1554,10 +1565,9 @@ public class AddressablesPreload : MonoBehaviour
         _lastSpeedBytes = 0;
         _lastSpeedTime = 0f;
 
-        // Reset thật sự ở đầu một lượt load mới.
-        DownloadPercent01 = 0f;
+        // Preserve bootstrap progress when a prepare session immediately follows catalog boot.
+        DownloadPercent01 = startProgress01;
 
-        SetProgressExact(0.01f);
         SetCheckingResourceText();
     }
 
@@ -1577,9 +1587,9 @@ public class AddressablesPreload : MonoBehaviour
         SetCheckingResourceText();
     }
 
-    private int CurrentOverallPercent()
+    private string CurrentOverallPercentText()
     {
-        return Mathf.Clamp(Mathf.FloorToInt(DownloadPercent01 * 100f), 0, 100);
+        return FormatProgressPercent(DownloadPercent01);
     }
 
     private float Map01(float value01, float from, float to)
@@ -1687,7 +1697,12 @@ public class AddressablesPreload : MonoBehaviour
 
     private void SetCheckingResourceText()
     {
-        LoadingText = $"Đang kiểm tra tài nguyên: {CurrentOverallPercent()}%";
+        LoadingText = $"Đang kiểm tra tài nguyên: {CurrentOverallPercentText()}";
+    }
+
+    private static string FormatProgressPercent(float p01)
+    {
+        return (Mathf.Clamp01(p01) * 100f).ToString("0.00", CultureInfo.InvariantCulture) + "%";
     }
 
     private void Fail(string message)

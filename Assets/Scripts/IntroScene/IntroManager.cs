@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Video;
 using System.Collections;
+using System.Globalization;
 using UnityEngine.UI;
 using TMPro;
 using System.IO;
@@ -35,7 +36,7 @@ public class IntroManager : MonoBehaviour
     public TMP_Text textLoading;
 
     [Header("Progress Behavior")]
-    public float warmupMinProgress = 0.01f;
+    [SerializeField] private float progressSmoothSpeed01PerSecond = 0.25f;
 
     [Header("Intro Sync (6s default UX)")]
     [Tooltip("Thời gian tối thiểu chạy intro (thường = thời lượng video bạn muốn).")]
@@ -149,23 +150,29 @@ private void Awake()
     {
         t01 = Mathf.Clamp01(t01);
 
+        if (t01 <= 0f && monotonicTarget01 <= 0f)
+        {
+            monotonicTarget01 = 0f;
+            currentVisual = 0f;
+            targetVisual = 0f;
+            visualReached100 = false;
+            SetProgressInstant(0f);
+            return;
+        }
+
         // Không cho progress tụt xuống.
         if (t01 < monotonicTarget01)
             t01 = monotonicTarget01;
 
         monotonicTarget01 = t01;
-        currentVisual = Mathf.Max(currentVisual, t01);
         targetVisual = Mathf.Max(targetVisual, t01);
 
-        if (currentVisual >= 1f)
+        if (t01 >= 1f)
         {
-            currentVisual = 1f;
             targetVisual = 1f;
             monotonicTarget01 = 1f;
-            visualReached100 = true;
         }
 
-        SetProgressInstant(currentVisual);
     }
 
     public void ForceProgressNoDecrease(float t01)
@@ -830,15 +837,13 @@ private void UpdateProgressFromPreload()
 {
     if (_preload == null)
     {
-        SetTargetMonotonic(warmupMinProgress);
-        ApplyVisual();
+        SetTargetMonotonic(0f);
         return;
     }
 
     if (_preload.LoadingPhaseId != lastPreloadPhaseId)
     {
         lastPreloadPhaseId = _preload.LoadingPhaseId;
-        ResetVisualProgressForNewPhase(Mathf.Max(warmupMinProgress, _preload.DownloadPercent01));
     }
 
     bool preloadDataDone =
@@ -849,19 +854,14 @@ private void UpdateProgressFromPreload()
     if (preloadDataDone || finishRequestedByBootFlow)
     {
         SetTargetMonotonic(1f);
-        ApplyVisual();
         return;
     }
 
     float data01 = Mathf.Clamp01(_preload.DownloadPercent01);
 
-    if (data01 <= 0f && warmupMinProgress > 0f)
-        data01 = warmupMinProgress;
-
     // Không map theo video/time nữa.
     // Thanh progress phải đồng bộ với % thật của phase hiện tại.
     SetTargetMonotonic(data01);
-    ApplyVisual();
 }
 
     private void SetTargetMonotonic(float newTarget01)
@@ -877,7 +877,16 @@ private void UpdateProgressFromPreload()
         EnsureLoadingCoverVisible();
 
         targetVisual = monotonicTarget01;
-        currentVisual = Mathf.Clamp01(targetVisual);
+        float smoothSpeed = Mathf.Max(0.01f, progressSmoothSpeed01PerSecond);
+        currentVisual = Mathf.MoveTowards(
+            Mathf.Clamp01(currentVisual),
+            Mathf.Clamp01(targetVisual),
+            smoothSpeed * Time.unscaledDeltaTime
+        );
+
+        if (targetVisual >= 1f && currentVisual >= 0.9999f)
+            currentVisual = 1f;
+
         visualReached100 = currentVisual >= 1f;
 
         SetProgressInstant(currentVisual);
@@ -885,11 +894,18 @@ private void UpdateProgressFromPreload()
 
 private string GetStageText(float t01)
 {
-    if (_preload != null && !string.IsNullOrEmpty(_preload.LoadingText))
-        return _preload.LoadingText;
+    string percent = FormatProgressPercent(t01);
 
-    return $"Đang tải tài nguyên ({Mathf.FloorToInt(t01 * 100f)}%)";
+    if (_preload != null && !string.IsNullOrEmpty(_preload.LoadingText))
+        return $"Đang kiểm tra tài nguyên: {percent}";
+
+    return $"Đang tải tài nguyên: {percent}";
 }
+
+    private static string FormatProgressPercent(float t01)
+    {
+        return (Mathf.Clamp01(t01) * 100f).ToString("0.00", CultureInfo.InvariantCulture) + "%";
+    }
 
     private void SetProgressInstant(float t01)
     {
@@ -1147,15 +1163,4 @@ public void RequestFinishTo100()
 
         SetTargetMonotonic(p01);
     }
-private void ResetVisualProgressForNewPhase(float start01)
-{
-    start01 = Mathf.Clamp01(start01);
-
-    monotonicTarget01 = start01;
-    currentVisual = start01;
-    targetVisual = start01;
-    visualReached100 = start01 >= 1f;
-
-    SetProgressInstant(start01);
-}
 }
