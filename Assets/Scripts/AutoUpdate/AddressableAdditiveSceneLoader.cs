@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Pathfinding;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
@@ -16,9 +17,12 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 {
     private static readonly HashSet<int> BoxLoadVisibleOwners = new HashSet<int>();
+    private static int AstarGraphRefreshOwnerCount;
 
     public static bool IsAnyBoxLoadVisible => BoxLoadVisibleOwners.Count > 0;
+    public static bool IsAstarGraphRefreshInProgress => AstarGraphRefreshOwnerCount > 0;
     public static event Action<bool> BoxLoadVisibilityChanged;
+    public static event Action AstarGraphRefreshCompleted;
 
     [SerializeField] private bool loadOnStart = true;
     [SerializeField] private float initialDelaySeconds = 0.75f;
@@ -39,6 +43,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     [SerializeField] private bool boxLoadOnlyOnMobile = true;
     [SerializeField] private bool showBoxLoadOnlyWhenDependenciesMissing = true;
     [SerializeField] private bool updateTimeLineSceneText = true;
+    [SerializeField] private bool rescanAstarAfterLateScenes = false;
+    [SerializeField, Min(0f)] private float astarRescanDelaySeconds = 0.1f;
     [SerializeField] private List<string> sceneKeys = new List<string>();
 
     private bool _isLoading;
@@ -63,6 +69,8 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private float _downloadProgress01;
     private float _overallProgress01;
     private string _loadingText = "0%";
+    private Coroutine _astarRescanRoutine;
+    private bool _astarRefreshCounted;
 
     private const float DownloadProgressWeight = 0.7f;
 
@@ -106,11 +114,13 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
     private void OnDisable()
     {
         SetBoxLoadOwnerVisible(false);
+        CancelAstarGraphRefresh();
     }
 
     private void OnDestroy()
     {
         SetBoxLoadOwnerVisible(false);
+        CancelAstarGraphRefresh();
     }
 
     public void BeginLoad()
@@ -153,6 +163,9 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
 #if ADDRESSABLES
         List<string> keys = BuildUniquePendingSceneKeys();
         BeginTracking(keys.Count);
+
+        if (rescanAstarAfterLateScenes && keys.Count > 0)
+            SetAstarGraphRefreshBusy(true);
 
         if (keys.Count == 0)
         {
@@ -227,6 +240,7 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
         _loadComplete = true;
 
         StartCoroutine(HideBlockingOverlayWhenReady());
+        QueueAstarGraphRefreshAfterLateScenes();
 
         Debug.Log("[LateSceneLoader] Late scene loading finished. loaded="
                   + _loadedSceneCount
@@ -234,6 +248,94 @@ public sealed class AddressableAdditiveSceneLoader : MonoBehaviour
                   + _totalSceneCount
                   + ", failed="
                   + _failedSceneCount);
+    }
+
+    private void QueueAstarGraphRefreshAfterLateScenes()
+    {
+        if (!rescanAstarAfterLateScenes || _loadedSceneCount <= 0)
+        {
+            SetAstarGraphRefreshBusy(false);
+            return;
+        }
+
+        if (_astarRescanRoutine != null)
+            StopCoroutine(_astarRescanRoutine);
+
+        _astarRescanRoutine = StartCoroutine(RefreshAstarGraphAfterLateScenesRoutine());
+    }
+
+    private IEnumerator RefreshAstarGraphAfterLateScenesRoutine()
+    {
+        SetAstarGraphRefreshBusy(true);
+
+        yield return null;
+
+        if (astarRescanDelaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(astarRescanDelaySeconds);
+
+        AstarPath astar = AstarPath.active;
+
+        if (astar == null)
+        {
+            Debug.LogWarning("[LateSceneLoader] A* graph refresh skipped because no active AstarPath exists.");
+            FinishAstarGraphRefresh(false, 0f);
+            yield break;
+        }
+
+        while (astar.isScanning)
+            yield return null;
+
+        float startedAt = Time.realtimeSinceStartup;
+
+        if (astar.IsAnyGraphUpdateQueued)
+            astar.FlushGraphUpdates();
+
+        foreach (Progress _ in astar.ScanAsync())
+            yield return null;
+
+        FinishAstarGraphRefresh(true, Time.realtimeSinceStartup - startedAt);
+    }
+
+    private void FinishAstarGraphRefresh(bool scanned, float elapsedSeconds)
+    {
+        _astarRescanRoutine = null;
+        SetAstarGraphRefreshBusy(false);
+
+        if (scanned)
+            Debug.Log($"[LateSceneLoader] A* graph refreshed after additive scenes in {elapsedSeconds:0.00}s.");
+    }
+
+    private void CancelAstarGraphRefresh()
+    {
+        if (_astarRescanRoutine != null)
+        {
+            StopCoroutine(_astarRescanRoutine);
+            _astarRescanRoutine = null;
+        }
+
+        SetAstarGraphRefreshBusy(false);
+    }
+
+    private void SetAstarGraphRefreshBusy(bool busy)
+    {
+        if (busy)
+        {
+            if (_astarRefreshCounted)
+                return;
+
+            _astarRefreshCounted = true;
+            AstarGraphRefreshOwnerCount++;
+            return;
+        }
+
+        if (!_astarRefreshCounted)
+            return;
+
+        _astarRefreshCounted = false;
+        AstarGraphRefreshOwnerCount = Mathf.Max(0, AstarGraphRefreshOwnerCount - 1);
+
+        if (AstarGraphRefreshOwnerCount == 0)
+            AstarGraphRefreshCompleted?.Invoke();
     }
 
     private IEnumerator HideBlockingOverlayWhenReady()

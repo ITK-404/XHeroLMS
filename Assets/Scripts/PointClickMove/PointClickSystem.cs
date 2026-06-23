@@ -87,6 +87,8 @@ public class PointClickSystem : MonoBehaviour
     private float activeMoveStationaryTimer = 0f;
     private float activeMoveStartRealtime = 0f;
     private int cachedGroundFallbackMask = -1;
+    [SerializeField, Min(0f)] private float navigationRefreshWaitTimeout = 10f;
+    private Coroutine pendingNavigationMoveRoutine;
 
     private const int RaycastBufferSize = 128;
     private const float GroundRaycastDistance = 1000f;
@@ -155,6 +157,7 @@ public class PointClickSystem : MonoBehaviour
         warZoneRetreatNeedsTriggerExit = false;
         warZoneTriggerContactCount = 0;
         warZoneNoticeTimer = 0f;
+        CancelPendingNavigationMove();
         ClearActiveMoveTracking(false);
         HideWarZoneNotice(true);
     }
@@ -228,6 +231,7 @@ public class PointClickSystem : MonoBehaviour
                 SetAstarAgentIdle(true);
 
             rotateWhenMove = false;
+            CancelPendingNavigationMove();
             ClearActiveMoveTracking(false);
 
             isClickMoving = false;
@@ -438,32 +442,95 @@ public class PointClickSystem : MonoBehaviour
                 // Giữ y hiện tại của player
                 desiredPos.y = transform.position.y;
 
-                if (!TryResolveClickDestination(hitPoint, desiredPos, out Vector3 finalDestination))
+                if (IsNavigationGraphRefreshing())
                 {
-                    Debug.LogWarning($"[PointClick] Không tìm được đường hợp lệ tới điểm click: {hitPoint}");
-                    HideMoveVfx();
-                    isClickMoving = false;
+                    QueueClickMoveAfterNavigationReady(hitPoint, desiredPos);
                     return;
                 }
 
-                // Spawn / move VFX tới điểm click
-                ShowMoveVfx(hitPoint); // VFX
-
-                if (!MoveAgentToResolvedDestination(finalDestination))
-                {
-                    HideMoveVfx();
-                    isClickMoving = false;
-                    return;
-                }
-
-                // Bật chế độ vừa đi vừa xoay
-                isClickMoving = true;
+                TryStartClickMove(hitPoint, desiredPos);
             }
             else
             {
                 Debug.Log("Không bắn dính mặt đất rồi");
             }
         }
+    }
+
+    private bool TryStartClickMove(Vector3 hitPoint, Vector3 preferredDestination)
+    {
+        lookTargetWorldPos = hitPoint;
+        lastPickPosition = hitPoint;
+
+        if (!TryResolveClickDestination(hitPoint, preferredDestination, out Vector3 finalDestination))
+        {
+            Debug.LogWarning($"[PointClick] Không tìm được đường hợp lệ tới điểm click: {hitPoint}");
+            HideMoveVfx();
+            isClickMoving = false;
+            return false;
+        }
+
+        ShowMoveVfx(hitPoint);
+
+        if (!MoveAgentToResolvedDestination(finalDestination))
+        {
+            HideMoveVfx();
+            isClickMoving = false;
+            return false;
+        }
+
+        isClickMoving = true;
+        return true;
+    }
+
+    private void QueueClickMoveAfterNavigationReady(Vector3 hitPoint, Vector3 preferredDestination)
+    {
+        CancelPendingNavigationMove();
+        ShowMoveVfx(hitPoint);
+        isClickMoving = false;
+        pendingNavigationMoveRoutine = StartCoroutine(StartClickMoveWhenNavigationReady(hitPoint, preferredDestination));
+    }
+
+    private IEnumerator StartClickMoveWhenNavigationReady(Vector3 hitPoint, Vector3 preferredDestination)
+    {
+        yield return WaitForNavigationGraphReady();
+        pendingNavigationMoveRoutine = null;
+
+        if (IsNavigationGraphRefreshing())
+        {
+            Debug.LogWarning("[PointClick] A* graph vẫn đang refresh, bỏ qua lệnh click để tránh tạo path sai.");
+            HideMoveVfx();
+            isClickMoving = false;
+            yield break;
+        }
+
+        TryStartClickMove(hitPoint, preferredDestination);
+    }
+
+    private bool IsNavigationGraphRefreshing()
+    {
+        return AddressableAdditiveSceneLoader.IsAstarGraphRefreshInProgress
+               || (AstarPath.active != null && AstarPath.active.isScanning);
+    }
+
+    private IEnumerator WaitForNavigationGraphReady()
+    {
+        float startedAt = Time.realtimeSinceStartup;
+
+        while (IsNavigationGraphRefreshing()
+               && Time.realtimeSinceStartup - startedAt < navigationRefreshWaitTimeout)
+        {
+            yield return null;
+        }
+    }
+
+    private void CancelPendingNavigationMove()
+    {
+        if (pendingNavigationMoveRoutine == null)
+            return;
+
+        StopCoroutine(pendingNavigationMoveRoutine);
+        pendingNavigationMoveRoutine = null;
     }
 
     private void ConfigureAstarAgent()
@@ -929,6 +996,17 @@ public class PointClickSystem : MonoBehaviour
     {
         transform.DOKill();
 
+        if (IsNavigationGraphRefreshing())
+        {
+            QueueMoveToPositionAfterNavigationReady(position, _rotateWhenMove);
+            return true;
+        }
+
+        return TryStartMoveToPosition(position, _rotateWhenMove);
+    }
+
+    private bool TryStartMoveToPosition(Vector3 position, bool _rotateWhenMove)
+    {
         if (!TryResolveReachableDestination(position, out Vector3 groundPos))
         {
             Debug.LogWarning($"[PointClick] Không tìm được đường hợp lệ tới vị trí: {position}");
@@ -942,6 +1020,26 @@ public class PointClickSystem : MonoBehaviour
 
         rotateWhenMove = _rotateWhenMove;
         return true;
+    }
+
+    private void QueueMoveToPositionAfterNavigationReady(Vector3 position, bool rotateWhenMoveAfterStart)
+    {
+        CancelPendingNavigationMove();
+        pendingNavigationMoveRoutine = StartCoroutine(StartPositionMoveWhenNavigationReady(position, rotateWhenMoveAfterStart));
+    }
+
+    private IEnumerator StartPositionMoveWhenNavigationReady(Vector3 position, bool rotateWhenMoveAfterStart)
+    {
+        yield return WaitForNavigationGraphReady();
+        pendingNavigationMoveRoutine = null;
+
+        if (IsNavigationGraphRefreshing())
+        {
+            Debug.LogWarning("[PointClick] A* graph vẫn đang refresh, bỏ qua lệnh move để tránh tạo path sai.");
+            yield break;
+        }
+
+        TryStartMoveToPosition(position, rotateWhenMoveAfterStart);
     }
     
     private bool TryHandleMoveToHouse(Ray ray)
@@ -1150,6 +1248,9 @@ public class PointClickSystem : MonoBehaviour
         if (ai == null)
             yield break;
 
+        while (pendingNavigationMoveRoutine != null)
+            yield return null;
+
         while (!HasArrivedAtActiveDestination())
         {
             if (!hasActiveMoveDestination && !lastPathStopWasArrival)
@@ -1246,6 +1347,7 @@ public class PointClickSystem : MonoBehaviour
         rotateWhenMove = false;
 
         transform.DOKill();
+        CancelPendingNavigationMove();
         HideMoveVfx();
         StopWaitToMoveChair();
 

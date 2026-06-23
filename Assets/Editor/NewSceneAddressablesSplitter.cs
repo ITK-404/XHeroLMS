@@ -1687,6 +1687,8 @@ public static class NewSceneAddressablesSplitter
         serialized.FindProperty("boxLoadObjectName").stringValue = BoxLoadObjectName;
         serialized.FindProperty("boxLoadOnlyOnMobile").boolValue = true;
         serialized.FindProperty("showBoxLoadOnlyWhenDependenciesMissing").boolValue = true;
+        serialized.FindProperty("rescanAstarAfterLateScenes").boolValue = true;
+        serialized.FindProperty("astarRescanDelaySeconds").floatValue = 0.1f;
 
         SerializedProperty sceneKeysProperty = serialized.FindProperty("sceneKeys");
         sceneKeysProperty.arraySize = lateSceneKeys.Count;
