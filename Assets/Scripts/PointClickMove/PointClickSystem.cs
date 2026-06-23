@@ -2,6 +2,7 @@
 using Pathfinding;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -37,12 +38,11 @@ public class PointClickSystem : MonoBehaviour
     // ===== Click focus config =====
     private float desiredDistanceFromTarget = 6f; // player sẽ đứng cách điểm click khoảng này
     private float minDistanceFromTarget = 3f; // khoảng cách tối thiểu
-    private float rotationLerpSpeed = 2f; // độ mượt xoay
+    [SerializeField, Min(30f)] private float autoTurnDegreesPerSecond = 90f; // giới hạn tốc độ xoay tự động để camera không quăng gắt
 
     [Header("Pathfinding")]
-    [SerializeField] private bool constrainAiInsideGraph = true;
+    private bool constrainAiInsideGraph = false;
     [SerializeField] private bool searchPathImmediately = true;
-    [SerializeField, Min(0.2f)] private float maxWaypointLookahead = 0.9f;
     [SerializeField, Min(0.25f)] private float maxDestinationSnapDistance = 3f;
     [SerializeField, Range(8, 32)] private int clickDestinationAngleSamples = 16;
     [SerializeField, Range(1, 6)] private int clickDestinationDistanceSamples = 4;
@@ -53,6 +53,7 @@ public class PointClickSystem : MonoBehaviour
     [SerializeField, Min(0.2f)] private float stationaryStopSeconds = 1.5f;
     [SerializeField, Min(0.01f)] private float progressEpsilon = 0.05f;
     [SerializeField, Min(0f)] private float minPathAgeBeforeStop = 0.15f;
+    [SerializeField, Range(0f, 1f)] private float minGroundNormalY = 0.35f;
 
     private bool isClickMoving = false;
 
@@ -85,6 +86,15 @@ public class PointClickSystem : MonoBehaviour
     private float activeMoveStuckTimer = 0f;
     private float activeMoveStationaryTimer = 0f;
     private float activeMoveStartRealtime = 0f;
+    private int cachedGroundFallbackMask = -1;
+
+    private const int RaycastBufferSize = 128;
+    private const float GroundRaycastDistance = 1000f;
+    private const float GroundProjectionHeight = 3f;
+    private const float GroundProjectionDistance = 12f;
+    private readonly RaycastHit[] groundRaycastHits = new RaycastHit[RaycastBufferSize];
+    private readonly RaycastHit[] checkpointRaycastHits = new RaycastHit[RaycastBufferSize];
+    private static readonly RaycastHitDistanceComparer HitDistanceComparer = new RaycastHitDistanceComparer();
 
     private const string WarZoneObjectName = "WarnZone";
     private const string WarZoneNoticeMessage = "Phía trước là cấm địa còn đang phong ấn, tạm thời chưa thể tiến vào.";
@@ -327,11 +337,7 @@ public class PointClickSystem : MonoBehaviour
         }
 
         Quaternion targetRot = Quaternion.LookRotation(dir.normalized, Vector3.up);
-        transform.rotation = Quaternion.Slerp(
-            transform.rotation,
-            targetRot,
-            rotationLerpSpeed * Time.deltaTime
-        );
+        RotateTowards(targetRot, autoTurnDegreesPerSecond);
 
         // Khi đã tới gần destination và gần như xoay xong thì tắt cờ + tắt VFX
         if (ai.reachedEndOfPath && Quaternion.Angle(transform.rotation, targetRot) < 1f)
@@ -402,7 +408,7 @@ public class PointClickSystem : MonoBehaviour
                 }
             }
             // Raycast xuống ground (maxDistance + layerMask)
-            if (Physics.Raycast(ray, out var groundHit, 1000f, groundLayerMask))
+            if (TryRaycastGround(ray, out var groundHit, GroundRaycastDistance))
             {
                 Debug.Log("bắn dính mặt đất, tính điểm đứng & move tới đó, vừa đi vừa xoay nhìn vào điểm click");
                 lastPickPosition = groundHit.point;
@@ -467,8 +473,6 @@ public class PointClickSystem : MonoBehaviour
             if (constrainAiInsideGraph)
                 aiPath.constrainInsideGraph = true;
 
-            if (maxWaypointLookahead > 0f && aiPath.pickNextWaypointDist > maxWaypointLookahead)
-                aiPath.pickNextWaypointDist = maxWaypointLookahead;
         }
     }
 
@@ -484,6 +488,107 @@ public class PointClickSystem : MonoBehaviour
 
         if (clearPath)
             ai.SetPath(null);
+    }
+
+    private bool TryRaycastGround(Ray ray, out RaycastHit groundHit, float maxDistance)
+    {
+        if (TryRaycastGroundInMask(ray, groundLayerMask.value, maxDistance, out groundHit))
+            return true;
+
+        int fallbackMask = GetGroundFallbackMask() & ~groundLayerMask.value;
+        return TryRaycastGroundInMask(ray, fallbackMask, maxDistance, out groundHit);
+    }
+
+    private bool TryRaycastGroundInMask(Ray ray, int layerMask, float maxDistance, out RaycastHit groundHit)
+    {
+        groundHit = default;
+
+        if (layerMask == 0)
+            return false;
+
+        int hitCount = Physics.RaycastNonAlloc(ray, groundRaycastHits, maxDistance, layerMask, QueryTriggerInteraction.Ignore);
+        if (hitCount <= 0)
+            return false;
+
+        SortRaycastHits(groundRaycastHits, hitCount);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit = groundRaycastHits[i];
+            if (hit.collider == null || hit.normal.y < minGroundNormalY)
+                continue;
+
+            groundHit = hit;
+            return true;
+        }
+
+        return false;
+    }
+
+    private int GetGroundFallbackMask()
+    {
+        if (cachedGroundFallbackMask >= 0)
+            return cachedGroundFallbackMask;
+
+        int mask = groundLayerMask.value;
+        AddLayerToMask(ref mask, "Default");
+        RemoveLayerFromMask(ref mask, "Ignore Raycast");
+        RemoveLayerFromMask(ref mask, "UI");
+        RemoveLayerFromMask(ref mask, "Obstacle");
+        RemoveLayerFromMask(ref mask, "IgnoreGenerateCollider");
+
+        cachedGroundFallbackMask = mask;
+        return cachedGroundFallbackMask;
+    }
+
+    private static void AddLayerToMask(ref int mask, string layerName)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer >= 0)
+            mask |= 1 << layer;
+    }
+
+    private static void RemoveLayerFromMask(ref int mask, string layerName)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer >= 0)
+            mask &= ~(1 << layer);
+    }
+
+    private bool TryProjectToGround(Vector3 position, out Vector3 groundPosition)
+    {
+        Vector3 rayOrigin = position + Vector3.up * GroundProjectionHeight;
+        Ray ray = new Ray(rayOrigin, Vector3.down);
+
+        if (TryRaycastGround(ray, out RaycastHit hit, GroundProjectionHeight + GroundProjectionDistance))
+        {
+            groundPosition = hit.point;
+            return true;
+        }
+
+        groundPosition = position;
+        return false;
+    }
+
+    private bool TryResolveTeleportDestination(Vector3 requestedDestination, out Vector3 finalDestination)
+    {
+        if (TryProjectToGround(requestedDestination, out finalDestination))
+            return true;
+
+        return TryResolveReachableDestination(requestedDestination, out finalDestination);
+    }
+
+    private int RaycastCheckpointHits(Ray ray, float maxDistance, QueryTriggerInteraction query)
+    {
+        int hitCount = Physics.RaycastNonAlloc(ray, checkpointRaycastHits, maxDistance, checkPointLayerMask, query);
+        SortRaycastHits(checkpointRaycastHits, hitCount);
+        return hitCount;
+    }
+
+    private static void SortRaycastHits(RaycastHit[] hits, int hitCount)
+    {
+        if (hitCount > 1)
+            Array.Sort(hits, 0, hitCount, HitDistanceComparer);
     }
 
     private bool TryResolveClickDestination(Vector3 hitPoint, Vector3 preferredDestination, out Vector3 finalDestination)
@@ -791,27 +896,30 @@ public class PointClickSystem : MonoBehaviour
 
     private bool TryHandleMoveStair(Ray ray)
     {
-        if (Physics.Raycast(ray, out var stairHit, 1000f, checkPointLayerMask, QueryTriggerInteraction.Collide))
+        int hitCount = RaycastCheckpointHits(ray, GroundRaycastDistance, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < hitCount; i++)
         {
+            RaycastHit stairHit = checkpointRaycastHits[i];
+            if (stairHit.collider == null || !stairHit.collider.CompareTag("CheckPoint"))
+                continue;
+
             Debug.Log("bắn dính cầu thang", stairHit.collider.gameObject);
-            if (stairHit.collider.CompareTag("CheckPoint"))
+
+            Debug.Log("Thử di chuyển tới cầu thang");
+            var stair = stairHit.collider.GetComponentInParent<StairZone>();
+
+            if (stair == null)
             {
-                Debug.Log("Thử di chuyển tới cầu thang");
-                var stair = stairHit.collider.GetComponentInParent<StairZone>();
-
-                if (stair == null)
-                {
-                    return false;
-                }
-
-                isClickMoving = false;
-                HideMoveVfx(); // VFX
-
-                Debug.Log("Đánh dính check point");
-                var position = stair.transform.position + stair.standPoint;
-                MoveToPosition(position);
-                return true;
+                continue;
             }
+
+            isClickMoving = false;
+            HideMoveVfx(); // VFX
+
+            Debug.Log("Đánh dính check point");
+            var position = stair.transform.position + stair.standPoint;
+            MoveToPosition(position);
+            return true;
         }
 
         return false;
@@ -838,10 +946,12 @@ public class PointClickSystem : MonoBehaviour
     
     private bool TryHandleMoveToHouse(Ray ray)
     {
-        var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
-        foreach (var hit in results)
+        int hitCount = RaycastCheckpointHits(ray, float.MaxValue, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < hitCount; i++)
         {
-            if (hit.collider.CompareTag("CheckPoint") &&
+            RaycastHit hit = checkpointRaycastHits[i];
+            if (hit.collider != null &&
+                hit.collider.CompareTag("CheckPoint") &&
                 hit.collider.TryGetComponent(out BuildingInteractable interactable))
             {
                 BuildingCameraManager.Instance.FocusOnBuilding(interactable);
@@ -855,10 +965,12 @@ public class PointClickSystem : MonoBehaviour
 
     private bool TryMoveTest(Ray ray)
     {
-        var results = Physics.RaycastAll(ray, float.MaxValue, checkPointLayerMask, QueryTriggerInteraction.Collide);
-        foreach (var hit in results)
+        int hitCount = RaycastCheckpointHits(ray, float.MaxValue, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < hitCount; i++)
         {
-            if (hit.collider.CompareTag("CheckPoint") &&
+            RaycastHit hit = checkpointRaycastHits[i];
+            if (hit.collider != null &&
+                hit.collider.CompareTag("CheckPoint") &&
                 hit.collider.TryGetComponent(out InteractionPoint interactionPoint))
             {
                 interactionPoint.Interact(this);
@@ -873,10 +985,11 @@ public class PointClickSystem : MonoBehaviour
     public void TeleportDelay(Vector3 targetPos)
     {
         var position = targetPos;
-        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
         characterController.enabled = false;
 
-        Vector3 groundPos = (Vector3)node.position;
+        if (!TryResolveTeleportDestination(position, out Vector3 groundPos))
+            groundPos = position;
+
         if (ai != null)
         {
             ai.isStopped = true;
@@ -898,10 +1011,11 @@ public class PointClickSystem : MonoBehaviour
     public void TeleportDelay(Transform hitTransform)
     {
         var position = hitTransform.position;
-        var node = AstarPath.active.GetNearest(new Vector3(position.x, 0, position.z)).node;
         characterController.enabled = false;
 
-        Vector3 groundPos = (Vector3)node.position;
+        if (!TryResolveTeleportDestination(position, out Vector3 groundPos))
+            groundPos = position;
+
         if (ai != null)
         {
             ai.isStopped = true;
@@ -928,24 +1042,29 @@ public class PointClickSystem : MonoBehaviour
         // Choose query type based on whether PlayerChairManager singleton exists (previously duplicated code paths)
         QueryTriggerInteraction query = PlayerChairManager.Instance ? QueryTriggerInteraction.Ignore : QueryTriggerInteraction.Collide;
 
-        if (Physics.Raycast(ray, out var chairHit, 100f, checkPointLayerMask, query))
+        int hitCount = RaycastCheckpointHits(ray, 100f, query);
+        for (int i = 0; i < hitCount; i++)
         {
+            RaycastHit chairHit = checkpointRaycastHits[i];
+            if (chairHit.collider == null || !chairHit.collider.CompareTag("CheckPoint"))
+                continue;
+
             Debug.Log("Hit check point");
-            if (chairHit.collider.CompareTag("CheckPoint"))
+
+            // set to global variable
+            currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
+            if (currentCheckPoint == null)
+                continue;
+
+            // If PlayerChairManager exists, honor the Sitdown state check (preserves previous behavior)
+            if (PlayerChairManager.Instance && PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
             {
-                // set to global variable
-                currentCheckPoint = chairHit.collider.GetComponentInParent<ChairCheckPoint>();
-
-                // If PlayerChairManager exists, honor the Sitdown state check (preserves previous behavior)
-                if (PlayerChairManager.Instance && PlayerChairManager.Instance.playerState == PlayerChairManager.PlayerState.Sitdown)
-                {
-                    Debug.Log("trang thai khong phu hop de ngoi");
-                    return false;
-                }
-
-                Debug.Log("Move to check point");
-                return MoveToChairCheckPoint(currentCheckPoint);
+                Debug.Log("trang thai khong phu hop de ngoi");
+                return false;
             }
+
+            Debug.Log("Move to check point");
+            return MoveToChairCheckPoint(currentCheckPoint);
         }
 
         return false;
@@ -989,7 +1108,7 @@ public class PointClickSystem : MonoBehaviour
         Debug.Log("Đánh dính check point");
 
         var position = chairCheckPoint.spriteCheckPoint.transform.position;
-        if (!MoveToPosition(position))
+        if (!MoveToPosition(position, false))
             return false;
 
         waitMoveToChair = StartCoroutine(WaitForRechPos(() =>
@@ -1014,14 +1133,16 @@ public class PointClickSystem : MonoBehaviour
 
             if (moveDir.sqrMagnitude > 0.001f)
             {
-                Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation,
-                    targetRot,
-                    rotationLerpSpeed * Time.deltaTime
-                );
+                Quaternion targetRot = Quaternion.LookRotation(moveDir.normalized, Vector3.up);
+                RotateTowards(targetRot, autoTurnDegreesPerSecond);
             }
         }
+    }
+
+    private void RotateTowards(Quaternion targetRot, float degreesPerSecond)
+    {
+        float maxDegreesDelta = Mathf.Max(1f, degreesPerSecond) * Time.deltaTime;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, maxDegreesDelta);
     }
 
     private IEnumerator WaitForRechPos(Action callback)
@@ -1034,7 +1155,6 @@ public class PointClickSystem : MonoBehaviour
             if (!hasActiveMoveDestination && !lastPathStopWasArrival)
                 yield break;
 
-            RotateToVelocity();
             yield return null;
         }
 
@@ -1438,5 +1558,13 @@ public class PointClickSystem : MonoBehaviour
     public void StopMoving()
     {
         StopActivePath(false);
+    }
+
+    private sealed class RaycastHitDistanceComparer : IComparer<RaycastHit>
+    {
+        public int Compare(RaycastHit x, RaycastHit y)
+        {
+            return x.distance.CompareTo(y.distance);
+        }
     }
 }

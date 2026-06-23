@@ -1,6 +1,6 @@
 ﻿# XHero Mobile Batch/FPS Report
 
-Generated: 2026-06-19 15:41:58
+Generated: 2026-06-23 15:45:21
 Mode: after one-click safe batch/FPS pass
 
 ## Safety Contract
@@ -21,7 +21,10 @@ Mode: after one-click safe batch/FPS pass
 - Scene 'Assets/Scenes/IntroScene.unity': no safe writable optimization needed.
 - Scene 'Assets/Scenes/LoadingScene.unity': no safe writable optimization needed.
 - Scene 'Assets/Scenes/New Scene 1.unity': no safe writable optimization needed.
-- Scene 'Assets/Scenes/New Scene.unity': no safe writable optimization needed.
+- Scene 'Assets/Scenes/New Scene.unity':
+-   Clamped terrain FPS budgets on 3 terrain(s) without changing terrain materials/shaders/render path.
+-   Enabled renderer occlusion allowance on 28 renderer(s).
+-   Ensured static batching/occlusion flags on 139 renderer object(s) that were already static.
 - Scene 'Assets/Scenes/New Scene/testS.unity': no safe writable optimization needed.
 - Scene 'Assets/Scenes/NewScene/DDCG2.unity': no safe writable optimization needed.
 - Scene 'Assets/Scenes/phong_ky_mon.unity': no safe writable optimization needed.
@@ -136,7 +139,7 @@ Mode: after one-click safe batch/FPS pass
 ### Summary
 - Renderers: total=720, enabled=512, mesh=512, skinned=0
 - Material slots: 611; unique materials=37; unique meshes=376
-- Static batching flagged mesh renderers: 512/512
+- Static batching flagged mesh renderers: 476/512
 - Terrains: 0; cameras=5
 
 ### Cameras
@@ -153,7 +156,7 @@ Mode: after one-click safe batch/FPS pass
 | Shader | Material count | Note |
 | --- | ---: | --- |
 | Universal Render Pipeline/Lit | 36 | OK |
-| Universal Render Pipeline/Particles/Simple Lit | 1 | OK |
+| Particles/Standard Unlit | 1 | Verify mobile/URP compatibility. |
 
 ### Batch Reduction Candidates
 | Count | Material slots | Static ready | Mesh | Materials | Example | Recommendation |
@@ -162,7 +165,7 @@ Mode: after one-click safe batch/FPS pass
 | 81 | 81 | True | polySurface628 | v1 | phongthuycohoc1 1 1/door_grp/door_01/polySurface628 | Should batch through Unity static batching if materials are compatible. |
 | 31 | 62 | True | Plane134 | v1, uv01 | phongthuycohoc1 1 1/phongthuycohoc1/Plane134 | Should batch through Unity static batching if materials are compatible. |
 | 41 | 41 | True | pCube70 | uv01 | phongthuycohoc1 1 1/phongthuycohoc1/pCube70 | Should batch through Unity static batching if materials are compatible. |
-| 36 | 36 | True | Plane | M_ | Learning Group/Check Point Sitdown/Chair Check Point/Check Point Sprite Temp/Plane | Should batch through Unity static batching if materials are compatible. |
+| 36 | 36 | False | Plane | M_ | Learning Group/Check Point Sitdown/Chair Check Point/Check Point Sprite Temp/Plane | Mark only verified non-moving environment objects static, then rerun. |
 | 16 | 32 | True | pPlane11 | RL18, uv01 | phongthuycohoc1 1 1/phongthuycohoc1/pPlane11 | Should batch through Unity static batching if materials are compatible. |
 | 28 | 28 | True | polySurface559 | KHUNGCUWA | phongthuycohoc1 1 1/phongthuycohoc1/polySurface559 | Should batch through Unity static batching if materials are compatible. |
 | 14 | 28 | True | pPlane12 | RL17, uv01 | phongthuycohoc1 1 1/phongthuycohoc1/pPlane12 | Should batch through Unity static batching if materials are compatible. |
@@ -217,9 +220,9 @@ Mode: after one-click safe batch/FPS pass
 
 ## Scene: Assets/Scenes/dai_dao_chi_gian_2.unity
 ### Summary
-- Renderers: total=173, enabled=112, mesh=97, skinned=0
-- Material slots: 188; unique materials=91; unique meshes=68
-- Static batching flagged mesh renderers: 86/97
+- Renderers: total=178, enabled=113, mesh=98, skinned=0
+- Material slots: 189; unique materials=91; unique meshes=68
+- Static batching flagged mesh renderers: 65/98
 - Terrains: 0; cameras=3
 
 ### Cameras
@@ -235,14 +238,13 @@ Mode: after one-click safe batch/FPS pass
 | --- | ---: | --- |
 | Universal Render Pipeline/Autodesk Interactive/AutodeskInteractive | 62 | OK |
 | Universal Render Pipeline/Lit | 27 | OK |
-| Particles/Standard Unlit | 1 | Verify mobile/URP compatibility. |
-| Universal Render Pipeline/Particles/Simple Lit | 1 | OK |
+| Particles/Standard Unlit | 2 | Verify mobile/URP compatibility. |
 
 ### Batch Reduction Candidates
 | Count | Material slots | Static ready | Mesh | Materials | Example | Recommendation |
 | ---: | ---: | --- | --- | --- | --- | --- |
 | 16 | 16 | False | khung_trong | lambert5 | Dai dao chi gian 2/khungcuaso/khung_trong | Mark only verified non-moving environment objects static, then rerun. |
-| 14 | 14 | True | Plane | M_ | Learning Group (1)/Check Point Sitdown/Chair Check Point (6)/Check Point Sprite Temp/Plane | Should batch through Unity static batching if materials are compatible. |
+| 15 | 15 | False | Plane | M_ | Learning Group (1)/Check Point Sitdown/Chair Check Point (6)/Check Point Sprite Temp/Plane | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 12 | True | BonSai_c3 | M_Leacves_2, M_Chau_4, M_Branches_4 | Dai dao chi gian 2/DDCG2/BonSai/BonSai_c3 | Should batch through Unity static batching if materials are compatible. |
 
 ### LOD Candidates
@@ -401,9 +403,9 @@ Mode: after one-click safe batch/FPS pass
 
 ## Scene: Assets/Scenes/New Scene.unity
 ### Summary
-- Renderers: total=4,948, enabled=2,175, mesh=2,147, skinned=0
-- Material slots: 5,134; unique materials=276; unique meshes=184
-- Static batching flagged mesh renderers: 2,102/2,147
+- Renderers: total=4,955, enabled=2,183, mesh=2,155, skinned=0
+- Material slots: 5,142; unique materials=290; unique meshes=183
+- Static batching flagged mesh renderers: 1,045/2,155
 - Terrains: 4; cameras=4
 
 ### Cameras
@@ -413,10 +415,10 @@ Mode: after one-click safe batch/FPS pass
 - Player/YawPivot/PitchPivot/FP_Camera/UICamera: occlusion=True, utility=True, targetTexture=null
 
 ### Terrains
-- Nui 2/MOUNTAIN 2/group1/nui/Nui10: pixelError=6, basemap=350, detailDistance=45, detailDensity=0.65, treeDistance=0, instanced=False
-- Nui 2/Terrain_(-161.10, -11.10, -1041.58): pixelError=16, basemap=260, detailDistance=45, detailDensity=0.65, treeDistance=420, instanced=False
-- Nui 2/Terrain_(238.90, -11.10, -441.58): pixelError=16, basemap=260, detailDistance=45, detailDensity=0.65, treeDistance=0, instanced=True
-- Nui 2/Terrian_SongSuoi (1): pixelError=16, basemap=260, detailDistance=45, detailDensity=0.65, treeDistance=0, instanced=True
+- Nui 2/MOUNTAIN 2/group1/nui/Nui10: pixelError=5, basemap=1000, detailDistance=80, detailDensity=1, treeDistance=0, instanced=False
+- Nui 2/Terrain_(-161.10, -11.10, -1041.58): pixelError=16, basemap=260, detailDistance=75, detailDensity=0.75, treeDistance=900, instanced=False
+- Nui 2/Terrain_(238.90, -11.10, -441.58): pixelError=16, basemap=260, detailDistance=75, detailDensity=0.75, treeDistance=0, instanced=True
+- Nui 2/Terrian_SongSuoi (1): pixelError=16, basemap=260, detailDistance=75, detailDensity=0.75, treeDistance=0, instanced=True
 
 ### Materials / Shaders
 | Shader | Material count | Note |
@@ -425,11 +427,11 @@ Mode: after one-click safe batch/FPS pass
 | Universal Render Pipeline/Nature/SpeedTree8_PBRLit | 72 | OK |
 | Universal Render Pipeline/Simple Lit | 44 | OK |
 | Universal Render Pipeline/Autodesk Interactive/AutodeskInteractive | 43 | OK |
+| Universal Render Pipeline/Unlit | 15 | OK |
 | Legacy Shaders/Particles/Alpha Blended | 6 | Verify mobile/URP compatibility. |
 | Legacy Shaders/Particles/Additive | 2 | Verify mobile/URP compatibility. |
 | Custom/AlwaysOnTop3D_HiddenByUI | 1 | Verify mobile/URP compatibility. |
-| Distant Lands/Lumen/Fake Light | 1 | Verify mobile/URP compatibility. |
-| Distant Lands/Lumen/Light Ray | 1 | Verify mobile/URP compatibility. |
+| Custom/BlurBoxShader | 1 | Verify mobile/URP compatibility. |
 | Shader Graphs/M_Water_Graph | 1 | OK |
 | Shader Graphs/SG_WindowCubemap | 1 | OK |
 | Universal Render Pipeline/Autodesk Interactive/AutodeskInteractiveTransparent | 1 | OK |
@@ -447,32 +449,32 @@ Mode: after one-click safe batch/FPS pass
 | 36 | 324 | True | khungNha | VienPhuDieu, GoDoc, door_fake, TuongGach, CuaSoTron, VRayMtl176, M_Go | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/khungNha | Should batch through Unity static batching if materials are compatible. |
 | 36 | 252 | True | Tru_Lancan | LanCan, ChanTru, HoaVanLanCan, GoDoc, TruNha, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/Tru_Lancan | Should batch through Unity static batching if materials are compatible. |
 | 36 | 252 | True | Tru_Lancan | LanCan, ChanTru, HoaVanLanCan, GoDoc, TruNha, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/Tru_Lancan | Should batch through Unity static batching if materials are compatible. |
-| 117 | 234 | True | buicayV1 1_LOD0 | go, buicayV1 | Enviroment/Tree Decor - Upper map/boncay sau/buicayV1 1/buicayV1 1_LOD0 | Should batch through Unity static batching if materials are compatible. |
+| 117 | 234 | False | buicayV1 1_LOD0 | go, buicayV1 | Enviroment/Tree Decor - Upper map/boncay sau/buicayV1 1/buicayV1 1_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 36 | 180 | True | Ngoi | Ngoi, GoNgang, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/Ngoi | Should batch through Unity static batching if materials are compatible. |
 | 36 | 180 | True | Ngoi | Ngoi, GoNgang, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/Ngoi | Should batch through Unity static batching if materials are compatible. |
-| 137 | 137 | True | lasen_b_LOD0 | lasen_b | Enviroment/Hoa Sen Group/lasen_b/lasen_b_LOD0 | Should batch through Unity static batching if materials are compatible. |
+| 137 | 137 | False | lasen_b_LOD0 | lasen_b | Enviroment/Hoa Sen Group/lasen_b/lasen_b_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 8 | 128 | True | khuevancac | New Material 1, M_Go, New Material, M_GocMai, dinhmai, rongbathang, M_Ngoi, M_Da, lambert2, phongthuycohoc_01_hoavan_hanglan1 | Enviroment/khu_trung_bay_vat_pham/MB_Khue_Van_Cac_LOD Group/MB_Khue_Van_Cac (1) | Should batch through Unity static batching if materials are compatible. |
 | 8 | 128 | True | khuevancac | New Material 1, M_Go, New Material, M_GocMai, dinhmai, rongbathang, M_Ngoi, lambert2, phongthuycohoc_01_hoavan_hanglan1 | Enviroment/khu_trung_bay_vat_pham/MB_Khue_Van_Cac_LOD Group/MB_Khue_Van_Cac_Low_Version | Should batch through Unity static batching if materials are compatible. |
-| 109 | 109 | True | Quad | SG_WindowCubemap Material | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/Quad | Should batch through Unity static batching if materials are compatible. |
+| 109 | 109 | False | Quad | SG_WindowCubemap Material | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/Quad | Mark only verified non-moving environment objects static, then rerun. |
 | 36 | 108 | True | CauThang | RongBacThang, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/CauThang | Should batch through Unity static batching if materials are compatible. |
 | 36 | 108 | True | CauThang | RongBacThang, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/CauThang | Should batch through Unity static batching if materials are compatible. |
 | 4 | 104 | True | polySurface44777 | New Material 2, New Material 1, New Material 3, M_Go4, blengo, New Material 5, phudieu, New Material, M_Da1, M_Tuong1, door_fake, phongthuycohoc_01_batthang1, M_Go5, M_ngoi, M_BacThang3, dinhmai, phongthuycohoc_02_hoavan_hanglan1 | Enviroment/khu_trung_bay_vat_pham/MB_NhaDai_01_LOD Group/MB_NhaDai_01/polySurface44777 | Should batch through Unity static batching if materials are compatible. |
-| 102 | 102 | True | lasena_LOD0 | lasena | Enviroment/Hoa Sen Group/lasena (4)/lasena_LOD0 | Should batch through Unity static batching if materials are compatible. |
-| 96 | 96 | True | buicokien_LOD0 | buicokien | Enviroment/khu_trung_bay_vat_pham/buicokien/buicokien_LOD0 | Should batch through Unity static batching if materials are compatible. |
-| 40 | 80 | True | tree_BB_LOD2 | thancay, tree_BB | Enviroment/Mot Goc Khuon Vien/Tree Group (1)/Tree Group 1 (2)/tree_BB/tree_BB_LOD2 | Should batch through Unity static batching if materials are compatible. |
-| 37 | 74 | True | hoasen_LOD0 | than, hoasen | Enviroment/Hoa Sen Group/hoasen/hoasen_LOD0 | Should batch through Unity static batching if materials are compatible. |
+| 102 | 102 | False | lasena_LOD0 | lasena | Enviroment/Hoa Sen Group/lasena (4)/lasena_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
+| 96 | 96 | False | buicokien_LOD0 | buicokien | Enviroment/khu_trung_bay_vat_pham/buicokien/buicokien_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
+| 40 | 80 | False | tree_BB_LOD2 | thancay, tree_BB | Enviroment/Mot Goc Khuon Vien/Tree Group (1)/Tree Group 1 (2)/tree_BB/tree_BB_LOD2 | Mark only verified non-moving environment objects static, then rerun. |
+| 37 | 74 | False | hoasen_LOD0 | than, hoasen | Enviroment/Hoa Sen Group/hoasen/hoasen_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 36 | 72 | True | hoavangoc | HoaVanGocMai, HoaVanDauMai | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/hoavangoc | Should batch through Unity static batching if materials are compatible. |
 | 36 | 72 | True | PhuDieu | VienPhuDieu, PhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/PhuDieu | Should batch through Unity static batching if materials are compatible. |
 | 36 | 72 | True | VienMai | GoDoc, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712/VienMai | Should batch through Unity static batching if materials are compatible. |
 | 36 | 72 | True | hoavangoc | HoaVanGocMai, HoaVanDauMai | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/hoavangoc | Should batch through Unity static batching if materials are compatible. |
 | 36 | 72 | True | PhuDieu | VienPhuDieu, PhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/PhuDieu | Should batch through Unity static batching if materials are compatible. |
 | 36 | 72 | True | VienMai | GoDoc, VienPhuDieu | Enviroment/khu_trung_bay_vat_pham/Nha_T1/NhaNgan_1712 (1)/VienMai | Should batch through Unity static batching if materials are compatible. |
-| 8 | 72 | False | Tru_Den_Da | M_ChanTru, M_HoaVan, M_HopDen_01, M_Ngoi, M_KhungMai_01, M_HopDen_02, M_KhungMai_02, M_HopDen_Light | Enviroment/KMDG (1)/truDen | Mark only verified non-moving environment objects static, then rerun. |
-| 22 | 66 | True | Bon_Hoa_5 | BonDa, New Material | Enviroment/Tree Decor - Upper map/boncay sau/Bon_Hoa_5 | Should batch through Unity static batching if materials are compatible. |
-| 32 | 64 | True | bupsen_LOD0 | than, bupsen | Enviroment/Hoa Sen Group/bupsen/bupsen_LOD0 | Should batch through Unity static batching if materials are compatible. |
-| 30 | 60 | True | nusen_LOD0 | than, nusen | Enviroment/Hoa Sen Group/nusen (1)/nusen_LOD0 | Should batch through Unity static batching if materials are compatible. |
+| 8 | 72 | False | Tru_Den_Da | M_ChanTru, M_HoaVan, M_HopDen_01, M_Ngoi, M_KhungMai_01, M_HopDen_02, M_KhungMai_02, M_HopDen_Light | Enviroment/Tru Den Group/truDen (2) | Mark only verified non-moving environment objects static, then rerun. |
+| 22 | 66 | False | Bon_Hoa_5 | BonDa, New Material | Enviroment/Tree Decor - Upper map/boncay sau/Bon_Hoa_5 | Mark only verified non-moving environment objects static, then rerun. |
+| 32 | 64 | False | bupsen_LOD0 | than, bupsen | Enviroment/Hoa Sen Group/bupsen/bupsen_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
+| 30 | 60 | False | nusen_LOD0 | than, nusen | Enviroment/Hoa Sen Group/nusen (1)/nusen_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 24 | 48 | True | Caycaob_2_LOD0 | thancay, Caycaob | Enviroment/khu_trung_bay_vat_pham/Caycaob_2/Caycaob_2_LOD0 | Should batch through Unity static batching if materials are compatible. |
-| 40 | 40 | True | tree_BB_LOD3 | tree_BB_Billboard_LOD3 | Enviroment/Mot Goc Khuon Vien/Tree Group (1)/Tree Group 1 (2)/tree_BB/tree_BB_LOD3 | Should batch through Unity static batching if materials are compatible. |
+| 40 | 40 | False | tree_BB_LOD3 | tree_BB_Billboard_LOD3 | Enviroment/Mot Goc Khuon Vien/Tree Group (1)/Tree Group 1 (2)/tree_BB/tree_BB_LOD3 | Mark only verified non-moving environment objects static, then rerun. |
 
 ### LOD Candidates
 | Vertices | Renderer | Mesh | Note |
@@ -587,7 +589,7 @@ Mode: after one-click safe batch/FPS pass
 ### Summary
 - Renderers: total=579, enabled=477, mesh=467, skinned=7
 - Material slots: 512; unique materials=61; unique meshes=106
-- Static batching flagged mesh renderers: 393/467
+- Static batching flagged mesh renderers: 0/467
 - Terrains: 0; cameras=3
 
 ### Cameras
@@ -606,8 +608,8 @@ Mode: after one-click safe batch/FPS pass
 | Universal Render Pipeline/Simple Lit | 12 | OK |
 | Shader Graphs/Smoke6way | 8 | OK |
 | Shader Graphs/TerrainGrass | 7 | OK |
+| Particles/Standard Unlit | 1 | Verify mobile/URP compatibility. |
 | Shader Graphs/UberParticles | 1 | OK |
-| Universal Render Pipeline/Particles/Simple Lit | 1 | OK |
 | Universal Render Pipeline/Particles/Unlit | 1 | OK |
 | Vefects/SH_Vefects_VFX_URP_Water_Surface_01 | 1 | Verify mobile/URP compatibility. |
 
@@ -615,19 +617,19 @@ Mode: after one-click safe batch/FPS pass
 | Count | Material slots | Static ready | Mesh | Materials | Example | Recommendation |
 | ---: | ---: | --- | --- | --- | --- | --- |
 | 172 | 172 | False | Grass_B | Grass_A | co/Grass_B | Mark only verified non-moving environment objects static, then rerun. |
-| 135 | 135 | True | polySurface67319 | New Material | KTB_Cum_senkymon/la_sung/polySurface67319 | Should batch through Unity static batching if materials are compatible. |
-| 14 | 28 | True | hoa_sung | New Material 1, M_la_sen1 | KTB_Cum_senkymon/hoa_sung | Should batch through Unity static batching if materials are compatible. |
+| 135 | 135 | False | polySurface67319 | New Material | KTB_Cum_senkymon/la_sung/polySurface67319 | Mark only verified non-moving environment objects static, then rerun. |
+| 14 | 28 | False | hoa_sung | New Material 1, M_la_sen1 | KTB_Cum_senkymon/hoa_sung | Mark only verified non-moving environment objects static, then rerun. |
 | 25 | 25 | False | Fern_A | Fern | co/Fern_A | Mark only verified non-moving environment objects static, then rerun. |
 | 17 | 17 | False | Bush_A | Bush | co/Bush_A | Mark only verified non-moving environment objects static, then rerun. |
-| 15 | 15 | True | nui01_geo | nui_kymon | nuison/nui01_geo | Should batch through Unity static batching if materials are compatible. |
+| 15 | 15 | False | nui01_geo | nui_kymon | nuison/nui01_geo | Mark only verified non-moving environment objects static, then rerun. |
 | 5 | 10 | False | polySurface66877 | hv_tren, hv_tren1 | congkymondongiap/polySurface66877 | Mark only verified non-moving environment objects static, then rerun. |
-| 9 | 9 | True | Dem_Ngoi | goi_ngoi | Dem Ngoi Group/DemNgoi | Should batch through Unity static batching if materials are compatible. |
-| 9 | 9 | True | Plane | M_ | Learning Group/Check Point Sitdown/Chair Check Point/Check Point Sprite Temp/Plane | Should batch through Unity static batching if materials are compatible. |
-| 8 | 8 | True | Generated VoluSmoke Mesh | Shader Graphs/Smoke6way | VoluSmokeSlice (9) | Should batch through Unity static batching if materials are compatible. |
-| 4 | 8 | True | cum_sen | New Material 1, New Material | KTB_Cum_senkymon/cum_sen | Should batch through Unity static batching if materials are compatible. |
+| 9 | 9 | False | Dem_Ngoi | goi_ngoi | Dem Ngoi Group/DemNgoi | Mark only verified non-moving environment objects static, then rerun. |
+| 9 | 9 | False | Plane | M_ | Learning Group/Check Point Sitdown/Chair Check Point/Check Point Sprite Temp/Plane | Mark only verified non-moving environment objects static, then rerun. |
+| 8 | 8 | False | Generated VoluSmoke Mesh | Shader Graphs/Smoke6way | VoluSmokeSlice (9) | Mark only verified non-moving environment objects static, then rerun. |
+| 4 | 8 | False | cum_sen | New Material 1, New Material | KTB_Cum_senkymon/cum_sen | Mark only verified non-moving environment objects static, then rerun. |
 | 7 | 7 | False | polySurface66621 | hv_tren1 | congkymondongiap/polySurface66621 | Mark only verified non-moving environment objects static, then rerun. |
-| 5 | 5 | True | Bush_Red | Bush_Red | co/Bush_Red | Should batch through Unity static batching if materials are compatible. |
-| 5 | 5 | True | polySurface67151 | hv_tren | congkymondongiap/polySurface67151 | Should batch through Unity static batching if materials are compatible. |
+| 5 | 5 | False | Bush_Red | Bush_Red | co/Bush_Red | Mark only verified non-moving environment objects static, then rerun. |
+| 5 | 5 | False | polySurface67151 | hv_tren | congkymondongiap/polySurface67151 | Mark only verified non-moving environment objects static, then rerun. |
 
 ### LOD Candidates
 | Vertices | Renderer | Mesh | Note |
@@ -663,7 +665,7 @@ Mode: after one-click safe batch/FPS pass
 ### Summary
 - Renderers: total=396, enabled=373, mesh=359, skinned=0
 - Material slots: 435; unique materials=78; unique meshes=199
-- Static batching flagged mesh renderers: 246/359
+- Static batching flagged mesh renderers: 0/359
 - Terrains: 0; cameras=3
 
 ### Cameras
@@ -710,21 +712,21 @@ Mode: after one-click safe batch/FPS pass
 | 8 | 8 | False | mai_thanh.012 | MaiNgoi | Map/PTS_Full/Cong_Ra/mai_thanh.012 | Mark only verified non-moving environment objects static, then rerun. |
 | 8 | 8 | False | polySurface1152.012 | hv_tren | Map/PTS_Full/Cong_Ra/polySurface1152.012 | Mark only verified non-moving environment objects static, then rerun. |
 | 8 | 8 | False | polySurface41500.012 | VienVang | Map/PTS_Full/Cong_Ra/polySurface41500.012 | Mark only verified non-moving environment objects static, then rerun. |
-| 8 | 8 | True | polySurface41908.012 | GoMai | Map/PTS_Full/Cong_Ra/polySurface41908.012 | Should batch through Unity static batching if materials are compatible. |
+| 8 | 8 | False | polySurface41908.012 | GoMai | Map/PTS_Full/Cong_Ra/polySurface41908.012 | Mark only verified non-moving environment objects static, then rerun. |
 | 8 | 8 | False | polySurface42063 | M_Tru_Go | Map/PTS_Full/Cong_Ra/polySurface42063 | Mark only verified non-moving environment objects static, then rerun. |
 | 8 | 8 | False | tu_hoa_van.012 | Tuhv | Map/PTS_Full/Cong_Ra/tu_hoa_van.012 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 8 | False | rong1 | Rong, TranChau | Map/PTS_Full/Cong_Ra/rong1 | Mark only verified non-moving environment objects static, then rerun. |
-| 4 | 8 | True | caytre_LOD0 | textre, caytre | Map/PTS_Full/quay_ghi_danh/ke_do_2/chau_truc/caytre/caytre_LOD0 | Should batch through Unity static batching if materials are compatible. |
+| 4 | 8 | False | caytre_LOD0 | textre, caytre | Map/PTS_Full/quay_ghi_danh/ke_do_2/chau_truc/caytre/caytre_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 8 | False | polySurface68739 | M_Sach_1 2, M_Sach_3 | Map/PTS_Full/quay_ghi_danh/ke_do_2/sach/polySurface68739 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 8 | False | chaucay_bonsai_LOD0 | thancay, chaucay_bonsai | Map/chaucay_bonsai/chaucay_bonsai_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 8 | False | caytrucsan10k_LOD0 | go, caytrucsan10k | Map/caytrucsan10k/caytrucsan10k_LOD0 | Mark only verified non-moving environment objects static, then rerun. |
 | 6 | 6 | False | polySurface68754 | M_Cong | Map/PTS_Full/Cong_Ra/polySurface68754 | Mark only verified non-moving environment objects static, then rerun. |
-| 6 | 6 | True | Geom_Rock_Overgrown_I_LOD02 | New Material 3 | Map/Rock/Geom_Rock_Overgrown_I_LOD02 | Should batch through Unity static batching if materials are compatible. |
+| 6 | 6 | False | Geom_Rock_Overgrown_I_LOD02 | New Material 3 | Map/Rock/Geom_Rock_Overgrown_I_LOD02 | Mark only verified non-moving environment objects static, then rerun. |
 | 5 | 5 | False | _LUMENRAY50_Solid Scatter 1 | Lumen Ray | VFX/ray2/Layer | Mark only verified non-moving environment objects static, then rerun. |
-| 4 | 4 | True | Cong_Ra_polySurface41970 | HV_Hoavan_tuong_new | Map/PTS_Full/Cong_Ra/Cong_Ra_polySurface41970 | Should batch through Unity static batching if materials are compatible. |
+| 4 | 4 | False | Cong_Ra_polySurface41970 | HV_Hoavan_tuong_new | Map/PTS_Full/Cong_Ra/Cong_Ra_polySurface41970 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 4 | False | pPlane19 | Rotation UV Shader Graph | Map/PTS_Full/Cong_Ra/pPlane19 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 4 | False | polySurface42068 | New Material | Map/PTS_Full/lich_khai_giang/polySurface42068 | Mark only verified non-moving environment objects static, then rerun. |
-| 4 | 4 | True | ChauTruc | ChauTruc | Map/PTS_Full/quay_ghi_danh/ke_do_2/chau_truc/ChauTruc | Should batch through Unity static batching if materials are compatible. |
+| 4 | 4 | False | ChauTruc | ChauTruc | Map/PTS_Full/quay_ghi_danh/ke_do_2/chau_truc/ChauTruc | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 4 | False | SachTre9 | M_SachTre | Map/PTS_Full/quay_ghi_danh/ke_do_2/sach/SachTre9 | Mark only verified non-moving environment objects static, then rerun. |
 | 4 | 4 | False | polySurface41963 | M_Cong | Map/PTS_Full/Tuong_Trong/polySurface41963 | Mark only verified non-moving environment objects static, then rerun. |
 
