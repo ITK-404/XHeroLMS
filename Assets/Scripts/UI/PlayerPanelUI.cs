@@ -13,27 +13,23 @@ public class PlayerPanelUI : MonoBehaviour
     // ──────────────────────────────────────────────
     public GameObject container;
 
-    [Header("Containers")]
-    public GameObject loginContainer;
+    [Header("Containers")] public GameObject loginContainer;
     public GameObject unLogginContainer;
     public GameObject defaultContainer;
 
     public PlayerInformationUI playerInformation;
-    public PlayerControllerUI  controllerUI;
+    public PlayerControllerUI controllerUI;
 
-    [Header("Auth")]
-    public AuthView authView;           // ← reference tới AuthView component
+    [Header("Auth")] public AuthView authView; // ← reference tới AuthView component
 
-    [Header("Scene & API")]
-    public string defaultLoadScene = "New Scene";
-    public string deleteUserPath   = "/users";
-    public string logoutPath       = "/users/logout";
-    public string fromPlatform     = "lms3d";
+    [Header("Scene & API")] public string defaultLoadScene = "New Scene";
+    public string deleteUserPath = "/users";
+    public string logoutPath = "/users/logout";
+    public string fromPlatform = "lms3d";
 
-    [Header("Pathfinding")]
-    public GameObject pathfindPanel;
-    public Button     exitPathBtn;
-    public Action     OnClickTryExitAutoFindWay;
+    [Header("Pathfinding")] public GameObject pathfindPanel;
+    public Button exitPathBtn;
+    public Action OnClickTryExitAutoFindWay;
     private static bool triedRestoreSession;
     private const float LoginPanelGuardInterval = 0.25f;
     private bool hasAuthState;
@@ -132,7 +128,14 @@ public class PlayerPanelUI : MonoBehaviour
             unLogginContainer.SetActive(b);
     }
 
-    // ──────────────────────────────────────────────
+    public void ShowExternalButton(bool state)
+    {
+        if (!TokenStore.IsAuthenticated) return;
+        
+        loginContainer.gameObject.SetActive(state);
+    }
+
+// ──────────────────────────────────────────────
     // Pathfinding
     // ──────────────────────────────────────────────
 

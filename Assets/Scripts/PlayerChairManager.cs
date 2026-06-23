@@ -95,6 +95,7 @@ public class PlayerChairManager : MonoBehaviour
             courseExitWayHandler.Show();
 
             PlayerPanelUI.Instance.ShowUnLoginContainer(true);
+            PlayerPanelUI.Instance.ShowExternalButton(true);
         });
     }
 
@@ -178,6 +179,7 @@ public class PlayerChairManager : MonoBehaviour
             courseExitWayHandler.Hide();
             
             PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+            PlayerPanelUI.Instance.ShowExternalButton(false);
             StartBlendCoroutine(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
