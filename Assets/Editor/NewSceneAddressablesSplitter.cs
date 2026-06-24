@@ -392,6 +392,7 @@ public static class NewSceneAddressablesSplitter
         SplitAutomaticRootCandidates(generatedMainScene, ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
 
         EnsureLateSceneLoader(generatedMainScene, lateSceneKeys);
+        BakeAstarGraphForGeneratedScenes(generatedMainScene, lateSceneKeys);
 
         if (!EditorSceneManager.SaveScene(generatedMainScene, GeneratedMainScenePath))
             throw new InvalidOperationException("Failed to save generated main scene: " + GeneratedMainScenePath);
@@ -418,6 +419,191 @@ public static class NewSceneAddressablesSplitter
 
         Debug.Log("[NewSceneSplit] Regenerated Cloud_New Scene group. Authoring scene was not modified. Late scenes: "
                   + string.Join(", ", lateSceneKeys));
+    }
+
+    private static void BakeAstarGraphForGeneratedScenes(Scene generatedMainScene, IReadOnlyList<string> lateSceneKeys)
+    {
+        if (!generatedMainScene.IsValid() || !generatedMainScene.isLoaded)
+            throw new InvalidOperationException("Generated main scene must be loaded before baking A* graph.");
+
+        if (lateSceneKeys == null || lateSceneKeys.Count == 0)
+            throw new InvalidOperationException("Cannot bake A* graph because no generated late scenes exist.");
+
+        List<Scene> openedScenes = new List<Scene>();
+        AstarPath previousActive = AstarPath.active;
+
+        try
+        {
+            EnsureGeneratedLateScenesLoaded(lateSceneKeys, openedScenes);
+            EditorSceneManager.SetActiveScene(generatedMainScene);
+            Physics.SyncTransforms();
+            Physics2D.SyncTransforms();
+
+            AstarPath astar = FindAstarPathInScene(generatedMainScene);
+
+            if (astar == null)
+                throw new InvalidOperationException("Cannot bake A* graph because generated main scene has no AstarPath/Pathfinder object.");
+
+            if (astar.data == null)
+                throw new InvalidOperationException("Cannot bake A* graph because AstarPath.data is missing.");
+
+            AstarPath.active = astar;
+            astar.data.FindGraphTypes();
+
+            if (astar.data.graphs == null || astar.data.graphs.Length == 0 || astar.data.graphTypes == null)
+                astar.data.DeserializeGraphs();
+
+            if (astar.data.graphs == null || astar.data.graphs.Length == 0)
+                throw new InvalidOperationException("Cannot bake A* graph because no graph settings were found on the generated Pathfinder.");
+
+            astar.data.UpdateShortcuts();
+
+            float lastProgressUpdate = 0f;
+
+            foreach (Pathfinding.Progress progress in astar.ScanAsync())
+            {
+                if (Time.realtimeSinceStartup - lastProgressUpdate > 0.2f)
+                {
+                    EditorUtility.DisplayProgressBar(
+                        "New Scene A* Bake",
+                        progress.description,
+                        Mathf.Clamp01(progress.progress));
+                    lastProgressUpdate = Time.realtimeSinceStartup;
+                }
+            }
+
+            Pathfinding.Serialization.SerializeSettings serializeSettings = new Pathfinding.Serialization.SerializeSettings
+            {
+                nodes = true
+            };
+
+            uint checksum;
+            byte[] bakedGraphData = astar.data.SerializeGraphs(serializeSettings, out checksum);
+
+            if (bakedGraphData == null || bakedGraphData.Length == 0)
+                throw new InvalidOperationException("A* graph bake produced empty serialized data.");
+
+            astar.data.SetData(bakedGraphData);
+            astar.scanOnStartup = false;
+            DisableRuntimeAstarRescan(generatedMainScene);
+
+            int nodeCount = 0;
+            astar.data.GetNodes(_ => nodeCount++);
+
+            EditorUtility.SetDirty(astar);
+            EditorUtility.SetDirty(astar.gameObject);
+            EditorSceneManager.MarkSceneDirty(generatedMainScene);
+
+            Debug.Log("[NewSceneSplit] Baked A* graph into generated main scene. lateScenes="
+                      + lateSceneKeys.Count
+                      + ", graphs="
+                      + astar.data.graphs.Count(graph => graph != null)
+                      + ", nodes="
+                      + nodeCount.ToString(CultureInfo.InvariantCulture)
+                      + ", bytes="
+                      + FormatBytes(bakedGraphData.Length)
+                      + ", checksum="
+                      + checksum.ToString(CultureInfo.InvariantCulture)
+                      + ", scanOnStartup=false, runtimeRescan=false");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+            AstarPath.active = previousActive;
+
+            for (int i = 0; i < openedScenes.Count; i++)
+            {
+                Scene scene = openedScenes[i];
+
+                if (scene.IsValid() && scene.isLoaded)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+    }
+
+    private static void EnsureGeneratedLateScenesLoaded(IReadOnlyList<string> lateSceneKeys, List<Scene> openedScenes)
+    {
+        for (int i = 0; i < lateSceneKeys.Count; i++)
+        {
+            string sceneKey = lateSceneKeys[i];
+            string scenePath = GetGeneratedLateScenePath(sceneKey);
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
+                throw new FileNotFoundException("Generated late scene is missing before A* bake: " + scenePath);
+
+            Scene loadedScene = SceneManager.GetSceneByName(sceneKey);
+
+            if (loadedScene.IsValid() && loadedScene.isLoaded)
+            {
+                if (!string.Equals(NormalizeAssetPath(loadedScene.path), NormalizeAssetPath(scenePath), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("A loaded scene named '"
+                                                        + sceneKey
+                                                        + "' does not match generated late scene path: "
+                                                        + loadedScene.path);
+                }
+
+                continue;
+            }
+
+            Scene openedScene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+
+            if (!openedScene.IsValid() || !openedScene.isLoaded)
+                throw new InvalidOperationException("Failed to load generated late scene for A* bake: " + scenePath);
+
+            openedScenes.Add(openedScene);
+        }
+    }
+
+    private static string GetGeneratedLateScenePath(string sceneKey)
+    {
+        return GeneratedSceneDirectory + "/" + sceneKey + ".unity";
+    }
+
+    private static string NormalizeAssetPath(string assetPath)
+    {
+        return string.IsNullOrEmpty(assetPath)
+            ? string.Empty
+            : assetPath.Replace('\\', '/');
+    }
+
+    private static AstarPath FindAstarPathInScene(Scene scene)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            AstarPath astar = root.GetComponentInChildren<AstarPath>(true);
+
+            if (astar != null)
+                return astar;
+        }
+
+        return null;
+    }
+
+    private static void DisableRuntimeAstarRescan(Scene generatedMainScene)
+    {
+        AddressableAdditiveSceneLoader loader = null;
+
+        foreach (GameObject root in generatedMainScene.GetRootGameObjects())
+        {
+            loader = root.GetComponentInChildren<AddressableAdditiveSceneLoader>(true);
+
+            if (loader != null)
+                break;
+        }
+
+        if (loader == null)
+            return;
+
+        SerializedObject serialized = new SerializedObject(loader);
+        SerializedProperty rescanProperty = serialized.FindProperty("rescanAstarAfterLateScenes");
+
+        if (rescanProperty != null)
+        {
+            rescanProperty.boolValue = false;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(loader);
+        }
     }
 
     public static void RestoreAuthoringSceneAndCleanGeneratedAssets()

@@ -227,6 +227,7 @@ public static class LoadingTransition
 
         Debug.Log("[LoadingTransition] LoadingScene opened.");
         _coroutine = null;
+        yield break;
     }
 
     // ============================================================

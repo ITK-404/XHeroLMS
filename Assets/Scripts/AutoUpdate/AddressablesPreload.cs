@@ -62,6 +62,10 @@ public class AddressablesPreload : MonoBehaviour
 
     public int LoadingPhaseId { get; private set; }
 
+    public bool IsPreparingKey { get; private set; }
+    public string ActivePrepareKey { get; private set; } = "";
+    public bool LastPrepareUsedCachedData { get; private set; }
+
 #if ADDRESSABLES
 
     [Header("Runtime Catalog From GCS")]
@@ -136,10 +140,6 @@ public class AddressablesPreload : MonoBehaviour
     private float _lastSpeedTime;
 
     private readonly HashSet<string> _preparedKeys = new HashSet<string>();
-
-    public bool IsPreparingKey { get; private set; }
-    public string ActivePrepareKey { get; private set; } = "";
-    public bool LastPrepareUsedCachedData { get; private set; }
 
     private float _prepareProgressStartRealtime;
     private bool _progressWindowActive;
