@@ -7,7 +7,7 @@ public static class LoadingUI
     private const string DEFAULT_IMG1_PATH   = "IMG_XHeroLMS/Img1";
     private const string DEFAULT_IMG2_PATH   = "IMG_XHeroLMS/Img2";
     private const string DEFAULT_POPUP_PATH  = "Login_Popup/Failed Login Popup UI Variant";
-    private const string DEFAULT_POPUP_Update  = "Login_Popup/Failed Login Popup UI Variant";
+    private const string DEFAULT_POPUP_Update  = "Login_Popup/Warning_Update_Popup";
     private const string DEFAULT_PREFAB_PATH = "Loading_UI/Loading_UI";
 
     private const int LOADING_SORTING_ORDER = 32760;
@@ -276,11 +276,11 @@ public static void ShowUpdatePopup(string message,
     GameObject popup = Object.Instantiate(prefab, popupCanvasGO.transform);
     popup.transform.SetAsLastSibling();
 
-    var ui = popup.GetComponent<UpdatePopupUI>();
+    var ui = popup.GetComponentInChildren<UpdatePopupUI>(true);
 
     if (ui == null)
     {
-        Debug.LogError("Prefab popup không chứa UpdatePopupUI!");
+        Debug.LogError("Prefab popup không chứa UpdatePopupUI: " + DEFAULT_POPUP_Update);
         Object.Destroy(popupRoot);
         return;
     }
