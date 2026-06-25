@@ -388,10 +388,10 @@ public class PointClickSystem : MonoBehaviour
                 return;
             }
 
-            // if (TryHandleMoveToHouse(ray))
-            // {
-            //     return;
-            // }
+            if (TryHandleMoveToHouse(ray))
+            {
+                return;
+            }
 
             if (TryMoveTest(ray))
             {
@@ -1045,21 +1045,61 @@ public class PointClickSystem : MonoBehaviour
     private bool TryHandleMoveToHouse(Ray ray)
     {
         int hitCount = RaycastCheckpointHits(ray, float.MaxValue, QueryTriggerInteraction.Collide);
+
+        List<Transform> blockerTransform = new();
+        List<BuildingInteractable> targetHits = new();
+        BuildingInteractable targetArea = null;
         for (int i = 0; i < hitCount; i++)
         {
             RaycastHit hit = checkpointRaycastHits[i];
-            if (hit.collider != null &&
-                hit.collider.CompareTag("CheckPoint") &&
-                hit.collider.TryGetComponent(out BuildingInteractable interactable))
+            if (hit.collider != null)
             {
-                BuildingCameraManager.Instance.FocusOnBuilding(interactable);
-                Debug.Log("bắn dính ngôi nhà, đang thử di chuyển tới");
-                return true;
+                if (hit.collider.CompareTag("CheckPoint") &&
+                    hit.collider.TryGetComponent(out BuildingInteractable hitTarget))
+                {
+                    Debug.Log("MoveToHouse cast to target area");
+                    targetHits.Add(hitTarget);
+                }
+                else
+                { 
+                    blockerTransform.Add(hit.collider.transform);
+                }
             }
         }
-     
-        return false;
+        // find shortest area
+        var currentPosition = transform.position;
+        var shortestDistance = float.MaxValue;
+
+        foreach (var item in targetHits)
+        {
+            var distance = Vector3.Distance(item.transform.position, currentPosition);
+
+            if (distance < shortestDistance)
+            {
+                targetArea = item;
+                shortestDistance = distance;
+            }
+        }
+        // purpose is prevent different blocker collider outside building
+        // blocker in same building will not affect this current check
+        if (targetArea == null) return false;
+
+        var targetParentBuilding = targetArea.transform.root;
+        foreach (var blocker in blockerTransform)
+        {
+            var rootOfBlocker = blocker.transform.root;
+            if (rootOfBlocker != targetParentBuilding)
+            {
+                Debug.Log($"MoveToHouse: this blocker not in same with building");
+                return false;
+            }
+        }
+        Debug.Log($"MoveToHouse: all blocker is place in same with target building");
+        
+        BuildingCameraManager.Instance.FocusOnBuilding(targetArea);
+        return true;
     }
+   
 
     private bool TryMoveTest(Ray ray)
     {
