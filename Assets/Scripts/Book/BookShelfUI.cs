@@ -30,7 +30,7 @@ public class BookShelfUI : MonoBehaviour
         return RectTransformUtility.RectangleContainsScreenPoint(
             boundRect,
             screenPosition,
-            Camera.main// hoặc Camera.main nếu Canvas là Screen Space - Camera
+            TabItemManagerUI.uiWorldSpaceCamera// hoặc Camera.main nếu Canvas là Screen Space - Camera
         );
     }
 }

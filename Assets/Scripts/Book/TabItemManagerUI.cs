@@ -16,6 +16,9 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 
 public class TabItemManagerUI : MonoBehaviour
 {
+    // ultis camera
+    public static Camera uiWorldSpaceCamera;
+    
     private Dictionary<CourseLessonTabID, BookShelfManager> tabList = new();
     private BookShelfManager[] tabIDs;
     private TabUI[] tabButtonsList;
@@ -28,6 +31,10 @@ public class TabItemManagerUI : MonoBehaviour
     
     private void Awake()
     {
+        uiWorldSpaceCamera = GetComponent<Canvas>().worldCamera;
+        if (uiWorldSpaceCamera == null)
+            uiWorldSpaceCamera = Camera.main;
+        
         tabIDs = GetComponentsInChildren<BookShelfManager>();
         tabButtonsList = GetComponentsInChildren<TabUI>();
         returnBtn.onClick.AddListener(() =>
