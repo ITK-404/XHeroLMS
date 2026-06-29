@@ -43,6 +43,7 @@ public class SnapElementCenterScrollViewBehaviour : MonoBehaviour, IEndDragHandl
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        customScrollView.StopDrag();
         dragDone = false;
         isAlign = false;
     }
