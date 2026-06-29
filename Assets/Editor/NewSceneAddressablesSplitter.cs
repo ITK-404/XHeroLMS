@@ -28,6 +28,9 @@ public static class NewSceneAddressablesSplitter
     private const string BoxLoadObjectName = "boxLoad";
     private const string FirstEntryReadyMarkerName = "[New Scene First Entry Ready]";
     private const string EnvironmentRootPath = "Enviroment";
+    private const string CanvasLoginPrefabPath = "Assets/Shaders/Prefabs_UI/Login/CanvasLogin.prefab";
+    private const string XHeroDeepLinkHost = "xhero.deeplink";
+    private const string XHeroAndroidPackageName = "com.xhero_app";
 
     private const string MainGroupName = "Cloud_New Scene";
     private const string LegacyLateGroupPrefix = "Cloud_New Scene_Late_";
@@ -200,7 +203,7 @@ public static class NewSceneAddressablesSplitter
 
     private static readonly string[] InitialSharedUiPrefabPaths =
     {
-        "Assets/Shaders/Prefabs_UI/Login/CanvasLogin.prefab",
+        CanvasLoginPrefabPath,
         "Assets/Shaders/Prefabs_UI/Phong Tuyen SInh/PTS_ObjectManager.prefab",
         "Assets/Shaders/Prefabs_UI/Minimap_New/Plot Area UI.prefab",
         "Assets/Shaders/Prefabs_UI/Thanh Toan/Canvas Payment UI Canvas.prefab",
@@ -399,6 +402,8 @@ public static class NewSceneAddressablesSplitter
 
         PatchGeneratedMainSceneYaml();
         AssetDatabase.ImportAsset(GeneratedMainScenePath, ImportAssetOptions.ForceUpdate);
+
+        NormalizeInitialLoginPrefabForAddressables();
 
         List<string> initialUiDependencyPaths = CollectInitialUiDependencyPaths();
         SharedGeneratedDependencySelection sharedGeneratedDependencyPaths =
@@ -1338,6 +1343,56 @@ public static class NewSceneAddressablesSplitter
 
             queue.Enqueue(hierarchyPath);
         }
+    }
+
+    private static void NormalizeInitialLoginPrefabForAddressables()
+    {
+        GameObject prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(CanvasLoginPrefabPath);
+
+        if (prefabAsset == null)
+        {
+            Debug.LogWarning("[NewSceneSplit] Cannot normalize CanvasLogin deeplink config. Prefab not found: " + CanvasLoginPrefabPath);
+            return;
+        }
+
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(CanvasLoginPrefabPath);
+        bool changed = false;
+
+        try
+        {
+            foreach (LmsDeepLinkAuthUI deepLinkAuthUI in prefabRoot.GetComponentsInChildren<LmsDeepLinkAuthUI>(true))
+            {
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroScheme, "xhero");
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroHost, XHeroDeepLinkHost);
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroAndroidHost, XHeroDeepLinkHost);
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroIosHost, XHeroDeepLinkHost);
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroPath, "");
+                changed |= SetIfDifferent(ref deepLinkAuthUI.xheroAndroidPackageName, XHeroAndroidPackageName);
+                changed |= SetIfDifferent(ref deepLinkAuthUI.androidStorePackageName, XHeroAndroidPackageName);
+            }
+
+            if (!changed)
+                return;
+
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, CanvasLoginPrefabPath);
+            AssetDatabase.ImportAsset(CanvasLoginPrefabPath, ImportAssetOptions.ForceUpdate);
+            Debug.Log("[NewSceneSplit] Normalized CanvasLogin XHero deeplink config before Addressables registration.");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(prefabRoot);
+        }
+    }
+
+    private static bool SetIfDifferent(ref string value, string expected)
+    {
+        expected = expected ?? "";
+
+        if (string.Equals(value ?? "", expected, StringComparison.Ordinal))
+            return false;
+
+        value = expected;
+        return true;
     }
 
     private static List<string> CollectInitialUiDependencyPaths()

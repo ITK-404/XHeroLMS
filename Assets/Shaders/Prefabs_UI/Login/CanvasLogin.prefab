@@ -14965,15 +14965,21 @@ MonoBehaviour:
   platform: pc
   requestTimeout: 10
   xheroScheme: xhero
-  xheroAndroidHost: com.xhero_app
+  xheroAndroidHost: xhero.deeplink
   xheroAndroidPackageName: com.xhero_app
-  xheroIosHost: com.xhero.app
-  xheroPath: /
+  xheroIosHost: xhero.deeplink
+  xheroHost: xhero.deeplink
+  xheroPath: 
   codeParamName: authLMSCode
   timestampParamName: timestamp
   functionParamName: function
   functionValue: auth-for-lms
-  xheroHost: xhero.deeplink
+  androidStorePackageName: com.xhero_app
+  androidStoreUrlOverride: 
+  androidStoreWebUrl: https://play.google.com/store/apps/details?id=com.xhero_app
+  iosAppStoreId: 6504331040
+  iosStoreUrlOverride: itms-apps://itunes.apple.com/app/id6504331040
+  iosStoreWebUrl: https://apps.apple.com/vn/app/xhero/id6504331040?l=vi
   waitTokenTimeoutSeconds: 25
   antiSpamSeconds: 3
   onLoginSuccess:
