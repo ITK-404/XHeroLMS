@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.EnhancedTouch;
+using UnityEngine.UI;
 using EnhancedTouch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 using System.Collections.Generic;
 using UnityEngine.Serialization;
@@ -10,12 +12,17 @@ public class TouchRotationView : MonoBehaviour
     [FormerlySerializedAs("rectTransform")] [SerializeField] private RectTransform rotationView;
     [SerializeField] private bool isLooking;
     [SerializeField] private int touchID;
+    [SerializeField] private bool blockRotationWhenPointerOverUI = true;
     
     [SerializeField] private List<RectTransform> includeList = new();
 
     public static bool IsLooking;
     
     public static Vector2 deltaGlobal;
+    private readonly List<RaycastResult> uiRaycastResults = new(16);
+    private PointerEventData uiPointerEventData;
+    private EventSystem uiPointerEventSystem;
+
     private void Awake()
     {
         EnhancedTouchSupport.Enable();
@@ -44,11 +51,18 @@ public class TouchRotationView : MonoBehaviour
     {
         deltaGlobal = Vector2.zero;
         isLooking = false;
+        IsLooking = false;
         touchID = -1;
     }
 
     private void Update()
     {
+        if (InputBlocker.IsBlocked())
+        {
+            ResetState();
+            return;
+        }
+
         if (TutorialHandler.Instance != null)
         {
             if (!TutorialHandler.Instance.IsPlayedBefore())
@@ -58,42 +72,43 @@ public class TouchRotationView : MonoBehaviour
         }
         var activeTouches = EnhancedTouch.activeTouches;
 
-        
-        
-            if (activeTouches.Count > 0)
+        if (activeTouches.Count == 0)
+        {
+            ResetState();
+            return;
+        }
+
+        if (activeTouches.Count >= 3)
+        {
+            ResetState();
+            return;
+        }
+
+        foreach (var touch in activeTouches)
+        {
+            switch (touch.phase)
             {
-                if (activeTouches.Count >= 3)
-                {
+                case UnityEngine.InputSystem.TouchPhase.None:
+                    break;
+                case UnityEngine.InputSystem.TouchPhase.Began:
+                    Check(touch);
+                    break;
+                case UnityEngine.InputSystem.TouchPhase.Moved:
+                    Move(touch);
+                    break;
+                case UnityEngine.InputSystem.TouchPhase.Ended:
+                    End(touch);
+                    break;
+                case UnityEngine.InputSystem.TouchPhase.Canceled:
                     ResetState();
-                    return;
-                }
-                
-                foreach (var touch in activeTouches)
-                {
-                    switch (touch.phase)
-                    {
-                        case UnityEngine.InputSystem.TouchPhase.None:
-                            break;
-                        case UnityEngine.InputSystem.TouchPhase.Began:
-                            Check(touch);
-                            break;
-                        case UnityEngine.InputSystem.TouchPhase.Moved:
-                            Move(touch);
-                            break;
-                        case UnityEngine.InputSystem.TouchPhase.Ended:
-                            End(touch);
-                            break;
-                        case UnityEngine.InputSystem.TouchPhase.Canceled:
-                            Debug.Log("Cancel");
-                            break;
-                        case UnityEngine.InputSystem.TouchPhase.Stationary:
-                            Static(touch);
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                    break;
+                case UnityEngine.InputSystem.TouchPhase.Stationary:
+                    Static(touch);
+                    break;
+                default:
+                    break;
             }
+        }
 
         IsLooking = isLooking;
     }
@@ -102,6 +117,13 @@ public class TouchRotationView : MonoBehaviour
     private void Check(EnhancedTouch touch)
     {
         if (isLooking == true) return;
+
+        if (IsBlockedByOverlayUI(touch.screenPosition))
+        {
+            ResetState();
+            return;
+        }
+
         Vector2 localPoint;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             rotationView,
@@ -150,6 +172,12 @@ public class TouchRotationView : MonoBehaviour
     {
         if (isLooking && touch.touchId == touchID)
         {
+            if (IsBlockedByOverlayUI(touch.screenPosition))
+            {
+                ResetState();
+                return;
+            }
+
             deltaGlobal = touch.delta;
         }
     }
@@ -164,7 +192,72 @@ public class TouchRotationView : MonoBehaviour
     {
         if (isLooking && touch.touchId == touchID)
         {
+            if (IsBlockedByOverlayUI(touch.screenPosition))
+            {
+                ResetState();
+                return;
+            }
+
             deltaGlobal = Vector2.zero;
         }
+    }
+
+    private bool IsBlockedByOverlayUI(Vector2 screenPosition)
+    {
+        if (!blockRotationWhenPointerOverUI)
+            return false;
+
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        if (uiPointerEventData == null || uiPointerEventSystem != eventSystem)
+        {
+            uiPointerEventData = new PointerEventData(eventSystem);
+            uiPointerEventSystem = eventSystem;
+        }
+
+        uiPointerEventData.Reset();
+        uiPointerEventData.position = screenPosition;
+
+        uiRaycastResults.Clear();
+        eventSystem.RaycastAll(uiPointerEventData, uiRaycastResults);
+
+        for (int i = 0; i < uiRaycastResults.Count; i++)
+        {
+            RaycastResult result = uiRaycastResults[i];
+            if (result.gameObject == null || !result.gameObject.activeInHierarchy)
+                continue;
+
+            if (result.module as GraphicRaycaster == null)
+                continue;
+
+            if (IsAllowedInputControl(result.gameObject.transform))
+                continue;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsAllowedInputControl(Transform target)
+    {
+        if (target == null)
+            return false;
+
+        if (rotationView != null && (target == rotationView || target.IsChildOf(rotationView)))
+            return true;
+
+        foreach (RectTransform item in includeList)
+        {
+            if (item == null)
+                continue;
+
+            if (target == item || target.IsChildOf(item))
+                return true;
+        }
+
+        return false;
     }
 }

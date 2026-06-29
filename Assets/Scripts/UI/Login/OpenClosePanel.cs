@@ -91,6 +91,7 @@ public class OpenClosePanel : MonoBehaviour
     void LateUpdate()
     {
         UpdateVisualState();
+        SyncInputBlockerWithPanelState();
     }
 
     PlayerControllerUI GetPlayerController()
@@ -189,6 +190,27 @@ public class OpenClosePanel : MonoBehaviour
     {
         return (targetPanel != null && targetPanel.activeSelf)
                || (targetImage != null && targetImage.gameObject.activeSelf);
+    }
+
+    void SyncInputBlockerWithPanelState()
+    {
+        bool shouldBlock = IsPanelOpen();
+
+        if (shouldBlock)
+        {
+            if (cursorMgr) cursorMgr.SetUIOpen(true);
+
+            if (!inputBlockedByThisPanel)
+            {
+                InputBlocker.SetBlocked(true);
+                inputBlockedByThisPanel = true;
+            }
+        }
+        else if (inputBlockedByThisPanel)
+        {
+            InputBlocker.SetBlocked(false);
+            inputBlockedByThisPanel = false;
+        }
     }
 
     public void CloseUI()
