@@ -8,9 +8,7 @@ public static class InputBlocker
 {
     private static bool _blocked = false;
     private static int blockCount = 0;
-    private static int suppressInputFrame = -1;
-    private static float suppressInputUntilTime = -1f;
-    private static bool suppressUntilPointerReleased = false;
+    private static int suppressInputUntilFrame = -1;
     
     /// <summary>
     /// Bật hoặc tắt khóa bàn phím/chuột.
@@ -56,37 +54,12 @@ public static class InputBlocker
 
     public static void SuppressGameplayInput(float seconds = 0.08f)
     {
-        suppressInputFrame = Mathf.Max(suppressInputFrame, Time.frameCount);
-        suppressInputUntilTime = Mathf.Max(suppressInputUntilTime, Time.unscaledTime + Mathf.Max(0f, seconds));
-
-        if (IsPointerActive())
-            suppressUntilPointerReleased = true;
+        suppressInputUntilFrame = Mathf.Max(suppressInputUntilFrame, Time.frameCount + 1);
     }
 
     private static bool IsInputSuppressed()
     {
-        if (Time.frameCount <= suppressInputFrame)
-            return true;
-
-        if (suppressUntilPointerReleased)
-        {
-            if (IsPointerActive())
-                return true;
-
-            suppressUntilPointerReleased = false;
-        }
-
-        return Time.unscaledTime < suppressInputUntilTime && IsPointerActive();
-    }
-
-    private static bool IsPointerActive()
-    {
-        if (UnityEngine.Input.touchCount > 0)
-            return true;
-
-        return UnityEngine.Input.GetMouseButton(0)
-               || UnityEngine.Input.GetMouseButtonDown(0)
-               || UnityEngine.Input.GetMouseButtonUp(0);
+        return Time.frameCount <= suppressInputUntilFrame;
     }
 }
 public class InputManager : Singleton<InputManager>
