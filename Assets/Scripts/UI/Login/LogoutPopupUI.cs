@@ -45,6 +45,7 @@ public class LogoutPopupUI : MonoBehaviour
     public void Hide()
     {
         _canvasGroup.gameObject.SetActive(false);
+        InputBlocker.SuppressGameplayInput();
     }
     
     public void SetInteractable(bool interactable)

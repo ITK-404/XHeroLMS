@@ -172,6 +172,7 @@ private void ResetStateToDefault()
             cursorMgr.SetUIOpen(false);
 
         InputBlocker.SetBlocked(false);
+        InputBlocker.SuppressGameplayInput();
 
         ResetStateToDefault();
     }

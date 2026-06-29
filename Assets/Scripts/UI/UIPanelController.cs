@@ -69,6 +69,9 @@ public class UIPanelController : MonoBehaviour
         // Thông báo cho CursorGameManager để xử lý chuột & camera
         if (cursorMgr) cursorMgr.SetUIOpen(isOpen);
 
+        if (!isOpen)
+            InputBlocker.SuppressGameplayInput();
+
         if (invokeEvent)
             onPanelVisibilityChanged?.Invoke(isOpen);
     }

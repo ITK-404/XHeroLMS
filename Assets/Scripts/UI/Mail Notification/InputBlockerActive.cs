@@ -19,6 +19,7 @@ public class InputBlockerActive : MonoBehaviour
     private void OnViewClosed()
     {
        InputBlocker.SetBlocked(false);
+       InputBlocker.SuppressGameplayInput();
     }
 
     private void OnViewOpened()

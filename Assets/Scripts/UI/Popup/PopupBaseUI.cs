@@ -19,5 +19,6 @@ public class PopupBaseUI : MonoBehaviour
     public void Hide()
     {
         container.gameObject.SetActive(false);
+        InputBlocker.SuppressGameplayInput();
     }
 }

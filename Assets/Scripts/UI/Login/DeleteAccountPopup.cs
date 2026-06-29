@@ -42,5 +42,6 @@ public class DeleteAccountPopup : MonoBehaviour
     public void Hide()
     {
         canvasGroup.gameObject.SetActive(false);
+        InputBlocker.SuppressGameplayInput();
     }
 }

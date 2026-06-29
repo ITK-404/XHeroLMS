@@ -200,7 +200,7 @@ public class OpenClosePanel : MonoBehaviour
         {
             if (cursorMgr) cursorMgr.SetUIOpen(true);
 
-            if (!inputBlockedByThisPanel)
+            if (!inputBlockedByThisPanel || InputBlocker.GetBlockCount() <= 0)
             {
                 InputBlocker.SetBlocked(true);
                 inputBlockedByThisPanel = true;
@@ -210,6 +210,7 @@ public class OpenClosePanel : MonoBehaviour
         {
             InputBlocker.SetBlocked(false);
             inputBlockedByThisPanel = false;
+            InputBlocker.SuppressGameplayInput();
         }
     }
 
@@ -224,5 +225,7 @@ public class OpenClosePanel : MonoBehaviour
             InputBlocker.SetBlocked(false);
             inputBlockedByThisPanel = false;
         }
+
+        InputBlocker.SuppressGameplayInput();
     }
 }
