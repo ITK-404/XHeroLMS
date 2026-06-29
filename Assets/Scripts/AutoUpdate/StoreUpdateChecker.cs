@@ -509,8 +509,8 @@ public class StoreUpdateChecker : MonoBehaviour
 
     private IEnumerator CoFetchIosStoreVersion(Action<string> onDone)
     {
-        string url = $"https://itunes.apple.com/lookup?id={UnityWebRequest.EscapeURL(iosAppId)}&country={UnityWebRequest.EscapeURL(iosCountry)}";
-        using (var req = UnityWebRequest.Get(url))
+        string url =
+            $"https://itunes.apple.com/lookup?id=6756565267&country=vn&t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";        using (var req = UnityWebRequest.Get(url))
         {
             req.timeout = 10;
             yield return req.SendWebRequest();
