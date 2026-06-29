@@ -38,6 +38,31 @@ public class LoadRoomTrigger : MonoBehaviour
     [SerializeField] private LoadType loadType = LoadType.Scene;
     // Chặn đặt trùng nhiều lần trong cùng 1 scene (nếu có nhiều cổng)
 
+    private void Awake()
+    {
+        LoadingTransition.OnLoadSceneEvent += LoadSceneEvent;
+    }
+
+    private void OnDestroy()
+    {
+        LoadingTransition.OnLoadSceneEvent -= LoadSceneEvent;
+    }
+
+    private float loadSceneTimer;
+    private float protectLoadScene = 3f;
+    private void LoadSceneEvent()
+    {
+        isEnter = false;
+        loadSceneTimer = Time.time;
+    }
+
+    private bool CanOpenDoor()
+    {
+        bool canLoadScene = Time.time > loadSceneTimer + protectLoadScene;
+        Debug.Log($"Current Time {Time.time} | load scene Timer {loadSceneTimer} | can load scene {canLoadScene}");
+        return canLoadScene;
+    }
+
     private void Reset()
     {
         var col = GetComponent<Collider>();
@@ -58,6 +83,11 @@ public class LoadRoomTrigger : MonoBehaviour
             return;
         }
 #endif
+        if (!CanOpenDoor())
+        {
+            isEnter = false;
+            return;
+        }
         if (isEnter) return;
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;
