@@ -373,16 +373,21 @@ bool isReview = IsPreviewMode();
             
             bool joined = data.isJoined ?? false;
             float priceVal = displayPrice ?? 0f;
+            bool hasPrice = data.currentPrice.HasValue || data.originalPrice.HasValue;
+            bool isFree = data.isFree ?? (hasPrice && priceVal <= 0f);
+            bool guestAllowed = isFree && !(data.needLogin ?? false);
+
+            slot.SetCourseState(joined, guestAllowed);
 
             var viewUI = slot.bookHandleUI as BookViewUI;
             if (viewUI != null)
             {
-                viewUI.ApplyCourseState(joined, priceVal);
+                viewUI.ApplyCourseState(joined, priceVal, isFree);
             }
             else
             {
                 // Fallback theo logic cũ: mua nếu price > 0
-                bool showBuy = priceVal > 0;
+                bool showBuy = !joined && !isFree;
                 slot.SetBuyCourse(showBuy);
             }
 
@@ -443,13 +448,17 @@ bool isReview = IsPreviewMode();
             yield break;
         }
 
-        bool needLogin = data.needLogin ?? false;
-        bool isFree = data.isFree ?? false;
+        bool hasPrice = data.currentPrice.HasValue || data.originalPrice.HasValue;
+        bool isFree = data.isFree ?? (hasPrice && (data.currentPrice ?? data.originalPrice ?? 0f) <= 0f);
+        bool guestAllowed = isFree && !(data.needLogin ?? false);
 
         if (!loggedIn)
         {
-            if (needLogin) yield break;
-            if (!isFree) yield break;
+            if (!guestAllowed)
+            {
+                book.ShowLoginRequiredPopup();
+                yield break;
+            }
 
             yield return book.TryEnterCourse();
             yield break;

@@ -134,6 +134,22 @@ public class LmsStore : MonoBehaviour
         return c;
     }
 
+    public static bool IsCourseFree(LmsCourse course)
+    {
+        if (course == null)
+            return false;
+
+        return course.isFree || (course.coursePrice != null && course.coursePrice.isFree);
+    }
+
+    public static bool AllowsGuestCourse(LmsCourse course)
+    {
+        if (!IsCourseFree(course))
+            return false;
+
+        return course.settings == null || !course.settings.needLogin;
+    }
+
     public IReadOnlyCollection<string> GetMyCourseIds() => _myCourseIds;
     public IReadOnlyList<LmsCourseUser> GetMyCourses() => Data.userCourses;
 
@@ -589,6 +605,7 @@ public class LmsCourse
     public float price;
     public bool isFree;
     public bool isJoined;
+    public LmsCoursePrice coursePrice;
 
     public SeoInfo seo;
     public string image;
