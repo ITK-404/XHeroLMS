@@ -31,7 +31,7 @@ public class OpenClosePanel : MonoBehaviour
     static bool triedRestoreSession;
     bool hasVisualState;
     bool lastLoggedIn;
-    bool inputBlockedByThisPanel;
+    bool gameplayLockedByThisPanel;
     
 
     void OnEnable()
@@ -66,10 +66,10 @@ public class OpenClosePanel : MonoBehaviour
         
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
-        if (inputBlockedByThisPanel)
+        if (gameplayLockedByThisPanel)
         {
-            InputBlocker.SetBlocked(false);
-            inputBlockedByThisPanel = false;
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
         }
 
         if (cursorMgr != null)
@@ -91,7 +91,7 @@ public class OpenClosePanel : MonoBehaviour
     void LateUpdate()
     {
         UpdateVisualState();
-        SyncInputBlockerWithPanelState();
+        SyncGameplayLockWithPanelState();
     }
 
     PlayerControllerUI GetPlayerController()
@@ -179,10 +179,10 @@ public class OpenClosePanel : MonoBehaviour
         if (targetPanel) targetPanel.SetActive(true);
         if (cursorMgr) cursorMgr.SetUIOpen(true);
 
-        if (!inputBlockedByThisPanel)
+        if (!gameplayLockedByThisPanel)
         {
-            InputBlocker.SetBlocked(true);
-            inputBlockedByThisPanel = true;
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+            gameplayLockedByThisPanel = true;
         }
     }
 
@@ -192,7 +192,7 @@ public class OpenClosePanel : MonoBehaviour
                || (targetImage != null && targetImage.gameObject.activeSelf);
     }
 
-    void SyncInputBlockerWithPanelState()
+    void SyncGameplayLockWithPanelState()
     {
         bool shouldBlock = IsPanelOpen();
 
@@ -200,17 +200,16 @@ public class OpenClosePanel : MonoBehaviour
         {
             if (cursorMgr) cursorMgr.SetUIOpen(true);
 
-            if (!inputBlockedByThisPanel || InputBlocker.GetBlockCount() <= 0)
+            if (!gameplayLockedByThisPanel)
             {
-                InputBlocker.SetBlocked(true);
-                inputBlockedByThisPanel = true;
+                GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+                gameplayLockedByThisPanel = true;
             }
         }
-        else if (inputBlockedByThisPanel)
+        else if (gameplayLockedByThisPanel)
         {
-            InputBlocker.SetBlocked(false);
-            inputBlockedByThisPanel = false;
-            InputBlocker.SuppressGameplayInput();
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
         }
     }
 
@@ -220,12 +219,11 @@ public class OpenClosePanel : MonoBehaviour
         if (targetPanel) targetPanel.SetActive(false);
         if (cursorMgr) cursorMgr.SetUIOpen(false);
 
-        if (inputBlockedByThisPanel)
+        if (gameplayLockedByThisPanel)
         {
-            InputBlocker.SetBlocked(false);
-            inputBlockedByThisPanel = false;
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
         }
 
-        InputBlocker.SuppressGameplayInput();
     }
 }

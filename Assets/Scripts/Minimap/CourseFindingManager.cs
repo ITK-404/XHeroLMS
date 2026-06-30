@@ -8,6 +8,7 @@ public class CourseFindingManager : MonoBehaviour
     [SerializeField] private PlotArea defaultPlotArea;
     [SerializeField] private PointClickSystem pointClickSystem;
     private bool isAutoFindingWay;
+    private bool ownsAutoFindGameplayLock;
 
     private void Start()
     {
@@ -24,7 +25,7 @@ public class CourseFindingManager : MonoBehaviour
     {
         isAutoFindingWay = false;
         pointClickSystem?.StopMoving();
-        InputBlocker.SetBlocked(false);
+        SetAutoFindGameplayLock(false);
     }
 
     private void OnDestroy()
@@ -36,6 +37,8 @@ public class CourseFindingManager : MonoBehaviour
 
         if (pointClickSystem != null)
             pointClickSystem.OnPathStopped -= OnPointClickPathStopped;
+
+        SetAutoFindGameplayLock(false);
     }
 
     private void OnPointClickPathStopped(bool arrived)
@@ -44,7 +47,7 @@ public class CourseFindingManager : MonoBehaviour
             return;
 
         isAutoFindingWay = false;
-        InputBlocker.SetBlocked(false);
+        SetAutoFindGameplayLock(false);
         PlayerPanelUI.Instance?.HidePathfinding();
     }
 
@@ -92,7 +95,7 @@ public class CourseFindingManager : MonoBehaviour
         if (!pointClickSystem.MoveToPosition(findPlot.Location.GetItemWorldPosition()))
         {
             isAutoFindingWay = false;
-            InputBlocker.SetBlocked(false);
+            SetAutoFindGameplayLock(false);
             PlayerPanelUI.Instance?.HidePathfinding();
             return;
         }
@@ -100,7 +103,24 @@ public class CourseFindingManager : MonoBehaviour
         pointClickSystem.IsClickMoving = true;
         isAutoFindingWay = true;
 
-        InputBlocker.SetBlocked(true);
+        SetAutoFindGameplayLock(true);
         PlayerPanelUI.Instance?.ShowPathfindingPanel();
+    }
+
+    private void SetAutoFindGameplayLock(bool locked)
+    {
+        if (ownsAutoFindGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsAutoFindGameplayLock = locked;
     }
 }

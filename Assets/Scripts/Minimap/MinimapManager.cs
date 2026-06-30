@@ -22,6 +22,7 @@ public class MinimapManager : MonoBehaviour
 
     public Action<bool> OnMinimapActiveAction;
     private bool minimapBlockedByBoxLoad;
+    private bool ownsGameplayLock;
 
     private void Awake()
     {
@@ -53,6 +54,7 @@ public class MinimapManager : MonoBehaviour
         
         findCourseHandler.OnCloseFindCourseAction -= HideFindCourseUI;
         AddressableAdditiveSceneLoader.BoxLoadVisibilityChanged -= OnBoxLoadVisibilityChanged;
+        SetGameplayLock(false);
 
     }
 
@@ -157,8 +159,8 @@ public class MinimapManager : MonoBehaviour
     private void UpdateState(bool isEnable)
     {
         OnMinimapActiveAction?.Invoke(isEnable);
-            InputBlocker.SetBlocked(isEnable);
-            TeleMapController._mapActive = isEnable;
+        SetGameplayLock(isEnable);
+        TeleMapController._mapActive = isEnable;
         
         player.GetComponent<PointClickSystem>().StopMoving();
         
@@ -194,6 +196,23 @@ public class MinimapManager : MonoBehaviour
 
         if (blocked && TeleMapController._mapActive)
             ToggleOffMinimap();
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 }
 

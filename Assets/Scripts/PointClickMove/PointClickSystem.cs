@@ -186,13 +186,16 @@ public class PointClickSystem : MonoBehaviour
             return;
         }
 
-        if (InputBlocker.IsBlocked() || IsBlendingCamera())
+        if (IsBlendingCamera())
         {
             if(rotateWhenMove)
                 RotateToVelocity();
             return;
         }
-            
+
+        bool movementLocked = GameplayLock.IsLocked(GameplayLockTarget.Movement);
+        bool interactLocked = GameplayLock.IsLocked(GameplayLockTarget.Interact);
+        bool cameraLocked = GameplayLock.IsLocked(GameplayLockTarget.Camera);
 
         // Gravity update
         bool isGrounded = characterController != null && characterController.isGrounded;
@@ -216,15 +219,16 @@ public class PointClickSystem : MonoBehaviour
         float v = 0; // W/S
         //h = Input.GetAxisRaw("Horizontal") + rotateLeftRightCamera.vertical; // A/D
         //v = Input.GetAxisRaw("Vertical"); // W/S
-        h = baseInput != null ? baseInput.MoveVector.x : 0;
-        v = baseInput != null ? baseInput.MoveVector.y : 0;
+        h = !movementLocked && baseInput != null ? baseInput.MoveVector.x : 0;
+        v = !movementLocked && baseInput != null ? baseInput.MoveVector.y : 0;
         // Debug.Log($"movement vector {h} {v}");
         // Forward/backward movement
         Vector3 forwardMove = transform.forward * v;
         bool isMoving = Mathf.Abs(v) > 0.1f;
         bool isRotateInput = Mathf.Abs(h) > 0.1f;
+        bool isLooking = !cameraLocked && TouchRotationView.IsLooking;
 
-        if (isMoving || isRotateInput || TouchRotationView.IsLooking)
+        if (isMoving || isRotateInput || isLooking)
         {
             // Điều khiển bằng phím => tắt AI + tắt click-move
             if (ai != null)
@@ -253,8 +257,8 @@ public class PointClickSystem : MonoBehaviour
         }
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
-        var delta = TouchRotationView.deltaGlobal;
-        bool isRotationActive = delta.magnitude > 0.1f;
+        var delta = cameraLocked ? Vector2.zero : TouchRotationView.deltaGlobal;
+        bool isRotationActive = !cameraLocked && delta.magnitude > 0.1f;
         if (delta != Vector2.zero)
         {
             float multiplier = config != null ? config.rotationMultiplier : 1f;
@@ -279,7 +283,7 @@ public class PointClickSystem : MonoBehaviour
         }
         else if (Mathf.Abs(h) > 0.1f && ai != null && ai.isStopped && ai.canMove == false)
         {
-            if (isRotationActive || TouchRotationView.IsLooking)
+            if (isRotationActive || isLooking)
             {
                 return;
             }
@@ -289,7 +293,7 @@ public class PointClickSystem : MonoBehaviour
             transform.Rotate(0, rotationAmount, 0);
         }
 
-        if (!TeleMapController._mapActive)
+        if (!TeleMapController._mapActive && !movementLocked && !interactLocked)
         {
             MoveByClick();
         }

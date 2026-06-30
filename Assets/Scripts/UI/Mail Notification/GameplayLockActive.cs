@@ -1,9 +1,9 @@
-using System;
 using UnityEngine;
 
-public class InputBlockerActive : MonoBehaviour
+public class GameplayLockActive : MonoBehaviour
 {
     private UIView uiView;
+    private bool ownsGameplayLock;
 
     private void Awake()
     {
@@ -18,21 +18,39 @@ public class InputBlockerActive : MonoBehaviour
 
     private void OnViewClosed()
     {
-       InputBlocker.SetBlocked(false);
-       InputBlocker.SuppressGameplayInput();
+       SetGameplayLock(false);
     }
 
     private void OnViewOpened()
     {
-        InputBlocker.SetBlocked(true);
+        SetGameplayLock(true);
     }
 
     private void OnDisable()
     {
+        SetGameplayLock(false);
+
         if (uiView)
         {
             uiView.OnViewOpened -= OnViewOpened;
             uiView.OnViewClosed -= OnViewClosed;
         }
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 }

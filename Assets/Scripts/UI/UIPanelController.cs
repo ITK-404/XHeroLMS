@@ -21,6 +21,7 @@ public class UIPanelController : MonoBehaviour
     public UnityEvent<bool> onPanelVisibilityChanged; // true = mở, false = tắt
 
     bool isOpen;
+    bool ownsGameplayLock;
     CursorGameManager cursorMgr;
 
     void Awake()
@@ -38,6 +39,11 @@ public class UIPanelController : MonoBehaviour
 
         if (toggleButton != null)
             toggleButton.onClick.AddListener(Toggle);
+    }
+
+    void OnDisable()
+    {
+        SetGameplayLock(false);
     }
 
     void Update()
@@ -69,13 +75,29 @@ public class UIPanelController : MonoBehaviour
         // Thông báo cho CursorGameManager để xử lý chuột & camera
         if (cursorMgr) cursorMgr.SetUIOpen(isOpen);
 
-        if (!isOpen)
-            InputBlocker.SuppressGameplayInput();
+        SetGameplayLock(isOpen);
 
         if (invokeEvent)
             onPanelVisibilityChanged?.Invoke(isOpen);
     }
 
     // Cho script khác kiểm tra trạng thái
+    void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
+    }
+
     public bool IsOpen() => isOpen;
 }

@@ -29,6 +29,7 @@ public class PlayerChairManager : MonoBehaviour
     [SerializeField] InputCanvas inputCanvas;
     [SerializeField] private CourseExitWayHandler courseExitWayHandler;
     public ChairCheckPoint currentCheckPoint;
+    private bool ownsCourseGameplayLock;
 
     private TutorialBase TutorialBase;
 
@@ -48,6 +49,7 @@ public class PlayerChairManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        SetCourseGameplayLock(false);
         Instance = null;
     }
 
@@ -84,7 +86,7 @@ public class PlayerChairManager : MonoBehaviour
         //playerStandUI.HideWatchVideoUI();
         playerStandUI.HideLearningUI();
         videoPlayerControllerPro.ExitFullscreenUI();
-        InputBlocker.SetBlocked(false);
+        SetCourseGameplayLock(false);
         StartBlendCoroutine(() =>
         {
             Debug.Log("bật lại input");
@@ -174,7 +176,7 @@ public class PlayerChairManager : MonoBehaviour
             }
             // d
             StopAllCoroutines();
-            InputBlocker.SetBlocked(true);
+            SetCourseGameplayLock(true);
             
             courseExitWayHandler.Hide();
             
@@ -235,5 +237,22 @@ public class PlayerChairManager : MonoBehaviour
 
         _blendToken++;
         _blendCoroutine = StartCoroutine(WaitForBlendDone(action, _blendToken));
+    }
+
+    private void SetCourseGameplayLock(bool locked)
+    {
+        if (ownsCourseGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsCourseGameplayLock = locked;
     }
 }

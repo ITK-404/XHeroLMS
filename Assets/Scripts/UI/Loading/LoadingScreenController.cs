@@ -47,8 +47,9 @@ public float rollbackPopupDelaySeconds = 0.15f;
 
 private bool _loadSucceeded;
 private bool _loadFailedOrCancelled;
-private GameObject _inputBlockerRoot;
-private Image _inputBlockerImage;
+private GameObject _raycastBlockerRoot;
+private Image _raycastBlockerImage;
+private bool _ownsLoadingGameplayLock;
 #if ADDRESSABLES
 private Coroutine _prepareAddressablesCoroutine;
 #endif
@@ -116,8 +117,8 @@ private void Awake()
     ResolvePanelLoadingRoot();
     ResolveExistingLoadNextVideoObjects();
 
-    EnsureInputBlocker();
-    SetInputBlockerVisible(false);
+    EnsureRaycastBlocker();
+    SetRaycastBlockerVisible(false);
 
     HideLoadNextVideoSurface();
     SetDefaultLoadingVisible(false);
@@ -724,7 +725,7 @@ private void StopDefaultLoadingVisuals()
     SetDefaultLoadingVisible(false);
 
     // Load xong thì trả lại input bình thường.
-    SetInputBlockerVisible(false);
+    SetRaycastBlockerVisible(false);
 }
 
 private void SetDefaultLoadingVisible(bool visible)
@@ -754,7 +755,7 @@ private void SetDefaultLoadingVisible(bool visible)
         loadingParticle.gameObject.SetActive(visible);
 
     // Chặn người dùng bấm xuyên xuống scene cũ trong lúc đang load.
-    SetInputBlockerVisible(_isLoading);
+    SetRaycastBlockerVisible(_isLoading);
 }
 
     private void HideDefaultLoadingPanel()
@@ -807,17 +808,17 @@ private void SetDefaultLoadingVisible(bool visible)
         _panelLoadingCanvasGroup.interactable = visible;
         _panelLoadingCanvasGroup.blocksRaycasts = visible;
     }
-private void EnsureInputBlocker()
+private void EnsureRaycastBlocker()
 {
-    if (_inputBlockerRoot != null && _inputBlockerImage != null)
+    if (_raycastBlockerRoot != null && _raycastBlockerImage != null)
         return;
 
     Transform parent = GetLoadNextVideoParent();
 
-    _inputBlockerRoot = new GameObject("Loading_Input_Blocker", typeof(RectTransform), typeof(Image));
-    _inputBlockerRoot.transform.SetParent(parent, false);
+    _raycastBlockerRoot = new GameObject("Loading_Raycast_Blocker", typeof(RectTransform), typeof(Image));
+    _raycastBlockerRoot.transform.SetParent(parent, false);
 
-    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    RectTransform rect = _raycastBlockerRoot.GetComponent<RectTransform>();
     rect.anchorMin = Vector2.zero;
     rect.anchorMax = Vector2.one;
     rect.offsetMin = Vector2.zero;
@@ -825,28 +826,28 @@ private void EnsureInputBlocker()
     rect.pivot = new Vector2(0.5f, 0.5f);
     rect.localScale = Vector3.one;
 
-    _inputBlockerImage = _inputBlockerRoot.GetComponent<Image>();
+    _raycastBlockerImage = _raycastBlockerRoot.GetComponent<Image>();
 
     // Trong suốt nhưng vẫn bắt raycast để không cho click xuyên xuống video/UI bên dưới.
-    _inputBlockerImage.color = new Color(0f, 0f, 0f, 0f);
-    _inputBlockerImage.raycastTarget = true;
+    _raycastBlockerImage.color = new Color(0f, 0f, 0f, 0f);
+    _raycastBlockerImage.raycastTarget = true;
 
-    _inputBlockerRoot.SetActive(false);
+    _raycastBlockerRoot.SetActive(false);
 }
 
-private void PlaceInputBlockerOnTop()
+private void PlaceRaycastBlockerOnTop()
 {
-    EnsureInputBlocker();
+    EnsureRaycastBlocker();
 
-    if (_inputBlockerRoot == null)
+    if (_raycastBlockerRoot == null)
         return;
 
     Transform parent = GetLoadNextVideoParent();
 
-    if (_inputBlockerRoot.transform.parent != parent)
-        _inputBlockerRoot.transform.SetParent(parent, false);
+    if (_raycastBlockerRoot.transform.parent != parent)
+        _raycastBlockerRoot.transform.SetParent(parent, false);
 
-    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    RectTransform rect = _raycastBlockerRoot.GetComponent<RectTransform>();
     rect.anchorMin = Vector2.zero;
     rect.anchorMax = Vector2.one;
     rect.offsetMin = Vector2.zero;
@@ -856,25 +857,43 @@ private void PlaceInputBlockerOnTop()
 
     // Cho blocker nằm trên cùng để bắt toàn bộ touch/click.
     // Nó trong suốt nên không che hình ảnh/video.
-    _inputBlockerRoot.transform.SetAsLastSibling();
+    _raycastBlockerRoot.transform.SetAsLastSibling();
 }
 
-private void SetInputBlockerVisible(bool visible)
+private void SetRaycastBlockerVisible(bool visible)
 {
     if (visible)
     {
-        PlaceInputBlockerOnTop();
+        PlaceRaycastBlockerOnTop();
     }
     else
     {
-        if (_inputBlockerRoot == null)
+        if (_raycastBlockerRoot == null)
+        {
+            SetLoadingGameplayLock(false);
             return;
+        }
     }
 
-    _inputBlockerRoot.SetActive(visible);
+    _raycastBlockerRoot.SetActive(visible);
 
-    if (_inputBlockerImage != null)
-        _inputBlockerImage.raycastTarget = visible;
+    if (_raycastBlockerImage != null)
+        _raycastBlockerImage.raycastTarget = visible;
+
+    SetLoadingGameplayLock(visible);
+}
+
+private void SetLoadingGameplayLock(bool locked)
+{
+    if (_ownsLoadingGameplayLock == locked)
+        return;
+
+    if (locked)
+        GameplayLock.Lock(GameplayLockReason.Loading, GameplayLockTarget.All);
+    else
+        GameplayLock.Unlock(GameplayLockReason.Loading);
+
+    _ownsLoadingGameplayLock = locked;
 }
     private IEnumerator CycleRandomImages()
     {
@@ -1382,7 +1401,7 @@ private void ShowLoadNextVideoSurface()
 
     // Chặn touch khi đang phát video chuyển cảnh.
     // Đặt sau video để blocker nằm trên cùng, nhưng nó trong suốt nên không che hình.
-    SetInputBlockerVisible(true);
+    SetRaycastBlockerVisible(true);
 }
 
 private void HideLoadNextVideoSurface()
@@ -1395,7 +1414,7 @@ private void HideLoadNextVideoSurface()
 
     // Nếu vẫn đang loading thì tiếp tục chặn click,
     // tránh có 1 frame bị click xuyên xuống scene/video bên dưới.
-    SetInputBlockerVisible(_isLoading);
+    SetRaycastBlockerVisible(_isLoading);
 }
 
     private void Update()
@@ -1433,11 +1452,13 @@ private void OnDestroy()
         _runtimeLoadNextRenderTexture = null;
     }
 
-    if (_inputBlockerRoot != null)
+    SetLoadingGameplayLock(false);
+
+    if (_raycastBlockerRoot != null)
     {
-        Destroy(_inputBlockerRoot);
-        _inputBlockerRoot = null;
-        _inputBlockerImage = null;
+        Destroy(_raycastBlockerRoot);
+        _raycastBlockerRoot = null;
+        _raycastBlockerImage = null;
     }
 }
 private bool IsNetworkDisconnectedNow()

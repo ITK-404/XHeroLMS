@@ -57,7 +57,7 @@ public class TouchRotationView : MonoBehaviour
 
     private void Update()
     {
-        if (InputBlocker.IsBlocked())
+        if (GameplayLock.IsLocked(GameplayLockTarget.Camera))
         {
             ResetState();
             return;

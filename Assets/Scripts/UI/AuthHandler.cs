@@ -181,7 +181,7 @@ public class AuthHandler
         else
             EventHub.RaisePlayerDeleteAccount();
 
-        InputBlocker.SetBlocked(false);
+        GameplayLock.Unlock(GameplayLockReason.UI);
         OnAuthComplete?.Invoke();
         LoadingTransition.Load_Scene(_defaultLoadScene, false);
     }

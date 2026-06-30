@@ -12,6 +12,7 @@ public class DeleteAccountPopup : MonoBehaviour
     [SerializeField] private Button continueBtn;
 
     public static Action OnDeleteAccountAction;
+    private bool ownsGameplayLock;
     
     private void Awake()
     {
@@ -23,6 +24,7 @@ public class DeleteAccountPopup : MonoBehaviour
     {
         continueBtn.onClick.RemoveListener(Hide);
         deleteAccountBtn.onClick.RemoveListener(OnDeleteAccount);
+        SetGameplayLock(false);
         
     }
 
@@ -37,11 +39,29 @@ public class DeleteAccountPopup : MonoBehaviour
         canvasGroup.gameObject.SetActive(true);
         canvasGroup.DOFade(0, 0);
         canvasGroup.DOFade(1, 0.2f);
+        SetGameplayLock(true);
     }
 
     public void Hide()
     {
         canvasGroup.gameObject.SetActive(false);
-        InputBlocker.SuppressGameplayInput();
+        SetGameplayLock(false);
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 }

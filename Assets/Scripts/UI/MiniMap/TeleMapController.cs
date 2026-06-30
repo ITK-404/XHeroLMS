@@ -24,6 +24,7 @@ public class TeleMapController : MonoBehaviour
     float _playerCamDepth;
 
     CursorGameManager cursorMgr;
+    private bool ownsGameplayLock;
 
     void Awake()
     {
@@ -32,6 +33,12 @@ public class TeleMapController : MonoBehaviour
         if (mapCamera) mapCamera.gameObject.SetActive(false);
         
         cursorMgr = FindAnyObjectByType<CursorGameManager>();
+    }
+
+    private void OnDisable()
+    {
+        SetGameplayLock(false);
+        _mapActive = false;
     }
 
     private bool IsBlendingCamera()
@@ -53,8 +60,8 @@ public class TeleMapController : MonoBehaviour
         {
             return;
         }
-        if (InputBlocker.IsBlocked())
-        return;
+        if (!_mapActive && GameplayLock.IsLocked(GameplayLockTarget.All))
+            return;
         // Nhấn phím M để bật/tắt map
         if (Input.GetKeyDown(KeyCode.M)) ToggleMap();
 
@@ -95,13 +102,32 @@ public class TeleMapController : MonoBehaviour
             if (playerCamera) playerCamera.depth = _playerCamDepth - 10f;
             mapCamera.depth = _playerCamDepth + 10f;
             if (cursorMgr) cursorMgr.SetUIOpen(true);
+            SetGameplayLock(true);
         }
         else
         {
             if (playerCamera) playerCamera.depth = _playerCamDepth;
             mapCamera.depth = _playerCamDepth - 10f;
             if (cursorMgr) cursorMgr.SetUIOpen(false);
+            SetGameplayLock(false);
         }
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 
 void TryTeleportAtMouse()
