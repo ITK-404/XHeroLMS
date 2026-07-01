@@ -376,8 +376,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             StopFirebaseListenSafe("wait_token_timeout");
 
             LoginController.ShowWarning(
-                "Chưa nhận được token từ XHero.\n" +
-                "Hãy mở XHero và xác nhận đăng nhập."
+                "Đăng nhập thất bại\n" +
+                "Hãy mở XHero và xác nhận đăng nhập lại."
             );
         }
     }
