@@ -5464,10 +5464,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Loading 35% ...
+  m_text: "\u1EC3 \xEA "
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: d85b7534cea2a244091c9d6fe52acff3, type: 2}
-  m_sharedMaterial: {fileID: 29329748463399144, guid: d85b7534cea2a244091c9d6fe52acff3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: fc8d33f3f5fd6489fad8667782a880ee, type: 2}
+  m_sharedMaterial: {fileID: 4162326499460517534, guid: fc8d33f3f5fd6489fad8667782a880ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -6472,29 +6472,44 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bde55bcd5e20eb64e90ff4f96c156028, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LoadingScreenController
+  panelLoadingRoot: {fileID: 0}
   imageScene1: {fileID: 6986288706498110925}
   progressRing: {fileID: 335126811950672249}
   textLoading: {fileID: 7669130224638703362}
   loadingParticle: {fileID: 8905542755190438646}
   sliderUI: {fileID: 4305470548555748816}
   dotSpeed: 0.5
-  minDisplaySeconds: 3
-  headroom: 0.06
-  milestonePercents:
-  - 0.3
-  - 0.5
-  - 0.6
-  - 0.7
-  - 0.8
-  - 0.9
-  milestoneDurations:
-  - 0.35
-  - 0.45
-  - 0.3
-  - 0.3
-  - 0.35
-  - 0.5
-  fakeFillDuration: 2
+  baseText: "\u0110ang t\u1EA3i"
+  maxLoadingSeconds: 2
+  enableRollbackProtection: 1
+  loadingSceneName: LoadingScene
+  networkLostHeader: "M\u1EA1ng kh\xF4ng \u1ED5n \u0111\u1ECBnh"
+  networkLostMessage: "\u0110\u01B0\u1EDDng truy\u1EC1n y\u1EBFu.\n\u0110\xE3 h\u1EE7y
+    t\u1EA3i v\xE0 quay l\u1EA1i m\xE0n tr\u01B0\u1EDBc."
+  showRollbackPopup: 1
+  rollbackPopupDelaySeconds: 0.15
+  minVisibleSeconds: 0.25
+  unloadUnusedAssetsAfterLoad: 0
+  waitForNewSceneLateContentBeforeReveal: 0
+  newSceneLateContentWaitTimeoutSeconds: 300
+  newSceneLateContentFindTimeoutSeconds: 5
+  waitForCachedNewSceneLateContentBeforeReveal: 1
+  cachedNewSceneLateContentWaitTimeoutSeconds: 12
+  uncachedNewSceneLateContentRevealGraceSeconds: 4
+  newSceneLateContentCacheProbeWaitSeconds: 1.5
+  imageSwitchInterval: 1
+  enableLoadNextVideo: 1
+  loadNextSourceSceneName: New Scene
+  loadNextVideoFileName: Load_next.mp4
+  loadNextVideoDuration: 6
+  loadNextVideoPrepareTimeout: 3
+  muteLoadNextVideo: 1
+  loadNextVideoRoot: {fileID: 0}
+  loadNextVideoRawImage: {fileID: 0}
+  loadNextVideoPlayer: {fileID: 0}
+  loadNextVideoRenderTexture: {fileID: 8400000, guid: 88d06499ce18ef14b9a3872a7fe25685, type: 2}
+  minValidLoadNextVideoBytes: 51200
+  forceRefreshLoadNextVideoCache: 0
 --- !u!1 &8901634900144014777
 GameObject:
   m_ObjectHideFlags: 0
