@@ -12,6 +12,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
     public static FirebaseLoginQrPerCode Instance { get; private set; }
 
     private DatabaseReference _currentRef;
+    private FirebaseDatabase _database;
     private bool _notifiedSuccess;
     private FirebaseApp _firebaseApp;
 
@@ -119,6 +120,8 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 }
 
                 var db = FirebaseDatabase.GetInstance(app);
+                _database = db;
+                db.GoOnline();
                 Debug.Log("[FirebaseLoginQrPerCode] Using DB URL = " + db.App.Options.DatabaseUrl);
 
                 // OPTIONAL: dump parent schema để biết backend có ghi đúng node không
@@ -182,6 +185,22 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         }
     }
 
+    public void RequestStep2Token(string code, string timestamp, string reason = "manual")
+    {
+        if (_notifiedSuccess || _step2Co != null)
+            return;
+
+        string codeToUse = NormalizeCode(code);
+        if (string.IsNullOrEmpty(codeToUse) || string.IsNullOrEmpty(timestamp))
+        {
+            Debug.LogWarning("[FirebaseLoginQrPerCode] RequestStep2Token skipped. reason=" + reason + " | code=" + codeToUse + " | timestamp=" + timestamp);
+            return;
+        }
+
+        Debug.Log("[FirebaseLoginQrPerCode] RequestStep2Token. reason=" + reason + " | code=" + codeToUse + " | timestamp=" + timestamp);
+        _step2Co = StartCoroutine(CoCallStep2(codeToUse, timestamp));
+    }
+
     private FirebaseApp EnsureFirebaseApp()
     {
         if (_firebaseApp != null)
@@ -238,14 +257,16 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_currentRef != null)
-            _currentRef.ValueChanged -= OnQrNodeChanged;
+        StopListenInternal();
 
         if (_step2Co != null)
         {
             StopCoroutine(_step2Co);
             _step2Co = null;
         }
+
+        if (Instance == this)
+            Instance = null;
     }
 
     private void StopListenInternal()
@@ -255,6 +276,18 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
             Debug.Log("[FirebaseLoginQrPerCode] StopListenInternal()");
             _currentRef.ValueChanged -= OnQrNodeChanged;
             _currentRef = null;
+        }
+
+        if (_database != null)
+        {
+            try
+            {
+                _database.GoOffline();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[FirebaseLoginQrPerCode] FirebaseDatabase.GoOffline failed: " + e.Message);
+            }
         }
     }
 
@@ -396,12 +429,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
 
         if (!string.IsNullOrEmpty(codeToUse))
         {
-            if (_step2Co != null)
-            {
-                StopCoroutine(_step2Co);
-                _step2Co = null;
-            }
-            _step2Co = StartCoroutine(CoCallStep2(codeToUse, timestamp));
+            RequestStep2Token(codeToUse, timestamp, "firebase_isScanned");
         }
         else
         {
@@ -415,12 +443,14 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
         if (string.IsNullOrEmpty(baseUrl))
         {
             Debug.LogError("[FirebaseLoginQrPerCode] LmsStore.Instance.baseUrl rỗng, không gọi được API step=2.");
+            _step2Co = null;
             yield break;
         }
 
         if (string.IsNullOrEmpty(timestamp))
         {
             Debug.LogError("[FirebaseLoginQrPerCode] CoCallStep2 được gọi nhưng timestamp rỗng -> abort.");
+            _step2Co = null;
             yield break;
         }
 
@@ -441,28 +471,38 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
 #endif
 
             long statusCode = req.responseCode;
-            string body = req.downloadHandler != null ? req.downloadHandler.text : "<null>";
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
 
             if (hasError)
             {
                 Debug.LogError(
                     $"[FirebaseLoginQrPerCode] step=2 request error: {req.error}, statusCode={statusCode}, body={body}"
                 );
+                _step2Co = null;
                 yield break;
             }
 
             Debug.Log($"[FirebaseLoginQrPerCode] step=2 response (status={statusCode}): {body}");
 
             string finalToken = null;
+            string trimmedBody = string.IsNullOrEmpty(body) ? "" : body.Trim();
+            bool bodyLooksJson = trimmedBody.StartsWith("{") || trimmedBody.StartsWith("[");
 
             try
             {
                 Step2Response resp = JsonUtility.FromJson<Step2Response>(body);
+
                 if (resp != null)
                 {
-                    if (resp.data != null && !string.IsNullOrEmpty(resp.data.accessToken))
-                        finalToken = resp.data.accessToken;
-                    else if (!string.IsNullOrEmpty(resp.token))
+                    if (resp.data != null)
+                    {
+                        if (!string.IsNullOrEmpty(resp.data.accessToken))
+                            finalToken = resp.data.accessToken;
+                        else if (!string.IsNullOrEmpty(resp.data.token))
+                            finalToken = resp.data.token;
+                    }
+
+                    if (string.IsNullOrEmpty(finalToken) && !string.IsNullOrEmpty(resp.token))
                         finalToken = resp.token;
                 }
             }
@@ -471,16 +511,18 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
                 Debug.LogWarning("[FirebaseLoginQrPerCode] Parse step=2 JSON fail, dùng raw string: " + e);
             }
 
-            if (string.IsNullOrEmpty(finalToken))
-                finalToken = body.Trim().Trim('"');
+            if (string.IsNullOrEmpty(finalToken) && !bodyLooksJson)
+                finalToken = trimmedBody.Trim('"');
 
             if (string.IsNullOrEmpty(finalToken))
             {
                 Debug.LogError("[FirebaseLoginQrPerCode] step=2 không lấy được token hợp lệ.");
+                _step2Co = null;
                 yield break;
             }
 
             Debug.Log("[FirebaseLoginQrPerCode] step=2 OK, nhận token = " + finalToken);
+            _step2Co = null;
             NotifySuccess(finalToken);
         }
     }
@@ -567,6 +609,7 @@ public class FirebaseLoginQrPerCode : MonoBehaviour
     [Serializable]
     private class Step2Data
     {
+        public string token;
         public string accessToken;
         public string userId;
     }
