@@ -33,10 +33,6 @@ public class LoginController : MonoBehaviour
     public bool autoFocusUsername = true;
     public bool showSuccessPopup = false;
 
-    [Header("FCM")]
-    [SerializeField] private float waitForFcmTokenTimeout = 8f;
-    [SerializeField] private bool allowLoginIfTokenStillEmptyAfterTimeout = true;
-
     bool autoRestoreOnStart = true;
     string verifyPath = "/users/me";
     bool disableLoginWhileVerifying = true;
@@ -454,32 +450,16 @@ public class LoginController : MonoBehaviour
         _isLoggingIn = true;
         if (buttonLogin) buttonLogin.interactable = false;
 
-        string readyToken = null;
-        yield return StartCoroutine(FCMManager.WaitForReadyToken(waitForFcmTokenTimeout, token =>
-        {
-            readyToken = token;
-        }));
-
+        string readyToken = FCMManager.GetBestKnownFcmToken();
         if (string.IsNullOrWhiteSpace(readyToken))
         {
-            Debug.LogWarning("[LoginController] FCM token still empty after waiting.");
-
-            if (!allowLoginIfTokenStillEmptyAfterTimeout)
-            {
-                ShowPopup(
-                    failPopupPrefab,
-                    "Đăng nhập thất bại",
-                    "Không lấy được device token. Vui lòng thử lại sau vài giây.",
-                    icon: LoginPopupUI.PopupIconType.Warning
-                );
-
-                _isLoggingIn = false;
-                if (buttonLogin) buttonLogin.interactable = true;
-                yield break;
-            }
+            readyToken = string.Empty;
+            Debug.Log("[LoginController] Login without FCM token.");
         }
-
-        Debug.Log("[LoginController] Login using FCM token: " + readyToken);
+        else
+        {
+            Debug.Log("[LoginController] Login using cached FCM token: " + MaskTokenForLog(readyToken));
+        }
 
         string url = $"{LmsStore.Instance.baseUrl}/users/authenticate";
 
@@ -487,7 +467,7 @@ public class LoginController : MonoBehaviour
         {
             username = username,
             password = password,
-            deviceToken = readyToken ?? string.Empty,
+            deviceToken = readyToken,
             fromPlatform = "lms3d"
         });
 
