@@ -95,9 +95,7 @@ public class EduCourseElement : MonoBehaviour
         }
 
         if (courseTag != null)
-        {
-            // setup tag nếu cần
-        }
+            courseTag.ShowLearningMode(data.learningMode);
 
         if (_loadImageRoutine != null)
         {
