@@ -33,6 +33,9 @@ public class LoadingScreenController : MonoBehaviour
     [Tooltip("Chỉ dùng để log cảnh báo nếu scene load quá lâu. Không dùng để đẩy progress ảo.")]
     public float maxLoadingSeconds = 2f;
 
+    public event Action OnStartLoadingEvent;
+    public event Action OnEndLoadingEvent;
+    
 // Network / Load Fail Protection")]
 public bool enableRollbackProtection = true;
 
@@ -141,6 +144,8 @@ private void Awake()
 
 private IEnumerator LoadByNameRoutine(string sceneName)
 {
+    OnStartLoadingEvent?.Invoke();
+    
     _isLoading = true;
     _loadSucceeded = false;
     _loadFailedOrCancelled = false;
@@ -233,6 +238,8 @@ private IEnumerator LoadByNameRoutine(string sceneName)
     Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
 
     yield return CloseLoadingScreenRoutine();
+    
+    OnEndLoadingEvent?.Invoke();
 }
 
     private IEnumerator SafeUnloadPreviousScene()

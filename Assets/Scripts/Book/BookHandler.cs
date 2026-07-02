@@ -98,6 +98,11 @@ public class BookHandler : MonoBehaviour
 
     private void OnPlayerClickBook()
     {
+        if (GameplayLock.IsLocked(GameplayLockTarget.BookInteract))
+        {
+            return;
+        }
+        
         if (CanSelectBook == false) return;
 
         if (!IsLoggedIn())
@@ -115,6 +120,11 @@ public class BookHandler : MonoBehaviour
 
     public void EnterCourse()
     {
+        if (GameplayLock.IsLocked(GameplayLockTarget.BookInteract))
+        {
+            return;
+        }
+        
         if (!CanEnterCourseFromCurrentAuth())
             return;
 

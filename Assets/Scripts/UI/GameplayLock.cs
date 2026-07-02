@@ -9,8 +9,9 @@ public enum GameplayLockTarget
     Movement  = 1 << 0,
     Interact  = 1 << 1,
     Camera    = 1 << 2,
+    BookInteract    = 1 << 3,
 
-    All = Movement | Interact | Camera
+    All = Movement | Interact | Camera | BookInteract
 }
 
 public enum GameplayLockReason
