@@ -20,6 +20,11 @@ public class PTS_CourseListBuilder : MonoBehaviour
     private bool freezeInitialFallbackSnapshot = true;
     private bool applyDefaultPrioritySortOnFallback = true;
 
+    [Header("Image Priority")]
+    [SerializeField] private int priorityImageCount = 6;
+    [SerializeField] private int deferredImageBatchSize = 4;
+    [SerializeField] private float deferredImageDelay = 0.05f;
+
     [Header("Debug")]
     [SerializeField] private bool enableProfilerLog = false;
     [SerializeField] private bool debugFirstVisibleItemsReadyTime = true;
@@ -40,10 +45,14 @@ public class PTS_CourseListBuilder : MonoBehaviour
 
     private CourseSearch _search;
     private Coroutine _buildCoroutine;
+    private Coroutine _deferredImageCoroutine;
     private Coroutine _firstVisibleDebugCoroutine;
+    private Coroutine _waitForStoreCoroutine;
     private int _buildVersion;
+    private int _cachedStoreVersion = -1;
     private bool _hasFallbackCache;
     private bool _isShowingFallback;
+    private bool _subscribedStore;
 
     private void Awake()
     {
@@ -63,14 +72,48 @@ public class PTS_CourseListBuilder : MonoBehaviour
     private void OnEnable()
     {
         CacheLayoutDrivers();
+        SubscribeStore();
         BindSearch();
+        CourseBootstrapLoader.EnsureLoaded();
         RefreshNow();
     }
 
     private void OnDisable()
     {
         StopBuildCoroutine();
+        StopWaitForStore();
         UnbindSearch();
+        UnsubscribeStore();
+    }
+
+    private void SubscribeStore()
+    {
+        if (_subscribedStore)
+            return;
+
+        CourseStaticStore.OnChanged += HandleCourseStoreChanged;
+        _subscribedStore = true;
+    }
+
+    private void UnsubscribeStore()
+    {
+        if (!_subscribedStore)
+            return;
+
+        CourseStaticStore.OnChanged -= HandleCourseStoreChanged;
+        _subscribedStore = false;
+    }
+
+    private void HandleCourseStoreChanged()
+    {
+        if (!isActiveAndEnabled)
+            return;
+
+        if (_search != null && _search.IsSearchActive)
+            return;
+
+        _hasFallbackCache = false;
+        RestoreFallbackNow();
     }
 
     // =========================================================
@@ -154,25 +197,92 @@ public class PTS_CourseListBuilder : MonoBehaviour
         if (!buildFromStoreOnEnable)
             return;
 
+        CourseBootstrapLoader.EnsureLoaded();
+
+        if (!CourseStaticStore.HasData)
+        {
+            StartWaitForStore();
+
+            _isShowingFallback = true;
+            if (_fallbackCache.Count == 0)
+                BuildNow(_fallbackCache);
+
+            return;
+        }
+
+        StopWaitForStore();
         CacheFallbackIfNeeded(forceRefresh: false);
 
         _isShowingFallback = true;
         BuildNow(_fallbackCache);
     }
 
+    private void StartWaitForStore()
+    {
+        if (_waitForStoreCoroutine != null || !gameObject.activeInHierarchy)
+            return;
+
+        _waitForStoreCoroutine = StartCoroutine(CoWaitForStoreThenRefresh());
+    }
+
+    private void StopWaitForStore()
+    {
+        if (_waitForStoreCoroutine == null)
+            return;
+
+        StopCoroutine(_waitForStoreCoroutine);
+        _waitForStoreCoroutine = null;
+    }
+
+    private IEnumerator CoWaitForStoreThenRefresh()
+    {
+        while (!CourseStaticStore.HasData)
+        {
+            CourseBootstrapLoader.EnsureLoaded();
+            yield return new WaitForSecondsRealtime(0.5f);
+        }
+
+        _waitForStoreCoroutine = null;
+
+        if (!isActiveAndEnabled)
+            yield break;
+
+        _hasFallbackCache = false;
+        RestoreFallbackNow();
+    }
+
     private void CacheFallbackIfNeeded(bool forceRefresh)
     {
-        if (!forceRefresh && _hasFallbackCache && freezeInitialFallbackSnapshot)
+        if (!forceRefresh &&
+            _hasFallbackCache &&
+            freezeInitialFallbackSnapshot &&
+            _cachedStoreVersion == CourseStaticStore.Version)
             return;
+
+        var all = CourseStaticStore.GetAll();
+        if (all == null || all.Count == 0)
+        {
+            if (forceRefresh)
+            {
+                _fallbackCache.Clear();
+                _hasFallbackCache = false;
+                _cachedStoreVersion = -1;
+            }
+
+            return;
+        }
 
         _fallbackCache.Clear();
 
-        var all = CourseStaticStore.GetAll();
-        if (all != null)
+        var filtered = RemoveDuplicateCourses(all, "FallbackCache");
+        for (int i = 0; i < filtered.Count; i++)
+            _fallbackCache.Add(filtered[i]);
+
+        if (_fallbackCache.Count == 0)
         {
-            var filtered = RemoveDuplicateCourses(all, "FallbackCache");
-            for (int i = 0; i < filtered.Count; i++)
-                _fallbackCache.Add(filtered[i]);
+            _hasFallbackCache = false;
+            _cachedStoreVersion = -1;
+            return;
         }
 
         if (applyDefaultPrioritySortOnFallback)
@@ -191,6 +301,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
         }
 
         _hasFallbackCache = true;
+        _cachedStoreVersion = CourseStaticStore.Version;
     }
 
     // =========================================================
@@ -246,7 +357,9 @@ public class PTS_CourseListBuilder : MonoBehaviour
         int instantCount = Mathf.Clamp(immediateRenderCount, 0, count);
         EnsureCapacity(instantCount);
 
-        BindRange(list, 0, instantCount, currentVersion);
+        int immediateImageCount = Mathf.Clamp(priorityImageCount, 0, count);
+
+        BindRange(list, 0, instantCount, currentVersion, immediateImageCount);
 
         LogFirstVisibleReadyIfNeeded(
             startTime,
@@ -258,6 +371,8 @@ public class PTS_CourseListBuilder : MonoBehaviour
 
         if (instantCount >= count)
         {
+            StartDeferredImageLoadIfNeeded(immediateImageCount, count, currentVersion);
+
             if (disableLayoutWhileBuilding)
             {
                 SetLayoutDriversEnabled(true);
@@ -273,7 +388,9 @@ public class PTS_CourseListBuilder : MonoBehaviour
             return;
         }
 
-        _buildCoroutine = StartCoroutine(BuildRemaining(list, instantCount, count, currentVersion, startTime));
+        StartDeferredImageLoadIfNeeded(immediateImageCount, count, currentVersion);
+
+        _buildCoroutine = StartCoroutine(BuildRemaining(list, instantCount, count, currentVersion, immediateImageCount, startTime));
     }
 
     private IEnumerator BuildRemaining(
@@ -281,6 +398,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
         int current,
         int totalCount,
         int version,
+        int immediateImageCount,
         float startTime)
     {
         yield return null;
@@ -295,7 +413,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
             int next = Mathf.Min(current + safeBatchSize, totalCount);
 
             EnsureCapacity(next);
-            BindRange(list, current, next, version);
+            BindRange(list, current, next, version, immediateImageCount);
 
             current = next;
 
@@ -331,6 +449,12 @@ public class PTS_CourseListBuilder : MonoBehaviour
             _buildCoroutine = null;
         }
 
+        if (_deferredImageCoroutine != null)
+        {
+            StopCoroutine(_deferredImageCoroutine);
+            _deferredImageCoroutine = null;
+        }
+
         if (_firstVisibleDebugCoroutine != null)
         {
             StopCoroutine(_firstVisibleDebugCoroutine);
@@ -345,7 +469,7 @@ public class PTS_CourseListBuilder : MonoBehaviour
     // BIND
     // =========================================================
 
-    private void BindRange(IReadOnlyList<CourseListItemData> list, int start, int endExclusive, int version)
+    private void BindRange(IReadOnlyList<CourseListItemData> list, int start, int endExclusive, int version, int immediateImageCount)
     {
         for (int i = start; i < endExclusive; i++)
         {
@@ -372,10 +496,56 @@ public class PTS_CourseListBuilder : MonoBehaviour
 
             if (!ReferenceEquals(_boundCourses[i], course))
             {
-                item.Bind(course);
+                item.Bind(course, i < immediateImageCount);
                 _boundCourses[i] = course;
             }
+            else if (i < immediateImageCount)
+            {
+                item.LoadImageNow();
+            }
+            else if (item.NeedsImageLoad())
+            {
+                item.LoadImageNow();
+            }
         }
+    }
+
+    private void StartDeferredImageLoadIfNeeded(int startIndex, int itemCount, int version)
+    {
+        if (startIndex >= itemCount)
+            return;
+
+        _deferredImageCoroutine = StartCoroutine(LoadDeferredImages(startIndex, itemCount, version));
+    }
+
+    private IEnumerator LoadDeferredImages(int startIndex, int itemCount, int version)
+    {
+        if (deferredImageDelay > 0f)
+            yield return new WaitForSecondsRealtime(deferredImageDelay);
+        else
+            yield return null;
+
+        int batchSize = Mathf.Max(1, deferredImageBatchSize);
+
+        for (int i = startIndex; i < itemCount; i++)
+        {
+            while (version == _buildVersion && i >= _items.Count)
+            {
+                yield return null;
+            }
+
+            if (version != _buildVersion)
+                yield break;
+
+            var item = i < _items.Count ? _items[i] : null;
+            if (item != null && item.gameObject.activeInHierarchy)
+                item.LoadImageNow();
+
+            if ((i - startIndex + 1) % batchSize == 0)
+                yield return null;
+        }
+
+        _deferredImageCoroutine = null;
     }
 
     // =========================================================
@@ -502,6 +672,8 @@ public class PTS_CourseListBuilder : MonoBehaviour
         if (count <= 0)
             return;
 
+        int immediateImageCount = Mathf.Clamp(priorityImageCount, 0, count);
+
         for (int i = 0; i < count; i++)
         {
             var c = list[i];
@@ -509,11 +681,13 @@ public class PTS_CourseListBuilder : MonoBehaviour
 
             var item = Instantiate(itemPrefab, contentParent);
             item.gameObject.SetActive(true);
-            item.Bind(c);
+            item.Bind(c, i < immediateImageCount);
             _items.Add(item);
         }
 
         _boundCourses.Clear();
+
+        StartDeferredImageLoadIfNeeded(immediateImageCount, count, _buildVersion);
     }
 
     private void ClearAllDestroy()

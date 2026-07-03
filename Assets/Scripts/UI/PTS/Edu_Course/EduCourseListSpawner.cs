@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,14 +19,20 @@ public class EduCourseListSpawner : MonoBehaviour
     // Số item tạo sẵn để giảm instantiate lúc refresh đầu.
     [SerializeField] private int prewarmCount = 10;
 
+    [Header("Image Priority")]
+    [SerializeField] private int priorityImageCount = 8;
+    [SerializeField] private int deferredImageBatchSize = 4;
+    [SerializeField] private float deferredImageDelay = 0.05f;
+
     [Header("Debug")]
     [SerializeField] private bool debugLog = true;
 
-    // Toàn bộ item đã tạo ra
+    // Toàn bộ item đã tạo ra.
     private readonly List<EduCourseElement> _items = new();
 
-    // Chống subscribe trùng / gọi refresh lặp vô ích
+    // Chống subscribe trùng / gọi refresh lặp vô ích.
     private bool _subscribed;
+    private Coroutine _deferredImageRoutine;
 
     private void Awake()
     {
@@ -39,6 +46,7 @@ public class EduCourseListSpawner : MonoBehaviour
     private void OnEnable()
     {
         Subscribe();
+        CourseBootstrapLoader.EnsureLoaded();
 
         if (autoRefreshOnEnable)
             Refresh();
@@ -46,11 +54,13 @@ public class EduCourseListSpawner : MonoBehaviour
 
     private void OnDisable()
     {
+        StopDeferredImageRoutine();
         Unsubscribe();
     }
 
     private void OnDestroy()
     {
+        StopDeferredImageRoutine();
         Unsubscribe();
         ReleaseAllItems();
     }
@@ -73,6 +83,8 @@ public class EduCourseListSpawner : MonoBehaviour
 
     public void Refresh()
     {
+        StopDeferredImageRoutine();
+
         if (contentParent == null || coursePrefab == null)
         {
             if (debugLog)
@@ -87,6 +99,16 @@ public class EduCourseListSpawner : MonoBehaviour
 
         if (source == null || source.Count == 0)
         {
+            CourseBootstrapLoader.EnsureLoaded();
+
+            if (!CourseStaticStore.HasLoaded || CourseStaticStore.IsLoading)
+            {
+                if (debugLog)
+                    Debug.Log("[EduCourseListSpawner] Course store is not ready, waiting for data.");
+
+                return;
+            }
+
             HideAllItems();
 
             if (debugLog)
@@ -108,6 +130,8 @@ public class EduCourseListSpawner : MonoBehaviour
 
         EnsureItemCount(sorted.Count);
 
+        int immediateImageCount = Mathf.Clamp(priorityImageCount, 0, sorted.Count);
+
         for (int i = 0; i < sorted.Count; i++)
         {
             var data = sorted[i];
@@ -116,16 +140,19 @@ public class EduCourseListSpawner : MonoBehaviour
             if (item == null)
                 continue;
 
+            if (data == null)
+            {
+                item.gameObject.SetActive(false);
+                continue;
+            }
+
             if (!item.gameObject.activeSelf)
                 item.gameObject.SetActive(true);
 
-            if (data != null)
-                item.Setup(data);
-            else
-                item.gameObject.SetActive(false);
+            item.Setup(data, i < immediateImageCount);
         }
 
-        // Ẩn item dư thay vì destroy liên tục
+        // Ẩn item dư thay vì destroy liên tục.
         for (int i = sorted.Count; i < _items.Count; i++)
         {
             if (_items[i] != null && _items[i].gameObject.activeSelf)
@@ -134,6 +161,40 @@ public class EduCourseListSpawner : MonoBehaviour
 
         if (debugLog)
             Debug.Log($"[EduCourseListSpawner] Active items = {sorted.Count}, pooled total = {_items.Count}");
+
+        if (immediateImageCount < sorted.Count)
+            _deferredImageRoutine = StartCoroutine(LoadDeferredImages(immediateImageCount, sorted.Count));
+    }
+
+    private IEnumerator LoadDeferredImages(int startIndex, int itemCount)
+    {
+        if (deferredImageDelay > 0f)
+            yield return new WaitForSecondsRealtime(deferredImageDelay);
+        else
+            yield return null;
+
+        int batchSize = Mathf.Max(1, deferredImageBatchSize);
+
+        for (int i = startIndex; i < itemCount && i < _items.Count; i++)
+        {
+            var item = _items[i];
+            if (item != null && item.gameObject.activeInHierarchy)
+                item.LoadImageNow();
+
+            if ((i - startIndex + 1) % batchSize == 0)
+                yield return null;
+        }
+
+        _deferredImageRoutine = null;
+    }
+
+    private void StopDeferredImageRoutine()
+    {
+        if (_deferredImageRoutine == null)
+            return;
+
+        StopCoroutine(_deferredImageRoutine);
+        _deferredImageRoutine = null;
     }
 
     private void Prewarm(int count)
@@ -179,6 +240,8 @@ public class EduCourseListSpawner : MonoBehaviour
 
     public void ClearItems()
     {
+        StopDeferredImageRoutine();
+
         if (usePooling)
         {
             HideAllItems();
@@ -197,6 +260,8 @@ public class EduCourseListSpawner : MonoBehaviour
 
     private void HideAllItems()
     {
+        StopDeferredImageRoutine();
+
         for (int i = 0; i < _items.Count; i++)
         {
             if (_items[i] != null && _items[i].gameObject.activeSelf)

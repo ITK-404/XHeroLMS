@@ -16,12 +16,24 @@ public static class CourseModels
     public class CourseListPayload
     {
         public CourseLite[] data;
+        public CourseLite[] items;
+        public CourseLite[] courses;
+
+        public int total;
+        public int count;
+        public int skip;
+        public int limit;
+        public int page;
+        public int totalPages;
+        public bool hasMore;
+        public bool hasNextPage;
     }
 
     [Serializable]
     public class CourseLite
     {
         public string _id;
+        public string id;
         public CoursePriceLite coursePrice;
         public SeoLite seo;
         public Settings settings;
@@ -199,7 +211,7 @@ public class DocAttach
 
         return new CourseListItemData
         {
-            id = c._id,
+            id = !string.IsNullOrWhiteSpace(c._id) ? c._id : c.id,
             title = c.title,
             image = c.image,
             learningMode = c.learningMode,

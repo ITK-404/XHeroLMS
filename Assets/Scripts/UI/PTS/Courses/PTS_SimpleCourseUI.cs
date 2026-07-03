@@ -6,11 +6,12 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class PTS_SimpleCourseUI : MonoBehaviour
 {
+    private const int CourseImageSize = 512;
+
     [Header("Buttons")] [SerializeField] private Button panelBtn;
     [SerializeField] private Button directBtn;
 
@@ -67,16 +68,19 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     private string _courseId;
     [SerializeField] private string _imageUrl;
-    private Coroutine _loadImgCo;
+    private string _runtimeImageUrl;
+    private int _imageRequestId;
     private Coroutine _waitDataCo;
+    private Sprite _runtimeSprite;
+    private GameObject _imageLoadingHandle;
+    private bool _imageLoadRequested;
 
     private static bool CourseLoading = false;
 
     // =========================
     // IMAGE CACHE
     // =========================
-    private static readonly Dictionary<string, Sprite> s_spriteCache = new();
-    private static readonly Dictionary<string, Texture2D> s_textureCache = new();
+    private static readonly HashSet<string> s_priorityImageUrls = new();
 
     // =========================
     // DEBUG IMAGE TIMING
@@ -93,6 +97,12 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     private int _bindImageToken = 0;
     private bool _reportedImageReadyForThisBind = false;
 
+    private void OnEnable()
+    {
+        if (_imageLoadRequested && !string.IsNullOrWhiteSpace(_imageUrl) && _runtimeSprite == null)
+            LoadImageNow();
+    }
+
     private void Awake()
     {
         BuildStatusMap();
@@ -106,11 +116,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     private void OnDisable()
     {
-        if (_loadImgCo != null)
-        {
-            StopCoroutine(_loadImgCo);
-            _loadImgCo = null;
-        }
+        StopImageLoad();
+        HideImageLoading();
 
         if (_waitDataCo != null)
         {
@@ -127,8 +134,8 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (directBtn != null)
             directBtn.onClick.RemoveListener(OnLoadImgFx);
 
-        if (_loadImgCo != null)
-            StopCoroutine(_loadImgCo);
+        StopImageLoad();
+        HideImageLoading();
 
         if (_waitDataCo != null)
             StopCoroutine(_waitDataCo);
@@ -152,11 +159,24 @@ public class PTS_SimpleCourseUI : MonoBehaviour
 
     public void Bind(CourseListItemData course)
     {
+        Bind(course, true);
+    }
+
+    public void Bind(CourseListItemData course, bool loadImageImmediately)
+    {
         if (course == null)
             return;
 
         _courseId = course.id;
-        _imageUrl = course.image;
+        string nextImageUrl = NormalizeImageUrl(course.image);
+        if (!string.Equals(_imageUrl, nextImageUrl, StringComparison.Ordinal))
+        {
+            _runtimeSprite = null;
+            _runtimeImageUrl = null;
+        }
+
+        _imageUrl = nextImageUrl;
+        _imageLoadRequested = loadImageImmediately;
         _bindImageToken++;
         _reportedImageReadyForThisBind = false;
 
@@ -186,7 +206,7 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         ApplyStatus(ResolveStatus(course));
         ApplyPrice(course);
 
-        BindThumbnail(_imageUrl, _bindImageToken);
+        BindThumbnail(_imageUrl, _bindImageToken, loadImageImmediately);
     }
 
     private void ApplyPrice(CourseListItemData course)
@@ -234,16 +254,76 @@ public class PTS_SimpleCourseUI : MonoBehaviour
     }
 
 
-    private void BindThumbnail(string url, int token)
+    public void LoadImageNow()
+    {
+        _imageLoadRequested = true;
+
+        if (img_course == null || string.IsNullOrWhiteSpace(_imageUrl))
+            return;
+
+        if (TryApplyCachedImage(_bindImageToken))
+            return;
+
+        if (_imageRequestId != 0)
+            return;
+
+        ShowImageLoading();
+        StartImageLoad(_imageUrl, _bindImageToken);
+    }
+
+    public bool NeedsImageLoad()
+    {
+        if (string.IsNullOrWhiteSpace(_imageUrl))
+            return false;
+
+        if (_imageRequestId != 0)
+            return false;
+
+        if (_runtimeSprite != null &&
+            string.Equals(_runtimeImageUrl, _imageUrl, StringComparison.Ordinal))
+            return false;
+
+        return true;
+    }
+
+    public static void PrewarmImages(IReadOnlyList<CourseListItemData> courses, int count)
+    {
+        if (courses == null || count <= 0)
+            return;
+
+        int safeCount = Mathf.Min(count, courses.Count);
+        for (int i = 0; i < safeCount; i++)
+        {
+            string url = NormalizeImageUrl(courses[i]?.image);
+            if (!string.IsNullOrWhiteSpace(url))
+                s_priorityImageUrls.Add(url);
+        }
+    }
+
+    private void ShowImageLoading()
     {
         if (img_course == null)
             return;
 
-        if (_loadImgCo != null)
-        {
-            StopCoroutine(_loadImgCo);
-            _loadImgCo = null;
-        }
+        _imageLoadingHandle = LoadingUI.ShowInside(img_course.rectTransform);
+    }
+
+    private void HideImageLoading()
+    {
+        LoadingUI.HideInside(_imageLoadingHandle);
+        _imageLoadingHandle = null;
+    }
+
+    private void BindThumbnail(string url, int token, bool loadImageImmediately)
+    {
+        if (img_course == null)
+            return;
+
+        StopImageLoad();
+        HideImageLoading();
+
+        img_course.enabled = true;
+        img_course.color = Color.white;
 
         if (usePlaceholderWhileLoading)
             img_course.sprite = placeholderSprite;
@@ -255,17 +335,60 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (string.IsNullOrWhiteSpace(url))
             return;
 
-        if (s_spriteCache.TryGetValue(url, out var cachedSprite) && cachedSprite != null)
+        if (_runtimeSprite != null &&
+            string.Equals(_runtimeImageUrl, url, StringComparison.Ordinal))
         {
-            ApplyLoadedSprite(cachedSprite, token, url, true);
+            ApplyLoadedSprite(_runtimeSprite, token, url, true);
             return;
         }
 
-        Debug.Log($"PTSSimpleCourse: name: {txt_name.text} url: {_imageUrl}");
-        // lý do gây leak bộ nhớ là do khi coroutine bị tắt, 
-        if (isLoaded == false)
-            PTS_ViewManager.Instance.StartCoroutine(LoadImageTo(img_course, url, token));
-        // _loadImgCo = StartCoroutine(LoadImageTo(img_course, url, token));
+        if (TryApplyCachedImage(token))
+            return;
+
+        ShowImageLoading();
+
+        bool shouldLoadNow = loadImageImmediately || s_priorityImageUrls.Contains(url);
+        if (shouldLoadNow)
+            StartImageLoad(url, token);
+    }
+
+    private void StartImageLoad(string url, int token)
+    {
+        if (string.IsNullOrWhiteSpace(url) || img_course == null)
+            return;
+
+        StopImageLoad();
+        ShowImageLoading();
+        _imageRequestId = CourseImageRuntimeCache.Request(url, CourseImageSize, (sprite, error) =>
+        {
+            if (token != _bindImageToken || !string.Equals(url, _imageUrl, StringComparison.Ordinal))
+                return;
+
+            _imageRequestId = 0;
+
+            if (sprite == null)
+            {
+                Debug.LogWarning($"[PTS] Load image failed: {_courseId} | {url} | {error}");
+                HideImageLoading();
+                return;
+            }
+
+            ApplyLoadedSprite(sprite, token, url, false);
+        });
+    }
+
+    private bool TryApplyCachedImage(int token)
+    {
+        if (string.IsNullOrWhiteSpace(_imageUrl))
+            return false;
+
+        if (CourseImageRuntimeCache.TryGet(_imageUrl, CourseImageSize, out var cachedSprite))
+        {
+            ApplyLoadedSprite(cachedSprite, token, _imageUrl, true);
+            return true;
+        }
+
+        return false;
     }
 
     private void ApplyLoadedSprite(Sprite sprite, int token, string url, bool fromCache)
@@ -273,9 +396,18 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         if (token != _bindImageToken)
             return;
 
+        if (!string.Equals(url, _imageUrl, StringComparison.Ordinal))
+            return;
+
         if (img_course == null || sprite == null)
             return;
 
+        _runtimeSprite = sprite;
+        _runtimeImageUrl = url;
+        HideImageLoading();
+
+        img_course.enabled = true;
+        img_course.color = Color.white;
         img_course.sprite = sprite;
         img_course.preserveAspect = preserveAspectAfterLoad;
 
@@ -474,70 +606,18 @@ public class PTS_SimpleCourseUI : MonoBehaviour
         seq.Append(bgImg.DOFade(0f, 0.15f));
     }
 
-    private bool isLoaded = false;
-
-    private IEnumerator LoadImageTo(Image target, string url, int token)
+    private void StopImageLoad()
     {
-        isLoaded = true;
-        using (var req = UnityWebRequestTexture.GetTexture(url))
-        {
-            yield return req.SendWebRequest();
+        if (_imageRequestId == 0)
+            return;
 
-#if UNITY_2020_3_OR_NEWER
-            if (req.result != UnityWebRequest.Result.Success)
-#else
-        if (req.isNetworkError || req.isHttpError)
-#endif
-            {
-                Debug.LogWarning($"[PTS] Load image failed: {url} | {req.error}");
-                _loadImgCo = null;
-                yield break;
-            }
+        CourseImageRuntimeCache.Cancel(_imageRequestId);
+        _imageRequestId = 0;
+    }
 
-            if (token != _bindImageToken)
-            {
-                _loadImgCo = null;
-                yield break;
-            }
-
-            Sprite sprite;
-            if (!s_spriteCache.TryGetValue(url, out sprite) || sprite == null)
-            {
-                var tempText = DownloadHandlerTexture.GetContent(req);
-                tempText.name = txt_name.text;
-                var tex = tempText.Resize(256);
-                // tex.name = txt_name.text;
-
-                // Debug.Log($"PTS_SimpleCourse: {txt_name.text} Temp{tempText.width} {tempText.height} :Current {tex.width} {tex.height}");
-
-                DestroyImmediate(tempText);
-
-                if (tex == null || target == null)
-                {
-                    _loadImgCo = null;
-                    yield break;
-                }
-
-                s_textureCache[url] = tex;
-
-                sprite = Sprite.Create(
-                    tex,
-                    new Rect(0, 0, tex.width, tex.height),
-                    new Vector2(0.5f, 0.5f),
-                    100f
-                );
-                s_spriteCache[url] = sprite;
-            }
-
-            if (target == null)
-            {
-                _loadImgCo = null;
-                yield break;
-            }
-
-            ApplyLoadedSprite(sprite, token, url, false);
-            _loadImgCo = null;
-        }
+    private static string NormalizeImageUrl(string raw)
+    {
+        return CourseImageRuntimeCache.NormalizeUrl(raw);
     }
 
     private static string FormatVndCompact(long v)

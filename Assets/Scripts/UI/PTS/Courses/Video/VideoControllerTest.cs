@@ -13,6 +13,7 @@ public class VideoControllerTest : MonoBehaviour
     private string testUrl = "https://www.youtube.com/watch?v=dk6ZFR_Ebkg&list=RDdk6ZFR_Ebkg&start_radio=1";
 
     private LocalProxyAutoBoot _proxy;
+    private bool _pendingIntroRequest;
 
     private void Start()
     {
@@ -22,10 +23,9 @@ public class VideoControllerTest : MonoBehaviour
         viewB.SetCore(core);
 
         CourseDetailStaticStore.OnChanged += CourseDetailStaticStoreOnOnChanged;
-        
         SceneManager.sceneLoaded += SceneManagerOnsceneLoaded;
-        
-        // Nếu store đã có data trước khi script này subscribe
+
+        // Nếu store đã có data trước khi script này subscribe.
         CourseDetailStaticStoreOnOnChanged();
     }
 
@@ -33,7 +33,7 @@ public class VideoControllerTest : MonoBehaviour
     {
         core.Pause();
     }
-    
+
     private void OnDestroy()
     {
         CourseDetailStaticStore.OnChanged -= CourseDetailStaticStoreOnOnChanged;
@@ -42,44 +42,68 @@ public class VideoControllerTest : MonoBehaviour
 
     private void OnDisable()
     {
+        _pendingIntroRequest = false;
         core.Stop();
     }
 
     private void CourseDetailStaticStoreOnOnChanged()
     {
-        if (!CourseDetailStaticStore.HasData ||
-            CourseDetailStaticStore.IsLoading ||
-            string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourseId) ||
-            CourseDetailStaticStore.CurrentDetail == null)
+        if (!IsStoreReady())
         {
             Debug.Log("[VideoIntro] Store chưa sẵn sàng, bỏ qua OnChanged.");
             return;
         }
+
+        if (!_pendingIntroRequest)
+            return;
+
+        _pendingIntroRequest = false;
+        PlayVideoIntroFromStore();
     }
 
     public void ShowVideoIntro()
     {
-        string videoUrl = CourseDetailStaticStore.VideoIntro;
-
-        if (string.IsNullOrEmpty(videoUrl))
+        if (!IsStoreReady())
         {
-            Debug.Log("[VideoIntro] Không có video intro.");
+            _pendingIntroRequest = true;
+            Debug.Log("[VideoIntro] Store chưa sẵn sàng, đợi OnChanged.");
             return;
         }
-        string playableUrl = _proxy != null ? _proxy.GetPlayableUrl(videoUrl) : videoUrl;
-        core.LoadAndPlay(playableUrl, CourseDetailStaticStore.GetFirstBanner());
+
+        PlayVideoIntroFromStore();
     }
-    
+
     public void ShowViewA()
     {
         viewA.gameObject.SetActive(true);
         viewB.gameObject.SetActive(false);
-
     }
 
     public void ShowViewB()
     {
         viewA.gameObject.SetActive(false);
         viewB.gameObject.SetActive(true);
+    }
+
+    private void PlayVideoIntroFromStore()
+    {
+        string videoUrl = CourseDetailStaticStore.GetVideoIntro();
+
+        if (string.IsNullOrEmpty(videoUrl))
+        {
+            Debug.Log("[VideoIntro] Không có video intro.");
+            return;
+        }
+
+        string playableUrl = _proxy != null ? _proxy.GetPlayableUrl(videoUrl) : videoUrl;
+        core.LoadAndPlay(playableUrl, CourseDetailStaticStore.GetFirstBanner());
+    }
+
+    private static bool IsStoreReady()
+    {
+        return CourseDetailStaticStore.HasData &&
+               !CourseDetailStaticStore.IsLoading &&
+               !string.IsNullOrEmpty(CourseDetailStaticStore.CurrentCourseId) &&
+               CourseDetailStaticStore.CurrentDetail != null;
     }
 }
