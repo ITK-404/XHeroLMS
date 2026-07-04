@@ -6,6 +6,8 @@ apply from: '../shared/common.gradle'
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 // Android Resolver Dependencies Start
+    implementation 'com.google.android.gms:play-services-auth:21.6.0' // Assets/Plugins/Android/Editor/SmsOtpRetrieverDependencies.xml:4
+    implementation 'com.google.android.gms:play-services-auth-api-phone:18.3.0' // Assets/Plugins/Android/Editor/SmsOtpRetrieverDependencies.xml:6
     implementation 'com.google.android.gms:play-services-base:18.9.0' // Assets/Firebase/Editor/DatabaseDependencies.xml:17
     implementation 'com.google.android.play:app-update:2.1.0' // Assets/GooglePlayPlugins/com.google.play.appupdate/Editor/Dependencies.xml:3
     implementation 'com.google.android.play:core-common:2.0.4' // Assets/GooglePlayPlugins/com.google.play.core/Editor/Dependencies.xml:3

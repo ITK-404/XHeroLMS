@@ -207,6 +207,17 @@ private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
     btnRegister.interactable = false;
     if (errorText) errorText.text = "";
 
+    var earlyOtpController = ResolveOtpController();
+    if (earlyOtpController != null)
+    {
+        earlyOtpController.PrepareForIncomingOtp(username84, "phone", "register");
+        Debug.Log("[Register F] OTP controller prepared before request so Android can listen for the incoming SMS.");
+    }
+    else
+    {
+        Debug.LogWarning("[Register F] OTP controller not found before request; Android SMS listener cannot start early.");
+    }
+
     string url = baseUrl.TrimEnd('/') + RegisterPath;
     string json = JsonUtility.ToJson(payload);
 
@@ -256,13 +267,7 @@ private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
             if (currentPanel) currentPanel.SetActive(false);
             if (otpPanel) otpPanel.SetActive(true);
 
-            OtpVerificationController targetOtp = otpController;
-            if (targetOtp == null && otpPanel != null)
-                targetOtp = otpPanel.GetComponentsInChildren<OtpVerificationController>(true).FirstOrDefault();
-
-            if (targetOtp == null)
-                targetOtp = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
-
+            OtpVerificationController targetOtp = ResolveOtpController();
             if (targetOtp != null)
             {
                 string contact = username84;
@@ -301,6 +306,20 @@ private IEnumerator RegisterRoutine(RegisterPayload payload, string username84)
 
         if (errorText) errorText.text = "";
         ValidateAll();
+    }
+
+    private OtpVerificationController ResolveOtpController()
+    {
+        if (otpController != null)
+            return otpController;
+
+        if (otpPanel != null)
+            otpController = otpPanel.GetComponentsInChildren<OtpVerificationController>(true).FirstOrDefault();
+
+        if (otpController == null)
+            otpController = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
+
+        return otpController;
     }
 
     // =========================
