@@ -26,6 +26,8 @@ public static class SeoResolver
     // để UI biết có nên có private hay không
     public static bool shouldHavePrivate { get; private set; } = false;
 
+    public static bool requiresPurchase { get; private set; } = false;
+
     public static void SetSeoCourseByScene(string scene)
     {
         seoCourse = GetSeoCourseByScene(scene);
@@ -149,6 +151,7 @@ public static class SeoResolver
         // reset flags
         canEnterCourse = false;
         shouldHavePrivate = false;
+        requiresPurchase = false;
 
         if (string.IsNullOrEmpty(_seo))
             yield break;
@@ -196,7 +199,7 @@ public static class SeoResolver
             canEnterCourse = true;
             shouldHavePrivate = false; // guest không bắt buộc có private
             Debug.Log($"[SeoResolver] Guest + needLogin=false => ALLOW (no private). seo={_seo} courseId={courseId}");
-            // yield break;
+            yield break;
         }
 
         // Login: allow
@@ -225,37 +228,11 @@ public static class SeoResolver
         var p = LmsStore.Instance.GetPrivate(courseId);
         if (p == null)
         {
-            // login mà vẫn không có private => dẫn đi mua luôn (đã login sẵn bằng token)
             canEnterCourse = false;
             shouldHavePrivate = false;
+            requiresPurchase = TokenStore.IsAuthenticated;
 
-            // token
-            string token = TokenStore.AccessToken;
-            token = (token ?? "").Trim();
-            if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                token = token.Substring("Bearer ".Length).Trim();
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                Debug.LogError($"[SeoResolver] Private null + token empty. courseId='{courseId}' => BLOCK");
-                yield break;
-            }
-
-            string url =
-                SecurityConfig.UrlWeb + "/en/thanh-toan/" +
-                "?course=" + UnityWebRequest.EscapeURL(courseId) +
-                "&accessToken=" + UnityWebRequest.EscapeURL(token);
-
-            // Debug.LogWarning($"[SeoResolver] Private null => OPEN PAYMENT. courseId='{courseId}' url={url}");
-
-            // Application.OpenURL(url);
-            Debug.LogError("Check null title here");
-            // WebViewTest.LoadWebView(url, "@@@@@@@@");
-            string courseName = market != null ? market.title : "Course";
-
-            WebViewTest.SetCourseContext(courseId, _seo, courseName);
-            WebViewTest.LoadWebView(url, courseName);
-
+            Debug.LogWarning($"[SeoResolver] Private null => BLOCK without opening payment. seo='{_seo}', courseId='{courseId}'");
             yield break;
         }
 

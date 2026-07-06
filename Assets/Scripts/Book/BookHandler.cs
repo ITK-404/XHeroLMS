@@ -231,8 +231,12 @@ public class BookHandler : MonoBehaviour
 
             BookHandler.CanSelectBook = false;
 
+            string message = SeoResolver.requiresPurchase
+                ? "Bạn chưa sở hữu khóa học này. Vui lòng bấm Mua/Ghi danh để thanh toán."
+                : "Bạn cần đăng nhập để tham gia khóa học này.";
+
             LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để tham gia khóa học này.",
+                message,
                 "Thông báo",
                 () => { BookHandler.CanSelectBook = true; }
             );
