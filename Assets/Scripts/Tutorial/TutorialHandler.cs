@@ -75,7 +75,7 @@ public class TutorialHandler : MonoBehaviour
     [SerializeField] private RectTransform followWorldItem;
 
     [SerializeField] private bool requiredCourseData = true;
-    
+    [SerializeField] private bool alwaysPlayTutorial = false;
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
     public void Save()
@@ -131,13 +131,13 @@ public class TutorialHandler : MonoBehaviour
 
         LoadSave();
         // isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
-
+        if (alwaysPlayTutorial) isPlayedBefore = false;
         // if player is played tutorial before
 
         
         CreateHandList();
-        bool isContainCourse = SeoResolver.IsContainData() && requiredCourseData;
-        
+        bool isContainCourse = SeoResolver.IsContainData() || requiredCourseData == false;
+
         if (isPlayedBefore || isContainCourse == false)
         {
             isPlayedBefore = true;
