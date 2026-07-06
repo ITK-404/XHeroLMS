@@ -1,10 +1,76 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases-dev/android/builds/1.0.9/" "gs://dlc-lms/addressables/releases-dev/android/latest/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/" "gs://dlc-lms/addressables/releases-dev/ios/latest/"
 ExitCode=0
 
 --- STDOUT ---
 
 
 --- STDERR ---
+WARNING:  Python 3.9.x is no longer officially supported by the Google Cloud CLI
+and may not function correctly. Please use Python version 3.10 and up.
+To reinstall gcloud, run:
+    $ gcloud components reinstall
+
+This will also prompt to install a compatible version of Python.
+
+If you have a compatible Python interpreter installed, you can use it by setting
+the CLOUDSDK_PYTHON environment variable to point to it.
+
+/Users/dev/google-cloud-sdk/platform/gsutil/third_party/urllib3/src/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+WARNING: gsutil rsync uses hashes when modification time is not available at
+both the source and destination. Your crcmod installation isn't using the
+module's C extension, so checksumming will run very slowly. If this is your
+first rsync since updating gsutil, this rsync can take significantly longer than
+usual. For help installing the extension, please see "gsutil help crcmod".
+
 Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
 Starting synchronization...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_dai_dao_chi_gian_2_scenes_all_8f3da12aa8897e6fc90103bafb4559e0.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_shared_assets_assets_prefabs_ui_09980ae59282b530e58b70315ef70e0a.bundle [Content-Type=application/octet-stream]...
+/ [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+-
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog.hash [Content-Type=application/octet-stream]...
+- [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_newscene_assets_new_scene_initial_721ecf3532dfedf71a5fe73d8712b6b4.bundle [Content-Type=application/octet-stream]...
+- [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/483192958c2089719c8dc303377b0b39_monoscripts_739715f09d814053254d1c3adf18ffd5.bundle [Content-Type=application/octet-stream]...
+- [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_dai_dao_chi_gian_1_scenes_all_dc2df032e2bbef3d6387a17585fb9b39.bundle [Content-Type=application/octet-stream]...
+- [0/13 files][    0.0 B/433.1 MiB]   0% Done                                   
+- [1/13 files][ 50.6 MiB/433.1 MiB]  11% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_certificates_scenes_all_0e2ff03cba1d53bb9bd56896b00d3feb.bundle [Content-Type=application/octet-stream]...
+- [1/13 files][ 50.6 MiB/433.1 MiB]  11% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_phong_tuyen_sinh_scenes_all_b3c26894251a41aa86dbc397ed8b1980.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog_1.0.10.hash [Content-Type=application/octet-stream]...
+- [1/13 files][ 50.6 MiB/433.1 MiB]  11% Done                                   
+- [1/13 files][ 50.6 MiB/433.1 MiB]  11% Done                                   
+- [2/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+- [3/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+- [4/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_coursescene_scenes_all_afab43ebee9b70aec8b605299fc6151f.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog.json [Content-Type=application/json]...
+- [4/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+- [4/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_newscene_scenes_new_scene_entry_6e9959dff38f6b0cb983baec8916cc76.bundle [Content-Type=application/octet-stream]...
+- [4/13 files][ 57.7 MiB/433.1 MiB]  13% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog_1.0.10.json [Content-Type=application/json]...
+- [5/13 files][151.7 MiB/433.1 MiB]  35% Done                                   
+- [6/13 files][151.7 MiB/433.1 MiB]  35% Done                                   
+- [6/13 files][151.7 MiB/433.1 MiB]  35% Done                                   
+\
+\ [7/13 files][366.1 MiB/433.1 MiB]  84% Done                                   
+\ [8/13 files][366.1 MiB/433.1 MiB]  84% Done                                   
+\ [9/13 files][366.1 MiB/433.1 MiB]  84% Done                                   
+\ [10/13 files][366.3 MiB/433.1 MiB]  84% Done                                  
+\ [11/13 files][366.5 MiB/433.1 MiB]  84% Done                                  
+|
+| [12/13 files][433.1 MiB/433.1 MiB]  99% Done                                  
+| [13/13 files][433.1 MiB/433.1 MiB] 100% Done                                  
+Operation completed over 13 objects/433.1 MiB.                                   
 
