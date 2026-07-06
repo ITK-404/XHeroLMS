@@ -74,6 +74,8 @@ public class TutorialHandler : MonoBehaviour
     [SerializeField] private Camera mainCamera;
     [SerializeField] private RectTransform followWorldItem;
 
+    [SerializeField] private bool requiredCourseData = true;
+    
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
     public void Save()
@@ -134,7 +136,7 @@ public class TutorialHandler : MonoBehaviour
 
         
         CreateHandList();
-        bool isContainCourse = SeoResolver.IsContainData();
+        bool isContainCourse = SeoResolver.IsContainData() && requiredCourseData;
         
         if (isPlayedBefore || isContainCourse == false)
         {
