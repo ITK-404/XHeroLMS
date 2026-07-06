@@ -25,7 +25,7 @@ public class LmsExportAllCourses : MonoBehaviour
     public int limit = 100;
     public string keyword = "";
     public string category = "";
-    public string tag = "";
+    public new string tag = "";
     public string sortBy = "";
     public string order = "";
 
