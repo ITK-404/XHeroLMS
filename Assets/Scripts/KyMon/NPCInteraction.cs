@@ -73,12 +73,12 @@ public class NPCInteraction : MonoBehaviour
     {
         isFocused = true;
         focusCamera.gameObject.SetActive(true);
-        InputBlocker.SetBlocked(true);
+        // InputBlocker.SetBlocked(true);
         // playerMoveSystem.enabled = false;          // tắt di chuyển
         // playerStandUI.returnBtn.gameObject.SetActive(false);
         // courseExitWayHandler.Hide();
 
-        playerChairManager.OnSitdownUI_Immediate();
+        // playerChairManager.OnSitdownUI_Immediate();
         playerStandUI.HideButtons();
         
         StartCoroutine(WaitForBlending(() =>
@@ -86,7 +86,7 @@ public class NPCInteraction : MonoBehaviour
             interactionUIView.ShowSupportChatBox();
             actionChoiceViewUI.Show();
         }));
-        playerChairManager.ShowAllCheckPoints(false);
+        // playerChairManager.ShowAllCheckPoints(false);
     }
 
     private void ExitFocusState()
@@ -94,13 +94,13 @@ public class NPCInteraction : MonoBehaviour
         isFocused = false;
         focusCamera.gameObject.SetActive(false);
         
-        InputBlocker.SetBlocked(false);
+        // InputBlocker.SetBlocked(false);
         interactionUIView.Show();
         interactionUIView.ShowWorldSpaceIcon();
         actionChoiceViewUI.Hide();
      
-        playerChairManager.OnStandupUI_Deferred();
-        playerChairManager.ShowAllCheckPoints(true);
+        // playerChairManager.OnStandupUI_Deferred();
+        // playerChairManager.ShowAllCheckPoints(true);
         playerStandUI.ShowSitdownButton();
     }
 
