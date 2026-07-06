@@ -529,7 +529,6 @@ GameObject:
   - component: {fileID: 7252951541728430324}
   - component: {fileID: 6868523504920295294}
   - component: {fileID: 243650745706797764}
-  - component: {fileID: 2551999638226748446}
   m_Layer: 0
   m_Name: Nha_T1
   m_TagString: Untagged
@@ -617,21 +616,6 @@ MonoBehaviour:
   sceneNameToLoad: phong_tuyen_sinh
   savePlayerPosition: 0
   standPoint: {fileID: 143139972626698190}
---- !u!114 &2551999638226748446
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5139930555961755734}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c671be8cae081bb4bad571d31fb0eb4a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GPUInstancerPro.Prefab::GPUInstancerPro.PrefabModule.GPUIPrefab
-  _prefabID: -1893135416
-  childOptionalRenderers: []
-  _isRenderersDisabled: 0
 --- !u!1 &5432302449483669428
 GameObject:
   m_ObjectHideFlags: 0
@@ -1150,15 +1134,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 12740078089748861, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5061675179800973581}
-    - targetCorrespondingSourceObject: {fileID: 12740078089748861, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 4770761855374826549}
     - targetCorrespondingSourceObject: {fileID: 6712151745095247234, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3630598916973150082}
-    - targetCorrespondingSourceObject: {fileID: 6712151745095247234, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6589055489051742305}
   m_SourcePrefab: {fileID: 100100000, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
 --- !u!23 &697631633104923050 stripped
 MeshRenderer:
@@ -1192,18 +1170,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 6186254054202247024, guid: a0ed18cbef63bf64c93008ef83f29f1b, type: 3}
---- !u!114 &4770761855374826549
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 864492953337276515}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!23 &1204913896048432071 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 1975600326520765145, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
@@ -1261,18 +1227,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2060375811355308927, guid: a0ed18cbef63bf64c93008ef83f29f1b, type: 3}
---- !u!114 &6589055489051742305
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6265723937349946524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-Editor::MapColliderBuilderWindow/GeneratedColliderMarker
 --- !u!23 &7634521747677438091 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 7071018509429541269, guid: a6511b235a9d8d747918bd1d9f54c06b, type: 3}
@@ -1817,6 +1771,14 @@ PrefabInstance:
     - target: {fileID: 2709250211678003297, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4705951087662239128, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.158
+      objectReference: {fileID: 0}
+    - target: {fileID: 4705951087662239128, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.044
       objectReference: {fileID: 0}
     - target: {fileID: 5746109236194964647, guid: 0a3e167a803b7b946a18a8c50adcd03a, type: 3}
       propertyPath: m_Size.x

@@ -7,22 +7,48 @@ public class CourseFindingManager : MonoBehaviour
     [SerializeField] private CourseMapBrowserUI courseMapBrowserUI;
     [SerializeField] private PlotArea defaultPlotArea;
     [SerializeField] private PointClickSystem pointClickSystem;
+    private bool isAutoFindingWay;
+    private bool ownsAutoFindGameplayLock;
+
     private void Start()
     {
         MinimapCourseDisplayUI.OnFindWayAction += OnClickFindWay;
-        PlayerPanelUI.Instance.OnClickTryExitAutoFindWay += OnClickTryExitAutoFindWay;
+
+        if (PlayerPanelUI.Instance != null)
+            PlayerPanelUI.Instance.OnClickTryExitAutoFindWay += OnClickTryExitAutoFindWay;
+
+        if (pointClickSystem != null)
+            pointClickSystem.OnPathStopped += OnPointClickPathStopped;
     }
 
     private void OnClickTryExitAutoFindWay()
     {
-        pointClickSystem.StopMoving();
-        InputBlocker.SetBlocked(false);
+        isAutoFindingWay = false;
+        pointClickSystem?.StopMoving();
+        SetAutoFindGameplayLock(false);
     }
 
     private void OnDestroy()
     {
         MinimapCourseDisplayUI.OnFindWayAction -= OnClickFindWay;
-        PlayerPanelUI.Instance.OnClickTryExitAutoFindWay -= OnClickTryExitAutoFindWay;
+
+        if (PlayerPanelUI.Instance != null)
+            PlayerPanelUI.Instance.OnClickTryExitAutoFindWay -= OnClickTryExitAutoFindWay;
+
+        if (pointClickSystem != null)
+            pointClickSystem.OnPathStopped -= OnPointClickPathStopped;
+
+        SetAutoFindGameplayLock(false);
+    }
+
+    private void OnPointClickPathStopped(bool arrived)
+    {
+        if (!isAutoFindingWay)
+            return;
+
+        isAutoFindingWay = false;
+        SetAutoFindGameplayLock(false);
+        PlayerPanelUI.Instance?.HidePathfinding();
     }
 
     private void OnClickFindWay(string seoUrl)
@@ -40,6 +66,12 @@ public class CourseFindingManager : MonoBehaviour
             return;
         }
 
+        if (pointClickSystem == null)
+        {
+            Debug.LogError("PointClickSystem is null");
+            return;
+        }
+
         var findPlot = defaultPlotArea;
         foreach (BigArea bigArea in AreaDisplayManager.Instance.BigAreas)
         {
@@ -52,12 +84,43 @@ public class CourseFindingManager : MonoBehaviour
                 }
             }
         }
+
+        if (findPlot == null || findPlot.Location == null)
+        {
+            Debug.LogError($"Không tìm được vị trí khóa học hợp lệ cho seo url: {seoUrl}");
+            return;
+        }
         
-        minimapManager.ToggleOffMinimap();
-        pointClickSystem.MoveToPosition(findPlot.Location.GetItemWorldPosition());
+        minimapManager?.ToggleOffMinimap();
+        if (!pointClickSystem.MoveToPosition(findPlot.Location.GetItemWorldPosition()))
+        {
+            isAutoFindingWay = false;
+            SetAutoFindGameplayLock(false);
+            PlayerPanelUI.Instance?.HidePathfinding();
+            return;
+        }
+
         pointClickSystem.IsClickMoving = true;
-        
-        InputBlocker.SetBlocked(true);
-        PlayerPanelUI.Instance.ShowPathfindingPanel();
+        isAutoFindingWay = true;
+
+        SetAutoFindGameplayLock(true);
+        PlayerPanelUI.Instance?.ShowPathfindingPanel();
+    }
+
+    private void SetAutoFindGameplayLock(bool locked)
+    {
+        if (ownsAutoFindGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsAutoFindGameplayLock = locked;
     }
 }

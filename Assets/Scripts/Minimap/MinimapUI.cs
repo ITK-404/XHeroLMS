@@ -1,5 +1,4 @@
 using System;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -32,6 +31,12 @@ public class MinimapUI : MonoBehaviour
 
     private void ClickTurnOnMinimap() => TurnOnMinimapAction?.Invoke();
     private void ClickTurnOffMinimap() => TurnOffMinimapAction?.Invoke();
+
+    public void SetTurnOnInteractable(bool interactable)
+    {
+        if (turnOnBtn != null)
+            turnOnBtn.interactable = interactable;
+    }
     
 
     public void Show()

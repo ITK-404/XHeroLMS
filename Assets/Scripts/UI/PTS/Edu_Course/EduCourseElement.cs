@@ -1,13 +1,15 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class EduCourseElement : MonoBehaviour
 {
+    public static event Action<string> CourseOpenRequested;
+
     [SerializeField] private Image courseImg;
     [SerializeField] private TextMeshProUGUI courseTitle;
     [SerializeField] private TextMeshProUGUI courseDate;
@@ -21,14 +23,24 @@ public class EduCourseElement : MonoBehaviour
     [Header("Fallback")]
     [SerializeField] private Sprite fallbackSprite;
 
+    [Header("Debug")]
+    [SerializeField] private bool debugImageLog;
+
     [SerializeField] private UnityEvent OnChangeViewClicked;
 
+    private const int CourseImageSize = 512;
+
     private string _courseId;
-    private Coroutine _loadImageRoutine;
+    private string _imageUrl;
+    private string _runtimeImageUrl;
+
+    private int _imageRequestId;
     private Coroutine _waitDataRoutine;
 
-    private Texture2D _runtimeTexture;
     private Sprite _runtimeSprite;
+    private GameObject _imageLoadingHandle;
+    private int _imageLoadVersion;
+    private bool _imageLoadRequested;
 
     private static bool _isLoadingCourse;
 
@@ -38,23 +50,23 @@ public class EduCourseElement : MonoBehaviour
             goToDetailBtn.onClick.AddListener(GoToDetail);
     }
 
+    private void OnEnable()
+    {
+        if (_imageLoadRequested && !string.IsNullOrWhiteSpace(_imageUrl) && _runtimeSprite == null)
+            ApplyOrLoadImage();
+    }
+
     private void OnDisable()
     {
-        if (_loadImageRoutine != null)
-        {
-            StopCoroutine(_loadImageRoutine);
-            _loadImageRoutine = null;
-        }
+        StopImageLoad();
+        HideImageLoading();
 
         if (_waitDataRoutine != null)
         {
             StopCoroutine(_waitDataRoutine);
             _waitDataRoutine = null;
+            _isLoadingCourse = false;
         }
-
-        // Quan trọng khi dùng pooling:
-        // item bị SetActive(false) phải nhả texture runtime
-        ReleaseRuntimeImage();
     }
 
     private void OnDestroy()
@@ -62,16 +74,20 @@ public class EduCourseElement : MonoBehaviour
         if (goToDetailBtn != null)
             goToDetailBtn.onClick.RemoveListener(GoToDetail);
 
-        if (_loadImageRoutine != null)
-            StopCoroutine(_loadImageRoutine);
+        StopImageLoad();
+        HideImageLoading();
 
         if (_waitDataRoutine != null)
+        {
             StopCoroutine(_waitDataRoutine);
+            _waitDataRoutine = null;
+            _isLoadingCourse = false;
+        }
 
         ReleaseRuntimeImage();
     }
 
-    public void Setup(CourseListItemData data)
+    public void Setup(CourseListItemData data, bool loadImageImmediately = true)
     {
         if (data == null) return;
 
@@ -95,26 +111,56 @@ public class EduCourseElement : MonoBehaviour
         }
 
         if (courseTag != null)
-        {
-            // setup tag nếu cần
-        }
+            courseTag.ShowLearningMode(data.learningMode);
 
-        if (_loadImageRoutine != null)
-        {
-            StopCoroutine(_loadImageRoutine);
-            _loadImageRoutine = null;
-        }
+        string nextImageUrl = NormalizeImageUrl(data.image);
 
-        // Mỗi lần setup item mới, phải nhả ảnh runtime cũ trước
-        ReleaseRuntimeImage();
+        StopImageLoad();
+        HideImageLoading();
+
+        if (!string.Equals(_imageUrl, nextImageUrl, StringComparison.Ordinal))
+            ReleaseRuntimeImage();
+
+        _imageUrl = nextImageUrl;
+        _imageLoadRequested = loadImageImmediately;
 
         if (courseImg != null)
         {
-            courseImg.sprite = fallbackSprite;
+            courseImg.enabled = true;
 
-            if (!string.IsNullOrWhiteSpace(data.image))
-                _loadImageRoutine = StartCoroutine(LoadImage(data.image));
+            if (_runtimeSprite != null &&
+                string.Equals(_runtimeImageUrl, _imageUrl, StringComparison.Ordinal))
+            {
+                courseImg.sprite = _runtimeSprite;
+                HideImageLoading();
+            }
+            else
+            {
+                courseImg.sprite = fallbackSprite;
+
+                if (TryApplyCachedImage())
+                    return;
+
+                if (!string.IsNullOrWhiteSpace(_imageUrl))
+                    ShowImageLoading();
+
+                if (loadImageImmediately)
+                    ApplyOrLoadImage();
+            }
         }
+    }
+
+    public void LoadImageNow()
+    {
+        _imageLoadRequested = true;
+
+        if (TryApplyCachedImage())
+            return;
+
+        if (!string.IsNullOrWhiteSpace(_imageUrl))
+            ShowImageLoading();
+
+        ApplyOrLoadImage();
     }
 
     public static string FormatNumber(int value)
@@ -142,6 +188,8 @@ public class EduCourseElement : MonoBehaviour
             Debug.LogWarning("[EduCourseElement] Missing courseDetailLoader or courseReviewLoader");
             return;
         }
+
+        CourseOpenRequested?.Invoke(_courseId);
 
         if (_waitDataRoutine != null)
             StopCoroutine(_waitDataRoutine);
@@ -251,43 +299,96 @@ public class EduCourseElement : MonoBehaviour
         return $"{day:00}/{month:00}/{year}";
     }
 
-    private IEnumerator LoadImage(string url)
+    private void ShowImageLoading()
     {
-        using (var req = UnityWebRequestTexture.GetTexture(url, false))
+        if (courseImg == null)
+            return;
+
+        _imageLoadingHandle = LoadingUI.ShowInside(courseImg.rectTransform);
+    }
+
+    private void HideImageLoading()
+    {
+        LoadingUI.HideInside(_imageLoadingHandle);
+        _imageLoadingHandle = null;
+    }
+
+    private void ApplyOrLoadImage()
+    {
+        if (courseImg == null || string.IsNullOrWhiteSpace(_imageUrl))
         {
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                _loadImageRoutine = null;
-                yield break;
-            }
-
-            var downloadedTexture = DownloadHandlerTexture.GetContent(req);
-            // Resize về 512
-            var resizedTexture = downloadedTexture.Resize(512);
-            // Hủy texture gốc sau khi resize xong
-            Destroy(downloadedTexture);
-
-            if (resizedTexture == null)
-            {
-                _loadImageRoutine = null;
-                yield break;
-            }
-
-            _runtimeTexture = resizedTexture;
-            _runtimeSprite = Sprite.Create(
-                _runtimeTexture,
-                new Rect(0, 0, _runtimeTexture.width, _runtimeTexture.height),
-                new Vector2(0.5f, 0.5f),
-                100f
-            );
-
-            if (courseImg != null)
-                courseImg.sprite = _runtimeSprite;
+            HideImageLoading();
+            return;
         }
 
-        _loadImageRoutine = null;
+        if (TryApplyCachedImage())
+            return;
+
+        if (_imageRequestId != 0)
+            return;
+
+        ShowImageLoading();
+        int version = ++_imageLoadVersion;
+        string requestUrl = _imageUrl;
+        _imageRequestId = CourseImageRuntimeCache.Request(requestUrl, CourseImageSize, (sprite, error) =>
+        {
+            if (version != _imageLoadVersion || !string.Equals(requestUrl, _imageUrl, StringComparison.Ordinal))
+                return;
+
+            _imageRequestId = 0;
+
+            if (sprite == null)
+            {
+                if (debugImageLog)
+                    Debug.LogWarning($"[EduCourseElement] Load image failed: {_courseId} | {requestUrl} | {error}");
+
+                HideImageLoading();
+                return;
+            }
+
+            ApplyImageSprite(requestUrl, sprite);
+
+            if (debugImageLog)
+                Debug.Log($"[EduCourseElement] Image applied: {_courseId} | {requestUrl}");
+        });
+    }
+
+    private bool TryApplyCachedImage()
+    {
+        if (string.IsNullOrWhiteSpace(_imageUrl))
+            return false;
+
+        if (CourseImageRuntimeCache.TryGet(_imageUrl, CourseImageSize, out var cachedSprite))
+        {
+            ApplyImageSprite(_imageUrl, cachedSprite);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ApplyImageSprite(string url, Sprite sprite)
+    {
+        _runtimeSprite = sprite;
+        _runtimeImageUrl = url;
+        HideImageLoading();
+
+        if (courseImg == null)
+            return;
+
+        courseImg.sprite = sprite;
+        courseImg.enabled = true;
+    }
+
+    private void StopImageLoad()
+    {
+        _imageLoadVersion++;
+
+        if (_imageRequestId == 0)
+            return;
+
+        CourseImageRuntimeCache.Cancel(_imageRequestId);
+        _imageRequestId = 0;
     }
 
     private void ReleaseRuntimeImage()
@@ -295,16 +396,13 @@ public class EduCourseElement : MonoBehaviour
         if (courseImg != null && courseImg.sprite == _runtimeSprite)
             courseImg.sprite = fallbackSprite;
 
-        if (_runtimeSprite != null)
-        {
-            Destroy(_runtimeSprite);
-            _runtimeSprite = null;
-        }
+        HideImageLoading();
+        _runtimeSprite = null;
+        _runtimeImageUrl = null;
+    }
 
-        if (_runtimeTexture != null)
-        {
-            Destroy(_runtimeTexture);
-            _runtimeTexture = null;
-        }
+    private static string NormalizeImageUrl(string raw)
+    {
+        return CourseImageRuntimeCache.NormalizeUrl(raw);
     }
 }

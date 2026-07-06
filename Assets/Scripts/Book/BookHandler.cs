@@ -23,6 +23,10 @@ public class BookHandler : MonoBehaviour
 
     public static bool CanSelectBook = true;
 
+    public bool HasBoundCourseState { get; private set; }
+    public bool BoundCourseIsJoined { get; private set; }
+    public bool BoundCourseGuestAllowed { get; private set; }
+
     public Action<BookHandler> OnRequestEnterCourse;
 
     private const string SceneRoom1 = "dai_dao_chi_gian_1";
@@ -59,18 +63,13 @@ public class BookHandler : MonoBehaviour
 
     private void BuyCourse()
     {
-        string token = TokenStore.AccessToken;
-
-        if (string.IsNullOrWhiteSpace(token))
+        if (!IsLoggedIn())
         {
-            LoadingUI.ShowErrorPopup(
-                "Bạn cần đăng nhập để xem khóa học này.",
-                "Thông báo",
-                () => { BookHandler.CanSelectBook = true; }
-            );
+            ShowLoginRequiredPopup();
             return;
         }
 
+        string token = TokenStore.AccessToken;
         token = token.Trim();
 
         if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -99,13 +98,36 @@ public class BookHandler : MonoBehaviour
 
     private void OnPlayerClickBook()
     {
+        if (GameplayLock.IsLocked(GameplayLockTarget.BookInteract))
+        {
+            return;
+        }
+        
         if (CanSelectBook == false) return;
+
+        if (!IsLoggedIn())
+        {
+            if (CanGuestAccessCourse())
+                BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
+            else
+                ShowLoginRequiredPopup();
+
+            return;
+        }
 
         BuyReviewCourseManager.Instance.ShowBookPreviewUI(this);
     }
 
     public void EnterCourse()
     {
+        if (GameplayLock.IsLocked(GameplayLockTarget.BookInteract))
+        {
+            return;
+        }
+        
+        if (!CanEnterCourseFromCurrentAuth())
+            return;
+
         if (OnRequestEnterCourse != null)
         {
             OnRequestEnterCourse.Invoke(this);
@@ -113,6 +135,79 @@ public class BookHandler : MonoBehaviour
         }
 
         BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
+    }
+
+    private bool CanEnterCourseFromCurrentAuth()
+    {
+        if (IsLoggedIn())
+            return true;
+
+        if (CanGuestAccessCourse())
+            return true;
+
+        ShowLoginRequiredPopup();
+        return false;
+    }
+
+    public void SetCourseState(bool isJoined, bool guestAllowed)
+    {
+        HasBoundCourseState = true;
+        BoundCourseIsJoined = isJoined;
+        BoundCourseGuestAllowed = guestAllowed;
+    }
+
+    public void ShowLoginRequiredPopup()
+    {
+        BookHandler.CanSelectBook = false;
+
+        LoadingUI.ShowErrorPopup(
+            "Bạn cần đăng nhập để tham gia khóa học này.",
+            "Thông báo",
+            () => { BookHandler.CanSelectBook = true; }
+        );
+    }
+
+    public bool RequiresLoginForCurrentCourse()
+    {
+        return !IsLoggedIn() && !CanGuestAccessCourse();
+    }
+
+    private static bool IsLoggedIn()
+    {
+        if (!TokenStore.IsAuthenticated)
+            TokenStore.TryRestoreFromDisk();
+
+        return TokenStore.IsAuthenticated && !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+    }
+
+    private bool CanGuestAccessCourse()
+    {
+        if (HasBoundCourseState)
+            return BoundCourseGuestAllowed;
+
+        if (bookHandleUI != null && bookHandleUI.HasCourseState)
+        {
+            SetCourseState(bookHandleUI.IsJoined, bookHandleUI.IsFree);
+            return bookHandleUI.IsFree;
+        }
+
+        string resolvedCourseId = course_id;
+
+        if (string.IsNullOrWhiteSpace(resolvedCourseId) && !string.IsNullOrWhiteSpace(book_seo))
+            resolvedCourseId = LmsStore.Instance.GetCourseIdBySeo(book_seo);
+
+        if (!string.IsNullOrWhiteSpace(resolvedCourseId))
+        {
+            var market = LmsStore.Instance.GetMarketCourse(resolvedCourseId);
+            if (market != null)
+            {
+                bool guestAllowed = LmsStore.AllowsGuestCourse(market);
+                SetCourseState(market.isJoined, guestAllowed);
+                return guestAllowed;
+            }
+        }
+
+        return false;
     }
 
     public IEnumerator TryEnterCourse()
@@ -137,7 +232,7 @@ public class BookHandler : MonoBehaviour
             BookHandler.CanSelectBook = false;
 
             LoadingUI.ShowErrorPopup(
-                "Bạn chưa sở hữu khóa học này hoặc khóa học chưa sẵn sàng.",
+                "Bạn cần đăng nhập để tham gia khóa học này.",
                 "Thông báo",
                 () => { BookHandler.CanSelectBook = true; }
             );
@@ -172,7 +267,7 @@ public class BookHandler : MonoBehaviour
             ? LmsStore.Instance.GetMarketCourse(courseId)
             : null;
 
-        bool isFree = market != null && market.isFree;
+        bool isFree = market != null && LmsStore.IsCourseFree(market);
         bool isJoined = market != null && market.isJoined;
         bool isCoHoc1 = IsCoHoc1Seo(book_seo);
 
@@ -184,7 +279,7 @@ public class BookHandler : MonoBehaviour
         // Khóa free hoặc Cổ học 1 vào phòng 1
         if (isFree || isCoHoc1)
             return SceneRoom1;
-        // TODO: 11/05/2026 -> chỉ có định nghĩa phòng cho các khoá kì môn, còn lại đều qua cổ học 2
+        
         if (SeoResolver.TryGetSceneNameBySeoID(book_seo, out var customScene))
         {
             return customScene;

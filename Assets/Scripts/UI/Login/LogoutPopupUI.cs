@@ -23,6 +23,7 @@ public class LogoutPopupUI : MonoBehaviour
     {
         logoutBtn.onClick.RemoveListener(Logout);
         returnBtn.onClick.RemoveListener(Return);
+        SetGameplayLock(false);
     }
     private void Logout()
     {
@@ -35,16 +36,20 @@ public class LogoutPopupUI : MonoBehaviour
     }
 
     [SerializeField] private CanvasGroup _canvasGroup;
+    private bool ownsGameplayLock;
+
     public void Show()
     {
         _canvasGroup.gameObject.SetActive(true);
         _canvasGroup.DOFade(0, 0);
         _canvasGroup.DOFade(1, 0.2f);
+        SetGameplayLock(true);
     }
 
     public void Hide()
     {
         _canvasGroup.gameObject.SetActive(false);
+        SetGameplayLock(false);
     }
     
     public void SetInteractable(bool interactable)
@@ -53,5 +58,22 @@ public class LogoutPopupUI : MonoBehaviour
 
         _canvasGroup.interactable = interactable;
         _canvasGroup.blocksRaycasts = interactable;
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 }

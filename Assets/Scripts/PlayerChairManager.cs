@@ -29,6 +29,7 @@ public class PlayerChairManager : MonoBehaviour
     [SerializeField] InputCanvas inputCanvas;
     [SerializeField] private CourseExitWayHandler courseExitWayHandler;
     public ChairCheckPoint currentCheckPoint;
+    private bool ownsCourseGameplayLock;
 
     private TutorialBase TutorialBase;
 
@@ -48,6 +49,7 @@ public class PlayerChairManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        SetCourseGameplayLock(false);
         Instance = null;
     }
 
@@ -75,13 +77,16 @@ public class PlayerChairManager : MonoBehaviour
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
-        ShowAllCheckPoints(true);
+        foreach (var item in allCheckPoints)
+        {
+            item.Show(true);
+        }
         // ẩn UI ngay khi bắt đầu đứng dậy
         //playerStandUI.UILearnCanvas.Hide();
         //playerStandUI.HideWatchVideoUI();
         playerStandUI.HideLearningUI();
         videoPlayerControllerPro.ExitFullscreenUI();
-        InputBlocker.SetBlocked(false);
+        SetCourseGameplayLock(false);
         StartBlendCoroutine(() =>
         {
             Debug.Log("bật lại input");
@@ -92,6 +97,7 @@ public class PlayerChairManager : MonoBehaviour
             courseExitWayHandler.Show();
 
             PlayerPanelUI.Instance.ShowUnLoginContainer(true);
+            PlayerPanelUI.Instance.ShowExternalButton(true);
         });
     }
 
@@ -164,14 +170,18 @@ public class PlayerChairManager : MonoBehaviour
             inputCanvas.Hide();
 
             // ẩn tất cả icon của ghế
-            ShowAllCheckPoints(false);
+            foreach (var item in allCheckPoints)
+            {
+                item.Show(false);
+            }
             // d
             StopAllCoroutines();
-            InputBlocker.SetBlocked(true);
+            SetCourseGameplayLock(true);
             
             courseExitWayHandler.Hide();
             
             PlayerPanelUI.Instance.ShowUnLoginContainer(false);
+            PlayerPanelUI.Instance.ShowExternalButton(false);
             StartBlendCoroutine(() =>
             {
                 // Hiện UI ngay sau khi ngồi xuống hoàn tất
@@ -228,40 +238,21 @@ public class PlayerChairManager : MonoBehaviour
         _blendToken++;
         _blendCoroutine = StartCoroutine(WaitForBlendDone(action, _blendToken));
     }
-     
-    public void OnSitdownUI_Immediate()
-    {
-        inputCanvas.Hide();
-        courseExitWayHandler.Hide();
-        PlayerPanelUI.Instance.ShowUnLoginContainer(false);
-        playerStandUI.returnBtn.gameObject.SetActive(false);
-    }
 
-    private void OnSitdownUI_Deferred()
+    private void SetCourseGameplayLock(bool locked)
     {
-        playerStandUI.ShowLearningUI();
-        videoPlayerControllerPro.EnterFullscreenUI();
-    }
+        if (ownsCourseGameplayLock == locked)
+            return;
 
-    private void OnStandupUI_Immediate()
-    {
-        playerStandUI.HideLearningUI();
-        videoPlayerControllerPro.ExitFullscreenUI();
-    }
-
-    public void OnStandupUI_Deferred()
-    {
-        inputCanvas.Show();
-        courseExitWayHandler.Show();
-        PlayerPanelUI.Instance.ShowUnLoginContainer(true);
-        playerStandUI.returnBtn.gameObject.SetActive(true);
-    }
-
-    public void ShowAllCheckPoints(bool b)
-    {
-        foreach (var item in allCheckPoints)
+        if (locked)
         {
-            item.Show(b);
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
         }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsCourseGameplayLock = locked;
     }
 }

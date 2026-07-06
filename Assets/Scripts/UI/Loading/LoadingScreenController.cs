@@ -33,6 +33,9 @@ public class LoadingScreenController : MonoBehaviour
     [Tooltip("Chỉ dùng để log cảnh báo nếu scene load quá lâu. Không dùng để đẩy progress ảo.")]
     public float maxLoadingSeconds = 2f;
 
+    public event Action OnStartLoadingEvent;
+    public event Action OnEndLoadingEvent;
+    
 // Network / Load Fail Protection")]
 public bool enableRollbackProtection = true;
 
@@ -47,8 +50,9 @@ public float rollbackPopupDelaySeconds = 0.15f;
 
 private bool _loadSucceeded;
 private bool _loadFailedOrCancelled;
-private GameObject _inputBlockerRoot;
-private Image _inputBlockerImage;
+private GameObject _raycastBlockerRoot;
+private Image _raycastBlockerImage;
+private bool _ownsLoadingGameplayLock;
 #if ADDRESSABLES
 private Coroutine _prepareAddressablesCoroutine;
 #endif
@@ -58,6 +62,15 @@ private Coroutine _prepareAddressablesCoroutine;
 
     [Tooltip("Có unload unused assets sau khi activate scene không. Bật cái này sẽ sạch RAM hơn nhưng có thể chậm thêm.")]
     public bool unloadUnusedAssetsAfterLoad = false;
+
+    [Header("New Scene Late Content")]
+    public bool waitForNewSceneLateContentBeforeReveal = false;
+    public float newSceneLateContentWaitTimeoutSeconds = 300f;
+    public float newSceneLateContentFindTimeoutSeconds = 5f;
+    public bool waitForCachedNewSceneLateContentBeforeReveal = true;
+    public float cachedNewSceneLateContentWaitTimeoutSeconds = 12f;
+    public float uncachedNewSceneLateContentRevealGraceSeconds = 4f;
+    public float newSceneLateContentCacheProbeWaitSeconds = 1.5f;
 
     [Header("Image Cycle")]
     public float imageSwitchInterval = 1f;
@@ -107,8 +120,8 @@ private void Awake()
     ResolvePanelLoadingRoot();
     ResolveExistingLoadNextVideoObjects();
 
-    EnsureInputBlocker();
-    SetInputBlockerVisible(false);
+    EnsureRaycastBlocker();
+    SetRaycastBlockerVisible(false);
 
     HideLoadNextVideoSurface();
     SetDefaultLoadingVisible(false);
@@ -131,6 +144,8 @@ private void Awake()
 
 private IEnumerator LoadByNameRoutine(string sceneName)
 {
+    OnStartLoadingEvent?.Invoke();
+    
     _isLoading = true;
     _loadSucceeded = false;
     _loadFailedOrCancelled = false;
@@ -222,7 +237,9 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
     Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
 
-    Destroy(gameObject);
+    yield return CloseLoadingScreenRoutine();
+    
+    OnEndLoadingEvent?.Invoke();
 }
 
     private IEnumerator SafeUnloadPreviousScene()
@@ -262,6 +279,31 @@ private IEnumerator LoadByNameRoutine(string sceneName)
             yield return null;
     }
 
+    private IEnumerator CloseLoadingScreenRoutine()
+    {
+        Scene ownScene = gameObject.scene;
+
+        if (ownScene.IsValid() &&
+            ownScene.isLoaded &&
+            string.Equals(ownScene.name, loadingSceneName, StringComparison.Ordinal) &&
+            SceneManager.sceneCount > 1)
+        {
+            Debug.Log($"[LoadingScreenController] Unload loading scene: {ownScene.name}");
+
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(ownScene);
+
+            if (unloadOp != null)
+            {
+                while (!unloadOp.isDone)
+                    yield return null;
+
+                yield break;
+            }
+        }
+
+        Destroy(gameObject);
+    }
+
 #if ADDRESSABLES
     private IEnumerator LoadAddressableSceneFast(string sceneName, float startTime, float visualStartTime)
     {
@@ -281,11 +323,12 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         Debug.Log($"[LoadingScreenController] Addressables LoadSceneAsync started: {sceneName}");
 
-        AsyncOperationHandle<SceneInstance> handle = LoadAddressableScenePackage(sceneName);
+        bool loadTargetAdditively = ShouldLoadTargetAdditivelyBeforeReveal(sceneName);
+        AsyncOperationHandle<SceneInstance> handle = LoadAddressableScenePackage(sceneName, loadTargetAdditively);
 
         while (handle.IsValid() && !handle.IsDone)
         {
-            SetProgress(Mathf.Clamp01(handle.PercentComplete));
+            SetProgress(Mathf.Lerp(0.45f, 0.65f, Mathf.Clamp01(handle.PercentComplete)));
             yield return null;
         }
 
@@ -307,7 +350,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         Debug.Log($"[LoadingScreenController] Scene package ready at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        SetProgress(1f);
+        SetProgress(0.65f);
 
         yield return WaitForLoadNextVideoFinished("addressables activation");
 
@@ -320,17 +363,154 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         while (!activateOp.isDone)
         {
-            SetProgress(Mathf.Clamp01(activateOp.progress));
+            SetProgress(Mathf.Lerp(0.65f, 0.75f, Mathf.Clamp01(activateOp.progress)));
             yield return null;
         }
 
         Debug.Log($"[LoadingScreenController] Scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
+        if (loadTargetAdditively && handle.Result.Scene.IsValid())
+        {
+            SceneManager.SetActiveScene(handle.Result.Scene);
+            Debug.Log($"[LoadingScreenController] Target scene set active after additive load: {handle.Result.Scene.name}");
+        }
+
+        SetProgress(0.75f);
+
+        yield return WaitForNewSceneLateContentIfNeeded(sceneName, startTime);
+
         _lastActivatedAddressableSceneHandle = handle;
 
-        _loadingStatusOverride = "Hoan tat";
+        _loadingStatusOverride = "Hoàn tất";
         SetProgress(1f);
+        _loadSucceeded = true;
     }
+
+    private bool ShouldLoadTargetAdditivelyBeforeReveal(string sceneName)
+    {
+        return SceneNameAliases.IsNewSceneFamily(sceneName);
+    }
+
+    private IEnumerator WaitForNewSceneLateContentIfNeeded(string sceneName, float startTime)
+    {
+        if (!SceneNameAliases.IsNewSceneFamily(sceneName))
+            yield break;
+
+        if (!waitForNewSceneLateContentBeforeReveal && !waitForCachedNewSceneLateContentBeforeReveal)
+            yield break;
+
+        _loadingStatusOverride = "Đang dựng thế giới";
+        SetProgress(0.75f);
+
+        AddressableAdditiveSceneLoader loader = null;
+        float findTimer = 0f;
+
+        while (loader == null && findTimer < Mathf.Max(0f, newSceneLateContentFindTimeoutSeconds))
+        {
+            loader = FindNewSceneLateLoader();
+
+            if (loader != null)
+                break;
+
+            findTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (loader == null)
+        {
+            Debug.LogWarning("[LoadingScreenController] New Scene late loader not found. Reveal scene without late wait.");
+            yield break;
+        }
+
+        loader.BeginLoad();
+
+        float cacheProbeTimer = 0f;
+
+        while (!loader.CacheStateKnown &&
+               cacheProbeTimer < Mathf.Max(0f, newSceneLateContentCacheProbeWaitSeconds) &&
+               !loader.IsComplete)
+        {
+            cacheProbeTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        bool shouldWaitForCachedContent =
+            waitForCachedNewSceneLateContentBeforeReveal &&
+            loader.CacheStateKnown &&
+            loader.AllDependenciesCached;
+
+        float timeoutSeconds;
+
+        if (waitForNewSceneLateContentBeforeReveal)
+            timeoutSeconds = newSceneLateContentWaitTimeoutSeconds;
+        else if (shouldWaitForCachedContent)
+            timeoutSeconds = cachedNewSceneLateContentWaitTimeoutSeconds;
+        else
+            timeoutSeconds = uncachedNewSceneLateContentRevealGraceSeconds;
+
+        Debug.Log("[LoadingScreenController] New Scene late wait. cacheKnown="
+                  + loader.CacheStateKnown
+                  + ", allCached="
+                  + loader.AllDependenciesCached
+                  + ", timeout="
+                  + timeoutSeconds.ToString("0.0"));
+
+        float waitTimer = 0f;
+
+        while (!loader.IsComplete)
+        {
+            waitTimer += Time.unscaledDeltaTime;
+
+            float lateProgress = Mathf.Clamp01(loader.Progress01);
+            SetProgress(Mathf.Lerp(0.75f, 0.98f, lateProgress));
+
+            if (timeoutSeconds > 0f && waitTimer >= timeoutSeconds)
+            {
+                Debug.LogWarning("[LoadingScreenController] Continue before New Scene late content is fully loaded. loaded="
+                                 + loader.LoadedSceneCount
+                                 + "/"
+                                 + loader.TotalSceneCount
+                                 + ", failed="
+                                 + loader.FailedSceneCount
+                                 + ", allCached="
+                                 + loader.AllDependenciesCached);
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        SetProgress(0.98f);
+
+        Debug.Log("[LoadingScreenController] New Scene late content ready at "
+                  + (Time.realtimeSinceStartup - startTime).ToString("0.00")
+                  + "s. loaded="
+                  + loader.LoadedSceneCount
+                  + "/"
+                  + loader.TotalSceneCount
+                  + ", failed="
+                  + loader.FailedSceneCount);
+    }
+
+private AddressableAdditiveSceneLoader FindNewSceneLateLoader()
+{
+    AddressableAdditiveSceneLoader[] loaders =
+        FindObjectsByType<AddressableAdditiveSceneLoader>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+    for (int i = 0; i < loaders.Length; i++)
+    {
+        AddressableAdditiveSceneLoader loader = loaders[i];
+
+        if (loader == null)
+            continue;
+
+        if (SceneNameAliases.IsNewSceneFamily(loader.gameObject.scene.name))
+            return loader;
+    }
+
+    return loaders.Length > 0 ? loaders[0] : null;
+}
+
 private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 {
     _loadingStatusOverride = "Đang chuẩn bị tài nguyên";
@@ -383,7 +563,7 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 
     Debug.Log($"[LoadingScreenController] Prepare addressables target DONE at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-    SetProgress(1f);
+    SetProgress(0.45f);
 }
 
     private IEnumerator RunPrepareTargetAddressablesRoutine(Action onDone)
@@ -404,16 +584,14 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
         float prepare01 = Mathf.Clamp01(AddressablesPreload.Instance.DownloadPercent01);
         _loadingStatusOverride = AddressablesPreload.Instance.LoadingText;
 
-        SetProgress(prepare01);
+        SetProgress(Mathf.Lerp(0.01f, 0.45f, prepare01));
     }
 
-    private AsyncOperationHandle<SceneInstance> LoadAddressableScenePackage(string sceneName)
+    private AsyncOperationHandle<SceneInstance> LoadAddressableScenePackage(string sceneName, bool loadAdditively)
     {
-#if UNITY_EDITOR
-        return Addressables.LoadSceneAsync(sceneName, LoadSceneMode.Single, false);
-#else
-        return LoadingTransition.LoadAddressableAsync(false);
-#endif
+        LoadSceneMode mode = loadAdditively ? LoadSceneMode.Additive : LoadSceneMode.Single;
+        Debug.Log($"[LoadingScreenController] Addressables scene mode={mode}, activateOnLoad=false, scene={sceneName}");
+        return Addressables.LoadSceneAsync(sceneName, mode, false);
     }
 
     private bool ShouldRunAddressablesPreloadPhase()
@@ -487,8 +665,9 @@ private IEnumerator PrepareAddressablesTarget(string sceneName, float startTime)
 
         Debug.Log($"[LoadingScreenController] Build scene activated at {Time.realtimeSinceStartup - startTime:0.00}s");
 
-        _loadingStatusOverride = "Hoan tat";
+        _loadingStatusOverride = "Hoàn tất";
         SetProgress(1f);
+        _loadSucceeded = true;
     }
 
     private void SetProgress(float t)
@@ -553,7 +732,7 @@ private void StopDefaultLoadingVisuals()
     SetDefaultLoadingVisible(false);
 
     // Load xong thì trả lại input bình thường.
-    SetInputBlockerVisible(false);
+    SetRaycastBlockerVisible(false);
 }
 
 private void SetDefaultLoadingVisible(bool visible)
@@ -583,7 +762,7 @@ private void SetDefaultLoadingVisible(bool visible)
         loadingParticle.gameObject.SetActive(visible);
 
     // Chặn người dùng bấm xuyên xuống scene cũ trong lúc đang load.
-    SetInputBlockerVisible(_isLoading);
+    SetRaycastBlockerVisible(_isLoading);
 }
 
     private void HideDefaultLoadingPanel()
@@ -636,17 +815,17 @@ private void SetDefaultLoadingVisible(bool visible)
         _panelLoadingCanvasGroup.interactable = visible;
         _panelLoadingCanvasGroup.blocksRaycasts = visible;
     }
-private void EnsureInputBlocker()
+private void EnsureRaycastBlocker()
 {
-    if (_inputBlockerRoot != null && _inputBlockerImage != null)
+    if (_raycastBlockerRoot != null && _raycastBlockerImage != null)
         return;
 
     Transform parent = GetLoadNextVideoParent();
 
-    _inputBlockerRoot = new GameObject("Loading_Input_Blocker", typeof(RectTransform), typeof(Image));
-    _inputBlockerRoot.transform.SetParent(parent, false);
+    _raycastBlockerRoot = new GameObject("Loading_Raycast_Blocker", typeof(RectTransform), typeof(Image));
+    _raycastBlockerRoot.transform.SetParent(parent, false);
 
-    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    RectTransform rect = _raycastBlockerRoot.GetComponent<RectTransform>();
     rect.anchorMin = Vector2.zero;
     rect.anchorMax = Vector2.one;
     rect.offsetMin = Vector2.zero;
@@ -654,28 +833,28 @@ private void EnsureInputBlocker()
     rect.pivot = new Vector2(0.5f, 0.5f);
     rect.localScale = Vector3.one;
 
-    _inputBlockerImage = _inputBlockerRoot.GetComponent<Image>();
+    _raycastBlockerImage = _raycastBlockerRoot.GetComponent<Image>();
 
     // Trong suốt nhưng vẫn bắt raycast để không cho click xuyên xuống video/UI bên dưới.
-    _inputBlockerImage.color = new Color(0f, 0f, 0f, 0f);
-    _inputBlockerImage.raycastTarget = true;
+    _raycastBlockerImage.color = new Color(0f, 0f, 0f, 0f);
+    _raycastBlockerImage.raycastTarget = true;
 
-    _inputBlockerRoot.SetActive(false);
+    _raycastBlockerRoot.SetActive(false);
 }
 
-private void PlaceInputBlockerOnTop()
+private void PlaceRaycastBlockerOnTop()
 {
-    EnsureInputBlocker();
+    EnsureRaycastBlocker();
 
-    if (_inputBlockerRoot == null)
+    if (_raycastBlockerRoot == null)
         return;
 
     Transform parent = GetLoadNextVideoParent();
 
-    if (_inputBlockerRoot.transform.parent != parent)
-        _inputBlockerRoot.transform.SetParent(parent, false);
+    if (_raycastBlockerRoot.transform.parent != parent)
+        _raycastBlockerRoot.transform.SetParent(parent, false);
 
-    RectTransform rect = _inputBlockerRoot.GetComponent<RectTransform>();
+    RectTransform rect = _raycastBlockerRoot.GetComponent<RectTransform>();
     rect.anchorMin = Vector2.zero;
     rect.anchorMax = Vector2.one;
     rect.offsetMin = Vector2.zero;
@@ -685,25 +864,43 @@ private void PlaceInputBlockerOnTop()
 
     // Cho blocker nằm trên cùng để bắt toàn bộ touch/click.
     // Nó trong suốt nên không che hình ảnh/video.
-    _inputBlockerRoot.transform.SetAsLastSibling();
+    _raycastBlockerRoot.transform.SetAsLastSibling();
 }
 
-private void SetInputBlockerVisible(bool visible)
+private void SetRaycastBlockerVisible(bool visible)
 {
     if (visible)
     {
-        PlaceInputBlockerOnTop();
+        PlaceRaycastBlockerOnTop();
     }
     else
     {
-        if (_inputBlockerRoot == null)
+        if (_raycastBlockerRoot == null)
+        {
+            SetLoadingGameplayLock(false);
             return;
+        }
     }
 
-    _inputBlockerRoot.SetActive(visible);
+    _raycastBlockerRoot.SetActive(visible);
 
-    if (_inputBlockerImage != null)
-        _inputBlockerImage.raycastTarget = visible;
+    if (_raycastBlockerImage != null)
+        _raycastBlockerImage.raycastTarget = visible;
+
+    SetLoadingGameplayLock(visible);
+}
+
+private void SetLoadingGameplayLock(bool locked)
+{
+    if (_ownsLoadingGameplayLock == locked)
+        return;
+
+    if (locked)
+        GameplayLock.Lock(GameplayLockReason.Loading, GameplayLockTarget.All);
+    else
+        GameplayLock.Unlock(GameplayLockReason.Loading);
+
+    _ownsLoadingGameplayLock = locked;
 }
     private IEnumerator CycleRandomImages()
     {
@@ -766,7 +963,8 @@ private void SetInputBlockerVisible(bool visible)
 
     private static bool SceneNameEquals(string a, string b)
     {
-        return NormalizeSceneName(a) == NormalizeSceneName(b);
+        return SceneNameAliases.AreSameScene(a, b) ||
+               NormalizeSceneName(a) == NormalizeSceneName(b);
     }
 
     private static string NormalizeSceneName(string sceneName)
@@ -1210,7 +1408,7 @@ private void ShowLoadNextVideoSurface()
 
     // Chặn touch khi đang phát video chuyển cảnh.
     // Đặt sau video để blocker nằm trên cùng, nhưng nó trong suốt nên không che hình.
-    SetInputBlockerVisible(true);
+    SetRaycastBlockerVisible(true);
 }
 
 private void HideLoadNextVideoSurface()
@@ -1223,7 +1421,7 @@ private void HideLoadNextVideoSurface()
 
     // Nếu vẫn đang loading thì tiếp tục chặn click,
     // tránh có 1 frame bị click xuyên xuống scene/video bên dưới.
-    SetInputBlockerVisible(_isLoading);
+    SetRaycastBlockerVisible(_isLoading);
 }
 
     private void Update()
@@ -1261,11 +1459,13 @@ private void OnDestroy()
         _runtimeLoadNextRenderTexture = null;
     }
 
-    if (_inputBlockerRoot != null)
+    SetLoadingGameplayLock(false);
+
+    if (_raycastBlockerRoot != null)
     {
-        Destroy(_inputBlockerRoot);
-        _inputBlockerRoot = null;
-        _inputBlockerImage = null;
+        Destroy(_raycastBlockerRoot);
+        _raycastBlockerRoot = null;
+        _raycastBlockerImage = null;
     }
 }
 private bool IsNetworkDisconnectedNow()

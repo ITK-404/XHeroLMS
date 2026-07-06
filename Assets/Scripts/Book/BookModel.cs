@@ -1,6 +1,7 @@
 ﻿using System;
 using DG.Tweening;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -20,6 +21,8 @@ public class BookModel : MonoBehaviour
     private bool isTweenDone = false;
     
     public Action OnPlayerClickBook;
+    public Func<bool> CanPlayerClick;
+    
     public bool canHover = true;
     private void Awake()
     {
@@ -98,6 +101,10 @@ public class BookModel : MonoBehaviour
 
     private void OnMouseUpAsButton()
     {
+        if (CanPlayerClick?.Invoke() == false)
+        {
+            return;
+        }
         if (Time.time - lastTimeClicked > 0.2f)
         {
             return;

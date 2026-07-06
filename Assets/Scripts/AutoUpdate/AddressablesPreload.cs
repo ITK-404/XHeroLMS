@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -61,6 +62,10 @@ public class AddressablesPreload : MonoBehaviour
 
     public int LoadingPhaseId { get; private set; }
 
+    public bool IsPreparingKey { get; private set; }
+    public string ActivePrepareKey { get; private set; } = "";
+    public bool LastPrepareUsedCachedData { get; private set; }
+
 #if ADDRESSABLES
 
     [Header("Runtime Catalog From GCS")]
@@ -72,7 +77,7 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private bool catalogOnlyOnBoot = true;
 
     [Tooltip("Mỗi lần vào scene sẽ kiểm tra dữ liệu mới trên GCS. Nếu có mới thì update rồi tải lại đúng scene.")]
-    [SerializeField] private bool checkCatalogBeforeEveryPrepare = true;
+    [SerializeField] private bool checkCatalogBeforeEveryPrepare = false;
 
     [Tooltip("Sau khi update dữ liệu, xóa bundle cũ không còn dùng.")]
     [SerializeField] private bool cleanOldBundleCacheAfterCatalogUpdate = true;
@@ -86,6 +91,7 @@ public class AddressablesPreload : MonoBehaviour
 
     [Header("Warmup / Giải nén")]
     [SerializeField] private bool warmupKeyDataAfterDownload = true;
+    [SerializeField] private bool warmupCachedKeyData = false;
     [SerializeField] private bool skipSceneWarmup = true;
     [SerializeField] private int warmupAssetBatchSize = 6;
     [SerializeField] private float warmupAssetBatchTimeoutSeconds = 240f;
@@ -103,7 +109,7 @@ public class AddressablesPreload : MonoBehaviour
     [SerializeField] private float progressWarmupEnd = 0.99f;
 
     // Khi dữ liệu đã có sẵn trong cache, vẫn chạy thanh load tối thiểu bấy nhiêu giây thay vì nhảy thẳng 100%.
-    private float cachedDataMinimumLoadSeconds = 1.2f;
+    private float cachedDataMinimumLoadSeconds = 0f;
 
     [Header("Retry / Timeout")]
     [SerializeField] private int maxCatalogRetries = 3;
@@ -135,11 +141,10 @@ public class AddressablesPreload : MonoBehaviour
 
     private readonly HashSet<string> _preparedKeys = new HashSet<string>();
 
-    public bool IsPreparingKey { get; private set; }
-    public string ActivePrepareKey { get; private set; } = "";
-    public bool LastPrepareUsedCachedData { get; private set; }
-
     private float _prepareProgressStartRealtime;
+    private bool _progressWindowActive;
+    private float _progressWindowStart01;
+    private float _progressWindowEnd01;
 
 #endif
 
@@ -181,6 +186,179 @@ public class AddressablesPreload : MonoBehaviour
     // PUBLIC API
     // ============================================================
 
+    public IEnumerator IsAddressableKeyCachedRoutine(string key, Action<bool> onDone)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        key = key.Trim();
+
+        while (_catalogRunning != null)
+            yield return null;
+
+        if (!IsReady || HasFailed)
+        {
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        AsyncOperationHandle<long> sizeHandle = default;
+
+        try
+        {
+            sizeHandle = Addressables.GetDownloadSizeAsync(key);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[Preload] Cache check threw exception. key={key}, error={e.Message}");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        float timer = 0f;
+
+        while (sizeHandle.IsValid() && !sizeHandle.IsDone)
+        {
+            if (stepTimeoutSeconds > 0f)
+            {
+                timer += Time.unscaledDeltaTime;
+
+                if (timer >= stepTimeoutSeconds)
+                {
+                    Debug.LogWarning($"[Preload] Cache check timeout. key={key}");
+                    SafeRelease(sizeHandle);
+                    onDone?.Invoke(false);
+                    yield break;
+                }
+            }
+
+            yield return null;
+        }
+
+        bool cached =
+            sizeHandle.IsValid() &&
+            sizeHandle.Status == AsyncOperationStatus.Succeeded &&
+            sizeHandle.Result <= verifySizeThresholdBytes;
+
+        if (sizeHandle.IsValid() && sizeHandle.Status != AsyncOperationStatus.Succeeded)
+        {
+            string err = sizeHandle.OperationException != null
+                ? sizeHandle.OperationException.Message
+                : sizeHandle.Status.ToString();
+
+            Debug.LogWarning($"[Preload] Cache check failed. key={key}, error={err}");
+        }
+
+        if (sizeHandle.IsValid())
+            Debug.Log($"[Preload] Cache check. key={key}, cached={cached}, remain={FormatBytes(Math.Max(0L, sizeHandle.Result))}");
+
+        SafeRelease(sizeHandle);
+        onDone?.Invoke(cached);
+    }
+
+    public IEnumerator PrepareAddressableKeysRoutine(IEnumerable<string> keys)
+    {
+        List<string> keyList = BuildUniquePrepareKeyList(keys);
+
+        if (keyList.Count == 0)
+        {
+            Fail("PrepareAddressableKeysRoutine failed: key list is empty.");
+            yield break;
+        }
+
+        if (keyList.Count == 1)
+        {
+            yield return PrepareAddressableKeyRoutine(keyList[0]);
+            yield break;
+        }
+
+        BeginNewLoadingSession(ShouldPreserveProgressForPrepareSession());
+
+        while (_catalogRunning != null)
+        {
+            SetPrepareText(DownloadPercent01);
+            yield return null;
+        }
+
+        if (HasFailed)
+        {
+            Debug.LogError($"[Preload] Cannot prepare key group because bootstrap failed. error={LastError}");
+            yield break;
+        }
+
+        if (!IsReady)
+        {
+            Fail("Catalog is not ready for prepare key group.");
+            yield break;
+        }
+
+        while (_prepareRunning != null)
+            yield return null;
+
+        if (checkCatalogBeforeEveryPrepare)
+        {
+            yield return CheckUpdateCatalogAndCleanOldBundles();
+
+            if (HasFailed)
+                yield break;
+        }
+
+        Debug.Log("[Preload] ===== Prepare key group started: " + string.Join(", ", keyList) + " =====");
+
+        for (int i = 0; i < keyList.Count; i++)
+        {
+            string key = keyList[i];
+            BeginProgressWindow(i, keyList.Count);
+
+            bool alreadyPreparedInSession =
+                rememberPreparedKeysInSession && _preparedKeys.Contains(key);
+
+            if (alreadyPreparedInSession)
+            {
+                IsPreparingKey = true;
+                ActivePrepareKey = key;
+                LastPrepareUsedCachedData = true;
+                _prepareProgressStartRealtime = Time.realtimeSinceStartup;
+
+                SetStage(PreloadStage.Done);
+                BytesToDownload = 0;
+                BytesDownloadedApprox = 0;
+                NetworkSpeedBytesPerSecond = 0;
+
+                yield return WaitCachedPrepareMinimumIfNeeded();
+
+                SetProgressExact(1f);
+                SetCheckingResourceText();
+
+                FinishPrepareKey();
+
+                Debug.Log($"[Preload] Key already prepared in this session and data is latest: {key}");
+                continue;
+            }
+
+            _prepareRunning = StartCoroutine(CoPrepareAddressableKeySafe(key, skipCatalogCheck: true));
+
+            while (_prepareRunning != null)
+                yield return null;
+
+            if (HasFailed)
+            {
+                ClearProgressWindow();
+                yield break;
+            }
+        }
+
+        ClearProgressWindow();
+        SetProgressExact(Mathf.Min(progressWarmupEnd, 0.99f));
+        SetCheckingResourceText();
+        SetStage(PreloadStage.Done);
+
+        Debug.Log("[Preload] ===== Prepare key group DONE: " + string.Join(", ", keyList) + " =====");
+    }
+
     public IEnumerator PrepareAddressableKeyRoutine(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -191,11 +369,11 @@ public class AddressablesPreload : MonoBehaviour
 
         key = key.Trim();
 
-        BeginNewLoadingSession();
+        BeginNewLoadingSession(ShouldPreserveProgressForPrepareSession());
 
         while (_catalogRunning != null)
         {
-            SetPrepareText(Mathf.Max(0.01f, DownloadPercent01));
+            SetPrepareText(DownloadPercent01);
             yield return null;
         }
 
@@ -572,7 +750,7 @@ public class AddressablesPreload : MonoBehaviour
             SetCheckingResourceText();
         }
 
-        if (warmupKeyDataAfterDownload)
+        if (warmupKeyDataAfterDownload && (totalBytes > 0 || warmupCachedKeyData))
         {
             BeginLoadingPhase(
                 PreloadStage.WarmupKeyData,
@@ -1169,6 +1347,47 @@ public class AddressablesPreload : MonoBehaviour
     // HELPERS
     // ============================================================
 
+    private List<string> BuildUniquePrepareKeyList(IEnumerable<string> keys)
+    {
+        List<string> result = new List<string>();
+        HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (keys == null)
+            return result;
+
+        foreach (string rawKey in keys)
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+                continue;
+
+            string key = rawKey.Trim();
+
+            if (seen.Add(key))
+                result.Add(key);
+        }
+
+        return result;
+    }
+
+    private void BeginProgressWindow(int index, int totalCount)
+    {
+        totalCount = Mathf.Max(1, totalCount);
+        index = Mathf.Clamp(index, 0, totalCount - 1);
+
+        float groupProgressEnd01 = Mathf.Min(progressWarmupEnd, 0.99f);
+
+        _progressWindowStart01 = Mathf.Clamp01(((float)index / totalCount) * groupProgressEnd01);
+        _progressWindowEnd01 = Mathf.Clamp01(((float)(index + 1) / totalCount) * groupProgressEnd01);
+        _progressWindowActive = true;
+    }
+
+    private void ClearProgressWindow()
+    {
+        _progressWindowActive = false;
+        _progressWindowStart01 = 0f;
+        _progressWindowEnd01 = 1f;
+    }
+
     private void ApplyUrlsFromRuntimeEnv()
     {
         if (!AppBuildEnvRuntime.HasConfig)
@@ -1239,7 +1458,7 @@ public class AddressablesPreload : MonoBehaviour
 
         NetworkSpeedBytesPerSecond = 0;
 
-        SetPrepareText(0.01f);
+        SetCheckingResourceText();
     }
 
     private IEnumerator HttpProbeGet(string url, int readBytes)
@@ -1316,8 +1535,18 @@ public class AddressablesPreload : MonoBehaviour
         }
     }
 
-    private void BeginNewLoadingSession()
+    private bool ShouldPreserveProgressForPrepareSession()
     {
+        if (HasFailed || DownloadPercent01 <= 0f)
+            return false;
+
+        return _catalogRunning != null || Stage == PreloadStage.CatalogReady;
+    }
+
+    private void BeginNewLoadingSession(bool preserveCurrentProgress = false)
+    {
+        float startProgress01 = preserveCurrentProgress ? Mathf.Clamp01(DownloadPercent01) : 0f;
+
         int phaseBefore = LoadingPhaseId;
         SetStage(PreloadStage.None);
 
@@ -1336,10 +1565,9 @@ public class AddressablesPreload : MonoBehaviour
         _lastSpeedBytes = 0;
         _lastSpeedTime = 0f;
 
-        // Reset thật sự ở đầu một lượt load mới.
-        DownloadPercent01 = 0f;
+        // Preserve bootstrap progress when a prepare session immediately follows catalog boot.
+        DownloadPercent01 = startProgress01;
 
-        SetProgressExact(0.01f);
         SetCheckingResourceText();
     }
 
@@ -1359,9 +1587,9 @@ public class AddressablesPreload : MonoBehaviour
         SetCheckingResourceText();
     }
 
-    private int CurrentOverallPercent()
+    private string CurrentOverallPercentText()
     {
-        return Mathf.Clamp(Mathf.FloorToInt(DownloadPercent01 * 100f), 0, 100);
+        return FormatProgressPercent(DownloadPercent01);
     }
 
     private float Map01(float value01, float from, float to)
@@ -1388,6 +1616,9 @@ public class AddressablesPreload : MonoBehaviour
             float timeCap = Mathf.Clamp01(elapsed / cachedDataMinimumLoadSeconds);
             p01 = Mathf.Min(p01, timeCap);
         }
+
+        if (_progressWindowActive)
+            p01 = Mathf.Lerp(_progressWindowStart01, _progressWindowEnd01, p01);
 
         // Không cho progress tụt lùi trong cùng một lượt load.
         DownloadPercent01 = Mathf.Max(DownloadPercent01, p01);
@@ -1466,7 +1697,12 @@ public class AddressablesPreload : MonoBehaviour
 
     private void SetCheckingResourceText()
     {
-        LoadingText = $"Đang kiểm tra tài nguyên: {CurrentOverallPercent()}%";
+        LoadingText = $"Đang kiểm tra tài nguyên: {CurrentOverallPercentText()}";
+    }
+
+    private static string FormatProgressPercent(float p01)
+    {
+        return (Mathf.Clamp01(p01) * 100f).ToString("0.00", CultureInfo.InvariantCulture) + "%";
     }
 
     private void Fail(string message)

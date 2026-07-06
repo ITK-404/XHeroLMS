@@ -1,27 +1,50 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BookShelfManager : MonoBehaviour
 {
     public CourseLessonTabID CourseID;
     [SerializeField] private BookShelfUI bookShelfUIPrefab;
     [SerializeField] private RectTransform content;
+
+    [SerializeField] private ScrollRect scrollRect;
     private BookShelfUI[] bookShelfList;
 
-    [ContextMenu("Load Data")]
+    private List<BookHandler> books = new();
 
     private void Start()
     {
         bookShelfList = GetComponentsInChildren<BookShelfUI>();
+        scrollRect = GetComponent<ScrollRect>();
         OnLoad();
+        SetupClickBounds();
     }
-    private List<BookHandler> books = new();
+
+    private void SetupClickBounds()
+    {
+        if (scrollRect == null)
+        {
+            return;
+        }
+        foreach (var bookShelf in bookShelfList)
+        {
+            bookShelf.SetClickBounds(scrollRect.viewport);
+        }
+    }
+    
     private void OnLoad()
     {
         foreach (var item in bookShelfList)
         {
             books.AddRange(item.books);
         }
+
+        SplitBookShelf();
+    }
+
+    private void SplitBookShelf()
+    {
         int activeBook = books.Count / 3;
         for (int i = 0; i < books.Count; i++)
         {
@@ -42,16 +65,5 @@ public class BookShelfManager : MonoBehaviour
     public void ResetScrollContent()
     {
         content.anchoredPosition = new Vector2(0, 0);
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.F))
-        {
-            foreach(var book in books)
-            {
-                book.bookHandleUI.RefreshColor();
-            }
-        }
     }
 }

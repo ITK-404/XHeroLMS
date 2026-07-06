@@ -8,6 +8,7 @@ public class InteractionManagerUI : MonoBehaviour
     [SerializeField] private PTS_ParticleE[] particleSystems;
     [SerializeField] private float stopEmitDistance = 0.5f;
     private UIManager UIManager;
+    private bool ownsGameplayLock;
     
     private void Start()
     {
@@ -17,7 +18,7 @@ public class InteractionManagerUI : MonoBehaviour
     public void OnExitNoneView()
     {
         PlayerPanelUI.Instance.ShowAll();
-        InputBlocker.SetBlocked(false);
+        SetGameplayLock(false);
         //apiInstance.gameObject.SetActive(false);
         
         UIManager.CourseMenuButtons.Show();
@@ -29,7 +30,7 @@ public class InteractionManagerUI : MonoBehaviour
     public void OnEnterCourseView()
     {
         PlayerPanelUI.Instance.HideAll();
-        InputBlocker.SetBlocked(true);
+        SetGameplayLock(true);
         
         UIManager.CourseMenuButtons.Hide();
         UIManager.InputCanvas.Hide();
@@ -41,6 +42,11 @@ public class InteractionManagerUI : MonoBehaviour
     private void Update()
     {
         CheckParticles();
+    }
+
+    private void OnDestroy()
+    {
+        SetGameplayLock(false);
     }
 
     private void CheckParticles()
@@ -59,5 +65,22 @@ public class InteractionManagerUI : MonoBehaviour
                 ps.Active();
             }
         }
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 }

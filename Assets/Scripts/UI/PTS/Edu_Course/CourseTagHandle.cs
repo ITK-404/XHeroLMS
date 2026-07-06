@@ -24,16 +24,17 @@ public class CourseTagHandle : MonoBehaviour
     [SerializeField] private bool hideWhenUnknown = true;
     [SerializeField] private bool debugLog = false;
 
+    private bool _subscribedToDetailStore;
+
     private void Awake()
     {
         if (!useLearningModeFromDetailStore)
-            Show(_tag);
+            ApplyTag(_tag);
     }
 
     private void OnEnable()
     {
-        if (listenStoreChanged)
-            CourseDetailStaticStore.OnChanged += RefreshFromDetailStore;
+        TrySubscribeDetailStore();
 
         if (useLearningModeFromDetailStore && autoRefreshOnEnable)
             RefreshFromDetailStore();
@@ -41,11 +42,50 @@ public class CourseTagHandle : MonoBehaviour
 
     private void OnDisable()
     {
-        if (listenStoreChanged)
-            CourseDetailStaticStore.OnChanged -= RefreshFromDetailStore;
+        UnsubscribeDetailStore();
     }
 
     public void Show(CourseTag newTag)
+    {
+        SetDetailStoreBinding(false);
+        ApplyTag(newTag);
+    }
+
+    public void ShowLearningMode(string learningMode)
+    {
+        SetDetailStoreBinding(false);
+
+        if (TryMapLearningModeToTag(learningMode, out var tag))
+        {
+            ApplyTag(tag);
+            return;
+        }
+
+        if (hideWhenUnknown)
+            SetAllInactive();
+        else
+            ApplyTag(_tag);
+    }
+
+    public void SetDetailStoreBinding(bool enabled)
+    {
+        useLearningModeFromDetailStore = enabled;
+        autoRefreshOnEnable = enabled;
+        listenStoreChanged = enabled;
+
+        if (!enabled)
+        {
+            UnsubscribeDetailStore();
+            return;
+        }
+
+        TrySubscribeDetailStore();
+
+        if (isActiveAndEnabled && autoRefreshOnEnable)
+            RefreshFromDetailStore();
+    }
+
+    private void ApplyTag(CourseTag newTag)
     {
         _tag = newTag;
 
@@ -68,14 +108,14 @@ public class CourseTagHandle : MonoBehaviour
 
         if (TryMapLearningModeToTag(learningMode, out var tag))
         {
-            Show(tag);
+            ApplyTag(tag);
         }
         else
         {
             if (hideWhenUnknown)
                 SetAllInactive();
             else
-                Show(_tag);
+                ApplyTag(_tag);
         }
     }
 
@@ -85,7 +125,25 @@ public class CourseTagHandle : MonoBehaviour
         if (useLearningModeFromDetailStore)
             RefreshFromDetailStore();
         else
-            Show(_tag);
+            ApplyTag(_tag);
+    }
+
+    private void TrySubscribeDetailStore()
+    {
+        if (!useLearningModeFromDetailStore || !listenStoreChanged || _subscribedToDetailStore)
+            return;
+
+        CourseDetailStaticStore.OnChanged += RefreshFromDetailStore;
+        _subscribedToDetailStore = true;
+    }
+
+    private void UnsubscribeDetailStore()
+    {
+        if (!_subscribedToDetailStore)
+            return;
+
+        CourseDetailStaticStore.OnChanged -= RefreshFromDetailStore;
+        _subscribedToDetailStore = false;
     }
 
     private bool TryMapLearningModeToTag(string learningMode, out CourseTag tag)

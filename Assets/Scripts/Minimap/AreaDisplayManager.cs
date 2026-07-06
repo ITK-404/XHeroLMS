@@ -105,6 +105,11 @@ public class AreaDisplayManager : MonoBehaviour
 
     private void HandleAreaSelection()
     {
+        if (AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            return;
+        }
+
         if (!TeleMapController._mapActive)
         {
             return;

@@ -28,15 +28,21 @@ public class OpenClosePanel : MonoBehaviour
     public string sceneNameAfterLogout = "NewScene";
     public float loadDelay = 0f;
     CursorGameManager cursorMgr;
+    static bool triedRestoreSession;
+    bool hasVisualState;
+    bool lastLoggedIn;
+    bool gameplayLockedByThisPanel;
     
 
     void OnEnable()
     {
+        LoginController.OnLoginComplete -= HandleLoginComplete;
         LoginController.OnLoginComplete += HandleLoginComplete;
-        var controller = PlayerPanelUI.Instance.controllerUI;
+        var controller = GetPlayerController();
         // gán click handler an toàn
         if (controller != null)
         {
+            controller.OnLoginBtnClicked -= OnOpenButtonClicked;
             controller.OnLoginBtnClicked += OnOpenButtonClicked;
         }
         if (buttonClose != null)
@@ -51,15 +57,23 @@ public class OpenClosePanel : MonoBehaviour
     {
         LoginController.OnLoginComplete -= HandleLoginComplete;
 
-        var controller = PlayerPanelUI.Instance.controllerUI;
+        var controller = GetPlayerController();
         // gán click handler an toàn
         if (controller != null)
         {
-            controller.OnLoginBtnClicked += OnOpenButtonClicked;
+            controller.OnLoginBtnClicked -= OnOpenButtonClicked;
         }
         
         if (buttonClose != null) buttonClose.onClick.RemoveListener(CloseUI);
 
+        if (gameplayLockedByThisPanel)
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
+        }
+
+        if (cursorMgr != null)
+            cursorMgr.SetUIOpen(false);
 
     }
 
@@ -73,10 +87,31 @@ public class OpenClosePanel : MonoBehaviour
 
         UpdateVisualState();
     }
+
+    void LateUpdate()
+    {
+        UpdateVisualState();
+        SyncGameplayLockWithPanelState();
+    }
+
+    PlayerControllerUI GetPlayerController()
+    {
+        return PlayerPanelUI.Instance != null ? PlayerPanelUI.Instance.controllerUI : null;
+    }
     
     bool IsLoggedIn()
     {
+        TryRestoreSessionOnce();
         return TokenStore.IsAuthenticated && !string.IsNullOrEmpty(TokenStore.AccessToken);
+    }
+
+    static void TryRestoreSessionOnce()
+    {
+        if (triedRestoreSession || TokenStore.IsAuthenticated)
+            return;
+
+        triedRestoreSession = true;
+        TokenStore.TryRestoreFromDisk();
     }
 
 
@@ -92,11 +127,16 @@ public class OpenClosePanel : MonoBehaviour
         bool loggedIn = IsLoggedIn();
 
         // Tự ẩn/hiện các nhóm UI nếu có cấu hình
-        ToggleGroup(showWhenLoggedIn, loggedIn);
-        ToggleGroup(showWhenLoggedOut, !loggedIn);
+        if (!hasVisualState || lastLoggedIn != loggedIn)
+        {
+            hasVisualState = true;
+            lastLoggedIn = loggedIn;
+            ToggleGroup(showWhenLoggedIn, loggedIn);
+            ToggleGroup(showWhenLoggedOut, !loggedIn);
+        }
 
         // Nếu đã login mà panel vẫn mở, đóng lại cho chắc
-        if (loggedIn && targetPanel && targetPanel.activeSelf)
+        if (loggedIn && IsPanelOpen())
             CloseUI();
     }
     
@@ -108,19 +148,69 @@ public class OpenClosePanel : MonoBehaviour
 
     void OnOpenButtonClicked()
     {
-        if (!IsLoggedIn())
+        if (IsLoggedIn())
+        {
+            CloseUI();
+        }
+        else
         {
             OpenUI();
         }
     }
 
+    public void OpenFromExternalLoginButton()
+    {
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        OnOpenButtonClicked();
+    }
+
     // ====== Core UI open/close ======
     void OpenUI()
     {
+        if (IsLoggedIn())
+        {
+            CloseUI();
+            return;
+        }
+
         if (targetImage) targetImage.gameObject.SetActive(true);
         if (targetPanel) targetPanel.SetActive(true);
         if (cursorMgr) cursorMgr.SetUIOpen(true);
-        InputBlocker.SetBlocked(true);
+
+        if (!gameplayLockedByThisPanel)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+            gameplayLockedByThisPanel = true;
+        }
+    }
+
+    bool IsPanelOpen()
+    {
+        return (targetPanel != null && targetPanel.activeSelf)
+               || (targetImage != null && targetImage.gameObject.activeSelf);
+    }
+
+    void SyncGameplayLockWithPanelState()
+    {
+        bool shouldBlock = IsPanelOpen();
+
+        if (shouldBlock)
+        {
+            if (cursorMgr) cursorMgr.SetUIOpen(true);
+
+            if (!gameplayLockedByThisPanel)
+            {
+                GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+                gameplayLockedByThisPanel = true;
+            }
+        }
+        else if (gameplayLockedByThisPanel)
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
+        }
     }
 
     public void CloseUI()
@@ -128,6 +218,12 @@ public class OpenClosePanel : MonoBehaviour
         if (targetImage) targetImage.gameObject.SetActive(false);
         if (targetPanel) targetPanel.SetActive(false);
         if (cursorMgr) cursorMgr.SetUIOpen(false);
-        InputBlocker.SetBlocked(false);
+
+        if (gameplayLockedByThisPanel)
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+            gameplayLockedByThisPanel = false;
+        }
+
     }
 }

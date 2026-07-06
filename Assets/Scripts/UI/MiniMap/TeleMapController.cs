@@ -24,6 +24,7 @@ public class TeleMapController : MonoBehaviour
     float _playerCamDepth;
 
     CursorGameManager cursorMgr;
+    private bool ownsGameplayLock;
 
     void Awake()
     {
@@ -34,6 +35,12 @@ public class TeleMapController : MonoBehaviour
         cursorMgr = FindAnyObjectByType<CursorGameManager>();
     }
 
+    private void OnDisable()
+    {
+        SetGameplayLock(false);
+        _mapActive = false;
+    }
+
     private bool IsBlendingCamera()
     {
         return brain != null && brain.IsBlending;
@@ -41,12 +48,20 @@ public class TeleMapController : MonoBehaviour
 
     void Update()
     {
+        if (AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            if (_mapActive)
+                ToggleMap(false);
+
+            return;
+        }
+
         if (IsBlendingCamera() || BuildingCameraManager.Instance.IsFocus())
         {
             return;
         }
-        if (InputBlocker.IsBlocked())
-        return;
+        if (!_mapActive && GameplayLock.IsLocked(GameplayLockTarget.All))
+            return;
         // Nhấn phím M để bật/tắt map
         if (Input.GetKeyDown(KeyCode.M)) ToggleMap();
 
@@ -70,7 +85,15 @@ public class TeleMapController : MonoBehaviour
             return;
         }
 
-        _mapActive = force.HasValue ? force.Value : !_mapActive;
+        bool targetActive = force.HasValue ? force.Value : !_mapActive;
+
+        if (targetActive && AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        {
+            Debug.Log("[TeleMap] Map is blocked while boxLoad is visible.");
+            return;
+        }
+
+        _mapActive = targetActive;
         mapCamera.gameObject.SetActive(_mapActive);
 
         if (_mapActive)
@@ -79,13 +102,32 @@ public class TeleMapController : MonoBehaviour
             if (playerCamera) playerCamera.depth = _playerCamDepth - 10f;
             mapCamera.depth = _playerCamDepth + 10f;
             if (cursorMgr) cursorMgr.SetUIOpen(true);
+            SetGameplayLock(true);
         }
         else
         {
             if (playerCamera) playerCamera.depth = _playerCamDepth;
             mapCamera.depth = _playerCamDepth - 10f;
             if (cursorMgr) cursorMgr.SetUIOpen(false);
+            SetGameplayLock(false);
         }
+    }
+
+    private void SetGameplayLock(bool locked)
+    {
+        if (ownsGameplayLock == locked)
+            return;
+
+        if (locked)
+        {
+            GameplayLock.Lock(GameplayLockReason.UI, GameplayLockTarget.All);
+        }
+        else
+        {
+            GameplayLock.Unlock(GameplayLockReason.UI);
+        }
+
+        ownsGameplayLock = locked;
     }
 
 void TryTeleportAtMouse()

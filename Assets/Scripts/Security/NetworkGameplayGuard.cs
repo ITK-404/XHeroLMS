@@ -79,10 +79,7 @@ public class NetworkGameplayGuard : MonoBehaviour
     private Coroutine returnRoutine;
     private Coroutine resumeRoutine;
 
-    private bool cachedTapToCancel;
-    private bool hasCachedTapToCancel;
-
-private bool ownsInputBlockerLock;
+    private bool ownsGameplayLock;
 
     private void Awake()
     {
@@ -243,8 +240,6 @@ private void HandleOnline()
         ownsLoadingUI = false;
     }
 
-    RestoreLoadingTapToCancel();
-
     if (shouldRecoverBootFlow)
         TryRecoverBootFlowWhenOnline();
 
@@ -349,7 +344,6 @@ private void HandleOnline()
 private void ShowWeakNetworkPopup()
 {
     LockGameplayInputByNetwork();
-    LockLoadingTapToCancel();
 
     DestroyCurrentNetworkPopupIfAny();
 
@@ -371,7 +365,6 @@ private void ShowWeakNetworkPopup()
 private void ShowFatalNetworkPopup()
 {
     LockGameplayInputByNetwork();
-    LockLoadingTapToCancel();
 
     DestroyCurrentNetworkPopupIfAny();
 
@@ -624,48 +617,25 @@ private void ShowFatalNetworkPopup()
 
 private void LockGameplayInputByNetwork()
 {
-    // Chỉ lock 1 lần để tránh blockCount tăng liên tục khi popup bị show lại.
-    if (ownsInputBlockerLock)
+    if (ownsGameplayLock)
         return;
 
-    InputBlocker.SetBlocked(true);
-    ownsInputBlockerLock = true;
+    GameplayLock.Lock(GameplayLockReason.Loading, GameplayLockTarget.All);
+    ownsGameplayLock = true;
 
     Debug.Log("[NetworkGameplayGuard] Gameplay input locked by network popup.");
 }
 
 private void UnlockGameplayInputByNetwork()
 {
-    // Chỉ unlock nếu chính NetworkGameplayGuard là bên đã lock.
-    // Tránh mở nhầm input của hệ thống khác.
-    if (!ownsInputBlockerLock)
+    if (!ownsGameplayLock)
         return;
 
-    InputBlocker.SetBlocked(false);
-    ownsInputBlockerLock = false;
+    GameplayLock.Unlock(GameplayLockReason.Loading);
+    ownsGameplayLock = false;
 
     Debug.Log("[NetworkGameplayGuard] Gameplay input unlocked after network restored.");
 }
-
-    private void LockLoadingTapToCancel()
-    {
-        if (!hasCachedTapToCancel)
-        {
-            cachedTapToCancel = LoadingUI.tapToCancel;
-            hasCachedTapToCancel = true;
-        }
-
-        LoadingUI.tapToCancel = false;
-    }
-
-    private void RestoreLoadingTapToCancel()
-    {
-        if (!hasCachedTapToCancel)
-            return;
-
-        LoadingUI.tapToCancel = cachedTapToCancel;
-        hasCachedTapToCancel = false;
-    }
 
     private void DestroyCurrentNetworkPopupIfAny()
     {

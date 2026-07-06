@@ -31,6 +31,12 @@ public class StoreUpdateChecker : MonoBehaviour
 
     public bool forceImmediateOnAndroid = false;
 
+    // Off: nut xac nhan mo Play Store. On: nut xac nhan chay Google Play in-app update flow.
+    private bool useGooglePlayInAppUpdateFlow = false;
+
+    // Neu Play Core khong ket luan duoc, doc versionName tu trang Play Store cong khai de doi chieu Application.version.
+    private bool checkAndroidStorePageFallback = true;
+
     public enum ReturnAction { OpenStore, QuitApp }
     public ReturnAction onReturn = ReturnAction.OpenStore;
 
@@ -103,11 +109,41 @@ public class StoreUpdateChecker : MonoBehaviour
 
         if (_appUpdateManager == null)
         {
-            _appUpdateManager = new AppUpdateManager();
-            Debug.Log("[StoreUpdateChecker] AppUpdateManager created");
+            try
+            {
+                _appUpdateManager = new AppUpdateManager();
+                Debug.Log("[StoreUpdateChecker] AppUpdateManager created");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[StoreUpdateChecker] AppUpdateManager create failed: " + e.Message);
+            }
         }
 
-        var infoOp = _appUpdateManager.GetAppUpdateInfo();
+        if (_appUpdateManager == null)
+        {
+            yield return CoCheckAndroid_UsingStorePage("Play Core manager unavailable");
+            yield break;
+        }
+
+        PlayAsyncOperation<AppUpdateInfo, AppUpdateErrorCode> infoOp = null;
+        string requestFallbackReason = null;
+        try
+        {
+            infoOp = _appUpdateManager.GetAppUpdateInfo();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[StoreUpdateChecker] GetAppUpdateInfo request failed: " + e.Message);
+            requestFallbackReason = "Play Core request failed";
+        }
+
+        if (infoOp == null)
+        {
+            yield return CoCheckAndroid_UsingStorePage(requestFallbackReason);
+            yield break;
+        }
+
         Debug.Log("[StoreUpdateChecker] GetAppUpdateInfo() requested");
         yield return infoOp;
 
@@ -116,6 +152,7 @@ public class StoreUpdateChecker : MonoBehaviour
         if (infoOp.Error != AppUpdateErrorCode.NoError)
         {
             Debug.LogWarning("[StoreUpdateChecker] Android GetAppUpdateInfo error: " + infoOp.Error);
+            yield return CoCheckAndroid_UsingStorePage("Play Core error: " + infoOp.Error);
             yield break;
         }
 
@@ -139,7 +176,8 @@ public class StoreUpdateChecker : MonoBehaviour
 
         if (!updateAvailableFlag && !updateByVersionCode)
         {
-            Debug.Log("[StoreUpdateChecker] No update detected -> return");
+            Debug.Log("[StoreUpdateChecker] No update detected by Play Core");
+            yield return CoCheckAndroid_UsingStorePage("Play Core reported no update");
             yield break;
         }
 
@@ -159,19 +197,28 @@ public class StoreUpdateChecker : MonoBehaviour
         if (!canFlexible && !canImmediate)
         {
             Debug.LogWarning("[StoreUpdateChecker] Update available but no allowed update type -> fallback open store");
-            LoadingUI.ShowUpdatePopup(msg, () =>
-            {
-                if (onReturn == ReturnAction.QuitApp) Application.Quit();
-                else Application.OpenURL(androidStoreUrl);
-            });
+            ShowPopup_OpenStoreOrQuit(msg);
             yield break;
         }
 
         Debug.Log("[StoreUpdateChecker] Update detected -> showing popup");
         UnityAction act = () =>
         {
-            Debug.Log("[StoreUpdateChecker] Popup action clicked -> start update flow");
-            StartCoroutine(CoStartAndroidUpdate(info, canFlexible, canImmediate));
+            if (onReturn == ReturnAction.QuitApp)
+            {
+                Application.Quit();
+                return;
+            }
+
+            if (useGooglePlayInAppUpdateFlow)
+            {
+                Debug.Log("[StoreUpdateChecker] Popup action clicked -> start Play Core update flow");
+                StartCoroutine(CoStartAndroidUpdate(info, canFlexible, canImmediate));
+                return;
+            }
+
+            Debug.Log("[StoreUpdateChecker] Popup action clicked -> open Android store");
+            OpenAndroidStore();
         };
 
         LoadingUI.ShowUpdatePopup(msg, act);
@@ -182,6 +229,32 @@ public class StoreUpdateChecker : MonoBehaviour
     {
         try { return info.AvailableVersionCode; }
         catch { return -1; }
+    }
+
+    private IEnumerator CoCheckAndroid_UsingStorePage(string reason)
+    {
+        if (!checkAndroidStorePageFallback || _shown)
+            yield break;
+
+        string storeVerName = null;
+        yield return CoFetchAndroidStoreVersionName(v => storeVerName = v);
+
+        if (string.IsNullOrEmpty(storeVerName))
+        {
+            if (!failSilentlyIfUnknown)
+                Debug.LogWarning("[StoreUpdateChecker] Android store version unknown. reason=" + reason);
+            yield break;
+        }
+
+        string localVer = Application.version;
+        int cmp = CompareVersions(localVer, storeVerName);
+        Debug.Log($"[StoreUpdateChecker] Android store page fallback. reason={reason} Local={localVer} | Store={storeVerName} | cmp={cmp}");
+
+        if (cmp < 0)
+        {
+            _shown = true;
+            ShowPopup_OpenStoreOrQuit(BuildUpdateMessage(storeVerName, localVer));
+        }
     }
 
     // Fetch versionName từ Play Store HTML (itemprop="softwareVersion")
@@ -213,12 +286,30 @@ public class StoreUpdateChecker : MonoBehaviour
 
             string html = req.downloadHandler.text;
 
-            // itemprop="softwareVersion">1.0.4</span>
-            var m = Regex.Match(html, "itemprop=\"softwareVersion\"[^>]*>\\s*([^<\\s]+)\\s*<",
-                RegexOptions.IgnoreCase);
-
-            onDone?.Invoke(m.Success ? m.Groups[1].Value.Trim() : null);
+            onDone?.Invoke(TryExtractAndroidStoreVersionName(html));
         }
+    }
+
+    private static string TryExtractAndroidStoreVersionName(string html)
+    {
+        if (string.IsNullOrEmpty(html))
+            return null;
+
+        string[] patterns =
+        {
+            @"itemprop=""softwareVersion""[^>]*>\s*([0-9]+(?:\.[0-9]+){1,3})\s*<",
+            @"\[\[\[""([0-9]+(?:\.[0-9]+){1,3})""\]\],\[\[\[36\]\]",
+            @"\[\[\[""([0-9]+(?:\.[0-9]+){1,3})""\]\],\[\[\[\d+\]\],\[\[\[\d+,""[^""]+""\]\]\]\]"
+        };
+
+        foreach (string pattern in patterns)
+        {
+            var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+            if (m.Success)
+                return m.Groups[1].Value.Trim();
+        }
+
+        return null;
     }
 
     private IEnumerator CoStartAndroidUpdate(AppUpdateInfo info, bool canFlexible, bool canImmediate)
@@ -246,7 +337,7 @@ public class StoreUpdateChecker : MonoBehaviour
 
         if (opt == null)
         {
-            Application.OpenURL(androidStoreUrl);
+            OpenAndroidStore();
             yield break;
         }
 
@@ -259,7 +350,7 @@ public class StoreUpdateChecker : MonoBehaviour
                 Debug.LogWarning("[StoreUpdateChecker] Android StartUpdate error: " + startOp.Error);
 
             // fallback: open store
-            Application.OpenURL(androidStoreUrl);
+            OpenAndroidStore();
             yield break;
         }
 
@@ -325,13 +416,52 @@ public class StoreUpdateChecker : MonoBehaviour
         }
     }
 
+    private void OpenAndroidStore()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        string packageId = GetAndroidStorePackageId();
+        if (!string.IsNullOrEmpty(packageId))
+        {
+            try
+            {
+                using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (var uriClass = new AndroidJavaClass("android.net.Uri"))
+                using (var uri = uriClass.CallStatic<AndroidJavaObject>("parse", "market://details?id=" + packageId))
+                using (var intent = new AndroidJavaObject("android.content.Intent", "android.intent.action.VIEW", uri))
+                {
+                    intent.Call<AndroidJavaObject>("setPackage", "com.android.vending");
+                    activity.Call("startActivity", intent);
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[StoreUpdateChecker] Open Play Store intent failed: " + e.Message);
+            }
+        }
+#endif
+
+        if (!string.IsNullOrEmpty(androidStoreUrl))
+            Application.OpenURL(androidStoreUrl);
+    }
+
+    private string GetAndroidStorePackageId()
+    {
+        var m = Regex.Match(androidStoreUrl ?? "", @"[?&]id=([^&#]+)", RegexOptions.IgnoreCase);
+        if (m.Success)
+            return Uri.UnescapeDataString(m.Groups[1].Value);
+
+        return Application.identifier;
+    }
+
     private void ShowPopup_OpenStoreOrQuit(string msg)
     {
         UnityAction act = () =>
         {
             if (onReturn == ReturnAction.QuitApp) Application.Quit();
 #if UNITY_ANDROID
-            else Application.OpenURL(androidStoreUrl);
+            else OpenAndroidStore();
 #elif UNITY_IOS
             else Application.OpenURL(iosStoreUrl);
 #else
@@ -379,10 +509,8 @@ public class StoreUpdateChecker : MonoBehaviour
 
     private IEnumerator CoFetchIosStoreVersion(Action<string> onDone)
     {
-        // string url = $"https://itunes.apple.com/lookup?id={UnityWebRequest.EscapeURL(iosAppId)}&country={UnityWebRequest.EscapeURL(iosCountry)}";
         string url =
-            $"https://itunes.apple.com/lookup?id=6756565267&country=vn&t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-        using (var req = UnityWebRequest.Get(url))
+            $"https://itunes.apple.com/lookup?id=6756565267&country=vn&t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";        using (var req = UnityWebRequest.Get(url))
         {
             req.timeout = 10;
             yield return req.SendWebRequest();
@@ -396,8 +524,6 @@ public class StoreUpdateChecker : MonoBehaviour
             string json = req.downloadHandler.text;
             var m = Regex.Match(json, "\"version\"\\s*:\\s*\"([^\"]+)\"");
             onDone?.Invoke(m.Success ? m.Groups[1].Value.Trim() : null);
-
-            Debug.Log($"[StoreUpdateChecker]Raw json {json}");
         }
     }
 #endif

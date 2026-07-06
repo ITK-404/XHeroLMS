@@ -11,6 +11,11 @@ public class BookViewUI : MonoBehaviour
     public TextMeshProUGUI priceText;
     public TextMeshProUGUI fullPriceText;
 
+    public bool HasCourseState { get; private set; }
+    public bool IsJoined { get; private set; }
+    public bool IsFree { get; private set; }
+    public float Price { get; private set; }
+
     public Color leftColor;
     public Color rightColor;
 
@@ -84,15 +89,20 @@ public class BookViewUI : MonoBehaviour
         tmp.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
     }
 
-    public void ApplyCourseState(bool joined, float price)
+    public void ApplyCourseState(bool joined, float price, bool? isFree = null)
     {
-        if (joined)
+        HasCourseState = true;
+        IsJoined = joined;
+        Price = price;
+        IsFree = isFree ?? price <= 0f;
+
+        if (IsJoined)
         {
             ShowEnterCourse("Vào học");
             return;
         }
 
-        if (price > 0f)
+        if (!IsFree)
         {
             ShowBuyCourseButton("Ghi danh");
             return;

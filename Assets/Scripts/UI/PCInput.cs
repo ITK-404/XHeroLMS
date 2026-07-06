@@ -19,10 +19,11 @@ public class PCInput : BaseInput
 
     private void MoveHandle()
     {
-        
-        MoveVector = InputHandler.Player.Move.ReadValue<Vector2>();
+        MoveVector = GameplayLock.IsLocked(GameplayLockTarget.Movement)
+            ? Vector2.zero
+            : InputHandler.Player.Move.ReadValue<Vector2>();
 
-
-        IsClicked = InputBlocker.IsBlocked() ? false : InputHandler.Player.Attack.WasPressedThisFrame();
+        IsClicked = !GameplayLock.IsLocked(GameplayLockTarget.Interact)
+                    && InputHandler.Player.Attack.WasPressedThisFrame();
     }
 }

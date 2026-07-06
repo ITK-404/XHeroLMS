@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class InputCanvas : MonoBehaviour
 {
-    [SerializeField] private bool debugInputBlocker = false;
+    [SerializeField] private bool debugGameplayLocked = false;
     [SerializeField] private int blockCount = 0;
     public GameObject container;
     private bool isWindow = false;
@@ -25,8 +25,8 @@ public class InputCanvas : MonoBehaviour
 
     private void Update()
     {
-        debugInputBlocker = InputBlocker.IsBlocked();
-        blockCount = InputBlocker.GetBlockCount();
+        debugGameplayLocked = GameplayLock.IsLocked(GameplayLockTarget.All);
+        blockCount = debugGameplayLocked ? 1 : 0;
     }
 
     public void Show()

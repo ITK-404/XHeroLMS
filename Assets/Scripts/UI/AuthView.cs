@@ -62,7 +62,7 @@ public class AuthView : MonoBehaviour
         _authHandler.OnRestore     = () =>
         {
             SetInteractable(true);
-            InputBlocker.SetBlocked(false);
+            GameplayLock.Unlock(GameplayLockReason.UI);
         };
         _authHandler.OnAuthComplete = HideAll;
     }

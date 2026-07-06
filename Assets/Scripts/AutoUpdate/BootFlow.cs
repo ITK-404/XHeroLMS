@@ -2,12 +2,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Cysharp.Threading.Tasks;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 #endif
 
 [DefaultExecutionOrder(-20000)]
@@ -23,7 +25,8 @@ public class BootFlow : MonoBehaviour
     public bool mainSceneIsAddressable = true;
 
     // Nếu mainSceneIsAddressable=true -> key scene Addressables mặc định khi không có saved session
-    string mainAddressableSceneKey = "New Scene";
+    string mainAddressableSceneKey = SceneNameAliases.NewSceneAddress;
+    private const string NewSceneFirstLateSceneKey = "New Scene Late 01";
 
     [Tooltip("Nếu mainSceneIsAddressable=false -> build index của Scene main")]
     public int mainSceneBuildIndex = 1;
@@ -48,11 +51,17 @@ public class BootFlow : MonoBehaviour
     [Header("Game Session")]
     private GameSessionHandler gameSessionHandler;
     private bool waitSavedSessionDataBeforeLoadScene = true;
-    private float savedSessionDataTimeoutSeconds = 45f;
+    private float savedSessionDataTimeoutSeconds = 10f;
+    private float introEnterMainGateTimeoutSeconds = 12f;
+    private bool prepareNewSceneLateContentBeforeEnter = true;
 
 #if ADDRESSABLES
     [Header("Scene Dependency Download Recovery")]
     private bool downloadSceneDependenciesInBootFlow = true;
+
+    private long firstNewSceneLatePrepareBudgetBytes = 2L * 1024L * 1024L;
+
+    private float firstNewSceneLateEntryGateTimeoutSeconds = 2f;
 
     private int sceneDownloadMaxRetries = 3;
 
@@ -259,22 +268,39 @@ public class BootFlow : MonoBehaviour
 
             Debug.Log("[BootFlow] Resolved addressable scene key: " + _resolvedMainSceneKey);
 
+            bool lateWorldFullyCached = false;
+
             if (downloadSceneDependenciesInBootFlow)
             {
                 bool dependencyReady = false;
 
-                yield return CoPrepareSceneDependenciesWithPreload(
+                if (prepareNewSceneLateContentBeforeEnter &&
+                    SceneNameAliases.IsNewSceneFamily(_resolvedMainSceneKey))
+                {
+                    yield return CoCheckNewSceneLateWorldCached(result => lateWorldFullyCached = result);
+                }
+
+                string[] dependencyKeys = BuildSceneDependencyPrepareKeys(_resolvedMainSceneKey, lateWorldFullyCached);
+
+                yield return CoClampFirstNewScenePrepareKeys(
                     _resolvedMainSceneKey,
+                    lateWorldFullyCached,
+                    dependencyKeys,
+                    result => dependencyKeys = result
+                );
+
+                yield return CoPrepareSceneDependenciesWithPreload(
+                    dependencyKeys,
                     result => dependencyReady = result
                 );
 
                 if (!dependencyReady)
                 {
-                    Debug.LogError("[BootFlow] Scene dependency prepare failed.");
+                    Debug.LogError("[BootFlow] Scene/world dependency prepare failed.");
 
                     if (IsRecoverablePreloadFailure())
                     {
-                        Debug.LogWarning("[BootFlow] Scene dependency failed because network/preload is not ready. Waiting for NetworkGameplayGuard recovery.");
+                        Debug.LogWarning("[BootFlow] Scene/world dependency failed because network/preload is not ready. Waiting for NetworkGameplayGuard recovery.");
                         _waitingForNetworkRecovery = true;
                         _loadingMain = false;
                         yield break;
@@ -299,12 +325,45 @@ public class BootFlow : MonoBehaviour
                 Debug.LogWarning("[BootFlow] downloadSceneDependenciesInBootFlow=false. Loading scene directly.");
             }
 
+            if (ShouldLoadAddressableWorldBehindIntro(_resolvedMainSceneKey))
+            {
+                bool worldReady = false;
+
+                yield return CoLoadAddressableWorldBehindIntro(
+                    _resolvedMainSceneKey,
+                    lateWorldFullyCached,
+                    result => worldReady = result
+                );
+
+                if (!worldReady)
+                {
+                    if (intro != null)
+                        intro.ShowFatalFail("World load failed.");
+
+                    _loadingMain = false;
+                }
+
+                yield break;
+            }
+
             if (intro != null)
             {
                 intro.SetBootProgress01(1f, true);
 
+                float introGateTimer = 0f;
                 while (!intro.CanEnterMain)
+                {
+                    introGateTimer += Time.unscaledDeltaTime;
+
+                    if (introEnterMainGateTimeoutSeconds > 0f &&
+                        introGateTimer >= introEnterMainGateTimeoutSeconds)
+                    {
+                        Debug.LogWarning("[BootFlow] Intro gate timeout. Continue loading main scene: " + _resolvedMainSceneKey);
+                        break;
+                    }
+
                     yield return null;
+                }
             }
 
             Debug.Log("[BootFlow] Loading scene once: " + _resolvedMainSceneKey);
@@ -439,7 +498,330 @@ public class BootFlow : MonoBehaviour
     }
 
 #if ADDRESSABLES
+    private string[] BuildSceneDependencyPrepareKeys(string sceneKey, bool lateWorldFullyCached)
+    {
+        if (prepareNewSceneLateContentBeforeEnter &&
+            SceneNameAliases.IsNewSceneFamily(sceneKey))
+        {
+            if (lateWorldFullyCached)
+            {
+                Debug.Log("[BootFlow] New Scene late world is fully cached. Wait all late content before entering.");
+                return new[]
+                {
+                    sceneKey,
+                    SceneNameAliases.NewSceneLateLabel
+                };
+            }
+
+            Debug.Log("[BootFlow] New Scene late world is not fully cached. Prepare only first late scene for first entry; remaining models load in background.");
+            return new[]
+            {
+                sceneKey,
+                NewSceneFirstLateSceneKey
+            };
+        }
+
+        return new[] { sceneKey };
+    }
+
+    private IEnumerator CoClampFirstNewScenePrepareKeys(
+        string sceneKey,
+        bool lateWorldFullyCached,
+        string[] dependencyKeys,
+        Action<string[]> onDone)
+    {
+        if (!prepareNewSceneLateContentBeforeEnter ||
+            lateWorldFullyCached ||
+            !SceneNameAliases.IsNewSceneFamily(sceneKey) ||
+            dependencyKeys == null ||
+            dependencyKeys.Length <= 1)
+        {
+            onDone?.Invoke(dependencyKeys ?? new[] { sceneKey });
+            yield break;
+        }
+
+        long firstLateBytes = -1;
+        bool sizeOk = false;
+
+        yield return CoGetDownloadSize(
+            NewSceneFirstLateSceneKey,
+            result =>
+            {
+                firstLateBytes = result;
+                sizeOk = true;
+            }
+        );
+
+        if (!sizeOk)
+        {
+            Debug.LogWarning("[BootFlow] Cannot check first New Scene late size. Keep original prepare keys.");
+            onDone?.Invoke(dependencyKeys);
+            yield break;
+        }
+
+        if (firstLateBytes > firstNewSceneLatePrepareBudgetBytes)
+        {
+            Debug.LogWarning("[BootFlow] First New Scene late key is too large before entry. "
+                             + "key="
+                             + NewSceneFirstLateSceneKey
+                             + ", size="
+                             + FormatBytes(firstLateBytes)
+                             + ", budget="
+                             + FormatBytes(firstNewSceneLatePrepareBudgetBytes)
+                             + ". Enter after main scene; late loader will continue in background.");
+
+            onDone?.Invoke(new[] { sceneKey });
+            yield break;
+        }
+
+        onDone?.Invoke(dependencyKeys);
+    }
+
+    private IEnumerator CoCheckNewSceneLateWorldCached(Action<bool> onDone)
+    {
+        if (preload == null)
+        {
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        bool cached = false;
+        yield return preload.IsAddressableKeyCachedRoutine(
+            SceneNameAliases.NewSceneLateLabel,
+            result => cached = result);
+
+        onDone?.Invoke(cached);
+    }
+
+    private bool ShouldLoadAddressableWorldBehindIntro(string sceneKey)
+    {
+        return prepareNewSceneLateContentBeforeEnter &&
+               SceneNameAliases.IsNewSceneFamily(sceneKey);
+    }
+
+    private IEnumerator CoLoadAddressableWorldBehindIntro(string sceneKey, bool waitForAllLateContent, Action<bool> onDone)
+    {
+        Scene introScene = intro != null ? intro.gameObject.scene : SceneManager.GetActiveScene();
+        AsyncOperationHandle<SceneInstance> handle = default;
+
+        Debug.Log("[BootFlow] Loading New Scene behind intro before allowing 100%: " + sceneKey);
+
+        try
+        {
+            handle = Addressables.LoadSceneAsync(sceneKey, LoadSceneMode.Additive, true);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BootFlow] Addressables.LoadSceneAsync additive threw exception: " + e);
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        while (handle.IsValid() && !handle.IsDone)
+        {
+            if (intro != null)
+                intro.SetBootProgress01(Mathf.Lerp(0.70f, 0.86f, Mathf.Clamp01(handle.PercentComplete)));
+
+            yield return null;
+        }
+
+        if (!handle.IsValid())
+        {
+            Debug.LogError("[BootFlow] New Scene additive load handle invalid.");
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        if (handle.Status != AsyncOperationStatus.Succeeded)
+        {
+            string err = handle.OperationException != null
+                ? handle.OperationException.ToString()
+                : handle.Status.ToString();
+
+            Debug.LogError("[BootFlow] New Scene additive load failed: " + err);
+            SafeRelease(handle);
+            onDone?.Invoke(false);
+            yield break;
+        }
+
+        Scene worldScene = handle.Result.Scene;
+        AddressableAdditiveSceneLoader lateLoader = FindLateLoaderInScene(worldScene);
+        List<GameObject> hiddenWorldRoots = HideWorldRootsUntilReady(worldScene, lateLoader);
+
+        if (intro != null)
+            intro.SetBootProgress01(0.86f);
+
+        yield return null;
+        yield return null;
+
+        if (lateLoader != null)
+        {
+            lateLoader.BeginLoad();
+            float firstLateGateTimer = 0f;
+
+            while (!IsRequiredLateContentReady(lateLoader, waitForAllLateContent))
+            {
+                if (intro != null)
+                    intro.SetBootProgress01(Mathf.Lerp(0.86f, 0.99f, Mathf.Clamp01(lateLoader.Progress01)));
+
+                if (!waitForAllLateContent && firstNewSceneLateEntryGateTimeoutSeconds > 0f)
+                {
+                    firstLateGateTimer += Time.unscaledDeltaTime;
+
+                    if (firstLateGateTimer >= firstNewSceneLateEntryGateTimeoutSeconds)
+                    {
+                        Debug.LogWarning("[BootFlow] First New Scene late gate timeout after "
+                                         + firstNewSceneLateEntryGateTimeoutSeconds
+                                         + "s. Enter now; late loader keeps loading in background.");
+                        break;
+                    }
+                }
+
+                yield return null;
+            }
+
+            if (lateLoader.FailedSceneCount > 0)
+            {
+                Debug.LogWarning("[BootFlow] New Scene late loader completed with failed scenes. loaded="
+                                 + lateLoader.LoadedSceneCount
+                                 + "/"
+                                 + lateLoader.TotalSceneCount
+                                 + ", failed="
+                                 + lateLoader.FailedSceneCount);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[BootFlow] New Scene late loader not found after main scene load. Continue with main scene only.");
+        }
+
+        if (worldScene.IsValid() && worldScene.isLoaded)
+            SceneManager.SetActiveScene(worldScene);
+
+        if (intro != null)
+        {
+            intro.SetBootProgress01(1f, true);
+
+            float introGateTimer = 0f;
+            while (!intro.CanEnterMain)
+            {
+                introGateTimer += Time.unscaledDeltaTime;
+
+                if (introEnterMainGateTimeoutSeconds > 0f &&
+                    introGateTimer >= introEnterMainGateTimeoutSeconds)
+                {
+                    Debug.LogWarning("[BootFlow] Intro gate timeout after world ready. Continue into loaded scene: " + sceneKey);
+                    break;
+                }
+
+                yield return null;
+            }
+        }
+
+        RestoreHiddenWorldRoots(hiddenWorldRoots);
+
+        if (introScene.IsValid() &&
+            introScene.isLoaded &&
+            (!worldScene.IsValid() || introScene != worldScene))
+        {
+            AsyncOperation unloadIntro = SceneManager.UnloadSceneAsync(introScene);
+
+            while (unloadIntro != null && !unloadIntro.isDone)
+                yield return null;
+        }
+
+        onDone?.Invoke(true);
+    }
+
+    private bool IsRequiredLateContentReady(AddressableAdditiveSceneLoader lateLoader, bool waitForAllLateContent)
+    {
+        if (lateLoader == null)
+            return true;
+
+        if (waitForAllLateContent)
+            return lateLoader.IsComplete;
+
+        Scene firstLateScene = SceneManager.GetSceneByName(NewSceneFirstLateSceneKey);
+
+        if (firstLateScene.IsValid() && firstLateScene.isLoaded)
+            return true;
+
+        return lateLoader.IsComplete;
+    }
+
+    private List<GameObject> HideWorldRootsUntilReady(Scene scene, AddressableAdditiveSceneLoader lateLoader)
+    {
+        List<GameObject> hiddenRoots = new List<GameObject>();
+
+        if (!scene.IsValid() || !scene.isLoaded)
+            return hiddenRoots;
+
+        GameObject loaderRoot = lateLoader != null
+            ? lateLoader.transform.root.gameObject
+            : null;
+
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            if (root == null)
+                continue;
+
+            if (loaderRoot != null && root == loaderRoot)
+                continue;
+
+            if (!root.activeSelf)
+                continue;
+
+            root.SetActive(false);
+            hiddenRoots.Add(root);
+        }
+
+        if (hiddenRoots.Count > 0)
+            Debug.Log("[BootFlow] Hidden New Scene roots until late content is ready: " + hiddenRoots.Count);
+
+        return hiddenRoots;
+    }
+
+    private void RestoreHiddenWorldRoots(List<GameObject> hiddenRoots)
+    {
+        if (hiddenRoots == null || hiddenRoots.Count == 0)
+            return;
+
+        for (int i = 0; i < hiddenRoots.Count; i++)
+        {
+            GameObject root = hiddenRoots[i];
+
+            if (root != null)
+                root.SetActive(true);
+        }
+
+        Debug.Log("[BootFlow] Restored New Scene roots after late content ready: " + hiddenRoots.Count);
+    }
+
+    private AddressableAdditiveSceneLoader FindLateLoaderInScene(Scene scene)
+    {
+        AddressableAdditiveSceneLoader[] loaders =
+            FindObjectsByType<AddressableAdditiveSceneLoader>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < loaders.Length; i++)
+        {
+            AddressableAdditiveSceneLoader loader = loaders[i];
+
+            if (loader == null)
+                continue;
+
+            if (scene.IsValid() && loader.gameObject.scene == scene)
+                return loader;
+        }
+
+        return loaders.Length > 0 ? loaders[0] : null;
+    }
+
     private IEnumerator CoPrepareSceneDependenciesWithPreload(string sceneKey, Action<bool> onDone)
+    {
+        yield return CoPrepareSceneDependenciesWithPreload(new[] { sceneKey }, onDone);
+    }
+
+    private IEnumerator CoPrepareSceneDependenciesWithPreload(IReadOnlyList<string> sceneKeys, Action<bool> onDone)
     {
         if (preload == null)
         {
@@ -455,9 +837,9 @@ public class BootFlow : MonoBehaviour
             yield break;
         }
 
-        Debug.Log("[BootFlow] Preparing scene dependencies via AddressablesPreload: " + sceneKey);
+        Debug.Log("[BootFlow] Preparing scene/world dependencies via AddressablesPreload: " + string.Join(", ", sceneKeys));
 
-        yield return preload.PrepareAddressableKeyRoutine(sceneKey);
+        yield return preload.PrepareAddressableKeysRoutine(sceneKeys);
 
         if (preload.HasFailed)
         {
@@ -466,7 +848,7 @@ public class BootFlow : MonoBehaviour
             yield break;
         }
 
-        Debug.Log("[BootFlow] Scene dependencies prepared via AddressablesPreload: " + sceneKey);
+        Debug.Log("[BootFlow] Scene/world dependencies prepared via AddressablesPreload: " + string.Join(", ", sceneKeys));
         onDone?.Invoke(true);
     }
 #endif
@@ -535,7 +917,7 @@ public class BootFlow : MonoBehaviour
                         return null;
                     }
 
-                    if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                    if (!SceneNameAliases.CanUseSavedSceneForResume(item.SceneLocation.SceneName))
                     {
                         Debug.LogWarning("[BootFlow] Saved session đúng UserID nhưng SceneName rỗng.");
                         return null;
@@ -568,7 +950,7 @@ public class BootFlow : MonoBehaviour
                 if (item.SceneLocation == null)
                     continue;
 
-                if (string.IsNullOrWhiteSpace(item.SceneLocation.SceneName))
+                if (!SceneNameAliases.CanUseSavedSceneForResume(item.SceneLocation.SceneName))
                     continue;
 
                 onlyValidSave = item;
@@ -629,7 +1011,7 @@ public class BootFlow : MonoBehaviour
         if (string.IsNullOrWhiteSpace(sceneName))
             return sceneName;
 
-        return sceneName;
+        return SceneNameAliases.ToAddressableSceneKey(sceneName);
     }
 
 #if ADDRESSABLES
@@ -943,6 +1325,24 @@ public class BootFlow : MonoBehaviour
         {
             // ignore
         }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double kb = 1024d;
+        const double mb = kb * 1024d;
+        const double gb = mb * 1024d;
+
+        if (bytes >= gb)
+            return (bytes / gb).ToString("0.##") + " GB";
+
+        if (bytes >= mb)
+            return (bytes / mb).ToString("0.##") + " MB";
+
+        if (bytes >= kb)
+            return (bytes / kb).ToString("0.##") + " KB";
+
+        return bytes + " B";
     }
 #endif
 }

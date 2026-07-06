@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Collections;
 using UnityEngine.Networking;
 using System.Collections.Generic;
+using System.Linq;
 
 public class ForgotController : MonoBehaviour
 {
@@ -214,6 +215,17 @@ public class ForgotController : MonoBehaviour
     {
         if (btnEnter) btnEnter.interactable = false;
 
+        var earlyOtpController = otpBy == "phone" ? ResolveOtpController() : null;
+        if (earlyOtpController != null)
+        {
+            earlyOtpController.PrepareForIncomingOtp(identifier, otpBy, functionName);
+            Debug.Log("[Forgot] OTP controller prepared before request so Android can listen for the incoming SMS.");
+        }
+        else if (otpBy == "phone")
+        {
+            Debug.LogWarning("[Forgot] OTP controller not found before request; Android SMS listener cannot start early.");
+        }
+
         string lastErrLog = null;
 
         string query =
@@ -261,10 +273,11 @@ public class ForgotController : MonoBehaviour
                     if (otpPanel) otpPanel.SetActive(true);
                     if (currentPanel) currentPanel.SetActive(false);
 
-                    if (otpController)
+                    var targetOtp = ResolveOtpController();
+                    if (targetOtp)
                     {
-                        otpController.SetContact(identifier, otpBy, functionName);
-                        otpController.BeginCountdown();
+                        targetOtp.SetContact(identifier, otpBy, functionName);
+                        targetOtp.BeginCountdown();
                     }
 
                     if (errorText && otpPanel == null)
@@ -307,6 +320,20 @@ public class ForgotController : MonoBehaviour
         ShowWarningPopup(finalMsg);
 
         if (btnEnter) btnEnter.interactable = true;
+    }
+
+    private OtpVerificationController ResolveOtpController()
+    {
+        if (otpController != null)
+            return otpController;
+
+        if (otpPanel != null)
+            otpController = otpPanel.GetComponentsInChildren<OtpVerificationController>(true).FirstOrDefault();
+
+        if (otpController == null)
+            otpController = FindFirstObjectByType<OtpVerificationController>(FindObjectsInactive.Include);
+
+        return otpController;
     }
 
     private string BuildForgotFriendlyMessage(UnityWebRequest req, string raw)

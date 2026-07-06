@@ -59,6 +59,10 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     public float waitTokenTimeoutSeconds = 25f;
     public float antiSpamSeconds = 3f;
 
+    [Header("Step=2 fallback")]
+    public bool requestStep2WhenReturningFromXHero = true;
+    public float step2FallbackRetryIntervalSeconds = 2f;
+
     [Serializable]
     public class StringEvent : UnityEvent<string> { }
 
@@ -72,6 +76,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
     private Coroutine _flowCo;
     private string _currentCode;
     private string _currentTimestamp;
+    private bool _openedXHeroApp = false;
+    private float _nextStep2FallbackAt = 0f;
 
     private void OnEnable()
     {
@@ -107,6 +113,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             if (_isRunning && !_loggedIn && !string.IsNullOrEmpty(_currentCode))
             {
                 Debug.Log("[LmsDeepLinkAuthUI] App resumed while waiting token. code=" + _currentCode);
+                TryRequestStep2Fallback("app_resumed");
             }
         }
     }
@@ -122,6 +129,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             if (_isRunning && !_loggedIn && !string.IsNullOrEmpty(_currentCode))
             {
                 Debug.Log("[LmsDeepLinkAuthUI] App focused while waiting token. code=" + _currentCode);
+                TryRequestStep2Fallback("app_focused");
             }
         }
     }
@@ -148,6 +156,8 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
         _loggedIn = false;
         _currentCode = null;
         _currentTimestamp = null;
+        _openedXHeroApp = false;
+        _nextStep2FallbackAt = 0f;
 
         TrySubscribeFirebase();
 
@@ -364,6 +374,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
 
         while (t > 0f && !_loggedIn)
         {
+            TryRequestStep2Fallback("wait_loop");
             t -= Time.unscaledDeltaTime;
             yield return null;
         }
@@ -376,8 +387,7 @@ public class LmsDeepLinkAuthUI : MonoBehaviour
             StopFirebaseListenSafe("wait_token_timeout");
 
             LoginController.ShowWarning(
-                "Chưa nhận được token từ XHero.\n" +
-                "Hãy mở XHero và xác nhận đăng nhập."
+                "Hãy mở XHero và xác nhận đăng nhập lại."
             );
         }
     }
@@ -439,8 +449,34 @@ private string BuildXHeroDeepLinkUrl(string code, string timestamp)
 
         Debug.Log($"[LmsDeepLinkAuthUI] Open deep link ({Application.platform}): {deepLinkUrl}");
 
+        _openedXHeroApp = true;
+        _nextStep2FallbackAt = Time.unscaledTime + Mathf.Max(0.5f, step2FallbackRetryIntervalSeconds);
         Application.OpenURL(deepLinkUrl);
         return true;
+    }
+
+    private void TryRequestStep2Fallback(string reason)
+    {
+        if (!requestStep2WhenReturningFromXHero || !_openedXHeroApp || !_isRunning || _loggedIn)
+            return;
+
+        if (string.IsNullOrEmpty(_currentCode) || string.IsNullOrEmpty(_currentTimestamp))
+            return;
+
+        if (Time.unscaledTime < _nextStep2FallbackAt)
+            return;
+
+        float retryInterval = Mathf.Max(0.5f, step2FallbackRetryIntervalSeconds);
+        _nextStep2FallbackAt = Time.unscaledTime + retryInterval;
+
+        try
+        {
+            EnsureFirebase().RequestStep2Token(_currentCode, _currentTimestamp, reason);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[LmsDeepLinkAuthUI] Step=2 fallback request failed. reason=" + reason + " | " + e);
+        }
     }
 
     private bool CanOpenXHeroApp()
