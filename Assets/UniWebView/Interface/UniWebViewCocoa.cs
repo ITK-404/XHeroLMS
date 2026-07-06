@@ -21,6 +21,7 @@ using System;
 using System.Runtime.InteropServices;
 using AOT;
 using System.Reflection;
+using UnityEngine.Rendering;
 
 public class UniWebViewInterface {
     
@@ -940,6 +941,13 @@ public class UniWebViewInterface {
         CheckPlatform();
         uv_authenticationSetPrivateMode(name, flag);
     }
+
+    [DllImport(DllLib)]
+    private static extern bool uv_setEmbeddedToolbarConfig(string name, string json);
+    public static bool SetEmbeddedToolbarConfig(string name, string json) {
+        CheckPlatform();
+        return uv_setEmbeddedToolbarConfig(name, json);
+    }
     
     [DllImport(DllLib)]
     private static extern void uv_setShowEmbeddedToolbar(string name, bool show);
@@ -1038,11 +1046,113 @@ public class UniWebViewInterface {
         CheckPlatform();
 
         IntPtr dataPtr = uv_getRenderedData(name, x, y, width, height, out var length);
-        
+        if (dataPtr == IntPtr.Zero || length <= 0) {
+            return null;
+        }
+
         byte[] managedData = new byte[length];
         Marshal.Copy(dataPtr, managedData, 0, length);
-        
+
         return managedData;
+    }
+
+    [DllImport(DllLib)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool uv_startSnapshotTextureStream(string name, long streamId, int x, int y, int width, int height, float resolutionScale);
+    public static bool StartSnapshotTextureStream(string name, long streamId, int x, int y, int width, int height, float resolutionScale) {
+        CheckPlatform();
+        if (!IsSnapshotTextureStreamGraphicsBackendSupported()) {
+            UniWebViewLogger.Instance.Critical("Snapshot texture stream is unavailable. Cocoa currently supports Metal only.");
+            return false;
+        }
+        return uv_startSnapshotTextureStream(name, streamId, x, y, width, height, resolutionScale);
+    }
+
+    [DllImport(DllLib)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool uv_startSnapshotTextureStreamSynthetic(string name, long streamId, int width, int height, int framePattern);
+    public static bool StartSnapshotTextureStreamWithSyntheticFrames(
+        string name, long streamId, int width, int height, int framePattern
+    ) {
+        CheckPlatform();
+        if (!IsSnapshotTextureStreamGraphicsBackendSupported()) {
+            UniWebViewLogger.Instance.Critical("Snapshot texture stream is unavailable. Cocoa currently supports Metal only.");
+            return false;
+        }
+        return uv_startSnapshotTextureStreamSynthetic(name, streamId, width, height, framePattern);
+    }
+
+    [DllImport(DllLib)]
+    private static extern void uv_stopSnapshotTextureStream(string name, long streamId);
+    public static void StopSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+        uv_stopSnapshotTextureStream(name, streamId);
+    }
+
+    [DllImport(DllLib)]
+    private static extern void uv_tickSnapshotTextureStream(string name, long streamId);
+    public static void TickSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+        uv_tickSnapshotTextureStream(name, streamId);
+    }
+
+    public static void PumpSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+    }
+
+    [DllImport(DllLib)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool uv_isSnapshotTextureStreamReady(string name, long streamId);
+    public static bool IsSnapshotTextureStreamReady(string name, long streamId) {
+        CheckPlatform();
+        return uv_isSnapshotTextureStreamReady(name, streamId);
+    }
+
+    [DllImport(DllLib)]
+    private static extern int uv_getSnapshotTextureStreamWidth(string name, long streamId);
+    public static int GetSnapshotTextureStreamWidth(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamWidth(name, streamId);
+    }
+
+    [DllImport(DllLib)]
+    private static extern int uv_getSnapshotTextureStreamHeight(string name, long streamId);
+    public static int GetSnapshotTextureStreamHeight(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamHeight(name, streamId);
+    }
+
+    [DllImport(DllLib)]
+    private static extern long uv_getSnapshotTextureStreamFrameIndex(string name, long streamId);
+    public static long GetSnapshotTextureStreamFrameIndex(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamFrameIndex(name, streamId);
+    }
+
+    [DllImport(DllLib)]
+    private static extern IntPtr uv_getSnapshotTextureStreamTexturePointer(string name, long streamId);
+    public static IntPtr GetSnapshotTextureStreamTexturePointer(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamTexturePointer(name, streamId);
+    }
+
+    public static TextureFormat GetSnapshotTextureStreamTextureFormat() {
+        CheckPlatform();
+        return TextureFormat.BGRA32;
+    }
+
+    public static long ConsumeSnapshotTextureStreamCpuFrame(string name, long streamId, IntPtr destination, int capacity) {
+        CheckPlatform();
+        return -1;
+    }
+
+    public static bool SnapshotTextureStreamUsesCpuFallback() {
+        CheckPlatform();
+        return false;
+    }
+
+    private static bool IsSnapshotTextureStreamGraphicsBackendSupported() {
+        return SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal;
     }
     
     [DllImport(DllLib)]

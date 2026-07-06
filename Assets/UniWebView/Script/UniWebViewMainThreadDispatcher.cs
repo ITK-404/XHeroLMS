@@ -36,7 +36,7 @@ public class UniWebViewMainThreadDispatcher : MonoBehaviour {
         get {
             if (_instance == null) {
                 // Try to find existing instance
-                _instance = FindFirstObjectByType<UniWebViewMainThreadDispatcher>();
+                _instance = FindAnyObjectByType<UniWebViewMainThreadDispatcher>();
                 
                 if (_instance == null) {
                     // Create new GameObject with dispatcher

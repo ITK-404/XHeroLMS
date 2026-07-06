@@ -111,6 +111,7 @@ public class UniWebViewInterface {
     public static void AuthenticationInit(string name, string url, string scheme) { CheckPlatform(); }
     public static void AuthenticationStart(string name) { CheckPlatform(); }
     public static void AuthenticationSetPrivateMode(string name, bool enabled) { CheckPlatform(); }
+    public static bool SetEmbeddedToolbarConfig(string name, string json) { CheckPlatform(); return false; }
     public static void SetShowEmbeddedToolbar(string name, bool show) { CheckPlatform(); }
     public static void SetEmbeddedToolbarOnTop(string name, bool top) { CheckPlatform(); }
     public static void SetEmbeddedToolbarDoneButtonText(string name, string text) { CheckPlatform(); }
@@ -125,6 +126,19 @@ public class UniWebViewInterface {
     public static void StartSnapshotForRendering(string name, string identifier) { CheckPlatform(); }
     public static void StopSnapshotForRendering(string name) { CheckPlatform(); }
     public static byte[] GetRenderedData(string name, int x, int y, int width, int height) { CheckPlatform(); return null; }
+    public static bool StartSnapshotTextureStream(string name, long streamId, int x, int y, int width, int height, float resolutionScale) { CheckPlatform(); return false; }
+    public static bool StartSnapshotTextureStreamWithSyntheticFrames(string name, long streamId, int width, int height, int framePattern) { CheckPlatform(); return false; }
+    public static void StopSnapshotTextureStream(string name, long streamId) { CheckPlatform(); }
+    public static void TickSnapshotTextureStream(string name, long streamId) { CheckPlatform(); }
+    public static void PumpSnapshotTextureStream(string name, long streamId) { CheckPlatform(); }
+    public static bool IsSnapshotTextureStreamReady(string name, long streamId) { CheckPlatform(); return false; }
+    public static int GetSnapshotTextureStreamWidth(string name, long streamId) { CheckPlatform(); return 0; }
+    public static int GetSnapshotTextureStreamHeight(string name, long streamId) { CheckPlatform(); return 0; }
+    public static long GetSnapshotTextureStreamFrameIndex(string name, long streamId) { CheckPlatform(); return 0; }
+    public static IntPtr GetSnapshotTextureStreamTexturePointer(string name, long streamId) { CheckPlatform(); return IntPtr.Zero; }
+    public static TextureFormat GetSnapshotTextureStreamTextureFormat() { CheckPlatform(); return TextureFormat.RGBA32; }
+    public static long ConsumeSnapshotTextureStreamCpuFrame(string name, long streamId, IntPtr destination, int capacity) { CheckPlatform(); return -1; }
+    public static bool SnapshotTextureStreamUsesCpuFallback() { CheckPlatform(); return false; }
     public static string CopyBackForwardList(string name) { CheckPlatform(); return ""; }
     public static void GoToIndexInBackForwardList(string listenerName, int index) { CheckPlatform(); }
 

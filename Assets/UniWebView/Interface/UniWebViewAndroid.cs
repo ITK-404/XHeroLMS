@@ -1,7 +1,9 @@
 #if UNITY_ANDROID && !UNITY_EDITOR
 
 using System;
+using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 class UniWebViewMethodChannel: AndroidJavaProxy {
     private const string GlobalChannelIdentifier = "__UniWebViewGlobalChannelIdentifier";
@@ -22,6 +24,7 @@ class UniWebViewMethodChannel: AndroidJavaProxy {
 }
 
 public class UniWebViewInterface {
+    private const int SnapshotTextureStreamStopRenderEventCount = 3;
     private static readonly AndroidJavaClass plugin;
     private static bool correctPlatform = Application.platform == RuntimePlatform.Android;
     
@@ -548,6 +551,26 @@ public class UniWebViewInterface {
         return plugin.CallStatic<int>("getStatusBarHeight");
     }
 
+    // Returns the padding of the native content view as [left, top, right, bottom] in pixels.
+    // Returns all zeros if the value cannot be retrieved, so callers fall back to the
+    // status-bar-based frame mapping.
+    public static float[] GetContentViewPadding() {
+        CheckPlatform();
+        try {
+            var result = plugin.CallStatic<string>("getContentViewPadding");
+            var parts = result.Split(',');
+            if (parts.Length == 4) {
+                return new float[] {
+                    int.Parse(parts[0]), int.Parse(parts[1]), int.Parse(parts[2]), int.Parse(parts[3])
+                };
+            }
+            UniWebViewLogger.Instance.Warning("Unexpected content view padding value: " + result);
+        } catch (Exception e) {
+            UniWebViewLogger.Instance.Warning("Failed to get content view padding: " + e.Message);
+        }
+        return new float[] { 0, 0, 0, 0 };
+    }
+
     public static void SetDownloadEventForContextMenuEnabled(string name, bool enabled) {
         CheckPlatform();
         plugin.CallStatic("setDownloadEventForContextMenuEnabled", name, enabled);
@@ -708,6 +731,11 @@ public class UniWebViewInterface {
         plugin.CallStatic("authenticationSetPrivateMode", name, enabled);
     }
 
+    public static bool SetEmbeddedToolbarConfig(string name, string json) {
+        CheckPlatform();
+        return plugin.CallStatic<bool>("setEmbeddedToolbarConfig", name, json);
+    }
+
     public static void SetShowEmbeddedToolbar(string name, bool show) {
         CheckPlatform();
         plugin.CallStatic("setShowEmbeddedToolbar", name, show);
@@ -786,6 +814,140 @@ public class UniWebViewInterface {
             byteArray[i] = (byte)sbyteArray[i];
         }   
         return byteArray;
+    }
+
+    public static bool StartSnapshotTextureStream(string name, long streamId, int x, int y, int width, int height, float resolutionScale) {
+        CheckPlatform();
+        LogSnapshotTextureStreamCpuFallbackIfNeeded();
+        if (!Mathf.Approximately(resolutionScale, 1.0f)) {
+            UniWebViewLogger.Instance.Info("Snapshot texture stream resolutionScale is not supported on Android yet. Capturing at full resolution.");
+        }
+        return plugin.CallStatic<bool>("startSnapshotTextureStream", name, streamId, x, y, width, height);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool uv_startSnapshotTextureStreamSynthetic(string name, long streamId, int width, int height, int framePattern);
+    public static bool StartSnapshotTextureStreamWithSyntheticFrames(
+        string name, long streamId, int width, int height, int framePattern
+    ) {
+        CheckPlatform();
+        LogSnapshotTextureStreamCpuFallbackIfNeeded();
+        return uv_startSnapshotTextureStreamSynthetic(name, streamId, width, height, framePattern);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern void uv_stopSnapshotTextureStream(string name, long streamId);
+    public static void StopSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+        uv_stopSnapshotTextureStream(name, streamId);
+        plugin.CallStatic("stopSnapshotTextureStream", name, streamId);
+        if (!SnapshotTextureStreamUsesCpuFallback()) {
+            IssueSnapshotTextureStreamRenderEvents(SnapshotTextureStreamStopRenderEventCount);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern void uv_tickSnapshotTextureStream(string name, long streamId);
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern IntPtr uv_getSnapshotTextureStreamRenderEventFunc();
+    public static void TickSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+        plugin.CallStatic("tickSnapshotTextureStream", name, streamId);
+        uv_tickSnapshotTextureStream(name, streamId);
+    }
+
+    public static void PumpSnapshotTextureStream(string name, long streamId) {
+        CheckPlatform();
+        if (SnapshotTextureStreamUsesCpuFallback()) {
+            return;
+        }
+        IssueSnapshotTextureStreamRenderEvent();
+    }
+
+    private static void IssueSnapshotTextureStreamRenderEvent() {
+        GL.IssuePluginEvent(uv_getSnapshotTextureStreamRenderEventFunc(), 0);
+    }
+
+    private static void IssueSnapshotTextureStreamRenderEvents(int count) {
+        for (var i = 0; i < count; i++) {
+            IssueSnapshotTextureStreamRenderEvent();
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool uv_isSnapshotTextureStreamReady(string name, long streamId);
+    public static bool IsSnapshotTextureStreamReady(string name, long streamId) {
+        CheckPlatform();
+        return uv_isSnapshotTextureStreamReady(name, streamId);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern int uv_getSnapshotTextureStreamWidth(string name, long streamId);
+    public static int GetSnapshotTextureStreamWidth(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamWidth(name, streamId);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern int uv_getSnapshotTextureStreamHeight(string name, long streamId);
+    public static int GetSnapshotTextureStreamHeight(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamHeight(name, streamId);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern long uv_getSnapshotTextureStreamFrameIndex(string name, long streamId);
+    public static long GetSnapshotTextureStreamFrameIndex(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamFrameIndex(name, streamId);
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern IntPtr uv_getSnapshotTextureStreamTexturePointer(string name, long streamId);
+    public static IntPtr GetSnapshotTextureStreamTexturePointer(string name, long streamId) {
+        CheckPlatform();
+        return uv_getSnapshotTextureStreamTexturePointer(name, streamId);
+    }
+
+    public static TextureFormat GetSnapshotTextureStreamTextureFormat() {
+        CheckPlatform();
+        return TextureFormat.RGBA32;
+    }
+
+    [System.Runtime.InteropServices.DllImport("UniWebViewNativeTexture")]
+    private static extern long uv_consumeSnapshotTextureStreamCpuFrame(string name, long streamId, IntPtr destination, int capacity);
+    public static long ConsumeSnapshotTextureStreamCpuFrame(string name, long streamId, IntPtr destination, int capacity) {
+        CheckPlatform();
+        return uv_consumeSnapshotTextureStreamCpuFrame(name, streamId, destination, capacity);
+    }
+
+    // The optimized native texture path renders through OpenGL ES. On other graphics backends
+    // (Vulkan), the stream falls back to a CPU readback that updates a stream-owned Texture2D.
+    public static bool SnapshotTextureStreamUsesCpuFallback() {
+        CheckPlatform();
+        return !IsSnapshotTextureStreamGLBackend();
+    }
+
+    private static void LogSnapshotTextureStreamCpuFallbackIfNeeded() {
+        if (SnapshotTextureStreamUsesCpuFallback()) {
+            UniWebViewLogger.Instance.Info(
+                "Snapshot texture stream is using the CPU readback fallback since the current " +
+                "graphics backend is not OpenGL ES: " + SystemInfo.graphicsDeviceType
+            );
+        }
+    }
+
+    private static bool IsSnapshotTextureStreamGLBackend() {
+#if UNITY_2023_1_OR_NEWER
+        // OpenGL ES 2.0 is no longer a selectable graphics API since Unity 2023.1.
+        return SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES3;
+#else
+        return SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES2 ||
+               SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES3;
+#endif
     }
 
     public static string CopyBackForwardList(string name) {

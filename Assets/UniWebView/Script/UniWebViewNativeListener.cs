@@ -223,6 +223,12 @@ public class UniWebViewNativeListener: MonoBehaviour {
         webView.InternalOnGeneralCallback(identifier);
     }
 
+    public void IntentResultReceived(string result) {
+        UniWebViewLogger.Instance.Info("Intent Result Received Event. Result: " + result);
+        var payload = JsonUtility.FromJson<UniWebViewNativeResultPayload>(result);
+        webView.InternalOnIntentResultReceived(payload);
+    }
+
     private void OnDestroy() {
         UniWebViewLogger.Instance.Verbose("Native listener destroyed: " + Name);
         webView = null;

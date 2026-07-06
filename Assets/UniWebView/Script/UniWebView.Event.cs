@@ -265,6 +265,26 @@ public partial class UniWebView {
     public event PopupWindowClosedDelegate OnPopupWindowClosed;
 
     /// <summary>
+    /// Delegate for external activity result received event.
+    /// </summary>
+    /// <param name="webView">The web view component which raises this event.</param>
+    /// <param name="result">The result returned from the external Android activity.</param>
+    public delegate void ExternalActivityResultReceivedDelegate(
+        UniWebView webView, UniWebViewExternalActivityResult result);
+    /// <summary>
+    /// Raised when an external Android activity, launched from the web view via a custom URL scheme
+    /// (such as `upi://` for payment apps), finishes and returns a result.
+    ///
+    /// When a web page navigates to a non-HTTP URL scheme that matches an installed app, UniWebView
+    /// launches that app using Android's `startActivityForResult`. When the external app calls
+    /// `setResult` and finishes, this event delivers the result back to your Unity code.
+    ///
+    /// This event is only available on Android. On iOS and macOS, external app communication uses
+    /// URL schemes and deep links instead (handle via `Application.deepLinkActivated`).
+    /// </summary>
+    public event ExternalActivityResultReceivedDelegate OnExternalActivityResultReceived;
+
+    /// <summary>
     /// Delegate for channel message received event.
     /// </summary>
     /// <param name="webView">The web view component which raises this event.</param>
@@ -437,8 +457,19 @@ public partial class UniWebView {
             OnCaptureSnapshotFinished(this, errorCode,  payload.data);
         }
     }
-    
+
+    internal void InternalOnIntentResultReceived(UniWebViewNativeResultPayload payload) {
+        if (OnExternalActivityResultReceived != null) {
+            int resultCode = int.TryParse(payload.resultCode, out resultCode) ? resultCode : 0;
+            var result = new UniWebViewExternalActivityResult(payload.identifier, resultCode, payload.data);
+            OnExternalActivityResultReceived(this, result);
+        }
+    }
+
     internal void InternalOnSnapshotRenderingStarted(string identifier) {
+        if (string.IsNullOrEmpty(identifier)) {
+            return;
+        }
         if (!actions.TryGetValue(identifier, out var action)) {
             return;
         }

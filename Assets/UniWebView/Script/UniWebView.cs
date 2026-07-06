@@ -86,14 +86,19 @@ public partial class UniWebView: MonoBehaviour {
 
         EmbeddedToolbar = new UniWebViewEmbeddedToolbar(listener);
 
-        var rect = fullScreen ? new Rect(0, 0, Screen.width, Screen.height) : NextFrameRect();
+        var rect = NextFrameRect();
+        SyncFramePropertyIfNeeded(rect);
 
-        UniWebViewInterface.Init(listener.Name, (int)rect.x, (int)rect. y, (int)rect.width, (int)rect.height);
+        UniWebViewInterface.Init(listener.Name, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
         currentOrientation = Screen.orientation;
         currentUnmappedFrame = UnmappedFrame();
         
         // Register channel message handler
         RegisterChannelMessageHandler();
+    }
+
+    private Rect FullScreenFrame() {
+        return NativeFrameRect(new Rect(0, 0, Screen.width, Screen.height));
     }
 
     void Start() {
@@ -102,8 +107,10 @@ public partial class UniWebView: MonoBehaviour {
         }
         
         if (useEmbeddedToolbar) {
-            EmbeddedToolbar.SetPosition(embeddedToolbarPosition);
-            EmbeddedToolbar.Show();            
+            var config = UniWebViewEmbeddedToolbarConfig.Default;
+            config.Position = embeddedToolbarPosition;
+            config.Visible = true;
+            EmbeddedToolbar.ApplyConfig(config);
         }
 
         if (!string.IsNullOrEmpty(urlOnStart)) {
@@ -124,6 +131,9 @@ public partial class UniWebView: MonoBehaviour {
                 OnOrientationChanged(this, newOrientation);
             }
             if (referenceRectTransform != null) {
+                needUpdateFrame = true;
+            }
+            if (fullScreen) {
                 needUpdateFrame = true;
             }
         }
@@ -176,6 +186,7 @@ public partial class UniWebView: MonoBehaviour {
         
     void OnDestroy() {
         var listenerName = ListenerNameOrId;
+        CleanupSnapshotResources();
         InternalCloseAllPopupWindows(listenerName);
         UniWebViewNativeListener.RemoveListener(listenerName);
         UniWebViewChannelMethodManager.Instance.UnregisterChannel(listenerName);
@@ -647,6 +658,39 @@ public partial class UniWebView: MonoBehaviour {
         UniWebViewChannelMethodManager.Instance.UnregisterChannelMethod(
             listener.Name, 
             UniWebViewChannelMethod.RequestMediaCapturePermission
+        );
+    }
+
+    /// <summary>
+    /// Registers a method handler for embedded toolbar item actions.
+    ///
+    /// This handler is invoked synchronously before native performs the default action for built-in embedded toolbar
+    /// items (back/forward/done/reload/title interactions). Return <c>true</c> to mark the action as handled and skip
+    /// native default behavior. Return <c>false</c> to let native continue with the default behavior.
+    ///
+    /// For title interactions, whether tap/long-press can trigger depends on the toolbar config item's
+    /// <c>titleInteraction</c> settings.
+    /// </summary>
+    /// <param name="handler">The synchronous action handler. Return <c>true</c> to intercept.</param>
+    public void RegisterOnEmbeddedToolbarItemAction(
+        Func<UniWebViewChannelMethodEmbeddedToolbarItemAction, bool> handler
+    )
+    {
+        object Func(object obj) => handler((UniWebViewChannelMethodEmbeddedToolbarItemAction)obj);
+        UniWebViewChannelMethodManager.Instance.RegisterChannelMethod(
+            listener.Name,
+            UniWebViewChannelMethod.EmbeddedToolbarItemAction,
+            Func
+        );
+    }
+
+    /// <summary>
+    /// Unregisters the method handler for embedded toolbar item actions.
+    /// </summary>
+    public void UnregisterOnEmbeddedToolbarItemAction() {
+        UniWebViewChannelMethodManager.Instance.UnregisterChannelMethod(
+            listener.Name,
+            UniWebViewChannelMethod.EmbeddedToolbarItemAction
         );
     }
     

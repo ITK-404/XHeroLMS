@@ -1,4 +1,78 @@
 # Release Note
+### 6.8.0 (22 Jun, 2026)
+
+#### Add
+
+* External activity result support on Android. When the web view launches a third-party app intent via `startActivityForResult`, the result is now captured and delivered through the new `OnExternalActivityResultReceived` event as a `UniWebViewExternalActivityResult` containing the result code and data extras.
+#### Fix
+
+* Fix Android web view frame position and size when the host app applies window insets as padding on the content view, which is the recommended adaptation for the edge-to-edge enforcement on Android 15 and later. The web view frame is now offset and scaled into the padded area where the Unity view is laid out, instead of only considering the status bar height.
+
+### 6.7.0 (11 Jun, 2026)
+
+#### Add
+
+* Live snapshot texture stream via `StartSnapshotTextureStream`. It creates a `UniWebViewSnapshotTextureStream` that owns a single `Texture2D` and keeps updating it in place with the latest web view content, which is much more efficient than the legacy snapshot rendering APIs. You can capture a sub-rectangle, control the refresh interval, and dispose the stream when it is no longer needed.
+* A `resolutionScale` parameter for `StartSnapshotTextureStream` to capture at a reduced resolution and lower the per-frame cost. It currently takes effect on iOS and macOS; Android always captures at full resolution.
+* On Android, the snapshot texture stream is backed by a new native library (`libUniWebViewNativeTexture.so`) with an optimized texture path on OpenGL ES 2 and OpenGL ES 3. On other graphics APIs such as Vulkan, the stream automatically falls back to a CPU readback path with the same behavior at a higher per-frame cost.
+
+#### Fix
+
+* Fix a memory leak on Android where the web view and its keyboard workaround were not fully detached and released when the web view is destroyed.
+
+#### Deprecate
+
+* The legacy snapshot rendering APIs (`StartSnapshotForRendering`, `StopSnapshotForRendering`, `GetRenderedData` and `CreateRenderedTexture`) are now marked as deprecated since they allocate heavily on every frame. Use the new `StartSnapshotTextureStream` instead.
+
+### 6.6.5 (17 May, 2026)
+
+#### Fix
+
+* Fix Android web view frame positioning when the `frame` property is used directly without a `referenceRectTransform`. The Unity frame is now mapped through the native coordinate system so the status bar offset and screen scale are applied consistently with reference-rect mode.
+* Fix Android keyboard avoidance using stale screen and keyboard heights, which could shrink the web view by the wrong amount or leave a gap when the soft keyboard appears. The overlap is now computed from the window's visible display frame.
+
+### 6.6.4 (14 May, 2026)
+
+#### Fix
+
+* Fix the Android web view frame not accounting for the safe area when the screen is in fullscreen mode.
+* Fix stale `onStarted` callbacks from `StartSnapshotForRendering` when the method is called again before a previous snapshot session is stopped. The old callback registration is now properly cleared, so only the latest `onStarted` is invoked.
+
+### 6.6.3 (30 Apr, 2026)
+
+#### Fix
+
+* Fix `StartSnapshotForRendering` invoking the `onStarted` callback before the first snapshot frame is actually cached. The callback now defers until the initial snapshot data is available, so the returned texture reflects real web view content instead of an empty image.
+
+### 6.6.2 (25 Apr, 2026)
+
+#### Fix
+
+* Fix slow first paint on iOS and macOS when a URL is loaded before `Show` is called. Pre-Show web views are no longer placed in a hidden ancestor chain, avoiding WebKit's `requestAnimationFrame` pause and 1Hz timer throttle.
+* Fix `GetAlpha` returning 0 on iOS and macOS before the first `Show` call. The user-set alpha is now returned regardless of the on-screen container state.
+* Fix missing `failingURL` in `OnPageErrorReceived` on iOS and macOS when WebKit delivers the error with only the `NSURL`-typed user info key.
+
+### 6.6.1 (2 April, 2026)
+
+#### Fix
+
+* Fix an Android crash when capturing a snapshot while the web view has a zero scale transform, which caused `Bitmap.createBitmap` to fail with an invalid size.
+
+### 6.6.0 (22 Mar, 2026)
+
+#### Add
+
+* Config-based embedded toolbar via `UniWebViewEmbeddedToolbarConfig`. Define toolbar layout, items, colors, and behavior in a JSON-friendly configuration and apply it with `ApplyConfig` on `UniWebViewEmbeddedToolbar`.
+* Custom toolbar items. Beyond the built-in Back, Forward, Done, Reload, and Title items, you can now add custom items to the left, center, and right positions of the toolbar.
+* Title interaction behaviors. Configure tap-to-scroll-to-top and long-press-to-copy-URL on the title item via `TitleInteraction` in the toolbar config.
+* Toolbar item action callbacks. Use `RegisterOnEmbeddedToolbarItemAction` and `UnregisterOnEmbeddedToolbarItemAction` on `UniWebView` to intercept tap and long-press gestures on any toolbar item.
+
+#### Fix
+
+* Fix an iOS Texture Mirror crash in `CA::Transaction::finish_frame` when a snapshot is requested while another is still in flight.
+* Enforce minimum touch target size for Android toolbar buttons to improve tap reliability.
+* Use native appearance defaults for macOS toolbar to match platform conventions.
+
 ### 6.5.0 (22 Feb, 2026)
 
 #### Add

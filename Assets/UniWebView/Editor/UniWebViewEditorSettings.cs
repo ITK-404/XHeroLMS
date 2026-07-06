@@ -133,25 +133,6 @@ public class UniWebViewEditorSettings: ScriptableObject
     }
 }
 
-// UniWebViewEditorSettings is not working well with AndroidProjectFilesModifier.
-// (reading it requires main thread, but the OnModifyAndroidProjectFiles is not in main thread)
-[Serializable]
-public class UniWebViewEditorSettingsReading {
-    public bool usesCleartextTraffic = false;
-    public bool writeExternalStorage = false;
-    public bool accessFineLocation = false;
-    public bool addsKotlin = true;
-    public string kotlinVersion = null;
-    public bool addsAndroidBrowser = true;
-    public string androidBrowserVersion = null;
-    public bool addsAndroidXCore = false;
-    public string androidXCoreVersion = null;
-    public bool enableJetifier = true;
-    public string[] authCallbackUrls = { };
-    public bool supportLINELogin = false;
-    public string[] androidAssetsFolders = { };
-}
-
 static class UniWebViewSettingsProvider {
     static SerializedObject settings;
 

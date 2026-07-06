@@ -23,6 +23,7 @@ using UnityEngine;
 enum UniWebViewChannelMethod {
     ShouldUniWebViewHandleRequest,
     RequestMediaCapturePermission,
+    EmbeddedToolbarItemAction,
     ChannelMessage
 }
 
@@ -109,6 +110,13 @@ class UniWebViewChannelMethodManager {
                 // (UniWebViewChannelMethodMediaCapturePermission) -> UniWebViewMediaCapturePermissionDecision
                 var input = JsonUtility.FromJson<UniWebViewChannelMethodMediaCapturePermission>(parameters);
                 UniWebViewMediaCapturePermissionDecision Func(UniWebViewChannelMethodMediaCapturePermission i) => (UniWebViewMediaCapturePermissionDecision)func(i);
+                result = ResultJsonWith(Func(input));
+                break;
+            }
+            case UniWebViewChannelMethod.EmbeddedToolbarItemAction: {
+                // (UniWebViewChannelMethodEmbeddedToolbarItemAction) -> bool
+                var input = JsonUtility.FromJson<UniWebViewChannelMethodEmbeddedToolbarItemAction>(parameters);
+                bool Func(UniWebViewChannelMethodEmbeddedToolbarItemAction i) => (bool)func(i);
                 result = ResultJsonWith(Func(input));
                 break;
             }

@@ -31,6 +31,7 @@ public partial class UniWebView {
     public Rect Frame {
         get => frame;
         set {
+            fullScreen = false;
             frame = value;
             UpdateFrame();
         }
@@ -47,10 +48,34 @@ public partial class UniWebView {
     public RectTransform ReferenceRectTransform {
         get => referenceRectTransform;
         set {
+            fullScreen = false;
             referenceRectTransform = value;
             UpdateFrame();
         }
     }
+
+    private bool loggedLegacyToolbarSuppressedByEmbeddedToolbar;
+
+#pragma warning disable 618
+    private bool ShouldDriveLegacyToolbar() {
+        if (!useToolbar) {
+            return false;
+        }
+
+        if (!useEmbeddedToolbar) {
+            return true;
+        }
+
+        if (!loggedLegacyToolbarSuppressedByEmbeddedToolbar) {
+            loggedLegacyToolbarSuppressedByEmbeddedToolbar = true;
+            UniWebViewLogger.Instance.Warning(() =>
+                "Detected legacy toolbar flag (useToolbar=true) together with embedded toolbar (useEmbeddedToolbar=true). " +
+                "Suppressing legacy toolbar to avoid duplicate toolbars. Please update old prefab/scene serialization.");
+        }
+
+        return false;
+    }
+#pragma warning restore 618
 
     /// <summary>
     /// Updates and sets current frame of web view to match the setting.
@@ -60,19 +85,31 @@ public partial class UniWebView {
     /// </summary>
     public void UpdateFrame() {
         Rect rect = NextFrameRect();
-        // Sync web view frame property.
-        frame = rect;
+        SyncFramePropertyIfNeeded(rect);
         UniWebViewInterface.SetFrame(listener.Name, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
+    }
+
+    void SyncFramePropertyIfNeeded(Rect rect) {
+        if (fullScreen || referenceRectTransform != null) {
+            frame = rect;
+        }
     }
     
     Rect UnmappedFrame() {
+        if (fullScreen) {
+            return new Rect(0, 0, Screen.width, Screen.height);
+        }
         return referenceRectTransform != null ? referenceRectTransform.rect : frame;
     }
     
     Rect NextFrameRect() {
+        if (fullScreen) {
+            return FullScreenFrame();
+        }
+
         if (referenceRectTransform == null) {
             UniWebViewLogger.Instance.Info("Using Frame setting to determine web view frame.");
-            return frame;
+            return NativeFrameRect(frame);
         }
 
         UniWebViewLogger.Instance.Info("Using reference RectTransform to determine web view frame.");
@@ -112,41 +149,105 @@ public partial class UniWebView {
                 throw new ArgumentOutOfRangeException();
         }
 
-        var nativeHeight = UniWebViewInterface.NativeScreenHeight();
-        var statusBarHeight = GetStatusBarHeight();
-        
-        // Calculate scaling factors to convert Unity coordinates to native screen coordinates
-        // - When "Render Outside Safe Area" is disabled, Unity's coordinate space doesn't include the status bar area
-        // - But native WebView positioning needs to account for the status bar offset
-        // - This creates a mismatch that needs correction in the Y coordinate calculation
-        var widthFactor = UniWebViewInterface.NativeScreenWidth() / Screen.width;
-        var heightFactor = (nativeHeight - statusBarHeight) / Screen.height;
-        
-        // Calculate status bar offset in Unity coordinate space
-        // This is used to adjust Y positioning when status bar is visible
-        var safeAreaOffsetY = statusBarHeight / heightFactor;
-        
-        // Convert Unity RectTransform coordinates to native screen coordinates
-        // 
-        // Unity coordinate system:
-        // - Origin (0,0) is at bottom-left of screen
-        // - Y increases upward
-        // 
-        // Native coordinate system:
-        // - Origin (0,0) is at top-left of screen (considering status bar)
-        // - Y increases downward
-        // 
-        // The calculation process:
-        // 1. topLeft.x * widthFactor: Convert Unity X to native X
-        // 2. (Screen.height - topLeft.y + safeAreaOffsetY) * heightFactor: 
-        //    - Screen.height - topLeft.y: Flip Y coordinate (Unity bottom-left to top-left)
-        //    - + safeAreaOffsetY: Adjust for status bar offset when it's visible
-        //    - * heightFactor: Scale to native screen height (If the resolution is different from native size)
-        var x = topLeft.x * widthFactor;
-        var y = (Screen.height - topLeft.y + safeAreaOffsetY) * heightFactor;
-        var width = (bottomRight.x - topLeft.x) * widthFactor;
-        var height = (topLeft.y - bottomRight.y) * heightFactor;
-        return new Rect(x, y, width, height);
+        var unityFrame = new Rect(
+            topLeft.x,
+            Screen.height - topLeft.y,
+            bottomRight.x - topLeft.x,
+            topLeft.y - bottomRight.y
+        );
+        return NativeFrameRect(unityFrame);
+    }
+
+    private Rect NativeFrameRect(Rect unityFrame) {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        try {
+            var padding = UniWebViewInterface.GetContentViewPadding();
+            if (padding[0] != 0 || padding[1] != 0 || padding[2] != 0 || padding[3] != 0) {
+                return CalculateNativeFrameRectWithContentPadding(
+                    unityFrame,
+                    Screen.width,
+                    Screen.height,
+                    UniWebViewInterface.NativeScreenWidth(),
+                    UniWebViewInterface.NativeScreenHeight(),
+                    padding[0], padding[1], padding[2], padding[3]
+                );
+            }
+            return CalculateNativeFrameRect(
+                unityFrame,
+                Screen.width,
+                Screen.height,
+                UniWebViewInterface.NativeScreenWidth(),
+                UniWebViewInterface.NativeScreenHeight(),
+                GetStatusBarHeight()
+            );
+        } catch (Exception e) {
+            UniWebViewLogger.Instance.Warning(() =>
+                $"Failed to calculate Android native frame: {e.Message}. Falling back to Unity frame.");
+        }
+#endif
+        return unityFrame;
+    }
+
+    private static Rect CalculateNativeFrameRect(
+        Rect unityFrame,
+        float unityScreenWidth,
+        float unityScreenHeight,
+        float nativeScreenWidth,
+        float nativeScreenHeight,
+        float statusBarHeight
+    ) {
+        if (unityScreenWidth <= 0 || unityScreenHeight <= 0 || nativeScreenWidth <= 0 || nativeScreenHeight <= 0) {
+            return unityFrame;
+        }
+
+        var contentHeight = Mathf.Max(0, nativeScreenHeight - statusBarHeight);
+        var widthFactor = nativeScreenWidth / unityScreenWidth;
+        var heightFactor = contentHeight / unityScreenHeight;
+
+        return new Rect(
+            unityFrame.x * widthFactor,
+            statusBarHeight + unityFrame.y * heightFactor,
+            unityFrame.width * widthFactor,
+            unityFrame.height * heightFactor
+        );
+    }
+
+    // Maps a Unity frame into native coordinates when the host app applies window insets as
+    // padding on the native content view (the pattern recommended by Google for edge-to-edge
+    // enforcement since Android 15). In that layout the Unity player view occupies the padded
+    // area of the content view, while UniWebView's container is positioned in the content
+    // view's full coordinate space, so the frame is offset by the padding origin and scaled
+    // into the padded area.
+    private static Rect CalculateNativeFrameRectWithContentPadding(
+        Rect unityFrame,
+        float unityScreenWidth,
+        float unityScreenHeight,
+        float nativeScreenWidth,
+        float nativeScreenHeight,
+        float paddingLeft,
+        float paddingTop,
+        float paddingRight,
+        float paddingBottom
+    ) {
+        if (unityScreenWidth <= 0 || unityScreenHeight <= 0 || nativeScreenWidth <= 0 || nativeScreenHeight <= 0) {
+            return unityFrame;
+        }
+
+        var paddedWidth = nativeScreenWidth - paddingLeft - paddingRight;
+        var paddedHeight = nativeScreenHeight - paddingTop - paddingBottom;
+        if (paddedWidth <= 0 || paddedHeight <= 0) {
+            return unityFrame;
+        }
+
+        var widthFactor = paddedWidth / unityScreenWidth;
+        var heightFactor = paddedHeight / unityScreenHeight;
+
+        return new Rect(
+            paddingLeft + unityFrame.x * widthFactor,
+            paddingTop + unityFrame.y * heightFactor,
+            unityFrame.width * widthFactor,
+            unityFrame.height * heightFactor
+        );
     }
 
     /// <summary>
@@ -290,7 +391,7 @@ public partial class UniWebView {
         }
         
 #pragma warning disable 618
-        if (showStarted && useToolbar) {
+        if (showStarted && ShouldDriveLegacyToolbar()) {
             var top = (toolbarPosition == UniWebViewToolbarPosition.Top);
             SetShowToolbar(true, false, top, fullScreen);
         }
@@ -333,7 +434,7 @@ public partial class UniWebView {
             }
         }
 #pragma warning disable 618
-        if (hideStarted && useToolbar) {
+        if (hideStarted && ShouldDriveLegacyToolbar()) {
             var top = (toolbarPosition == UniWebViewToolbarPosition.Top);
             SetShowToolbar(false, false, top, fullScreen);
         }
@@ -351,8 +452,9 @@ public partial class UniWebView {
     /// <returns></returns>
     public bool AnimateTo(Rect frame, float duration, float delay = 0.0f, Action completionHandler = null) {
         var identifier = Guid.NewGuid().ToString();
+        var nativeFrame = NativeFrameRect(frame);
         var animationStarted = UniWebViewInterface.AnimateTo(listener.Name, 
-                    (int)frame.x, (int)frame.y, (int)frame.width, (int)frame.height, duration, delay, identifier);
+                    (int)nativeFrame.x, (int)nativeFrame.y, (int)nativeFrame.width, (int)nativeFrame.height, duration, delay, identifier);
         if (animationStarted) {
             this.frame = frame;
             if (completionHandler != null) {
