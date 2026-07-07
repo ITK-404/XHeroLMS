@@ -30,7 +30,7 @@ public class LoginController : MonoBehaviour
     public Sprite iconHide;
 
     [Header("Options")]
-    public bool autoFocusUsername = true;
+    public bool autoFocusUsername = false;
     public bool showSuccessPopup = false;
 
     bool autoRestoreOnStart = true;
@@ -584,8 +584,11 @@ public class LoginController : MonoBehaviour
             if (inputPassword != null)
             {
                 inputPassword.text = "";
-                inputPassword.ActivateInputField();
-                inputPassword.Select();
+                if (autoFocusUsername)
+                {
+                    inputPassword.ActivateInputField();
+                    inputPassword.Select();
+                }
             }
         }
         else if (autoFocusUsername)

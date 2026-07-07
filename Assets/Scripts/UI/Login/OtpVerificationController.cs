@@ -123,7 +123,6 @@ public class OtpVerificationController : MonoBehaviour
     private void Awake()
     {
         baseUrl = LmsStore.Instance.baseUrl;
-        ConfigureOtpInputs();
     }
 
     private void Start()
@@ -172,6 +171,10 @@ public class OtpVerificationController : MonoBehaviour
         EnsureContactFromSessionOrPrefs();
         UpdateStatusLabel();
 
+        if (!IsOtpPanelActive())
+            return;
+
+        ConfigureOtpInputs();
         EnsureOtpConfigLoadStarted();
         ClearOtpInputs(focusOtpOnEnable);
         StartAndroidSmsOtpAutoFillIfNeeded();
@@ -247,6 +250,9 @@ public class OtpVerificationController : MonoBehaviour
     // Gọi từ màn Register / Forgot khi OTP đã được gửi thành công
     public void BeginCountdown()
     {
+        ConfigureOtpInputs();
+        ClearOtpInputs(focusOtpOnEnable);
+
         if (_beginCountdownRoutine != null)
             StopCoroutine(_beginCountdownRoutine);
 
@@ -422,6 +428,7 @@ public class OtpVerificationController : MonoBehaviour
         input.lineType = TMP_InputField.LineType.SingleLine;
         input.richText = false;
         input.shouldHideMobileInput = true;
+        input.shouldActivateOnSelect = false;
 
 #if UNITY_IOS && !UNITY_EDITOR
         try
@@ -467,6 +474,8 @@ public class OtpVerificationController : MonoBehaviour
 
     private void FocusOtpAt(int index, bool replaceCurrent)
     {
+        ConfigureOtpInputs();
+
         int count = GetOtpSlotCount();
         if (count <= 0) return;
 
@@ -606,6 +615,8 @@ public class OtpVerificationController : MonoBehaviour
 
     private void FillOtpCode(string value, bool submitAfterFill)
     {
+        ConfigureOtpInputs();
+
         string digits = KeepOnlyDigits(value);
         int count = GetOtpSlotCount();
         if (digits.Length > count)
@@ -620,7 +631,8 @@ public class OtpVerificationController : MonoBehaviour
         else
         {
             SetOtpVisuals(digits);
-            SelectOtpFallback(GetNextEditIndex(), true);
+            if (!string.IsNullOrEmpty(digits))
+                SelectOtpFallback(GetNextEditIndex(), true);
         }
 
         if (count > 0 && submitAfterFill && digits.Length == count)
@@ -1116,6 +1128,11 @@ public class OtpVerificationController : MonoBehaviour
 
         if (focusFirst)
             FocusOtpAt(0, false);
+    }
+
+    private bool IsOtpPanelActive()
+    {
+        return currentPanel == null || currentPanel.activeInHierarchy;
     }
 
     private void OnBackClicked()
