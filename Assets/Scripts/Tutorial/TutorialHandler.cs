@@ -78,6 +78,9 @@ public class TutorialHandler : MonoBehaviour
     [SerializeField] private bool alwaysPlayTutorial = false;
     private string key => $"{TokenStore.UserID} {keyPlayedBefore}";
     //private string key => $"{keyPlayedBefore}";
+
+    public event Action OnCompleteTutorial;
+    
     public void Save()
     {
         // Debug.Log("Save key");
@@ -97,7 +100,14 @@ public class TutorialHandler : MonoBehaviour
         }
 
         firstTimePlayed = true;
+        CompleteTutorial();
     }
+
+    private void CompleteTutorial()
+    {
+        OnCompleteTutorial?.Invoke();
+    }
+    
 
     private void LoadSave()
     {
