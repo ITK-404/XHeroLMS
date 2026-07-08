@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +8,7 @@ public class AutoReplayController : MonoBehaviour
 {
     [SerializeField] private TutorialHandler tutorialHandler;
     [SerializeField] private AskForReplayTutorialUI view;
+    [SerializeField] private AskForReplayAnimation askForReplayAnimation;
 
     private void Awake()
     {
@@ -45,11 +47,19 @@ public class AutoReplayController : MonoBehaviour
 
     private void ReplayTutorial()
     {
-        view.Hide();
-        LoadingTransition.Load_Scene(SceneManager.GetActiveScene().name);
-        tutorialHandler.ResetKey();
+        // view.Hide();
+        view.SetInteractable(false);
+        StartCoroutine(WaitForLoading());
         Debug.Log("[AutoReplayController] replay tutorial");
     }
+
+    private IEnumerator WaitForLoading()
+    {
+        yield return askForReplayAnimation.StartTransitionAsync().ToCoroutine();
+        LoadingTransition.Load_Scene(SceneManager.GetActiveScene().name);
+        tutorialHandler.ResetKey();
+    }
+    
 
     private void ContinueLearn()
     {

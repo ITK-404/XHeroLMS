@@ -151,4 +151,9 @@ public class UIView : MonoBehaviour
     protected virtual void OnAfterShow() { }
     protected virtual void OnBeforeHide() { }
     protected virtual void OnAfterHide() {OnViewClosed?.Invoke(); }
+
+    public void SetInteractable(bool isInteractable)
+    {
+        canvasGroup.interactable = isInteractable;
+    }
 }
