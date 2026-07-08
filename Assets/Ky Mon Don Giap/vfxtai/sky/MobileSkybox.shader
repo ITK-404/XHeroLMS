@@ -18,7 +18,7 @@ Shader "Zhanyou/Skybox" {
 			#pragma fragment frag
 			#pragma multi_compile_fog
 			#include "UnityCG.cginc"
-			#include "SkyBoxFog.cginc"
+			//#include "SkyBoxFog.cginc"
 			
 			struct appdata_t
 			{
@@ -50,7 +50,7 @@ Shader "Zhanyou/Skybox" {
 				fixed4 col = tex2D(_MainTex, i.texcoord);
 				col.rgb *= _Tint.rgb;
 				UNITY_OPAQUE_ALPHA(col.a);
-				APPLY_SKY_BOX_FOG(i.fogCoord, col)
+				//APPLY_SKY_BOX_FOG(i.fogCoord, col)
 				return col;
 			}
 			ENDCG
