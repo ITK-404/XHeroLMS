@@ -59,6 +59,8 @@ public class NPCInteraction : MonoBehaviour
         
         actionChoiceViewUI.Hide();
         interactionUIView.ShowWorldSpaceIcon();
+
+        previousRuntimeWorldSpaceEnable = !GetActiveWorldSpaceState();
     }
     private bool isFocused = false;
 
@@ -125,5 +127,27 @@ public class NPCInteraction : MonoBehaviour
     {
         if (isFocused)
             ExitFocusState();
+    }
+
+    private bool previousRuntimeWorldSpaceEnable = true;
+    private void LateUpdate()
+    {
+        WorldSpaceUIRuntimeStateCheck();
+    }
+
+    private void WorldSpaceUIRuntimeStateCheck()
+    {
+        var canActiveWorldSpaceUI = GetActiveWorldSpaceState();
+        Debug.Log($"NPC Interaction can active world space ui " + canActiveWorldSpaceUI);
+        if (previousRuntimeWorldSpaceEnable != canActiveWorldSpaceUI)
+        {
+            worldSpaceUi.SetActive(canActiveWorldSpaceUI);
+            previousRuntimeWorldSpaceEnable = canActiveWorldSpaceUI;
+        }
+    }
+
+    private bool GetActiveWorldSpaceState()
+    {
+        return TutorialHandler.Instance != null && TutorialHandler.Instance.IsPlayedBefore();
     }
 }

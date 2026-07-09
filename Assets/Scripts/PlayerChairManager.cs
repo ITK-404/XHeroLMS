@@ -15,36 +15,30 @@ public class PlayerChairManager : MonoBehaviour
         Free,
         Sitdown
     }
+
     public static PlayerChairManager Instance;
     public CinemachineBrain brain;
     private ChairCheckPoint[] allCheckPoints;
     private List<ChairCheckPoint> chairList = new();
-    public GameObject player;
     public PlayerState playerState;
-    [Header("UI")]
-
-    VideoPlayerControllerPro videoPlayerControllerPro;
+    [Header("UI")] VideoPlayerControllerPro videoPlayerControllerPro;
     CourseListView courseListView;
     [SerializeField] PlayerStandUI playerStandUI;
-    [SerializeField] InputCanvas inputCanvas;
-    [SerializeField] private CourseExitWayHandler courseExitWayHandler;
     public ChairCheckPoint currentCheckPoint;
     private bool ownsCourseGameplayLock;
-
-    private TutorialBase TutorialBase;
+    [SerializeField] private EnterFocusStateTransition enterFocusStateTransition;
+    [SerializeField] private LearningFocusMode learningFocusMode;
 
     private void Awake()
     {
         allCheckPoints = GetComponentsInChildren<ChairCheckPoint>();
         Instance = this;
 
-
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
         videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
         courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
         playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
-        courseExitWayHandler.Show();
     }
 
     private void OnDestroy()
@@ -53,19 +47,8 @@ public class PlayerChairManager : MonoBehaviour
         Instance = null;
     }
 
-    private IEnumerator WaitForBlendDone(Action action)
-    {
-        yield return new WaitForSeconds(2);
-
-        Debug.Log("Chạy callback");
-        action?.Invoke();
-        action = null;
-
-        yield return null;
-    }
     public void PlayerStandup()
     {
-
         TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
 
         if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
@@ -73,138 +56,78 @@ public class PlayerChairManager : MonoBehaviour
             TutorialHandler.Instance.Save();
         }
 
+        StandUpStateHandle();
+
+        learningFocusMode.Exit();
+
+        StartBlendCoroutine(() =>
+        {
+            Debug.Log("bật lại input");
+
+            enterFocusStateTransition.Exit();
+        });
+    }
+
+
+    public void PlayerSitdown()
+    {
+        // sit down logic, hardcode logic
+        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
+
+        ChairCheckPoint temp = currentCheckPoint;
+
+        if (temp == null) return;
+
+        SitDownStateHandle(temp);
+
+        enterFocusStateTransition.Enter();
+
+        StartBlendCoroutine(() =>
+        {
+            learningFocusMode.Enter();
+            SetTutorialToNextStep();
+        });
+    }
+
+    private void SetTutorialToNextStep()
+    {
+        if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
+        {
+            TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
+        }
+    }
+
+    private void SitDownStateHandle(ChairCheckPoint temp)
+    {
+        playerState = PlayerState.Sitdown;
+        Debug.Log("Sit down");
+
+        QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
+        QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+
+        ShowAllCheckPoint(false);
+        // d
+        StopAllCoroutines();
+        SetCourseGameplayLock(true);
+    }
+
+    private void StandUpStateHandle()
+    {
         StopCourseVideoForStandUp();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
         QuadCinemachineController.Instance.ChangeState(ViewState.Player);
-        foreach (var item in allCheckPoints)
-        {
-            item.Show(true);
-        }
-        // ẩn UI ngay khi bắt đầu đứng dậy
-        //playerStandUI.UILearnCanvas.Hide();
-        //playerStandUI.HideWatchVideoUI();
-        playerStandUI.HideLearningUI();
-        videoPlayerControllerPro.ExitFullscreenUI();
+        ShowAllCheckPoint(true);
         SetCourseGameplayLock(false);
-        StartBlendCoroutine(() =>
-        {
-            Debug.Log("bật lại input");
-            
-            playerStandUI.returnBtn.gameObject.SetActive(true);
-            inputCanvas.Show();
-
-            courseExitWayHandler.Show();
-
-            PlayerPanelUI.Instance.ShowUnLoginContainer(true);
-            PlayerPanelUI.Instance.ShowExternalButton(true);
-        });
     }
 
-    private void StopCourseVideoForStandUp()
-    {
-        if (courseListView == null)
-            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
 
-        if (courseListView != null)
-        {
-            courseListView.StopVideoAndAudioForStandUp();
-            return;
-        }
-
-        if (videoPlayerControllerPro == null)
-            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
-
-        videoPlayerControllerPro?.PauseVideoAndAudioForStandUp();
-    }
-
-    private void Recalculator()
-    {
-        var playerForward = brain.transform.forward;
-        playerForward.y = 0;
-        playerForward.Normalize();
-        float bestScore = float.MinValue; // score = dot - khoảng cách có thể được cân nhắc riêng
-        ChairCheckPoint temp = null;
-        foreach (var item in chairList)
-        {
-            Vector3 dirToItem = item.transform.position - brain.transform.position;
-            dirToItem.y = 0;
-            dirToItem.Normalize();
-
-            float dot = Vector3.Dot(playerForward, dirToItem);
-            if (dot > 0.5f) // nằm trong tầm nhìn ~60 độ
-            {
-                float distance = Vector3.Distance(brain.transform.position, item.transform.position);
-                float score = dot / distance; // dot cao, distance nhỏ => ưu tiên cao
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    temp = item;
-                }
-            }
-        }
-        currentCheckPoint = temp;
-
-    }
-
-    private float timer;
-    private float blockTimer = 2.3f;
-    private void UpdateBlockTimer() => timer = Time.time;
-    private bool CanInteract() => Time.time > timer + blockTimer;
-    public void PlayerSitdown()
-    {
-        // sit down logic
-        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
-    
-        ChairCheckPoint temp = currentCheckPoint;
-
-        if (temp != null)
-        {
-            playerState = PlayerState.Sitdown;
-            Debug.Log("Sit down");
-            
-            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
-
-            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
-            inputCanvas.Hide();
-
-            // ẩn tất cả icon của ghế
-            foreach (var item in allCheckPoints)
-            {
-                item.Show(false);
-            }
-            // d
-            StopAllCoroutines();
-            SetCourseGameplayLock(true);
-            
-            courseExitWayHandler.Hide();
-            
-            PlayerPanelUI.Instance.ShowUnLoginContainer(false);
-            PlayerPanelUI.Instance.ShowExternalButton(false);
-            StartBlendCoroutine(() =>
-            {
-                // Hiện UI ngay sau khi ngồi xuống hoàn tất
-                //playerStandUI.ShowWatchVideoUI();
-                //playerStandUI.UILearnCanvas.Show();
-                playerStandUI.ShowLearningUI();
-                videoPlayerControllerPro.EnterFullscreenUI();
-                playerStandUI.returnBtn.gameObject.SetActive(false);
-                if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
-                {
-                    TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
-                }
-            });
-        }
-    }
-
-    
     public void TrySetChair(ChairCheckPoint currentChair)
     {
         if (!chairList.Contains(currentChair))
         {
             chairList.Add(currentChair);
-            Recalculator();
+            FindBestChairCheckPoint();
         }
     }
 
@@ -213,9 +136,10 @@ public class PlayerChairManager : MonoBehaviour
         if (chairList.Contains(removeChair))
         {
             chairList.Remove(removeChair);
-            Recalculator();
+            FindBestChairCheckPoint();
         }
     }
+
     private Coroutine _blendCoroutine;
     private int _blendToken = 0; // tăng mỗi lần gọi, callback tự check có còn valid không
 
@@ -254,5 +178,63 @@ public class PlayerChairManager : MonoBehaviour
         }
 
         ownsCourseGameplayLock = locked;
+    }
+
+    private void FindBestChairCheckPoint()
+    {
+        var playerForward = brain.transform.forward;
+        playerForward.y = 0;
+        playerForward.Normalize();
+
+        float bestScore = float.MinValue; // score = dot - khoảng cách có thể được cân nhắc riêng
+        ChairCheckPoint temp = null;
+        Vector3 dirToItem;
+        foreach (var item in chairList)
+        {
+            dirToItem = item.transform.position - brain.transform.position;
+            dirToItem.y = 0;
+            dirToItem.Normalize();
+
+            float dot = Vector3.Dot(playerForward, dirToItem);
+            if (dot > 0.5f) // nằm trong tầm nhìn ~60 độ
+            {
+                float distance = Vector3.Distance(brain.transform.position, item.transform.position);
+                float score = dot / distance; // dot cao, distance nhỏ => ưu tiên cao
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    temp = item;
+                }
+            }
+        }
+
+        currentCheckPoint = temp;
+    }
+
+
+    private void StopCourseVideoForStandUp()
+    {
+        if (courseListView == null)
+            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
+
+        if (courseListView != null)
+        {
+            courseListView.StopVideoAndAudioForStandUp();
+            return;
+        }
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        videoPlayerControllerPro?.PauseVideoAndAudioForStandUp();
+    }
+
+    private void ShowAllCheckPoint(bool state)
+    {
+        foreach (var item in allCheckPoints)
+        {
+            item.Show(state);
+        }
     }
 }

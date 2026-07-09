@@ -42,4 +42,9 @@ public class KyMon_WorldSpaceUI : WorldSpaceUI
       float targetScale = Mathf.Lerp(maxSize, minSize, t);
       container.localScale = Vector3.one * targetScale;
    }
+
+   public void SetActive(bool isActive)
+   {
+      gameObject.SetActive(isActive);
+   }
 }
