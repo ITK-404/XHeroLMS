@@ -557,6 +557,8 @@ GameObject:
   - component: {fileID: 2974010752193467795}
   - component: {fileID: 7393169707463316099}
   - component: {fileID: 3584113717805914119}
+  - component: {fileID: 4038948451448061316}
+  - component: {fileID: 240387854499894394}
   m_Layer: 0
   m_Name: Check Point Sitdown
   m_TagString: Untagged
@@ -628,12 +630,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerChairManager
   brain: {fileID: 8955719291077470119}
-  player: {fileID: 6674375816462219331}
   playerState: 0
   playerStandUI: {fileID: 1074200743973317228}
-  inputCanvas: {fileID: 3732800431349861119}
-  courseExitWayHandler: {fileID: 7515099656230651949}
   currentCheckPoint: {fileID: 0}
+  enterFocusStateTransition: {fileID: 4038948451448061316}
+  learningFocusMode: {fileID: 240387854499894394}
 --- !u!114 &3584113717805914119
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -650,6 +651,36 @@ MonoBehaviour:
   speed: 2
   items: []
   canMove: 0
+--- !u!114 &4038948451448061316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2984939604763138042}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed5e28a0f7c34f1f8b5b525f647941ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnterFocusStateTransition
+  playerPanelUI: {fileID: 5131974860424708709}
+  inputCanvas: {fileID: 3732800431349861119}
+  courseExitWayHandler: {fileID: 7515099656230651949}
+  playerStandUI: {fileID: 1074200743973317228}
+--- !u!114 &240387854499894394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2984939604763138042}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a037a4e58d74b3fb070ba560ee08682, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LearningFocusMode
+  playerStandUI: {fileID: 1074200743973317228}
+  videoPlayerControllerPro: {fileID: 599063398178703817}
 --- !u!1 &3334324843384736820
 GameObject:
   m_ObjectHideFlags: 0
@@ -5288,7 +5319,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9094949413797586316, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: m_AspectRatio
-      value: 1.3333333
+      value: 1.7777778
       objectReference: {fileID: 0}
     - target: {fileID: 9134903083417484563, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: updateOnScreenChange
