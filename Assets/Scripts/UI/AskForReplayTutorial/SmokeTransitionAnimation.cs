@@ -4,7 +4,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AskForReplayAnimation : MonoBehaviour
+public class SmokeTransitionAnimation : MonoBehaviour
 {
     [SerializeField] private Image[] transitionImages;
 
