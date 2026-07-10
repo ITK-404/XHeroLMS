@@ -20,7 +20,8 @@ public class AskForReplayTutorialUI : UIView
     private void OnDestroy()
     {
         acceptButton.onClick.RemoveListener(OnClickedAccept);
-        declineButton.onClick.RemoveListener(OnClickedDecline);    }
+        declineButton.onClick.RemoveListener(OnClickedDecline);
+    }
 
     private void OnClickedDecline()
     {
