@@ -7,9 +7,10 @@ public class KyMon_AdvanceCourseUI : MonoBehaviour
 {
     public event Action<bool> OnSelectStateChanged;
     [SerializeField] private Toggle toggle;
-   
+
     public UnityEvent OnToggleOn;
     public UnityEvent OnToggleOff;
+
     private void Awake()
     {
         HandleContentUI(false);

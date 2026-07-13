@@ -10,44 +10,45 @@ public class NPCInteractionUIController : MonoBehaviour
 
     private void Awake()
     {
-        actionChoiceViewUI.OnShowOptionOne += ActionChoiceViewUIOnOnShowOptionOne;
-        actionChoiceViewUI.OnShowOptionTwo += ActionChoiceViewUIOnOnShowOptionTwo;
-        
-        tabItemManagerUI.OnClickReturnBtnEvent += TabItemManagerUIOnOnClickReturnBtnEvent;
-        advanceCourseUI.OnClickReturnEvent += TabItemManagerUIOnOnClickReturnBtnEvent;
-        
+        actionChoiceViewUI.OnShowOptionOne += HandleShowOptionOne;
+        actionChoiceViewUI.OnShowOptionTwo += HandleShowOptionTwo;
+
+        tabItemManagerUI.OnClickReturnBtnEvent += HandleReturnButtonClicked;
+        advanceCourseUI.OnClickReturnEvent += HandleReturnButtonClicked;
     }
 
     private void OnDestroy()
     {
-        actionChoiceViewUI.OnShowOptionOne -= ActionChoiceViewUIOnOnShowOptionOne;
-        actionChoiceViewUI.OnShowOptionTwo -= ActionChoiceViewUIOnOnShowOptionTwo;
-        
-        tabItemManagerUI.OnClickReturnBtnEvent -= TabItemManagerUIOnOnClickReturnBtnEvent;
-        advanceCourseUI.OnClickReturnEvent -= TabItemManagerUIOnOnClickReturnBtnEvent;
+        actionChoiceViewUI.OnShowOptionOne -= HandleShowOptionOne;
+        actionChoiceViewUI.OnShowOptionTwo -= HandleShowOptionTwo;
+
+        tabItemManagerUI.OnClickReturnBtnEvent -= HandleReturnButtonClicked;
+        advanceCourseUI.OnClickReturnEvent -= HandleReturnButtonClicked;
     }
 
-    private void TabItemManagerUIOnOnClickReturnBtnEvent()
+    private void HandleReturnButtonClicked()
     {
         interactionUIView.Show();
         actionChoiceViewUI.Show();
         interactionUIView.ShowSupportChatBox();
+
         tabItemManagerUI.gameObject.SetActive(false);
         advanceCourseUI.Hide();
     }
 
-    private void ActionChoiceViewUIOnOnShowOptionTwo()
+    private void HandleShowOptionTwo()
     {
         interactionUIView.Hide();
         actionChoiceViewUI.Hide();
 
-        advanceCourseUI?.Show();
+        advanceCourseUI.Show();
     }
 
-    private void ActionChoiceViewUIOnOnShowOptionOne()
+    private void HandleShowOptionOne()
     {
         interactionUIView.Hide();
         actionChoiceViewUI.Hide();
+
         if (tabItemManagerUI)
         {
             tabItemManagerUI.gameObject.SetActive(true);

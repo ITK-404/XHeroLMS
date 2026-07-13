@@ -7,7 +7,6 @@ public class NPCInteraction : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private CinemachineCamera focusCamera;
-    [SerializeField] private PointClickSystem playerMoveSystem;
     [Header("Setting")]
     [SerializeField] private Transform player;
     [SerializeField] private Transform target;
@@ -16,14 +15,7 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField] private NPCInteractionUIView interactionUIView;
     [SerializeField] private ActionChoiceViewUI actionChoiceViewUI;
     [SerializeField] private KyMon_WorldSpaceUI worldSpaceUi;
-    [SerializeField] private InputCanvas inputCanvas;
-    [SerializeField] private CourseExitWayHandler courseExitWayHandler;
-
-    [SerializeField] private PlayerChairManager playerChairManager;
-    // player
-    [SerializeField] private PlayerStandUI playerStandUI;
-    
-    private PointClickSystem pointClickSystem;
+    [SerializeField] private EnterFocusStateTransition focusStateTransition;
     private PlayerCamera playerCamera;
 
     private int playerCameraPriority = 1;
@@ -31,15 +23,15 @@ public class NPCInteraction : MonoBehaviour
     private void Awake()
     {
         focusCamera.gameObject.SetActive(false);
-        interactionUIView.OnClickWorldSpaceEvent += ViewOnOnClickWorldSpaceEvent;
-        actionChoiceViewUI.OnClickReturnBtn += InteractionUIViewOnOnClickReturnBtn;
+        interactionUIView.OnClickWorldSpaceEvent += OnClickWorldSpaceButtonHandle;
+        actionChoiceViewUI.OnClickReturnBtn += OnReturnClickedHandle;
     }
 
     
     private void OnDestroy()
     {
-        interactionUIView.OnClickWorldSpaceEvent -= ViewOnOnClickWorldSpaceEvent;
-        actionChoiceViewUI.OnClickReturnBtn -= InteractionUIViewOnOnClickReturnBtn;
+        interactionUIView.OnClickWorldSpaceEvent -= OnClickWorldSpaceButtonHandle;
+        actionChoiceViewUI.OnClickReturnBtn -= OnReturnClickedHandle;
     }
 
     private void Start()
@@ -49,7 +41,6 @@ public class NPCInteraction : MonoBehaviour
         actionChoiceViewUI.Hide();
         
         playerCamera = PlayerCamera.Instance;
-        playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
         
         focusCamera.Priority.Value = playerCamera.playerCinemachineCamera.Priority.Value;
         
@@ -75,14 +66,7 @@ public class NPCInteraction : MonoBehaviour
     {
         isFocused = true;
         focusCamera.gameObject.SetActive(true);
-        // InputBlocker.SetBlocked(true);
-        // playerMoveSystem.enabled = false;          // tắt di chuyển
-        // playerStandUI.returnBtn.gameObject.SetActive(false);
-        // courseExitWayHandler.Hide();
-
-        // playerChairManager.OnSitdownUI_Immediate();
-        playerStandUI.HideButtons();
-        
+        HandleFocusState(true);
         StartCoroutine(WaitForBlending(() =>
         {
             interactionUIView.ShowSupportChatBox();
@@ -100,15 +84,27 @@ public class NPCInteraction : MonoBehaviour
         interactionUIView.Show();
         interactionUIView.ShowWorldSpaceIcon();
         actionChoiceViewUI.Hide();
-     
-        // playerChairManager.OnStandupUI_Deferred();
-        // playerChairManager.ShowAllCheckPoints(true);
-        playerStandUI.ShowSitdownButton();
+
+        HandleFocusState(false);
+    }
+
+    private void HandleFocusState(bool isEnter)
+    {
+        if (isEnter)
+        {
+            focusStateTransition.Enter();
+            focusStateTransition.HideStandButtons();
+        }
+        else
+        {
+            focusStateTransition.Exit();
+            focusStateTransition.ShowStandButtons();
+        }
     }
 
     // ==================== TRIGGERS ====================
     
-    private void ViewOnOnClickWorldSpaceEvent()
+    private void OnClickWorldSpaceButtonHandle()
     {
         if (isFocused) return;
         
@@ -117,10 +113,7 @@ public class NPCInteraction : MonoBehaviour
             EnterFocusState();
     }
     
-    private void InteractionUIViewOnOnClickReturnBtn()
-    {
-        OnReturnPressed();
-    }
+    private void OnReturnClickedHandle() => OnReturnPressed();
 
     // Gọi cái này từ Return Button
     public void OnReturnPressed()

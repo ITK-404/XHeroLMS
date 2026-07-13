@@ -34,4 +34,7 @@ public class EnterFocusStateTransition : FocusMode
         playerPanelUI.ShowUnLoginContainer(isEnable);
         playerPanelUI.ShowExternalButton(isEnable);
     }
+
+    public void HideStandButtons() => playerStandUI.HideButtons();
+    public void ShowStandButtons() => playerStandUI.ShowSitdownButton();
 }
