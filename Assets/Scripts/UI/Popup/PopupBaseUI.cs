@@ -7,7 +7,7 @@ public class PopupBaseUI : MonoBehaviour
 
     private void OnValidate()
     {
-        if(container == null)
+        if (container == null)
         {
             container = transform.Find("Container").gameObject;
         }

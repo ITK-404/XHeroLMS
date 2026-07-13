@@ -7,7 +7,8 @@ using UnityEngine.UI;
 public class BuyReviewCourseManager : MonoBehaviour
 {
     public static BuyReviewCourseManager Instance;
-
+    public ConfirmationLoadCoursePopup confirmPopup;
+    
     [SerializeField] private CourseReviewUI courseReviewUI;
     [SerializeField] private TabItemManagerUI tabItemManagerUI;
 

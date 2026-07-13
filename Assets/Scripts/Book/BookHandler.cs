@@ -258,9 +258,19 @@ public class BookHandler : MonoBehaviour
 
             yield break;
         }
-
-        AudioManager.Instance.Resume();
-        LoadingTransition.Load_Scene(targetScene);
+        var popup = BuyReviewCourseManager.Instance.confirmPopup;
+        if (popup == null)
+        {
+            Debug.LogError("Confirm popup is null");
+            yield break;
+        }
+        
+        popup.Show();
+        popup.Init(book_name, () =>
+        {
+            AudioManager.Instance.Resume();
+            LoadingTransition.Load_Scene(targetScene);
+        });
     }
 
     private string ResolveTargetScene()

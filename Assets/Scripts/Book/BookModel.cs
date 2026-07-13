@@ -27,13 +27,21 @@ public class BookModel : MonoBehaviour
     private void Awake()
     {
         smoothCurve = AnimationUltis.CreateInOutBackCurve();
-    }
+        mpb = new MaterialPropertyBlock();
 
+    }
+    private static readonly int MainTexID = Shader.PropertyToID("_MainTex");
+
+    private MaterialPropertyBlock mpb;
 
     public void SetBaseMap(Texture texture)
     {
-        if(texture)
-            _renderer.materials[1].SetTexture("_MainTex", texture);
+        if (texture)
+        {
+            _renderer.GetPropertyBlock(mpb,1);
+            mpb.SetTexture(MainTexID, texture);
+            _renderer.SetPropertyBlock(mpb,1);
+        }
     }
 
     [ContextMenu("De Active Grayscale")]
