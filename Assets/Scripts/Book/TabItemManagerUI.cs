@@ -38,6 +38,10 @@ public class TabItemManagerUI : MonoBehaviour
         if (uiWorldSpaceCamera == null)
             uiWorldSpaceCamera = Camera.main;
         
+        if (uiWorldSpaceCamera)
+        {
+            Debug.Log($"TabItemManagerUI set camera: ", uiWorldSpaceCamera.gameObject);
+        }
         tabIDs = GetComponentsInChildren<BookShelfManager>();
         tabButtonsList = GetComponentsInChildren<TabUI>();
         returnBtn.onClick.AddListener(OnClickPreviousScene);

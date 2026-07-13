@@ -20,7 +20,7 @@ public class BuyReviewCourseManager : MonoBehaviour
     [SerializeField] private UniWebView uniWebView;
 
     public UniWebView UniWebView => uniWebView;
-    
+
     private BookHandler currentBookSelect;
 
     private bool autoSkipVideo = false;
@@ -29,7 +29,7 @@ public class BuyReviewCourseManager : MonoBehaviour
     public AutomaticTextPreview automaticTextPreview;
 
     private bool needFetchData;
-    private Coroutine previewCoroutine; 
+    private Coroutine previewCoroutine;
 
     private void Awake()
     {
@@ -134,27 +134,27 @@ public class BuyReviewCourseManager : MonoBehaviour
 
         // CHANGED: Preview không còn bắt buộc private
         // Nếu canEnterCourse=false => nghĩa là needLogin=true và user đang guest
-if (!SeoResolver.canEnterCourse)
-{
-    // Chưa login -> vẫn báo cần đăng nhập
-    if (!IsLoggedIn())
-    {
-        BookHandler.CanSelectBook = false; // tránh click spam trong lúc popup
-        LoadingUI.ShowErrorPopup(
-            "Bạn cần đăng nhập để xem khóa học này.",
-            "Thông báo",
-            () => { BookHandler.CanSelectBook = true; }
-        );
+        if (!SeoResolver.canEnterCourse)
+        {
+            // Chưa login -> vẫn báo cần đăng nhập
+            if (!IsLoggedIn())
+            {
+                BookHandler.CanSelectBook = false; // tránh click spam trong lúc popup
+                LoadingUI.ShowErrorPopup(
+                    "Bạn cần đăng nhập để xem khóa học này.",
+                    "Thông báo",
+                    () => { BookHandler.CanSelectBook = true; }
+                );
 
-        previewCoroutine = null;
-        yield break;
-    }
+                previewCoroutine = null;
+                yield break;
+            }
 
-    // Đã login nhưng vẫn không vào được -> silent (không popup, không làm gì)
-    BookHandler.CanSelectBook = true;
-    previewCoroutine = null;
-    yield break;
-}
+            // Đã login nhưng vẫn không vào được -> silent (không popup, không làm gì)
+            BookHandler.CanSelectBook = true;
+            previewCoroutine = null;
+            yield break;
+        }
 
         // Nếu có private thì render đầy đủ, còn không thì render tối thiểu
         if (courseReviewUI != null)
@@ -277,9 +277,8 @@ if (!SeoResolver.canEnterCourse)
             autoSkipVideo = PlayerPrefs.GetInt(AUTO_SKIP_SAVE_KEY) == 1;
     }
 
-private bool IsLoggedIn()
-{
-    return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
-}
-
+    private bool IsLoggedIn()
+    {
+        return !string.IsNullOrWhiteSpace(TokenStore.AccessToken);
+    }
 }

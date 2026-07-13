@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-public class KyMon_AdvanceCourseUI : MonoBehaviour
+public class KyMon_AdvanceCourseElementUI : MonoBehaviour
 {
     public event Action<bool> OnSelectStateChanged;
     [SerializeField] private Toggle toggle;
