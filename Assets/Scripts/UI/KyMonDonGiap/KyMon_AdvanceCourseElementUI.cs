@@ -34,4 +34,6 @@ public class KyMon_AdvanceCourseElementUI : MonoBehaviour
             OnToggleOff?.Invoke();
         }
     }
+
+    public bool IsOn() => toggle.isOn;
 }

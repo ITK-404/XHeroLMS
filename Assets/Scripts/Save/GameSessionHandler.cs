@@ -192,9 +192,9 @@ public class GameSessionHandler : MonoBehaviour
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
         // load by session data
-        if (data.CourseData != null && !string.IsNullOrEmpty(data.CourseData.seoId))
+        if (data.saveCourseData != null && !string.IsNullOrEmpty(data.saveCourseData.seoId))
         {
-            var seoId = data.CourseData.seoId;
+            var seoId = data.saveCourseData.seoId;
             
             Debug.Log("[GameSessionHandler] Fetech data và thử load khoá học");
             //fetech data xong moi laod
@@ -260,9 +260,9 @@ public class GameSessionHandler : MonoBehaviour
 
         // Tái dùng cùng logic fetch data như LoadGameSessionData,
         // nhưng hàm này trả bool để BootFlow biết khi nào xong.
-        if (data.CourseData != null && !string.IsNullOrEmpty(data.CourseData.seoId))
+        if (data.saveCourseData != null && !string.IsNullOrEmpty(data.saveCourseData.seoId))
         {
-            var seoId = data.CourseData.seoId;
+            var seoId = data.saveCourseData.seoId;
             SeoResolver.seoCourse = seoId;
             await SeoResolver.LoadPrivateAndFillData();
             if (!SeoResolver.canEnterCourse)

@@ -604,7 +604,7 @@ bool isReview = IsPreviewMode();
         return "[]";
     }
 
-    int FindMatchingBracket(string s, int openIdx, char openCh, char closeCh)
+    public static int FindMatchingBracket(string s, int openIdx, char openCh, char closeCh)
     {
         int depth = 0;
         for (int i = openIdx; i < s.Length; i++)
@@ -621,7 +621,7 @@ bool isReview = IsPreviewMode();
         return -1;
     }
 
-    int SkipString(string s, int startQuoteIdx)
+    public static int SkipString(string s, int startQuoteIdx)
     {
         int i = startQuoteIdx + 1;
         bool escaped = false;
@@ -667,7 +667,7 @@ bool isReview = IsPreviewMode();
         return list;
     }
 
-    CourseData ParseCourse(string objJson)
+    public static CourseData ParseCourse(string objJson)
     {
         if (string.IsNullOrEmpty(objJson)) return null;
 
@@ -706,7 +706,7 @@ bool isReview = IsPreviewMode();
         };
     }
 
-    float? TryParseFloat(string s)
+    public static float? TryParseFloat(string s)
     {
         if (string.IsNullOrEmpty(s)) return null;
         float v;
@@ -715,35 +715,35 @@ bool isReview = IsPreviewMode();
         return null;
     }
 
-    bool? TryParseBool(string s)
+    public static bool? TryParseBool(string s)
     {
         if (string.IsNullOrEmpty(s)) return null;
         if (bool.TryParse(s, out var b)) return b;
         return null;
     }
 
-    string MatchStringField(string objJson, string field)
+    public static string MatchStringField(string objJson, string field)
     {
         var rx = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
         var m = rx.Match(objJson);
         return m.Success ? m.Groups[1].Value : null;
     }
 
-    string MatchNumberField(string objJson, string field)
+    public static string MatchNumberField(string objJson, string field)
     {
         var rx = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)", RegexOptions.IgnoreCase);
         var m = rx.Match(objJson);
         return m.Success ? m.Groups[1].Value : null;
     }
 
-    string MatchBoolField(string objJson, string field)
+    public static string MatchBoolField(string objJson, string field)
     {
         var rx = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
         var m = rx.Match(objJson);
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
     }
 
-    string MatchNestedStringField(string objJson, string parent, string child)
+    public static string MatchNestedStringField(string objJson, string parent, string child)
     {
         int pIdx = objJson.IndexOf("\"" + parent + "\"", StringComparison.OrdinalIgnoreCase);
         if (pIdx < 0) return null;
@@ -758,7 +758,7 @@ bool isReview = IsPreviewMode();
         return MatchStringField(sub, child);
     }
 
-    string MatchNestedNumberField(string objJson, string parent, string child)
+    public static string MatchNestedNumberField(string objJson, string parent, string child)
     {
         int pIdx = objJson.IndexOf("\"" + parent + "\"", StringComparison.OrdinalIgnoreCase);
         if (pIdx < 0) return null;
@@ -773,7 +773,7 @@ bool isReview = IsPreviewMode();
         return MatchNumberField(sub, child);
     }
 
-    string MatchNestedBoolField(string objJson, string parent, string child)
+    public static string MatchNestedBoolField(string objJson, string parent, string child)
     {
         int pIdx = objJson.IndexOf("\"" + parent + "\"", StringComparison.OrdinalIgnoreCase);
         if (pIdx < 0) return null;
@@ -791,7 +791,7 @@ bool isReview = IsPreviewMode();
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
     }
 
-    List<string> MatchStringArrayField(string objJson, string field)
+    public static List<string> MatchStringArrayField(string objJson, string field)
     {
         int fIdx = objJson.IndexOf("\"" + field + "\"", StringComparison.OrdinalIgnoreCase);
         if (fIdx < 0) return null;

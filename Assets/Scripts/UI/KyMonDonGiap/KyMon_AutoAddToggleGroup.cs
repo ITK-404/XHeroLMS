@@ -14,5 +14,9 @@ public class KyMon_AutoAddToggleGroup : MonoBehaviour
         {
             toggle.group = toggleGroup;
         }
+        
+#if UNITY_EDITOR
+        UnityEditor.EditorUtility.SetDirty(gameObject);
+#endif
     }
 }
