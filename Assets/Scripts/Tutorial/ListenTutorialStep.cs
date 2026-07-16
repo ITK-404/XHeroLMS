@@ -8,23 +8,26 @@ public abstract class ListenTutorialStep : MonoBehaviour
     [SerializeField] private UnityEvent onDifferentStep;
     private void Start()
     {
-        TutorialHandler.Instance.ChangedToStepEvent += TutorialChangedStep;
+        TutorialHandler.ChangedToStepEvent += TutorialChangedStep;
     }
 
     private void OnDestroy()
     {
-        TutorialHandler.Instance.ChangedToStepEvent -= TutorialChangedStep;
+        TutorialHandler.ChangedToStepEvent -= TutorialChangedStep;
     }
 
     private void TutorialChangedStep(TutorialStepType step)
     {
+        Debug.Log($"HighlightTutorialStep change step");
         if (listenStep == step)
         {
             onSameStep?.Invoke();
+            OnSameStep();
         }
         else
         {
             onDifferentStep?.Invoke();
+            OnDifferentStep();
         }
     }
     

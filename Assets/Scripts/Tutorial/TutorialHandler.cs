@@ -80,7 +80,7 @@ public class TutorialHandler : MonoBehaviour
     //private string key => $"{keyPlayedBefore}";
 
     public event Action OnCompleteTutorial;
-    public event Action<TutorialStepType> ChangedToStepEvent;
+    public static event Action<TutorialStepType> ChangedToStepEvent;
     
     public void Save()
     {
