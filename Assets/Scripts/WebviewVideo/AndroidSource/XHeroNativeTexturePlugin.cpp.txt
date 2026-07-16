@@ -1,0 +1,739 @@
+#include <GLES3/gl3.h>
+#include <GLES2/gl2ext.h>
+#include <android/log.h>
+#include <jni.h>
+
+#include <cstdint>
+#include <mutex>
+
+#ifndef GL_TEXTURE_EXTERNAL_OES
+#define GL_TEXTURE_EXTERNAL_OES 0x8D65
+#endif
+
+#define XHERO_LOG_TAG "XHeroNativeTexture"
+#define XHERO_LOGI(...) __android_log_print(ANDROID_LOG_INFO, XHERO_LOG_TAG, __VA_ARGS__)
+#define XHERO_LOGE(...) __android_log_print(ANDROID_LOG_ERROR, XHERO_LOG_TAG, __VA_ARGS__)
+
+static JavaVM* g_vm = nullptr;
+static std::mutex g_mutex;
+
+static int g_width = 1920;
+static int g_height = 1080;
+static GLuint g_oesTexture = 0;
+static GLuint g_unityTexture = 0;
+static GLuint g_frameBuffer = 0;
+static GLuint g_program = 0;
+static GLuint g_vertexBuffer = 0;
+static GLuint g_vertexArray = 0;
+static GLint g_posLocation = -1;
+static GLint g_uvLocation = -1;
+static GLint g_matrixLocation = -1;
+static GLint g_samplerLocation = -1;
+static jobject g_surfaceTexture = nullptr;
+static jobject g_surface = nullptr;
+static bool g_surfaceActive = false;
+static bool g_hasFrame = false;
+static int g_renderedFrameLogCount = 0;
+static int g_updateErrorLogCount = 0;
+static int g_renderErrorLogCount = 0;
+
+static const int EVENT_INIT = 1;
+static const int EVENT_UPDATE = 2;
+static const int EVENT_RELEASE = 3;
+
+static JNIEnv* GetEnv(bool* shouldDetach) {
+    *shouldDetach = false;
+    if (!g_vm) {
+        return nullptr;
+    }
+
+    JNIEnv* env = nullptr;
+    if (g_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        if (g_vm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+            return nullptr;
+        }
+        *shouldDetach = true;
+    }
+    return env;
+}
+
+static void ClearJniException(JNIEnv* env) {
+    if (env && env->ExceptionCheck()) {
+        env->ExceptionClear();
+    }
+}
+
+static void DrainGlErrors(const char* stage) {
+    GLenum error = glGetError();
+    while (error != GL_NO_ERROR) {
+        XHERO_LOGE("%s glError=0x%04x", stage, error);
+        error = glGetError();
+    }
+}
+
+static void ClearGlErrors() {
+    while (glGetError() != GL_NO_ERROR) {
+    }
+}
+
+static void RestoreCapability(GLenum capability, GLboolean wasEnabled) {
+    if (wasEnabled) {
+        glEnable(capability);
+    } else {
+        glDisable(capability);
+    }
+}
+
+struct GlStateSnapshot {
+    GLint drawFramebuffer = 0;
+    GLint readFramebuffer = 0;
+    GLint program = 0;
+    GLint viewport[4] = {0, 0, 0, 0};
+    GLint activeTexture = 0;
+    GLint texture2D = 0;
+    GLint textureExternal = 0;
+    GLint arrayBuffer = 0;
+    GLint elementArrayBuffer = 0;
+    GLint vertexArray = 0;
+    GLboolean blend = GL_FALSE;
+    GLboolean cullFace = GL_FALSE;
+    GLboolean depthTest = GL_FALSE;
+    GLboolean scissorTest = GL_FALSE;
+};
+
+static void SaveGlState(GlStateSnapshot* state) {
+    if (!state) {
+        return;
+    }
+
+    state->blend = glIsEnabled(GL_BLEND);
+    state->cullFace = glIsEnabled(GL_CULL_FACE);
+    state->depthTest = glIsEnabled(GL_DEPTH_TEST);
+    state->scissorTest = glIsEnabled(GL_SCISSOR_TEST);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &state->drawFramebuffer);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &state->readFramebuffer);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &state->program);
+    glGetIntegerv(GL_VIEWPORT, state->viewport);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &state->activeTexture);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &state->arrayBuffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &state->elementArrayBuffer);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &state->vertexArray);
+    glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &state->texture2D);
+    glGetIntegerv(GL_TEXTURE_BINDING_EXTERNAL_OES, &state->textureExternal);
+    ClearGlErrors();
+}
+
+static void RestoreGlState(const GlStateSnapshot& state) {
+    glBindVertexArray(state.vertexArray);
+    RestoreCapability(GL_BLEND, state.blend);
+    RestoreCapability(GL_CULL_FACE, state.cullFace);
+    RestoreCapability(GL_DEPTH_TEST, state.depthTest);
+    RestoreCapability(GL_SCISSOR_TEST, state.scissorTest);
+    glBindBuffer(GL_ARRAY_BUFFER, state.arrayBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.elementArrayBuffer);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, state.textureExternal);
+    glBindTexture(GL_TEXTURE_2D, state.texture2D);
+    glActiveTexture(state.activeTexture);
+    glUseProgram(state.program);
+    glViewport(state.viewport[0], state.viewport[1], state.viewport[2], state.viewport[3]);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, state.readFramebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.drawFramebuffer);
+}
+
+static const char* SafeGlString(GLenum name) {
+    const GLubyte* value = glGetString(name);
+    return value ? reinterpret_cast<const char*>(value) : "<null>";
+}
+
+static GLuint CompileShader(GLenum type, const char* source, const char* label) {
+    GLuint shader = glCreateShader(type);
+    if (!shader) {
+        XHERO_LOGE("%s glCreateShader failed.", label);
+        DrainGlErrors(label);
+        return 0;
+    }
+
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    GLint compiled = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        char log[2048] = {0};
+        glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+        XHERO_LOGE("%s shader compile failed: %s", label, log);
+        glDeleteShader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+static GLuint CreateProgramWithSources(const char* vertex, const char* fragment, const char* label) {
+    GLuint vs = CompileShader(GL_VERTEX_SHADER, vertex, label);
+    GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragment, label);
+    if (!vs || !fs) {
+        if (vs) glDeleteShader(vs);
+        if (fs) glDeleteShader(fs);
+        return 0;
+    }
+
+    GLuint program = glCreateProgram();
+    if (!program) {
+        XHERO_LOGE("%s glCreateProgram failed.", label);
+        DrainGlErrors(label);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+        return 0;
+    }
+
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    glLinkProgram(program);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    GLint linked = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        char log[2048] = {0};
+        glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+        XHERO_LOGE("%s program link failed: %s", label, log);
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    g_posLocation = glGetAttribLocation(program, "aPosition");
+    g_uvLocation = glGetAttribLocation(program, "aTexCoord");
+    g_matrixLocation = glGetUniformLocation(program, "uSTMatrix");
+    g_samplerLocation = glGetUniformLocation(program, "sTexture");
+
+    if (g_posLocation < 0 || g_uvLocation < 0 || g_matrixLocation < 0 || g_samplerLocation < 0) {
+        XHERO_LOGE(
+            "%s missing shader locations. pos=%d uv=%d matrix=%d sampler=%d",
+            label,
+            g_posLocation,
+            g_uvLocation,
+            g_matrixLocation,
+            g_samplerLocation);
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    XHERO_LOGI("%s shader program ready.", label);
+    return program;
+}
+
+static GLuint CreateProgram() {
+    const char* vertexEs3 =
+        "#version 300 es\n"
+        "in vec4 aPosition;\n"
+        "in vec2 aTexCoord;\n"
+        "out vec2 vTexCoord;\n"
+        "uniform mat4 uSTMatrix;\n"
+        "void main() {\n"
+        "  gl_Position = aPosition;\n"
+        "  vTexCoord = (uSTMatrix * vec4(aTexCoord, 0.0, 1.0)).xy;\n"
+        "}\n";
+
+    const char* fragmentEs3 =
+        "#version 300 es\n"
+        "#extension GL_OES_EGL_image_external_essl3 : require\n"
+        "precision highp float;\n"
+        "in vec2 vTexCoord;\n"
+        "uniform samplerExternalOES sTexture;\n"
+        "out vec4 fragColor;\n"
+        "void main() {\n"
+        "  vec4 color = texture(sTexture, vTexCoord);\n"
+        "  color.rgb = pow(max(color.rgb, vec3(0.0)), vec3(2.2));\n"
+        "  fragColor = color;\n"
+        "}\n";
+
+    GLuint program = CreateProgramWithSources(vertexEs3, fragmentEs3, "GLES3");
+    if (program) {
+        return program;
+    }
+
+    const char* vertexEs2 =
+        "attribute vec4 aPosition;\n"
+        "attribute vec2 aTexCoord;\n"
+        "varying vec2 vTexCoord;\n"
+        "uniform mat4 uSTMatrix;\n"
+        "void main() {\n"
+        "  gl_Position = aPosition;\n"
+        "  vTexCoord = (uSTMatrix * vec4(aTexCoord, 0.0, 1.0)).xy;\n"
+        "}\n";
+
+    const char* fragmentEs2 =
+        "#extension GL_OES_EGL_image_external : require\n"
+        "precision highp float;\n"
+        "varying vec2 vTexCoord;\n"
+        "uniform samplerExternalOES sTexture;\n"
+        "void main() {\n"
+        "  vec4 color = texture2D(sTexture, vTexCoord);\n"
+        "  color.rgb = pow(max(color.rgb, vec3(0.0)), vec3(2.2));\n"
+        "  gl_FragColor = color;\n"
+        "}\n";
+
+    return CreateProgramWithSources(vertexEs2, fragmentEs2, "GLES2");
+}
+
+static void DeleteGlResources() {
+    g_surfaceActive = false;
+    if (g_vertexArray) {
+        glDeleteVertexArrays(1, &g_vertexArray);
+        g_vertexArray = 0;
+    }
+    if (g_vertexBuffer) {
+        glDeleteBuffers(1, &g_vertexBuffer);
+        g_vertexBuffer = 0;
+    }
+    if (g_program) {
+        glDeleteProgram(g_program);
+        g_program = 0;
+    }
+    if (g_frameBuffer) {
+        glDeleteFramebuffers(1, &g_frameBuffer);
+        g_frameBuffer = 0;
+    }
+    if (g_unityTexture) {
+        glDeleteTextures(1, &g_unityTexture);
+        g_unityTexture = 0;
+    }
+    if (g_oesTexture) {
+        glDeleteTextures(1, &g_oesTexture);
+        g_oesTexture = 0;
+    }
+    g_hasFrame = false;
+    g_renderedFrameLogCount = 0;
+    g_updateErrorLogCount = 0;
+    g_renderErrorLogCount = 0;
+}
+
+static void InitGlResources() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    GlStateSnapshot state;
+    SaveGlState(&state);
+    GLenum framebufferStatus = GL_FRAMEBUFFER_COMPLETE;
+    static const GLfloat vertices[] = {
+        -1.0f, -1.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f, 1.0f,
+         1.0f,  1.0f, 1.0f, 1.0f,
+    };
+
+    DeleteGlResources();
+    DrainGlErrors("before init");
+
+    XHERO_LOGI(
+        "Init GL resources. version=%s shading=%s renderer=%s size=%dx%d",
+        SafeGlString(GL_VERSION),
+        SafeGlString(GL_SHADING_LANGUAGE_VERSION),
+        SafeGlString(GL_RENDERER),
+        g_width,
+        g_height);
+
+    glGenTextures(1, &g_oesTexture);
+    DrainGlErrors("gen oes texture");
+    if (!g_oesTexture) {
+        XHERO_LOGE("Failed to create OES texture.");
+        goto cleanup;
+    }
+
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, g_oesTexture);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    DrainGlErrors("setup oes texture");
+
+    glGenTextures(1, &g_unityTexture);
+    DrainGlErrors("gen unity texture");
+    if (!g_unityTexture) {
+        XHERO_LOGE("Failed to create Unity texture.");
+        goto cleanup;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, g_unityTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_width, g_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    DrainGlErrors("setup unity texture");
+
+    glGenFramebuffers(1, &g_frameBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, g_frameBuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_unityTexture, 0);
+    framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
+        XHERO_LOGE("Framebuffer incomplete: 0x%04x", framebufferStatus);
+        DeleteGlResources();
+        goto cleanup;
+    }
+
+    g_program = CreateProgram();
+    if (!g_program) {
+        XHERO_LOGE("Failed to create shader program.");
+        DeleteGlResources();
+        goto cleanup;
+    }
+
+    glGenBuffers(1, &g_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, g_vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    DrainGlErrors("setup quad vbo");
+    if (!g_vertexBuffer) {
+        XHERO_LOGE("Failed to create quad vertex buffer.");
+        DeleteGlResources();
+        goto cleanup;
+    }
+
+    glGenVertexArrays(1, &g_vertexArray);
+    glBindVertexArray(g_vertexArray);
+    glBindBuffer(GL_ARRAY_BUFFER, g_vertexBuffer);
+    glEnableVertexAttribArray(g_posLocation);
+    glEnableVertexAttribArray(g_uvLocation);
+    glVertexAttribPointer(g_posLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), reinterpret_cast<const void*>(0));
+    glVertexAttribPointer(g_uvLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), reinterpret_cast<const void*>(2 * sizeof(GLfloat)));
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    DrainGlErrors("setup quad vao");
+    if (!g_vertexArray) {
+        XHERO_LOGE("Failed to create quad vertex array.");
+        DeleteGlResources();
+        goto cleanup;
+    }
+
+    g_hasFrame = false;
+    g_renderedFrameLogCount = 0;
+    g_updateErrorLogCount = 0;
+    g_renderErrorLogCount = 0;
+
+cleanup:
+    RestoreGlState(state);
+    DrainGlErrors("after init");
+}
+
+static void ReleaseJavaSurfaceRefs(JNIEnv* env) {
+    g_surfaceActive = false;
+    g_hasFrame = false;
+
+    if (!env) {
+        return;
+    }
+
+    if (g_surface) {
+        jclass surfaceClass = env->FindClass("android/view/Surface");
+        jmethodID release = surfaceClass ? env->GetMethodID(surfaceClass, "release", "()V") : nullptr;
+        if (release) {
+            env->CallVoidMethod(g_surface, release);
+            ClearJniException(env);
+        }
+        env->DeleteGlobalRef(g_surface);
+        g_surface = nullptr;
+    }
+
+    if (g_surfaceTexture) {
+        jclass stClass = env->FindClass("android/graphics/SurfaceTexture");
+        jmethodID release = stClass ? env->GetMethodID(stClass, "release", "()V") : nullptr;
+        if (release) {
+            env->CallVoidMethod(g_surfaceTexture, release);
+            ClearJniException(env);
+        }
+        env->DeleteGlobalRef(g_surfaceTexture);
+        g_surfaceTexture = nullptr;
+    }
+}
+
+static void ReleaseAll() {
+    bool detach = false;
+    JNIEnv* env = GetEnv(&detach);
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        ReleaseJavaSurfaceRefs(env);
+        DeleteGlResources();
+    }
+    if (detach && g_vm) {
+        g_vm->DetachCurrentThread();
+    }
+}
+
+static bool UpdateSurfaceTexture(JNIEnv* env, float* matrix) {
+    if (!env || !g_surfaceTexture) {
+        return false;
+    }
+
+    jclass stClass = env->FindClass("android/graphics/SurfaceTexture");
+    if (!stClass) {
+        ClearJniException(env);
+        return false;
+    }
+
+    jmethodID updateTexImage = env->GetMethodID(stClass, "updateTexImage", "()V");
+    jmethodID getTransformMatrix = env->GetMethodID(stClass, "getTransformMatrix", "([F)V");
+    jmethodID getTimestamp = env->GetMethodID(stClass, "getTimestamp", "()J");
+    if (!updateTexImage || !getTransformMatrix || !getTimestamp) {
+        ClearJniException(env);
+        env->DeleteLocalRef(stClass);
+        return false;
+    }
+
+    ClearGlErrors();
+    env->CallVoidMethod(g_surfaceTexture, updateTexImage);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(stClass);
+        return false;
+    }
+    GLenum updateError = glGetError();
+    if (updateError != GL_NO_ERROR) {
+        if (g_updateErrorLogCount < 6) {
+            g_updateErrorLogCount++;
+            XHERO_LOGE("update SurfaceTexture failed glError=0x%04x", updateError);
+        }
+        ClearGlErrors();
+        env->DeleteLocalRef(stClass);
+        return false;
+    }
+
+    jlong timestamp = env->CallLongMethod(g_surfaceTexture, getTimestamp);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(stClass);
+        return false;
+    }
+    if (timestamp <= 0) {
+        env->DeleteLocalRef(stClass);
+        return false;
+    }
+
+    jfloatArray array = env->NewFloatArray(16);
+    env->CallVoidMethod(g_surfaceTexture, getTransformMatrix, array);
+    if (!env->ExceptionCheck() && array) {
+        env->GetFloatArrayRegion(array, 0, 16, matrix);
+    } else {
+        ClearJniException(env);
+    }
+    if (array) {
+        env->DeleteLocalRef(array);
+    }
+    env->DeleteLocalRef(stClass);
+
+    return true;
+}
+
+static bool RenderOesToUnityTexture(const float* matrix) {
+    if (!g_program || !g_oesTexture || !g_unityTexture || !g_frameBuffer || !g_vertexArray) {
+        return false;
+    }
+
+    GLint oldDrawFramebuffer = 0;
+    GLint oldReadFramebuffer = 0;
+    GLint oldProgram = 0;
+    GLint oldViewport[4] = {0, 0, 0, 0};
+    GLint oldActiveTexture = 0;
+    GLint oldTexture2D = 0;
+    GLint oldTextureExternal = 0;
+    GLint oldArrayBuffer = 0;
+    GLint oldElementArrayBuffer = 0;
+    GLint oldVertexArray = 0;
+    GLfloat oldClearColor[4] = {0, 0, 0, 0};
+    GLboolean oldColorMask[4] = {GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
+    GLboolean oldBlend = glIsEnabled(GL_BLEND);
+    GLboolean oldCullFace = glIsEnabled(GL_CULL_FACE);
+    GLboolean oldDepthTest = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean oldScissorTest = glIsEnabled(GL_SCISSOR_TEST);
+
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawFramebuffer);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadFramebuffer);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &oldProgram);
+    glGetIntegerv(GL_VIEWPORT, oldViewport);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &oldActiveTexture);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &oldElementArrayBuffer);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &oldVertexArray);
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, oldClearColor);
+    glGetBooleanv(GL_COLOR_WRITEMASK, oldColorMask);
+    glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldTexture2D);
+    glGetIntegerv(GL_TEXTURE_BINDING_EXTERNAL_OES, &oldTextureExternal);
+    ClearGlErrors();
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_frameBuffer);
+    glViewport(0, 0, g_width, g_height);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glUseProgram(g_program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, g_oesTexture);
+    glUniform1i(g_samplerLocation, 0);
+    glUniformMatrix4fv(g_matrixLocation, 1, GL_FALSE, matrix);
+    glBindVertexArray(g_vertexArray);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glFlush();
+    GLenum drawError = glGetError();
+
+    glBindVertexArray(oldVertexArray);
+    RestoreCapability(GL_BLEND, oldBlend);
+    RestoreCapability(GL_CULL_FACE, oldCullFace);
+    RestoreCapability(GL_DEPTH_TEST, oldDepthTest);
+    RestoreCapability(GL_SCISSOR_TEST, oldScissorTest);
+    glColorMask(oldColorMask[0], oldColorMask[1], oldColorMask[2], oldColorMask[3]);
+    glClearColor(oldClearColor[0], oldClearColor[1], oldClearColor[2], oldClearColor[3]);
+    glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementArrayBuffer);
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, oldTextureExternal);
+    glBindTexture(GL_TEXTURE_2D, oldTexture2D);
+    glActiveTexture(oldActiveTexture);
+    glUseProgram(oldProgram);
+    glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadFramebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawFramebuffer);
+
+    if (drawError != GL_NO_ERROR) {
+        if (g_renderErrorLogCount < 12) {
+            g_renderErrorLogCount++;
+            XHERO_LOGE("render oes to unity texture failed glError=0x%04x", drawError);
+            DrainGlErrors("render oes to unity texture");
+        } else {
+            ClearGlErrors();
+        }
+        return false;
+    }
+
+    if (g_renderedFrameLogCount < 3) {
+        g_renderedFrameLogCount++;
+        XHERO_LOGI("Rendered native frame to Unity texture #%d size=%dx%d", g_renderedFrameLogCount, g_width, g_height);
+    }
+    return true;
+}
+
+static void UpdateFrame() {
+    bool detach = false;
+    JNIEnv* env = GetEnv(&detach);
+    if (!env) {
+        return;
+    }
+
+    float matrix[16] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    };
+
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_surfaceActive && UpdateSurfaceTexture(env, matrix)) {
+            if (RenderOesToUnityTexture(matrix)) {
+                g_hasFrame = true;
+            }
+        }
+    }
+
+    if (detach && g_vm) {
+        g_vm->DetachCurrentThread();
+    }
+}
+
+static void OnRenderEvent(int eventId) {
+    if (eventId == EVENT_INIT) {
+        InitGlResources();
+    } else if (eventId == EVENT_UPDATE) {
+        UpdateFrame();
+    } else if (eventId == EVENT_RELEASE) {
+        ReleaseAll();
+    }
+}
+
+extern "C" {
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    g_vm = vm;
+    return JNI_VERSION_1_6;
+}
+
+void XHeroNative_SetSize(int width, int height) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_width = width > 0 ? width : 1920;
+    g_height = height > 0 ? height : 1080;
+}
+
+void* XHeroNative_GetRenderEventFunc() {
+    return reinterpret_cast<void*>(&OnRenderEvent);
+}
+
+void* XHeroNative_GetTexturePtr() {
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(g_unityTexture));
+}
+
+int XHeroNative_HasFrame() {
+    return g_hasFrame ? 1 : 0;
+}
+
+JNIEXPORT jobject JNICALL Java_com_xherozone_webviewvideo_XHeroNativeTexturePlayer_nativeCreateSurface(
+        JNIEnv* env, jclass, jint width, jint height) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+
+    ReleaseJavaSurfaceRefs(env);
+
+    if (!g_oesTexture) {
+        return nullptr;
+    }
+
+    jclass stClass = env->FindClass("android/graphics/SurfaceTexture");
+    jmethodID stCtor = stClass ? env->GetMethodID(stClass, "<init>", "(I)V") : nullptr;
+    if (!stClass || !stCtor) {
+        ClearJniException(env);
+        return nullptr;
+    }
+
+    jobject localSurfaceTexture = env->NewObject(stClass, stCtor, static_cast<jint>(g_oesTexture));
+    if (!localSurfaceTexture || env->ExceptionCheck()) {
+        ClearJniException(env);
+        return nullptr;
+    }
+
+    jmethodID setDefaultBufferSize = env->GetMethodID(stClass, "setDefaultBufferSize", "(II)V");
+    if (setDefaultBufferSize) {
+        env->CallVoidMethod(localSurfaceTexture, setDefaultBufferSize, width, height);
+        ClearJniException(env);
+    }
+
+    jclass surfaceClass = env->FindClass("android/view/Surface");
+    jmethodID surfaceCtor = surfaceClass ? env->GetMethodID(surfaceClass, "<init>", "(Landroid/graphics/SurfaceTexture;)V") : nullptr;
+    if (!surfaceClass || !surfaceCtor) {
+        ClearJniException(env);
+        return nullptr;
+    }
+
+    jobject localSurface = env->NewObject(surfaceClass, surfaceCtor, localSurfaceTexture);
+    if (!localSurface || env->ExceptionCheck()) {
+        ClearJniException(env);
+        env->DeleteLocalRef(localSurfaceTexture);
+        return nullptr;
+    }
+
+    g_surfaceTexture = env->NewGlobalRef(localSurfaceTexture);
+    g_surface = env->NewGlobalRef(localSurface);
+    g_surfaceActive = true;
+    g_hasFrame = false;
+
+    env->DeleteLocalRef(localSurfaceTexture);
+    return localSurface;
+}
+
+JNIEXPORT void JNICALL Java_com_xherozone_webviewvideo_XHeroNativeTexturePlayer_nativeReleaseSurface(
+        JNIEnv* env, jclass) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    ReleaseJavaSurfaceRefs(env);
+}
+
+}

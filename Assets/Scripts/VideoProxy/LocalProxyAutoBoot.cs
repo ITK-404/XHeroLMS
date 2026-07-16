@@ -64,6 +64,27 @@ public class LocalProxyAutoBoot : MonoBehaviour
 
         return originUrl;
     }
+
+    public string GetPlayableUrlNoCache(string originUrl)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (enableProxyOnAndroid)
+        {
+            if (!started)
+            {
+                started = AndroidLocalVideoProxy.Start(port);
+            }
+
+            if (started)
+            {
+                return AndroidLocalVideoProxy.WrapNoCache(originUrl, port);
+            }
+        }
+#endif
+
+        return originUrl;
+    }
+
     public bool EnsureStarted()
 {
 #if UNITY_ANDROID && !UNITY_EDITOR

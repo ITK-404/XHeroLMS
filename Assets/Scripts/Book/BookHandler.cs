@@ -134,7 +134,10 @@ public class BookHandler : MonoBehaviour
             return;
         }
 
-        BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
+        if (BuyReviewCourseManager.Instance != null)
+            BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
+        else
+            StartCoroutine(TryEnterCourse());
     }
 
     private bool CanEnterCourseFromCurrentAuth()
@@ -258,17 +261,24 @@ public class BookHandler : MonoBehaviour
 
             yield break;
         }
-        var popup = BuyReviewCourseManager.Instance.confirmPopup;
+        var reviewManager = BuyReviewCourseManager.Instance;
+        var popup = reviewManager != null ? reviewManager.confirmPopup : null;
         if (popup == null)
         {
-            Debug.LogError("Confirm popup is null");
+            Debug.LogWarning("[BookHandler] Confirm popup is null. Load target scene directly: " + targetScene);
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.Resume();
+
+            LoadingTransition.Load_Scene(targetScene);
             yield break;
         }
         
         popup.Show();
         popup.Init(book_name, () =>
         {
-            AudioManager.Instance.Resume();
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.Resume();
+
             LoadingTransition.Load_Scene(targetScene);
         });
     }

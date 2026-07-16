@@ -67,6 +67,25 @@ public static class AndroidLocalVideoProxy
         string escaped = Uri.EscapeDataString(originUrl);
         return $"{localPrefix}{escaped}";
     }
+
+    public static string WrapNoCache(string originUrl, int port = DefaultPort)
+    {
+        if (string.IsNullOrEmpty(originUrl))
+        {
+            return originUrl;
+        }
+
+        string localPrefix = $"http://127.0.0.1:{port}/stream?u=";
+
+        if (originUrl.StartsWith(localPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return originUrl;
+        }
+
+        string escaped = Uri.EscapeDataString(originUrl);
+        return $"{localPrefix}{escaped}";
+    }
+
     public static bool Preload(string originUrl, long start = 0)
 {
 #if UNITY_ANDROID && !UNITY_EDITOR

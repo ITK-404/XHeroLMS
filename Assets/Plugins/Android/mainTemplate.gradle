@@ -5,6 +5,9 @@ apply from: '../shared/common.gradle'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.media3:media3-exoplayer:1.4.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.4.1'
+    implementation 'androidx.media3:media3-datasource:1.4.1'
 // Android Resolver Dependencies Start
     implementation 'com.google.android.gms:play-services-auth:21.6.0' // Assets/Plugins/Android/Editor/SmsOtpRetrieverDependencies.xml:4
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.3.0' // Assets/Plugins/Android/Editor/SmsOtpRetrieverDependencies.xml:6

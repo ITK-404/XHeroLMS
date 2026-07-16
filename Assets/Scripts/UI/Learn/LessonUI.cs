@@ -21,6 +21,7 @@ public class LessonUI : MonoBehaviour
 
     [Header("Data")]
     public string lessonID;
+    public string linkVideo1;
     public string linkVideo2;
     public string type;
     public bool isSelect = false;

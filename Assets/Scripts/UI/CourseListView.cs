@@ -42,6 +42,7 @@ public class CourseListView : MonoBehaviour
 
     private LearnUI learnUI;
     private VideoPlayerControllerPro videoPlayerControllerPro;
+    private XHeroWebViewTexturePlayer webViewTexturePlayer;
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
     private readonly List<LessonUI> _videoLessons = new();
@@ -149,6 +150,9 @@ public class CourseListView : MonoBehaviour
     private bool _proxyRetryTriedForCurrentVideo;
     private bool _proxyBufferGuardPaused;
     private bool _standUpPausedVideo;
+    private bool _standUpResumeRequested;
+    private LessonUI _standUpResumeLesson;
+    private double _standUpResumeTime;
     private bool _videoFirstFrameLoading;
     private string _videoFirstFrameLoadingUrl;
     private int _videoFirstFrameLoadingToken;
@@ -176,6 +180,16 @@ public class CourseListView : MonoBehaviour
 
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
+        webViewTexturePlayer = FindAnyObjectByType<XHeroWebViewTexturePlayer>();
+        if (!webViewTexturePlayer)
+        {
+            GameObject webViewPlayerObject = new GameObject("XHeroWebViewTexturePlayer");
+            webViewTexturePlayer = webViewPlayerObject.AddComponent<XHeroWebViewTexturePlayer>();
+        }
+
+        if (videoPlayerControllerPro)
+            videoPlayerControllerPro.SetWebViewTexturePlayer(webViewTexturePlayer);
+
         examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
     }
@@ -549,12 +563,14 @@ private void OnDisable()
                     string lessonTitle = string.IsNullOrEmpty(lesson.title) ? "" : lesson.title.Trim();
                     if (string.IsNullOrEmpty(lessonTitle)) continue;
 
+                    string link1 = ResolveLessonPrimaryVideoUrl(lesson);
                     string link2 = ResolveLessonPlayableUrl(lesson);
 
-                    Debug.Log($"[Lesson Link Map] title={lesson.title} | type={lesson.type} | finalLink={link2}");
+                    Debug.Log($"[Lesson Link Map] title={lesson.title} | type={lesson.type} | link1={link1} | link2={link2}");
 
                     var lessonUI = Instantiate(itemPrefab, headerChapter.lessonContainer.transform);
                     lessonUI.titleTMP.text = $"{lessonTitle}";
+                    lessonUI.linkVideo1 = link1;
                     lessonUI.linkVideo2 = link2;
                     lessonUI.lessonID = lesson._id;
                     lessonUI.type = lesson.type;
@@ -573,7 +589,9 @@ private void OnDisable()
                     int.TryParse(lesson.duration, out var duration);
                     lessonUI.duration = duration;
 
-                    if (!string.IsNullOrEmpty(lessonUI.linkVideo2) && IsVideoLesson(lessonUI))
+                    if ((!string.IsNullOrEmpty(lessonUI.linkVideo1) ||
+                         !string.IsNullOrEmpty(lessonUI.linkVideo2)) &&
+                        IsVideoLesson(lessonUI))
                     {
                         _videoLessons.Add(lessonUI);
                     }
@@ -610,6 +628,7 @@ private void OnDisable()
 
             var finalItem = Instantiate(itemPrefab, headerFinal.lessonContainer.transform);
             finalItem.titleTMP.text = finalExamItemTitle;
+            finalItem.linkVideo1 = "";
             finalItem.linkVideo2 = "";
             finalItem.lessonID = finalExamId;
             finalItem.type = FinalExamType;
@@ -675,6 +694,19 @@ private void OnDisable()
         return string.IsNullOrWhiteSpace(fallbackDoc) ? "" : fallbackDoc.Trim();
     }
 
+    private static string ResolveLessonPrimaryVideoUrl(object lesson)
+    {
+        if (lesson == null) return "";
+
+        string video1 = GetStringMember(lesson, "videoLink");
+        return string.IsNullOrWhiteSpace(video1) ? "" : video1.Trim();
+    }
+
+    private static bool ShouldUseWebViewTexture(string link1)
+    {
+        return XHeroWebViewTexturePlayer.IsSupportedIframeUrl(link1);
+    }
+
     private static string GetFirstDocAttachUri(object lesson)
     {
         object docAttach =
@@ -714,18 +746,26 @@ private void OnDisable()
         if (lesson == null) return;
 
         _standUpPausedVideo = false;
+        _standUpResumeRequested = false;
 
-        string url = lesson.linkVideo2;
+        string link1 = lesson.linkVideo1;
+        string fallbackUrl = lesson.linkVideo2;
+        bool useWebViewTexture = ShouldUseWebViewTexture(link1);
+        string url = useWebViewTexture ? link1 : fallbackUrl;
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            Debug.LogWarning("[CourseListView] Empty video url.");
+            Debug.LogWarning(
+                $"[CourseListView] Empty video url. link1={link1}, link2={fallbackUrl}"
+            );
             return;
         }
 
         if (!IsVideoLesson(lesson))
         {
-            Debug.LogWarning($"[CourseListView] Block non-video lesson from PlayVideo. type={lesson.type}, url={url}");
+            Debug.LogWarning(
+                $"[CourseListView] Block non-video lesson from PlayVideo. type={lesson.type}, link1={link1}, link2={fallbackUrl}"
+            );
             return;
         }
 
@@ -742,6 +782,29 @@ private void OnDisable()
         _playVideoToken++;
         int playToken = _playVideoToken;
         ShowVideoFirstFrameLoading(url, playToken);
+
+        if (useWebViewTexture)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != url)
+            {
+                ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
+            }
+#endif
+
+            _usingProxyForCurrentVideo = false;
+            _activeVideoOriginUrl = url;
+            _currentOriginUrl = url;
+            _fallbackToOriginTriedForCurrentVideo = false;
+            _proxyRetryTriedForCurrentVideo = false;
+
+            Debug.Log(
+                $"[{XHeroWebViewTexturePlayer.MethodName}] Play videoLink1 iframe by native WebView texture. iframe={link1} | fallbackLink2={fallbackUrl}"
+            );
+
+            _playVideoRoutine = StartCoroutine(PlayLink1WithWebViewTexture(link1, fallbackUrl, playToken));
+            return;
+        }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!proxyBoot)
@@ -764,6 +827,108 @@ private void OnDisable()
         _proxyRetryTriedForCurrentVideo = false;
 
         _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, playToken));
+    }
+
+    private IEnumerator PlayLink1WithWebViewTexture(string link1, string fallbackUrl, int token)
+    {
+        if (!webViewTexturePlayer)
+            webViewTexturePlayer = FindAnyObjectByType<XHeroWebViewTexturePlayer>();
+
+        if (!webViewTexturePlayer || !videoPlayerControllerPro)
+        {
+            yield return PlayLink2FallbackAfterLink1Failure(fallbackUrl, token, "Missing WebView texture player.");
+            yield break;
+        }
+
+        RawImage targetRawImage = videoPlayerControllerPro.GetCurrentVideoRawImage();
+        if (!targetRawImage)
+        {
+            yield return PlayLink2FallbackAfterLink1Failure(fallbackUrl, token, "Missing current video RawImage.");
+            yield break;
+        }
+
+        _videoStopRequested = false;
+        _usingProxyForCurrentVideo = false;
+        _activeVideoOriginUrl = link1;
+        _currentOriginUrl = link1;
+        _videoStartRealtime = Time.realtimeSinceStartup;
+        _videoStartUrl = link1;
+        _loggedFirstFrame = false;
+
+        string failureReason = null;
+        bool firstFrameReady = false;
+
+        webViewTexturePlayer.Play(
+            link1,
+            targetRawImage,
+            () =>
+            {
+                if (token != _playVideoToken)
+                    return;
+
+                firstFrameReady = true;
+                _loggedFirstFrame = true;
+                HideVideoFirstFrameLoading(token);
+                videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
+                Debug.Log($"[{XHeroWebViewTexturePlayer.MethodName}] First texture frame READY | url={link1}");
+            },
+            reason => failureReason = reason);
+
+        if (learnUI && learnUI.toggleLessonScrollView != null)
+        {
+            learnUI.toggleLessonScrollView.ChangeState(ToggleBaseUI.State.DeActive);
+        }
+
+        float timeoutAt = Time.realtimeSinceStartup + 12f;
+        while (token == _playVideoToken && !firstFrameReady && string.IsNullOrWhiteSpace(failureReason))
+        {
+            if (Time.realtimeSinceStartup >= timeoutAt)
+            {
+                failureReason = "Timed out waiting for native WebView texture first frame.";
+                break;
+            }
+
+            yield return null;
+        }
+
+        if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
+            yield break;
+        }
+
+        if (!string.IsNullOrWhiteSpace(failureReason))
+        {
+            webViewTexturePlayer.Stop();
+            yield return PlayLink2FallbackAfterLink1Failure(fallbackUrl, token, failureReason);
+        }
+    }
+
+    private IEnumerator PlayLink2FallbackAfterLink1Failure(string fallbackUrl, int token, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(fallbackUrl))
+        {
+            Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] Cannot fallback because videoLink2 is empty. reason={reason}");
+            HideVideoFirstFrameLoading(token);
+            yield break;
+        }
+
+        if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
+            yield break;
+        }
+
+        _activeVideoOriginUrl = fallbackUrl;
+        _currentOriginUrl = fallbackUrl;
+
+        ShowVideoFirstFrameLoading(fallbackUrl, token);
+
+        Debug.LogWarning(
+            $"[{XHeroWebViewTexturePlayer.MethodName}] Fallback to videoLink2 through existing pipeline. reason={reason} | url={fallbackUrl}"
+        );
+
+        yield return PlayVideoWithProxyPreload(fallbackUrl, token);
     }
 
     private IEnumerator PlayVideoWithProxyPreload(string originUrl, int token)
@@ -1118,6 +1283,11 @@ private void StopVideoPipeline()
         _playVideoRoutine = null;
     }
 
+    if (webViewTexturePlayer)
+        webViewTexturePlayer.Stop();
+
+    XHeroWebViewTexturePlayer.StopActiveInstance();
+
     _playVideoToken++;
     _videoStopRequested = true;
 
@@ -1272,6 +1442,7 @@ private void PauseVideoAudioOnly()
 
         StopVideoPipeline();
         HideVideoFirstFrameLoading();
+        ClearStandUpResumeState();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!string.IsNullOrWhiteSpace(oldUrl))
@@ -1286,8 +1457,141 @@ private void PauseVideoAudioOnly()
         _proxyRetryTriedForCurrentVideo = false;
     }
 
+    private void CaptureStandUpResumeState()
+    {
+        _standUpResumeRequested = false;
+        _standUpResumeLesson = null;
+        _standUpResumeTime = 0;
+
+        if (_currentLesson == null || !IsVideoLesson(_currentLesson))
+            return;
+
+        bool hasPlayableLink =
+            ShouldUseWebViewTexture(_currentLesson.linkVideo1) ||
+            !string.IsNullOrWhiteSpace(_currentLesson.linkVideo2);
+
+        if (!hasPlayableLink)
+            return;
+
+        bool hasActiveVideo =
+            (webViewTexturePlayer && webViewTexturePlayer.IsActive) ||
+            (videoPlayer && (videoPlayer.isPlaying || videoPlayer.isPrepared || !string.IsNullOrWhiteSpace(videoPlayer.url)));
+
+        if (!hasActiveVideo)
+            return;
+
+        _standUpResumeRequested = true;
+        _standUpResumeLesson = _currentLesson;
+        _standUpResumeTime = GetCurrentPlaybackTimeSeconds();
+
+        Debug.Log(
+            $"[CourseListView] Capture stand-up video resume. title={_currentLesson.titleTMP?.text} time={_standUpResumeTime:F2}s"
+        );
+    }
+
+    private void ClearStandUpResumeState()
+    {
+        _standUpResumeRequested = false;
+        _standUpResumeLesson = null;
+        _standUpResumeTime = 0;
+    }
+
+    private double GetCurrentPlaybackTimeSeconds()
+    {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+            return Math.Max(0.0, webViewTexturePlayer.CurrentTime);
+
+        if (videoPlayer)
+        {
+            try { return Math.Max(0.0, videoPlayer.time); }
+            catch { }
+        }
+
+        return 0;
+    }
+
+    public void ResumeVideoAfterSitDownIfNeeded()
+    {
+        if (!_standUpResumeRequested || _standUpResumeLesson == null)
+            return;
+
+        LessonUI lesson = _standUpResumeLesson;
+        double resumeTime = _standUpResumeTime;
+        ClearStandUpResumeState();
+
+        if (!IsVideoLesson(lesson))
+            return;
+
+        string displayUrl = ShouldUseWebViewTexture(lesson.linkVideo1)
+            ? lesson.linkVideo1
+            : lesson.linkVideo2;
+
+        Debug.Log(
+            $"[CourseListView] Resume stand-up video after sit-down. title={lesson.titleTMP?.text} time={resumeTime:F2}s url={displayUrl}"
+        );
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        if (videoPlayerControllerPro != null)
+        {
+            videoPlayerControllerPro.SetCurrentUrl(displayUrl);
+            videoPlayerControllerPro.ShowVideoInCurrentMode();
+        }
+
+        PlayVideo(lesson);
+
+        if (resumeTime > 0.25)
+            StartCoroutine(SeekAfterStandUpResume(resumeTime, _playVideoToken));
+    }
+
+    private IEnumerator SeekAfterStandUpResume(double resumeTime, int token)
+    {
+        float timeoutAt = Time.realtimeSinceStartup + 10f;
+
+        while (token == _playVideoToken && Time.realtimeSinceStartup < timeoutAt)
+        {
+            if (webViewTexturePlayer && webViewTexturePlayer.IsActive && webViewTexturePlayer.IsReady)
+            {
+                double targetTime = webViewTexturePlayer.Duration > 0.0001
+                    ? Math.Min(resumeTime, Math.Max(0.0, webViewTexturePlayer.Duration - 0.25))
+                    : resumeTime;
+
+                webViewTexturePlayer.Seek(targetTime);
+                webViewTexturePlayer.PlayWebVideo();
+                Debug.Log($"[CourseListView] Seek resumed WebView video to {targetTime:F2}s");
+                yield break;
+            }
+
+            if (videoPlayer && videoPlayer.isPrepared)
+            {
+                double targetTime = videoPlayer.length > 0.0001
+                    ? Math.Min(resumeTime, Math.Max(0.0, videoPlayer.length - 0.25))
+                    : resumeTime;
+
+                try
+                {
+                    videoPlayer.time = targetTime;
+                    videoPlayer.Play();
+                    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
+                    Debug.Log($"[CourseListView] Seek resumed VideoPlayer to {targetTime:F2}s");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("[CourseListView] Failed to seek resumed video: " + e.Message);
+                }
+
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+
     public void StopVideoAndAudioForStandUp()
     {
+        CaptureStandUpResumeState();
+
         if (_playVideoRoutine != null)
         {
             StopCoroutine(_playVideoRoutine);
@@ -1298,6 +1602,11 @@ private void PauseVideoAudioOnly()
         _standUpPausedVideo = true;
         _proxyBufferGuardPaused = false;
         ResetProxyPlaybackWatchdogState();
+
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+            webViewTexturePlayer.Stop();
+
+        XHeroWebViewTexturePlayer.StopActiveInstance();
 
         PauseVideoAudioOnly();
 
@@ -1742,12 +2051,18 @@ private void PauseVideoAudioOnly()
             for (int i = 0; i < _videoLessons.Count; i++)
             {
                 if (_videoLessons[i] != null &&
-                    _videoLessons[i].linkVideo2 == currentUrl)
+                    (string.Equals(_videoLessons[i].linkVideo2, currentUrl, StringComparison.Ordinal) ||
+                     string.Equals(_videoLessons[i].linkVideo1, currentUrl, StringComparison.Ordinal)))
                 {
                     startIndex = i;
                     break;
                 }
             }
+        }
+
+        if (startIndex < 0 && _currentLesson != null)
+        {
+            startIndex = _videoLessons.IndexOf(_currentLesson);
         }
 
         int nextIndex = startIndex + 1;
@@ -1817,7 +2132,9 @@ private void PauseVideoAudioOnly()
             }
         }
 
-        Debug.Log($"[CourseListView] Cập nhật lesson mới | title={lesson.titleTMP?.text} | type={lesson.type} | url={lesson.linkVideo2}");
+        Debug.Log(
+            $"[CourseListView] Cập nhật lesson mới | title={lesson.titleTMP?.text} | type={lesson.type} | link1={lesson.linkVideo1} | link2={lesson.linkVideo2}"
+        );
 
         _currentLesson = lesson;
 
@@ -1863,11 +2180,15 @@ private void PauseVideoAudioOnly()
 
         if (targetIsVideo)
         {
-            Debug.Log("[CourseListView] Play video: " + _currentLesson.linkVideo2);
+            string displayUrl = ShouldUseWebViewTexture(_currentLesson.linkVideo1)
+                ? _currentLesson.linkVideo1
+                : _currentLesson.linkVideo2;
+
+            Debug.Log("[CourseListView] Play video: " + displayUrl);
 
             if (videoPlayerControllerPro != null)
             {
-                videoPlayerControllerPro.SetCurrentUrl(_currentLesson.linkVideo2);
+                videoPlayerControllerPro.SetCurrentUrl(displayUrl);
                 videoPlayerControllerPro.ShowVideoInCurrentMode();
             }
 
@@ -2008,7 +2329,7 @@ private void OnVideoPrepared(VideoPlayer vp)
             return false;
         }
 
-        return IsVideoUrl(lesson.linkVideo2);
+        return IsVideoUrl(lesson.linkVideo2) || XHeroWebViewTexturePlayer.IsSupportedIframeUrl(lesson.linkVideo1);
     }
 
     private bool IsDocumentLesson(LessonUI lesson)

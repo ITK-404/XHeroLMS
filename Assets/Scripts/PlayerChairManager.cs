@@ -85,6 +85,7 @@ public class PlayerChairManager : MonoBehaviour
         StartBlendCoroutine(() =>
         {
             learningFocusMode.Enter();
+            ResumeCourseVideoAfterSitDown();
             SetTutorialToNextStep();
         });
     }
@@ -228,6 +229,14 @@ public class PlayerChairManager : MonoBehaviour
             videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
 
         videoPlayerControllerPro?.PauseVideoAndAudioForStandUp();
+    }
+
+    private void ResumeCourseVideoAfterSitDown()
+    {
+        if (courseListView == null)
+            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
+
+        courseListView?.ResumeVideoAfterSitDownIfNeeded();
     }
 
     private void ShowAllCheckPoint(bool state)

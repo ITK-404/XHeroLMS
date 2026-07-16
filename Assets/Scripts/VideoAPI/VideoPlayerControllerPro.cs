@@ -106,6 +106,7 @@ public class VideoPlayerControllerPro : MonoBehaviour
     [Header("Next Course")]
     public CourseListView courseListView;
     private string _currentUrl;
+    private XHeroWebViewTexturePlayer webViewTexturePlayer;
 
     // ==== System volume sync (2-way) ====
     [Header("System Volume Sync")]
@@ -127,6 +128,7 @@ public enum VideoViewMode
     void Awake()
     {
         if (!courseListView) courseListView = FindAnyObjectByType<CourseListView>();
+        webViewTexturePlayer = FindAnyObjectByType<XHeroWebViewTexturePlayer>();
 
         if (!videoPlayer) videoPlayer = GetComponent<VideoPlayer>();
         if (videoQuad) _quadRenderer = videoQuad.GetComponent<Renderer>();
@@ -182,6 +184,12 @@ public enum VideoViewMode
 
     void Update()
     {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            UpdateWebViewTextureControls();
+            return;
+        }
+
         if (!videoPlayer) return;
 
         if (useFixedRT)
@@ -365,6 +373,13 @@ public enum VideoViewMode
     // ---- Controls ----
     public void TogglePlayPause()
     {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            webViewTexturePlayer.TogglePlayPause();
+            OnPlayStateChanged?.Invoke(webViewTexturePlayer.IsPlaying);
+            return;
+        }
+
         if (!videoPlayer) return;
         if (!videoPlayer.isPrepared)
         {
@@ -380,6 +395,13 @@ public enum VideoViewMode
 
     public void TryToPauseVideo()
     {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            webViewTexturePlayer.PauseWebVideo();
+            OnPlayStateChanged?.Invoke(false);
+            return;
+        }
+
         if (videoPlayer.isPlaying)
         { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
     }
@@ -459,6 +481,9 @@ public void EnterFullScreenMode()
     {
         float vol = _muted ? 0f : volume;
         if (audioSource) audioSource.volume = vol;
+
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+            webViewTexturePlayer.SetVolume(vol);
 
         if (videoPlayer && videoPlayer.audioOutputMode == VideoAudioOutputMode.Direct)
         {
@@ -636,6 +661,18 @@ public void EnterFullScreenMode()
     public void OnDurationSliderChangedContinuous(float vNorm)
     {
         RegisterInteraction();
+
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            if (webViewTexturePlayer.Duration > 0.0001)
+            {
+                double previewTime = Mathf.Clamp01(vNorm) * webViewTexturePlayer.Duration;
+                if (textTime)
+                    textTime.text = $"{FormatTime(previewTime)} / {FormatTime(webViewTexturePlayer.Duration)}";
+            }
+            return;
+        }
+
         if (!videoPlayer || !videoPlayer.isPrepared || videoPlayer.length <= 0) return;
         double t = Mathf.Clamp01(vNorm) * videoPlayer.length;
         SetTimeSafely(t);
@@ -662,6 +699,14 @@ public void EnterFullScreenMode()
     {
         RegisterInteraction();
         _isScrubbingByUI = false;
+
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            if (sliderDuration && webViewTexturePlayer.Duration > 0)
+                webViewTexturePlayer.Seek(sliderDuration.value * webViewTexturePlayer.Duration);
+            return;
+        }
+
         if (sliderDuration && videoPlayer && videoPlayer.isPrepared && videoPlayer.length > 0)
         {
             double t = sliderDuration.value * videoPlayer.length;
@@ -876,6 +921,17 @@ public void EnterFullScreenMode()
 
     public void PauseVideoAndAudioForStandUp()
     {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            webViewTexturePlayer.Stop();
+            XHeroWebViewTexturePlayer.StopActiveInstance();
+            _wasPlayingBeforeSwitch = false;
+            OnPlayStateChanged?.Invoke(false);
+            return;
+        }
+
+        XHeroWebViewTexturePlayer.StopActiveInstance();
+
         if (videoPlayer)
         {
             try { videoPlayer.Pause(); } catch { }
@@ -923,6 +979,13 @@ public void EnterFullScreenMode()
 
     public void PauseVideo()
     {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            webViewTexturePlayer.PauseWebVideo();
+            OnPlayStateChanged?.Invoke(false);
+            return;
+        }
+
         if (videoPlayer && videoPlayer.isPlaying)
         {
             videoPlayer.Pause();
@@ -960,7 +1023,62 @@ public void ShowVideoInCurrentMode()
 
     VideoContainer target = GetCurrentContainer();
     if (target != null)
+    {
         target.ShowVideo();
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+            webViewTexturePlayer.SetTargetRawImage(target.videoContainer);
+    }
+}
+
+public void SetWebViewTexturePlayer(XHeroWebViewTexturePlayer player)
+{
+    webViewTexturePlayer = player;
+}
+
+public RawImage GetCurrentVideoRawImage()
+{
+    VideoContainer target = GetCurrentContainer();
+    return target != null ? target.videoContainer : null;
+}
+
+private void UpdateWebViewTextureControls()
+{
+    if (Input.anyKeyDown) RegisterInteraction();
+    if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0)) RegisterInteraction();
+    if ((Input.mousePresent) && (Input.mousePosition != _lastMousePos))
+    { _lastMousePos = Input.mousePosition; RegisterInteraction(); }
+    if (Input.touchCount > 0) RegisterInteraction();
+
+    if (autoHideMenu && panelMenu)
+        if (panelMenu.activeSelf && (Time.time - _lastInteractTime) > autoHideSeconds)
+            panelMenu.SetActive(false);
+
+    if (Input.GetKeyDown(KeyCode.Space)) { RegisterInteraction(); TogglePlayPause(); }
+    if (Input.GetKeyDown(KeyCode.UpArrow)) { RegisterInteraction(); ChangeVolume(+volumeStep); }
+    if (Input.GetKeyDown(KeyCode.DownArrow)) { RegisterInteraction(); ChangeVolume(-volumeStep); }
+
+    if (!_isScrubbingByUI && sliderDuration && webViewTexturePlayer.Duration > 0.0001)
+    {
+        float value = Mathf.Clamp01((float)(webViewTexturePlayer.CurrentTime / webViewTexturePlayer.Duration));
+        sliderDuration.SetValueWithoutNotify(value);
+    }
+
+    if (textTime)
+    {
+        if (webViewTexturePlayer.Duration > 0.0001)
+            textTime.text = $"{FormatTime(webViewTexturePlayer.CurrentTime)} / {FormatTime(webViewTexturePlayer.Duration)}";
+        else
+            textTime.text = "00:00 / 00:00";
+    }
+
+    if (sliderVolume && sliderVolume.gameObject.activeSelf && !_isDraggingVolume)
+    {
+        if (Time.unscaledTime >= _nextSysPollTime)
+        {
+            _nextSysPollTime = Time.unscaledTime + systemPollInterval;
+            SyncFromSystemVolume(force: false);
+        }
+    }
 }
 
 public void ShowDocumentInCurrentMode(string documentUrl)
