@@ -80,6 +80,7 @@ public class TutorialHandler : MonoBehaviour
     //private string key => $"{keyPlayedBefore}";
 
     public event Action OnCompleteTutorial;
+    public event Action<TutorialStepType> ChangedToStepEvent;
     
     public void Save()
     {
@@ -293,6 +294,8 @@ public class TutorialHandler : MonoBehaviour
 
         FocusCorrectItem(tutorialStep);
         this.index = index;
+        
+        ChangedToStepEvent?.Invoke(tutorialStep);
     }
 
     
