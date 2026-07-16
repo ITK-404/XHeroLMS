@@ -12,7 +12,7 @@ public class KyMon_CustomerInformation : MonoBehaviour
         {
             Debug.LogError("[KyMon_CustomerInformation] User is not login, please check again");
         }
-        FillData(TokenStore.FullName, TokenStore.UserID);
+        FillData(TokenStore.FullName, TokenStore.Username);
     }
     
     public string GetUserName()

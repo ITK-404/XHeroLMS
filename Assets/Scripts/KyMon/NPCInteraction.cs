@@ -130,9 +130,17 @@ public class NPCInteraction : MonoBehaviour
 
     private void WorldSpaceUIRuntimeStateCheck()
     {
+        // top priority
+        var isFacingIcon = worldSpaceUi.GetIsPlayerFacingIcon();
+        if (isFacingIcon == false)
+        {
+            previousRuntimeWorldSpaceEnable = false;
+            worldSpaceUi.SetActive(false);
+            return;
+        }
         var canActiveWorldSpaceUI = GetActiveWorldSpaceState();
         Debug.Log($"NPC Interaction can active world space ui " + canActiveWorldSpaceUI);
-        if (previousRuntimeWorldSpaceEnable != canActiveWorldSpaceUI)
+        if (previousRuntimeWorldSpaceEnable != canActiveWorldSpaceUI )
         {
             worldSpaceUi.SetActive(canActiveWorldSpaceUI);
             previousRuntimeWorldSpaceEnable = canActiveWorldSpaceUI;
