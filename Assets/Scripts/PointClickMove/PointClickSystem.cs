@@ -288,7 +288,7 @@ public class PointClickSystem : MonoBehaviour
                 return;
             }
 
-            Debug.Log("Đang xoay");
+            // Debug.Log("Đang xoay");
             float rotationAmount = h * rotationSpeed * Time.deltaTime;
             transform.Rotate(0, rotationAmount, 0);
         }

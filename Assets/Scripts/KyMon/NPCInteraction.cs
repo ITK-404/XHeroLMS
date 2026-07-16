@@ -139,7 +139,6 @@ public class NPCInteraction : MonoBehaviour
             return;
         }
         var canActiveWorldSpaceUI = GetActiveWorldSpaceState();
-        Debug.Log($"NPC Interaction can active world space ui " + canActiveWorldSpaceUI);
         if (previousRuntimeWorldSpaceEnable != canActiveWorldSpaceUI )
         {
             worldSpaceUi.SetActive(canActiveWorldSpaceUI);
