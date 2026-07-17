@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -8,6 +9,8 @@ public class BuyReviewCourseManager : MonoBehaviour
 {
     public static BuyReviewCourseManager Instance;
     public ConfirmationLoadCoursePopup confirmPopup;
+    [SerializeField] private bool autoDeActive = false;
+    [SerializeField] private Camera uiCamera;
     
     [SerializeField] private CourseReviewUI courseReviewUI;
     [SerializeField] private TabItemManagerUI tabItemManagerUI;
@@ -79,6 +82,14 @@ public class BuyReviewCourseManager : MonoBehaviour
             playVideoHandleUI.skipButton.onClick.RemoveListener(Skip);
 
         SaveKey();
+    }
+
+    private void Start()
+    {
+        if (autoDeActive)
+        {
+            uiCamera.gameObject.SetActive(false);
+        }
     }
 
     private void EnterCourse()

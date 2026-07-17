@@ -261,7 +261,8 @@ public class BookHandler : MonoBehaviour
         var popup = BuyReviewCourseManager.Instance.confirmPopup;
         if (popup == null)
         {
-            Debug.LogError("Confirm popup is null");
+            AudioManager.Instance.Resume();
+            LoadingTransition.Load_Scene(targetScene);
             yield break;
         }
         
