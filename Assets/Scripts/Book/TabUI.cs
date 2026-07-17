@@ -26,7 +26,7 @@ public class TabUI : MonoBehaviour
     {
         button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(OnClickTab);
-        ActiveState(false);
+        // ActiveState(false);
     }
 
     private void OnDestroy()
@@ -87,7 +87,11 @@ public class TabUI : MonoBehaviour
 
     public void ActiveState(bool state)
     {
-        if (button == null) return;
+        Debug.Log($"[TabUI] ActiveState change {state}",gameObject);
+        if (button == null)
+        {
+            button = GetComponent<Button>();
+        }
 
         buttonState = state;
         // An toàn khi thiếu Image hoặc Sprite
