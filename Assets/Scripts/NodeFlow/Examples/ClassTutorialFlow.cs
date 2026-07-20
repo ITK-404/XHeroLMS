@@ -31,6 +31,7 @@ public class ClassTutorialFlow : FlowBase
     }
 }
 
+
 public static class TutorialStepId
 {
     public const string ClickChair = "ClickChair";
