@@ -87,7 +87,7 @@ private static final int MAX_BOOSTER_THREADS = 3;
     }
 
     public static String version() {
-        return "LocalVideoProxy/FastFrameGuardedAhead-NoCacheStream/2026-07-14";
+        return "LocalVideoProxy/FastFrameGuardedAhead-HlsTypedStream/2026-07-20";
     }
 
     public static synchronized boolean startProxy(int port) {
@@ -424,7 +424,9 @@ private static final int MAX_BOOSTER_THREADS = 3;
                 );
             }
 
-            if (!"/video".equals(uri) && !"/warm".equals(uri) && !"/stream".equals(uri)) {
+            boolean isStreamUri = uri != null && uri.startsWith("/stream");
+
+            if (!"/video".equals(uri) && !"/warm".equals(uri) && !isStreamUri) {
                 return newFixedLengthResponse(
                         NanoHTTPD.Response.Status.NOT_FOUND,
                         "text/plain",
@@ -446,8 +448,13 @@ private static final int MAX_BOOSTER_THREADS = 3;
             String originUrl = URLDecoder.decode(enc, "UTF-8");
             long requestStart = 0L;
 
-            if ("/stream".equals(uri)) {
-                return serveNoCacheStream(id, session, originUrl);
+            if (isStreamUri) {
+                String refEnc = getParam(qs, "r");
+                String referer = null;
+                if (refEnc != null && refEnc.length() > 0) {
+                    try { referer = URLDecoder.decode(refEnc, "UTF-8"); } catch (Exception ignored) { }
+                }
+                return serveNoCacheStream(id, session, originUrl, referer);
             }
 
             if ("/warm".equals(uri)) {
@@ -591,7 +598,7 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
         }
     }
 
-    private NanoHTTPD.Response serveNoCacheStream(long id, IHTTPSession session, String originUrl) {
+    private NanoHTTPD.Response serveNoCacheStream(long id, IHTTPSession session, String originUrl, String referer) {
         okhttp3.Response upstream = null;
 
         try {
@@ -605,6 +612,10 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
                     .header("Accept", "*/*")
                     .header("Accept-Encoding", "identity")
                     .header("User-Agent", "UnityLocalProxy/NoCacheStream/1.0");
+
+            if (referer != null && referer.length() > 0) {
+                builder.header("Referer", referer);
+            }
 
             if (!likelyPlaylist && clientRange != null && clientRange.trim().length() > 0) {
                 builder.header("Range", clientRange);
@@ -645,15 +656,17 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
             if (likelyPlaylist || isHlsPlaylistContent(contentType)) {
                 String playlist = body.string();
                 closeQuietly(upstream);
+                String rewritten = rewriteHlsPlaylist(session, originUrl, playlist, referer);
 
                 NanoHTTPD.Response resp = newFixedLengthResponse(
                         NanoHTTPD.Response.Status.OK,
                         "application/vnd.apple.mpegurl",
-                        rewriteHlsPlaylist(session, originUrl, playlist)
+                        rewritten
                 );
 
                 resp.addHeader("Cache-Control", "no-cache");
                 resp.addHeader("Pragma", "no-cache");
+                W("#" + id + " [STREAM_HLS_PLAYLIST] origin=" + originUrl + " bytes=" + rewritten.length());
                 return resp;
             }
 
@@ -694,7 +707,7 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
         }
     }
 
-    private String rewriteHlsPlaylist(IHTTPSession session, String originUrl, String playlist) {
+    private String rewriteHlsPlaylist(IHTTPSession session, String originUrl, String playlist, String referer) {
         if (playlist == null || playlist.length() == 0) {
             return playlist;
         }
@@ -710,9 +723,9 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
             if (trimmed.length() == 0) {
                 rewritten = line;
             } else if (trimmed.startsWith("#")) {
-                rewritten = rewriteHlsUriAttributes(session, originUrl, line);
+                rewritten = rewriteHlsUriAttributes(session, originUrl, line, referer);
             } else {
-                rewritten = toLocalStreamUrl(session, resolveUrl(originUrl, trimmed));
+                rewritten = toLocalStreamUrl(session, resolveUrl(originUrl, trimmed), referer);
             }
 
             out.append(rewritten);
@@ -725,7 +738,7 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
         return out.toString();
     }
 
-    private String rewriteHlsUriAttributes(IHTTPSession session, String originUrl, String line) {
+    private String rewriteHlsUriAttributes(IHTTPSession session, String originUrl, String line, String referer) {
         String marker = "URI=\"";
         int search = 0;
         StringBuilder out = null;
@@ -745,7 +758,7 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
             }
 
             String rawUrl = line.substring(valueStart, valueEnd);
-            String localUrl = toLocalStreamUrl(session, resolveUrl(originUrl, rawUrl));
+            String localUrl = toLocalStreamUrl(session, resolveUrl(originUrl, rawUrl), referer);
 
             if (out == null) {
                 out = new StringBuilder(line.length() + 128);
@@ -766,12 +779,12 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
         return out.toString();
     }
 
-    private String toLocalStreamUrl(IHTTPSession session, String absoluteUrl) {
+    private String toLocalStreamUrl(IHTTPSession session, String absoluteUrl, String referer) {
         if (absoluteUrl == null || absoluteUrl.length() == 0) {
             return absoluteUrl;
         }
 
-        if (absoluteUrl.startsWith("http://127.0.0.1:") && absoluteUrl.contains("/stream?u=")) {
+        if (absoluteUrl.startsWith("http://127.0.0.1:") && absoluteUrl.contains("/stream") && absoluteUrl.contains("?u=")) {
             return absoluteUrl;
         }
 
@@ -787,10 +800,28 @@ long total = cache.waitForTotal(STARTUP_WAIT_MS);
         }
 
         try {
-            return "http://" + host + "/stream?u=" + java.net.URLEncoder.encode(absoluteUrl, "UTF-8");
+            String local = "http://" + host + getStreamEndpoint(absoluteUrl) + "?u=" + java.net.URLEncoder.encode(absoluteUrl, "UTF-8");
+            if (referer != null && referer.length() > 0) {
+                local += "&r=" + java.net.URLEncoder.encode(referer, "UTF-8");
+            }
+            return local;
         } catch (Exception e) {
             return absoluteUrl;
         }
+    }
+
+    private static String getStreamEndpoint(String absoluteUrl) {
+        if (absoluteUrl == null) {
+            return "/stream";
+        }
+
+        String lower = absoluteUrl.toLowerCase();
+        if (lower.contains(".m3u8")) return "/stream.m3u8";
+        if (lower.contains(".ts")) return "/stream.ts";
+        if (lower.contains(".m4s")) return "/stream.m4s";
+        if (lower.contains(".mp4")) return "/stream.mp4";
+        if (lower.contains(".key")) return "/stream.key";
+        return "/stream";
     }
 
     private static boolean isLikelyHlsPlaylistUrl(String url) {

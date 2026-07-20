@@ -75,15 +75,74 @@ public static class AndroidLocalVideoProxy
             return originUrl;
         }
 
-        string localPrefix = $"http://127.0.0.1:{port}/stream?u=";
+        string localPrefix = $"http://127.0.0.1:{port}{GetStreamEndpoint(originUrl)}?u=";
 
-        if (originUrl.StartsWith(localPrefix, StringComparison.OrdinalIgnoreCase))
+        if (IsWrappedNoCacheUrl(originUrl, port))
         {
             return originUrl;
         }
 
         string escaped = Uri.EscapeDataString(originUrl);
         return $"{localPrefix}{escaped}";
+    }
+
+    public static string WrapNoCache(string originUrl, string referer, int port = DefaultPort)
+    {
+        if (string.IsNullOrEmpty(originUrl))
+        {
+            return originUrl;
+        }
+
+        string localPrefix = $"http://127.0.0.1:{port}{GetStreamEndpoint(originUrl)}?u=";
+
+        if (IsWrappedNoCacheUrl(originUrl, port))
+        {
+            return originUrl;
+        }
+
+        string escaped = Uri.EscapeDataString(originUrl);
+        string url = $"{localPrefix}{escaped}";
+
+        if (!string.IsNullOrEmpty(referer))
+        {
+            url += "&r=" + Uri.EscapeDataString(referer);
+        }
+
+        return url;
+    }
+
+    private static bool IsWrappedNoCacheUrl(string url, int port)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return false;
+        }
+
+        string localPrefix = $"http://127.0.0.1:{port}/stream";
+        return url.StartsWith(localPrefix, StringComparison.OrdinalIgnoreCase) &&
+               url.IndexOf("?u=", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static string GetStreamEndpoint(string originUrl)
+    {
+        if (string.IsNullOrEmpty(originUrl))
+        {
+            return "/stream";
+        }
+
+        string lower = originUrl.ToLowerInvariant();
+        if (lower.Contains(".m3u8"))
+            return "/stream.m3u8";
+        if (lower.Contains(".ts"))
+            return "/stream.ts";
+        if (lower.Contains(".m4s"))
+            return "/stream.m4s";
+        if (lower.Contains(".mp4"))
+            return "/stream.mp4";
+        if (lower.Contains(".key"))
+            return "/stream.key";
+
+        return "/stream";
     }
 
     public static bool Preload(string originUrl, long start = 0)

@@ -65,6 +65,7 @@ public final class XHeroNativeTexturePlayer {
     private static boolean playerStoppedByLifecycle;
     private static long lifecycleResumePositionMs;
     private static int playGeneration;
+    private static boolean resolveOnlyMode;
 
     static {
         System.loadLibrary("xheronativetexture");
@@ -132,6 +133,57 @@ public final class XHeroNativeTexturePlayer {
         });
 
         return true;
+    }
+
+    public static boolean resolveOnly(final String url) {
+        if (TextUtils.isEmpty(url)) {
+            lastError = "Missing iframe URL.";
+            return false;
+        }
+
+        activity = UnityPlayer.currentActivity;
+        if (activity == null) {
+            lastError = "Unity activity is null.";
+            return false;
+        }
+
+        iframeUrl = url;
+        lastError = "";
+        resolvedStreamUrl = "";
+        active = true;
+        resolveOnlyMode = true;
+        streamStarted = false;
+        playGeneration++;
+
+        MAIN.post(new Runnable() {
+            @Override public void run() {
+                try {
+                    stopOnMainThread();
+                    active = true;
+                    resolveOnlyMode = true;
+                    streamStarted = false;
+                    resolvedStreamUrl = "";
+                    iframeUrl = url;
+                    createResolverWebView();
+                    resolverWebView.loadUrl(url);
+                    Log.w(TAG, "resolveOnly start url=" + url);
+                } catch (Throwable t) {
+                    lastError = "resolveOnly start failed: " + t.getMessage();
+                    Log.e(TAG, lastError, t);
+                    stopOnMainThread();
+                }
+            }
+        });
+
+        return true;
+    }
+
+    public static String getResolvedUrl() {
+        return (resolveOnlyMode && streamStarted && resolvedStreamUrl != null) ? resolvedStreamUrl : "";
+    }
+
+    public static void stopResolveOnly() {
+        stop();
     }
 
     public static void stop() {
@@ -338,6 +390,12 @@ public final class XHeroNativeTexturePlayer {
                 }
 
                 releaseResolverWebViewOnly();
+
+                if (resolveOnlyMode) {
+                    Log.w(TAG, "resolveOnly resolved stream=" + streamUrl);
+                    return;
+                }
+
                 startExoPlayer(streamUrl);
             }
         });
@@ -441,6 +499,7 @@ public final class XHeroNativeTexturePlayer {
 
     private static void stopOnMainThread() {
         active = false;
+        resolveOnlyMode = false;
         streamStarted = false;
         playerReady = false;
         resolverReleaseScheduled = false;

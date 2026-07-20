@@ -36,9 +36,7 @@ public class PlayerChairManager : MonoBehaviour
 
         // videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
         // videoPlayerControllerPro = FindObjectOfType<VideoPlayerControllerPro>(includeInactive: true);
-        videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
-        courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
-        playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
+        ResolveRuntimeReferences();
     }
 
     private void OnDestroy()
@@ -49,30 +47,38 @@ public class PlayerChairManager : MonoBehaviour
 
     public void PlayerStandup()
     {
-        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
+        ResolveRuntimeReferences();
+        HideTutorialSitdownStandupUI();
 
-        if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
+        if (TutorialHandler.Instance != null &&
+            TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
         {
             TutorialHandler.Instance.Save();
         }
 
         StandUpStateHandle();
 
-        learningFocusMode.Exit();
+        if (learningFocusMode != null)
+            learningFocusMode.Exit();
+        else
+            ExitLearningFocusFallback();
 
         StartBlendCoroutine(() =>
         {
+            ResolveRuntimeReferences();
             Debug.Log("bật lại input");
 
-            enterFocusStateTransition.Exit();
+            if (enterFocusStateTransition != null)
+                enterFocusStateTransition.Exit();
         });
     }
 
 
     public void PlayerSitdown()
     {
+        ResolveRuntimeReferences();
         // sit down logic, hardcode logic
-        TutorialHandler.Instance.sitdownStandupUI.gameObject.SetActive(false);
+        HideTutorialSitdownStandupUI();
 
         ChairCheckPoint temp = currentCheckPoint;
 
@@ -80,11 +86,20 @@ public class PlayerChairManager : MonoBehaviour
 
         SitDownStateHandle(temp);
 
-        enterFocusStateTransition.Enter();
+        if (enterFocusStateTransition != null)
+            enterFocusStateTransition.Enter();
+        else
+            Debug.LogWarning("[PlayerChairManager] Missing EnterFocusStateTransition while sitting down.");
 
         StartBlendCoroutine(() =>
         {
-            learningFocusMode.Enter();
+            ResolveRuntimeReferences();
+
+            if (learningFocusMode != null)
+                learningFocusMode.Enter();
+            else
+                EnterLearningFocusFallback();
+
             ResumeCourseVideoAfterSitDown();
             SetTutorialToNextStep();
         });
@@ -92,7 +107,8 @@ public class PlayerChairManager : MonoBehaviour
 
     private void SetTutorialToNextStep()
     {
-        if (TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
+        if (TutorialHandler.Instance != null &&
+            TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
         {
             TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
         }
@@ -103,8 +119,11 @@ public class PlayerChairManager : MonoBehaviour
         playerState = PlayerState.Sitdown;
         Debug.Log("Sit down");
 
-        QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
-        QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
+        if (QuadCameraManager.Instance != null && temp.checkPoint != null)
+            QuadCameraManager.Instance.SetupSitdownCameraByCheckPoint(temp.checkPoint.transform);
+
+        if (QuadCinemachineController.Instance != null)
+            QuadCinemachineController.Instance.ChangeState(ViewState.Sitdown);
 
         ShowAllCheckPoint(false);
         // d
@@ -117,7 +136,8 @@ public class PlayerChairManager : MonoBehaviour
         StopCourseVideoForStandUp();
         Debug.Log("Stand up");
         playerState = PlayerState.Free;
-        QuadCinemachineController.Instance.ChangeState(ViewState.Player);
+        if (QuadCinemachineController.Instance != null)
+            QuadCinemachineController.Instance.ChangeState(ViewState.Player);
         ShowAllCheckPoint(true);
         SetCourseGameplayLock(false);
     }
@@ -241,9 +261,58 @@ public class PlayerChairManager : MonoBehaviour
 
     private void ShowAllCheckPoint(bool state)
     {
+        if (allCheckPoints == null)
+            allCheckPoints = GetComponentsInChildren<ChairCheckPoint>(true);
+
         foreach (var item in allCheckPoints)
         {
-            item.Show(state);
+            if (item != null)
+                item.Show(state);
         }
+    }
+
+    private void ResolveRuntimeReferences()
+    {
+        if (allCheckPoints == null || allCheckPoints.Length == 0)
+            allCheckPoints = GetComponentsInChildren<ChairCheckPoint>(true);
+
+        if (videoPlayerControllerPro == null)
+            videoPlayerControllerPro = FindFirstObjectByType<VideoPlayerControllerPro>(FindObjectsInactive.Include);
+
+        if (courseListView == null)
+            courseListView = FindFirstObjectByType<CourseListView>(FindObjectsInactive.Include);
+
+        if (playerStandUI == null)
+            playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
+
+        if (enterFocusStateTransition == null)
+            enterFocusStateTransition = FindFirstObjectByType<EnterFocusStateTransition>(FindObjectsInactive.Include);
+
+        if (learningFocusMode == null)
+            learningFocusMode = FindFirstObjectByType<LearningFocusMode>(FindObjectsInactive.Include);
+    }
+
+    private static void HideTutorialSitdownStandupUI()
+    {
+        if (TutorialHandler.Instance != null && TutorialHandler.Instance.sitdownStandupUI != null)
+            TutorialHandler.Instance.sitdownStandupUI.SetActive(false);
+    }
+
+    private void EnterLearningFocusFallback()
+    {
+        if (playerStandUI != null)
+            playerStandUI.ShowLearningUI();
+
+        if (videoPlayerControllerPro != null)
+            videoPlayerControllerPro.EnterFullscreenUI();
+    }
+
+    private void ExitLearningFocusFallback()
+    {
+        if (playerStandUI != null)
+            playerStandUI.HideLearningUI();
+
+        if (videoPlayerControllerPro != null)
+            videoPlayerControllerPro.ExitFullscreenUI();
     }
 }

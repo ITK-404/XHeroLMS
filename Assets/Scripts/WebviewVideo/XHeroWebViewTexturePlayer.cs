@@ -26,6 +26,11 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     [SerializeField] private int frameRate = 30;
     [SerializeField] private float webVideoPollInterval = 0.25f;
 
+    [Header("Android Vulkan Safe Capture")]
+    [SerializeField] private int vulkanMaxTextureWidth = 1280;
+    [SerializeField] private int vulkanMaxTextureHeight = 720;
+    [SerializeField] private int vulkanMaxFrameRate = 30;
+
     private Coroutine playRoutine;
     private Coroutine statePollRoutine;
     private RawImage targetRawImage;
@@ -55,6 +60,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     private const int AndroidRenderEventRelease = 3;
     private AndroidJavaClass androidBridge;
     private IntPtr androidRenderEventFunc;
+    private int androidUploadedFrameSerial;
+    private int androidExpectedFrameSize;
 #elif UNITY_EDITOR_WIN
     private EditorChromeCaptureBridge editorBridge;
 #endif
@@ -154,6 +161,10 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         firstFrameReady = null;
         loadFailed = null;
         lastFrameBuffer = null;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        androidUploadedFrameSerial = 0;
+        androidExpectedFrameSize = 0;
+#endif
         IsActive = false;
         IsReady = false;
         IsPlaying = false;
@@ -335,6 +346,24 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         textureWidth = Mathf.Clamp(textureWidth, 320, 1920);
         textureHeight = Mathf.Clamp(textureHeight, 180, 1080);
         frameRate = Mathf.Clamp(frameRate, 5, 60);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Vulkan)
+        {
+            int maxWidth = Mathf.Clamp(vulkanMaxTextureWidth, 320, 1920);
+            int maxHeight = Mathf.Clamp(vulkanMaxTextureHeight, 180, 1080);
+
+            float scale = Mathf.Min(
+                1f,
+                Mathf.Min(maxWidth / (float)textureWidth, maxHeight / (float)textureHeight)
+            );
+
+            textureWidth = Mathf.Max(320, Mathf.RoundToInt(textureWidth * scale));
+            textureHeight = Mathf.Max(180, Mathf.RoundToInt(textureHeight * scale));
+            frameRate = Mathf.Min(frameRate, Mathf.Clamp(vulkanMaxFrameRate, 5, 60));
+        }
+#endif
+
         SetCaptureFrameRate(frameRate);
 
         IsActive = true;
@@ -350,47 +379,53 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         targetUvRectOverridden = false;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-        if (!PrepareAndroidNativeTexture(textureWidth, textureHeight))
+        // The jar still receives a real android.view.Surface from libxheronativetexture.so.
+        // The rebuilt .so owns a private EGL/GLES context, reads the SurfaceTexture into an
+        // RGBA buffer, and Unity uploads that buffer into a normal Texture2D. This keeps the
+        // existing jar/JNI architecture intact while remaining independent of Unity's Vulkan
+        // or OpenGLES renderer.
+        if (!PrepareAndroidNativeBridge(textureWidth, textureHeight))
         {
-            Fail("Native texture renderer failed to initialize.");
+            Fail("Native SurfaceTexture bridge failed to initialize.");
             yield break;
         }
 
-        yield return new WaitForEndOfFrame();
-        yield return null;
+        androidExpectedFrameSize = textureWidth * textureHeight * 4;
+        androidUploadedFrameSerial = 0;
 
-        IntPtr nativeTexturePtr = GetAndroidNativeTexturePtr();
-        if (nativeTexturePtr == IntPtr.Zero)
-        {
-            Fail("Native texture pointer is null.");
-            yield break;
-        }
-
-        texture = Texture2D.CreateExternalTexture(textureWidth, textureHeight, TextureFormat.RGBA32, false, false, nativeTexturePtr);
+        texture = new Texture2D(textureWidth, textureHeight, TextureFormat.RGBA32, false, false);
         texture.wrapMode = TextureWrapMode.Clamp;
         texture.filterMode = FilterMode.Bilinear;
         ApplyRuntimeFramePacing();
 
         if (!PlatformStart(iframeUrl, textureWidth, textureHeight, frameRate))
         {
-            Fail("Native texture player failed to start.");
+            Fail("Native WebView player failed to start or could not obtain its Surface.");
             yield break;
         }
 
-        Debug.Log($"[{MethodName}] Resolve iframe and play by native texture player: {iframeUrl}");
+        Debug.Log(
+            $"[{MethodName}] Start iframe through jar -> libxheronativetexture.so -> RGBA Texture2D. " +
+            $"graphics={SystemInfo.graphicsDeviceType} size={textureWidth}x{textureHeight} fps={frameRate} url={iframeUrl}"
+        );
 
         statePollRoutine = StartCoroutine(PollVideoState());
-
         WaitForEndOfFrame endOfFrame = new WaitForEndOfFrame();
 
         while (IsActive)
         {
+            // Schedule native SurfaceTexture update/readback on Unity's render thread.
             yield return endOfFrame;
+            RequestAndroidNativeFrame();
 
-            UpdateAndroidNativeTexture();
+            // GL.IssuePluginEvent is asynchronous. Give the render thread a chance to finish,
+            // then upload only when the native frame serial changes.
+            yield return null;
+
+            bool uploaded = TryUploadAndroidNativeFrame();
             ParseState(PlatformGetState());
 
-            if (!IsReady && HasAndroidNativeFrame() && HasPlayableVideoFrame())
+            if (!IsReady && uploaded && HasPlayableVideoFrame())
             {
                 IsReady = true;
                 ApplyBridgeTextureToTarget();
@@ -398,17 +433,25 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
                 firstFrameReady = null;
                 PlayWebVideo();
                 SetVolume(1f);
-                Debug.Log($"[{MethodName}] First native player texture frame READY | time={CurrentTime:F2}/{Duration:F2} playing={IsPlaying}");
+                Debug.Log(
+                    $"[{MethodName}] First jar/native RGBA frame READY | " +
+                    $"graphics={SystemInfo.graphicsDeviceType} time={CurrentTime:F2}/{Duration:F2} playing={IsPlaying}"
+                );
             }
 
-            string error = PlatformGetLastError();
-            if (!string.IsNullOrWhiteSpace(error))
+            string nativeError = GetAndroidNativeError();
+            if (!string.IsNullOrWhiteSpace(nativeError))
             {
-                Fail(error);
+                Fail(nativeError);
                 yield break;
             }
 
-            yield return null;
+            string javaError = PlatformGetLastError();
+            if (!string.IsNullOrWhiteSpace(javaError))
+            {
+                Fail(javaError);
+                yield break;
+            }
         }
 #else
         texture = new Texture2D(textureWidth, textureHeight, GetTextureFormat(), false, false);
@@ -615,7 +658,7 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-    private bool PrepareAndroidNativeTexture(int width, int height)
+    private bool PrepareAndroidNativeBridge(int width, int height)
     {
         try
         {
@@ -629,36 +672,74 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"[{MethodName}] Android native texture init failed: {e.Message}");
+            Debug.LogWarning($"[{MethodName}] Android native bridge init failed: {e.Message}");
             return false;
         }
     }
 
-    private IntPtr GetAndroidNativeTexturePtr()
-    {
-        try { return XHeroNative_GetTexturePtr(); }
-        catch { return IntPtr.Zero; }
-    }
-
-    private void UpdateAndroidNativeTexture()
+    private void RequestAndroidNativeFrame()
     {
         if (androidRenderEventFunc != IntPtr.Zero)
             GL.IssuePluginEvent(androidRenderEventFunc, AndroidRenderEventUpdate);
     }
 
-    private bool HasAndroidNativeFrame()
+    private bool TryUploadAndroidNativeFrame()
     {
-        try { return XHeroNative_HasFrame() != 0; }
-        catch { return false; }
+        if (texture == null)
+            return false;
+
+        try
+        {
+            int serial = XHeroNative_GetFrameSerial();
+            if (serial <= 0 || serial == androidUploadedFrameSerial)
+                return false;
+
+            int size = XHeroNative_GetFrameBufferSize();
+            if (size <= 0 || size != androidExpectedFrameSize)
+            {
+                Debug.LogWarning(
+                    $"[{MethodName}] Native frame size mismatch. expected={androidExpectedFrameSize} actual={size}"
+                );
+                return false;
+            }
+
+            IntPtr framePtr = XHeroNative_GetFrameBufferPtr();
+            if (framePtr == IntPtr.Zero)
+                return false;
+
+            texture.LoadRawTextureData(framePtr, size);
+            texture.Apply(false, false);
+            androidUploadedFrameSerial = serial;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[{MethodName}] Native RGBA upload failed: {e.Message}");
+            return false;
+        }
+    }
+
+    private string GetAndroidNativeError()
+    {
+        try
+        {
+            IntPtr ptr = XHeroNative_GetLastError();
+            return ptr == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(ptr);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void ReleaseAndroidNativeTexture()
     {
-        if (androidRenderEventFunc != IntPtr.Zero)
-        {
-            try { GL.IssuePluginEvent(androidRenderEventFunc, AndroidRenderEventRelease); } catch { }
-            androidRenderEventFunc = IntPtr.Zero;
-        }
+        // This bridge owns a private EGL context, so it can release synchronously. Doing this
+        // directly avoids an old queued RELEASE event destroying a newly started lesson.
+        try { XHeroNative_ReleaseNow(); } catch { }
+        androidRenderEventFunc = IntPtr.Zero;
+        androidUploadedFrameSerial = 0;
+        androidExpectedFrameSize = 0;
     }
 #endif
 
@@ -861,8 +942,17 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
     [DllImport("xheronativetexture")] private static extern void XHeroNative_SetSize(int width, int height);
     [DllImport("xheronativetexture")] private static extern IntPtr XHeroNative_GetRenderEventFunc();
+    [DllImport("xheronativetexture")] private static extern void XHeroNative_ReleaseNow();
+
+    // Retained in the .so for ABI compatibility with older builds, but the Vulkan-safe
+    // path below deliberately consumes an RGBA buffer rather than a GLuint.
     [DllImport("xheronativetexture")] private static extern IntPtr XHeroNative_GetTexturePtr();
     [DllImport("xheronativetexture")] private static extern int XHeroNative_HasFrame();
+
+    [DllImport("xheronativetexture")] private static extern IntPtr XHeroNative_GetFrameBufferPtr();
+    [DllImport("xheronativetexture")] private static extern int XHeroNative_GetFrameBufferSize();
+    [DllImport("xheronativetexture")] private static extern int XHeroNative_GetFrameSerial();
+    [DllImport("xheronativetexture")] private static extern IntPtr XHeroNative_GetLastError();
 #endif
 
 #if UNITY_IOS && !UNITY_EDITOR
