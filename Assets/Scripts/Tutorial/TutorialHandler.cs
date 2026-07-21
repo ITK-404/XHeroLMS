@@ -142,7 +142,9 @@ public class TutorialHandler : MonoBehaviour
 
         LoadSave();
         // isPlayedBefore = firstTimePlayed; // ép luôn là chưa chơi
+#if UNITY_EDITOR
         if (alwaysPlayTutorial) isPlayedBefore = false;
+#endif
         // if player is played tutorial before
 
         
