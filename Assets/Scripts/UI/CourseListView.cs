@@ -181,6 +181,8 @@ public class CourseListView : MonoBehaviour
 
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
+
+#if (UNITY_ANDROID && !UNITY_EDITOR) || UNITY_EDITOR_WIN
         webViewTexturePlayer = FindAnyObjectByType<XHeroWebViewTexturePlayer>();
         if (!webViewTexturePlayer)
         {
@@ -190,6 +192,7 @@ public class CourseListView : MonoBehaviour
 
         if (videoPlayerControllerPro)
             videoPlayerControllerPro.SetWebViewTexturePlayer(webViewTexturePlayer);
+#endif
 
         examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
@@ -705,7 +708,13 @@ private void OnDisable()
 
     private static bool ShouldUseWebViewTexture(string link1)
     {
+#if UNITY_IOS && !UNITY_EDITOR
+        // iOS tạm thời bỏ qua Link 1 WebView texture và dùng videoLink2.
+        return false;
+#else
+        // Giữ nguyên hành vi Link 1 hiện tại trên Android và runtime được hỗ trợ.
         return XHeroWebViewTexturePlayer.IsSupportedIframeUrl(link1);
+#endif
     }
 
     private static string GetFirstDocAttachUri(object lesson)
@@ -753,6 +762,13 @@ private void OnDisable()
         string fallbackUrl = lesson.linkVideo2;
         bool useWebViewTexture = ShouldUseWebViewTexture(link1);
         string url = useWebViewTexture ? link1 : fallbackUrl;
+
+#if UNITY_IOS && !UNITY_EDITOR
+        Debug.Log(
+            $"[CourseListView] iOS route: use videoLink2 through Unity VideoPlayer. " +
+            $"link2={fallbackUrl}"
+        );
+#endif
 
         if (string.IsNullOrWhiteSpace(url))
         {
