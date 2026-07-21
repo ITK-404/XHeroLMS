@@ -11,6 +11,7 @@ public class AutoReplayController : MonoBehaviour
     [SerializeField] private AskForReplayTutorialUI view;
     [FormerlySerializedAs("askForReplayAnimation")] [SerializeField] private SmokeTransitionAnimation smokeTransitionAnimation;
 
+    private bool isShowBefore = false;    
     private void Awake()
     {
         if(tutorialHandler)
@@ -49,6 +50,9 @@ public class AutoReplayController : MonoBehaviour
     private void ReplayTutorial()
     {
         // view.Hide();
+        if (isShowBefore) return;
+        isShowBefore = true;
+        
         view.SetInteractable(false);
         StartCoroutine(WaitForLoading());
         Debug.Log("[AutoReplayController] replay tutorial");
