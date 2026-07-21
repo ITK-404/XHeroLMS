@@ -36,12 +36,14 @@ public class BookModel : MonoBehaviour
 
     public void SetBaseMap(Texture texture)
     {
-        if (texture)
+        if (_renderer == null || mpb == null || texture == null)
         {
-            _renderer.GetPropertyBlock(mpb,1);
-            mpb.SetTexture(MainTexID, texture);
-            _renderer.SetPropertyBlock(mpb,1);
+            return;
         }
+        
+        _renderer.GetPropertyBlock(mpb,1);
+        mpb.SetTexture(MainTexID, texture);
+        _renderer.SetPropertyBlock(mpb,1);
     }
 
     [ContextMenu("De Active Grayscale")]

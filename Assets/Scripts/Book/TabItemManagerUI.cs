@@ -22,7 +22,7 @@ public class TabItemManagerUI : MonoBehaviour
     private Dictionary<CourseLessonTabID, BookShelfManager> tabList = new();
     private BookShelfManager[] tabIDs;
     private TabUI[] tabButtonsList;
-    private CourseLessonTabID currentItemID;
+    [SerializeField] private CourseLessonTabID currentItemID;
     [SerializeField] Button returnBtn;
     [SerializeField] private GameObject shelfContainer;
     [SerializeField] private GameObject tabContainer;
@@ -107,13 +107,14 @@ public class TabItemManagerUI : MonoBehaviour
                 item.Value.gameObject.SetActive(false);
             }
         }
-
+        Debug.Log($"CurrentTabID: {tabButtonsList.Length}");
         foreach(var item in tabButtonsList)
         {
             bool isActiveCurrentUI = activeTabID == item.tabID;
             item.ActiveState(isActiveCurrentUI);
+            Debug.Log($"CurrentTabID active state: {isActiveCurrentUI}",gameObject);
         }
-    }
+    }   
 
     public void Show()
     {

@@ -1,25 +1,431 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "C:\_khoa\XHeroLMS\ServerData\Android" "gs://dlc-lms/addressables/releases-dev/android/builds/1.0.10/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "/Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS" "gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/"
 ExitCode=0
 
 --- STDOUT ---
 
 
 --- STDERR ---
-Building synchronization state...
-Starting synchronization...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.10.hash [Content-Type=application/octet-stream]...
-/ [0/4 files][    0.0 B/429.3 KiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog_1.0.10.json [Content-Type=application/json]...
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.json [Content-Type=application/json]...
-/ [0/4 files][    0.0 B/429.3 KiB]   0% Done                                    
-/ [0/4 files][    0.0 B/429.3 KiB]   0% Done                                    
-Copying file://C:\_khoa\XHeroLMS\ServerData\Android\catalog.hash [Content-Type=application/octet-stream]...
-/ [0/4 files][    0.0 B/429.3 KiB]   0% Done                                    
--
-- [1/4 files][429.3 KiB/429.3 KiB]  99% Done                                    
-- [2/4 files][429.3 KiB/429.3 KiB]  99% Done                                    
-- [3/4 files][429.3 KiB/429.3 KiB]  99% Done                                    
-- [4/4 files][429.3 KiB/429.3 KiB] 100% Done                                    
+WARNING:  Python 3.9.x is no longer officially supported by the Google Cloud CLI
+and may not function correctly. Please use Python version 3.10 and up.
+To reinstall gcloud, run:
+    $ gcloud components reinstall
 
-Operation completed over 4 objects/429.3 KiB.                                    
+This will also prompt to install a compatible version of Python.
+
+If you have a compatible Python interpreter installed, you can use it by setting
+the CLOUDSDK_PYTHON environment variable to point to it.
+
+/Users/dev/google-cloud-sdk/platform/gsutil/third_party/urllib3/src/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+WARNING: gsutil rsync uses hashes when modification time is not available at
+both the source and destination. Your crcmod installation isn't using the
+module's C extension, so checksumming will run very slowly. If this is your
+first rsync since updating gsutil, this rsync can take significantly longer than
+usual. For help installing the extension, please see "gsutil help crcmod".
+
+Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Starting synchronization...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/483192958c2089719c8dc303377b0b39_monoscripts_31039ccc1f4734965bab16f858df4640.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/483192958c2089719c8dc303377b0b39_unitybuiltinassets_da338c50e693973a3d07b870d2df0251.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.json [Content-Type=application/json]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog.hash [Content-Type=application/octet-stream]...
+/ [0 files][    0.0 B/ 22.2 KiB]                                                
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.10.hash [Content-Type=application/octet-stream]...
+/ [0 files][    0.0 B/237.0 KiB]                                                
+/ [0 files][    0.0 B/450.4 KiB]                                                
+/ [0 files][    0.0 B/450.5 KiB]                                                
+/ [0 files][    0.0 B/450.5 KiB]                                                
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/catalog_1.0.10.json [Content-Type=application/json]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_dai_dao_chi_gian_1_scenes_all_bc514e8abc71121fa8065b606f8e4914.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_certificates_scenes_all_fd28348b9427b210f15ef34ff892d6a1.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_coursescene_scenes_all_d5d28e38753b7023ce3a32a480532160.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_assets_new_scene_initial_8b43cf914e271a6cabfdd96f21aa8ec3.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_assets_new_scene_late_shared_7b0c546cb4dbd18fec15f9cda9a6ac7c.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_assets_new_scene_shared_0c1e8d3529ab7e0730a43b4334c4b141.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_dai_dao_chi_gian_2_scenes_all_d6336d76959b67b6a834d643c3a7875c.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_entry_8738f4fb3bf2cd8252943669456713de.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_01_96b4d824dc8214a768ffe8cbe3c69f95.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_03_592c323aa86876df742ddabd884c79c3.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_02_d55fdd188625843523b86a5307bd06f8.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_04_d2895af9c7568c2c2834be5f60ef2e37.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_06_4fcdfdbc11153d18a0fdce2c9a9572e4.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_07_db5bf527c27d329c9f017eb901c00ef0.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][    0.0 B/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_05_9873fab6a6d6d693ccf836eddaaaa931.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_09_059d5bca59acfaa6c18cd89ae62feba6.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_11_02a2d776bc640723a553938c2aeb6b98.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_10_e7d9a9b6688cd7b97593eb970572715e.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_08_72c56727110c5f20dea5dd58d41e44e0.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_12_a43453958b9e3104fb4eb5f8df361ab9.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_14_922e3c549e5fd16885d658e87955c656.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_16_43123e60ca819151c80458dfdafb19f6.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_15_b9a7495e68b2643399fea83eb13a3d61.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_19_22ac36deb68538e1a1352e1d7653fe95.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+/ [0/50 files][ 22.2 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_13_7284af9d5dbc86452c12fedaa0586b6e.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][237.1 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_20_973eec2ca1142e59ef6eacc59305d8aa.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][237.1 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_17_890fc7a71611898232a6a3b8c7d38d74.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_21_c9ad00368ef70467cad6b1cf4c43021b.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][237.1 KiB/772.7 MiB]   0% Done                                   
+/ [0/50 files][237.1 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_22_bfa050e2ac7b1e9a862312a034b86949.bundle [Content-Type=application/octet-stream]...
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_phong_ky_mon_scenes_all_b4866dddcb0ade8df053374ef7dbae58.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][501.1 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_phong_tuyen_sinh_scenes_all_af8a1ec07562a47999d0ce97b5b28b03.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][501.1 KiB/772.7 MiB]   0% Done                                   
+/ [0/50 files][501.1 KiB/772.7 MiB]   0% Done                                   
+==> NOTE: You are uploading one or more large file(s), which would run
+significantly faster if you enable parallel composite uploads. This
+feature can be enabled by editing the
+"parallel_composite_upload_threshold" value in your .boto
+configuration file. However, note that if you do this large files will
+be uploaded as `composite objects
+<https://cloud.google.com/storage/docs/composite-objects>`_,which
+means that any user who downloads such objects will need to have a
+compiled crcmod installed (see "gsutil help crcmod"). This is because
+without a compiled crcmod, computing checksums on composite objects is
+so slow that gsutil disables downloads of composite objects.
+
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_newscene_scenes_new_scene_latenew_scene_late_18_559fa069af6190d9617603957108470d.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][714.5 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_assets_prefabs_ui_a35c68b219a0e94629d5b033b3626d56.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][927.9 KiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_assets_textmeshpro_2dfb573af3c7319840788884dbf10508.bundle [Content-Type=application/octet-stream]...
+/ [0/50 files][927.9 KiB/772.7 MiB]   0% Done                                   
+/ [1/50 files][  1.3 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_batterywarninghandler_fa33a4419424f2d069e2dd7ba8bc5064.bundle [Content-Type=application/octet-stream]...
+/ [1/50 files][  1.3 MiB/772.7 MiB]   0% Done                                   
+/ [2/50 files][  1.3 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_gamesessionconfig_c3d14dac2b99c79cd4cace384a0a2cbd.bundle [Content-Type=application/octet-stream]...
+/ [2/50 files][  1.3 MiB/772.7 MiB]   0% Done                                   
+/ [3/50 files][  1.6 MiB/772.7 MiB]   0% Done                                   
+/ [4/50 files][  1.6 MiB/772.7 MiB]   0% Done                                   
+-
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_graphics_preset_high_005110f438b455295a6de7c93ca39b4a.bundle [Content-Type=application/octet-stream]...
+- [4/50 files][  1.8 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_graphics_preset_low_9006043f797b3a8ab1d2864c79547325.bundle [Content-Type=application/octet-stream]...
+- [4/50 files][  1.8 MiB/772.7 MiB]   0% Done                                   
+- [5/50 files][  2.4 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_graphics_preset_medium_7a1fa3635387167a91a255fbc14496b9.bundle [Content-Type=application/octet-stream]...
+- [5/50 files][  2.4 MiB/772.7 MiB]   0% Done                                   
+- [6/50 files][  4.2 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_graphics_preset_ultra_0cb54218324fe895efaba29181aff258.bundle [Content-Type=application/octet-stream]...
+- [6/50 files][  4.5 MiB/772.7 MiB]   0% Done                                   
+- [7/50 files][  4.6 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_graphicssettingsmanager_7e054ff86a94374ac9fea9e2a634cc8e.bundle [Content-Type=application/octet-stream]...
+- [7/50 files][  4.6 MiB/772.7 MiB]   0% Done                                   
+- [8/50 files][  5.1 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_playerrotationconfighandler_c0abfc0edf90afea9316c11525887d1c.bundle [Content-Type=application/octet-stream]...
+- [8/50 files][  5.1 MiB/772.7 MiB]   0% Done                                   
+- [9/50 files][  5.9 MiB/772.7 MiB]   0% Done                                   
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_rollbacksceneconfig_6d41a0b31387f1bcb39df461fd5a1a16.bundle [Content-Type=application/octet-stream]...
+- [9/50 files][  5.9 MiB/772.7 MiB]   0% Done                                   
+- [10/50 files][  6.4 MiB/772.7 MiB]   0% Done                                  
+Copying file:///Users/dev/Documents/GitHub/XHeroLMS/ServerData/iOS/cloud_shared_assets_scenelocationconfig_58bc187aff3995c95e0bf1a00fc616cc.bundle [Content-Type=application/octet-stream]...
+- [10/50 files][  6.4 MiB/772.7 MiB]   0% Done                                  
+- [11/50 files][  6.9 MiB/772.7 MiB]   0% Done                                  
+- [12/50 files][  7.2 MiB/772.7 MiB]   0% Done                                  
+\
+\ [13/50 files][ 10.0 MiB/772.7 MiB]   1% Done                                  
+\ [14/50 files][ 10.0 MiB/772.7 MiB]   1% Done                                  
+\ [15/50 files][ 10.3 MiB/772.7 MiB]   1% Done                                  
+\ [16/50 files][ 11.4 MiB/772.7 MiB]   1% Done                                  
+|
+| [17/50 files][ 12.2 MiB/772.7 MiB]   1% Done                                  
+| [18/50 files][ 13.5 MiB/772.7 MiB]   1% Done                                  
+| [19/50 files][ 14.8 MiB/772.7 MiB]   1% Done                                  
+| [20/50 files][ 15.8 MiB/772.7 MiB]   2% Done                                  
+/
+/ [21/50 files][ 18.2 MiB/772.7 MiB]   2% Done                                  
+/ [22/50 files][ 20.2 MiB/772.7 MiB]   2% Done                                  
+/ [23/50 files][ 21.7 MiB/772.7 MiB]   2% Done                                  
+/ [24/50 files][ 21.7 MiB/772.7 MiB]   2% Done                                  
+-
+- [25/50 files][ 22.5 MiB/772.7 MiB]   2% Done                                  
+- [26/50 files][ 26.6 MiB/772.7 MiB]   3% Done                                  
+\
+\ [27/50 files][ 28.9 MiB/772.7 MiB]   3% Done                                  
+|
+/
+/ [27/50 files][ 37.9 MiB/772.7 MiB]   4% Done                                  
+-
+- [28/50 files][ 47.4 MiB/772.7 MiB]   6% Done                                  
+\
+|
+| [29/50 files][ 56.1 MiB/772.7 MiB]   7% Done                                  
+| [30/50 files][ 57.7 MiB/772.7 MiB]   7% Done                                  
+/
+/ [30/50 files][ 65.6 MiB/772.7 MiB]   8% Done                                  
+-
+- [31/50 files][ 68.2 MiB/772.7 MiB]   8% Done                                  
+\
+|
+| [31/50 files][ 76.4 MiB/772.7 MiB]   9% Done                                  
+/
+/ [31/50 files][ 84.7 MiB/772.7 MiB]  10% Done                                  
+-
+\
+\ [32/50 files][ 91.4 MiB/772.7 MiB]  11% Done   8.6 MiB/s ETA 00:01:19         
+|
+| [32/50 files][ 99.9 MiB/772.7 MiB]  12% Done   8.4 MiB/s ETA 00:01:20         
+/
+/ [33/50 files][101.2 MiB/772.7 MiB]  13% Done   7.9 MiB/s ETA 00:01:25         
+-
+- [33/50 files][109.4 MiB/772.7 MiB]  14% Done   8.0 MiB/s ETA 00:01:23         
+\
+|
+| [33/50 files][116.9 MiB/772.7 MiB]  15% Done   7.8 MiB/s ETA 00:01:24         
+/
+/ [33/50 files][125.9 MiB/772.7 MiB]  16% Done   8.0 MiB/s ETA 00:01:21         
+-
+\
+\ [33/50 files][134.2 MiB/772.7 MiB]  17% Done   7.9 MiB/s ETA 00:01:21         
+|
+/
+/ [34/50 files][142.2 MiB/772.7 MiB]  18% Done   7.7 MiB/s ETA 00:01:22         
+/ [35/50 files][146.3 MiB/772.7 MiB]  18% Done   8.0 MiB/s ETA 00:01:18         
+-
+\
+\ [35/50 files][155.3 MiB/772.7 MiB]  20% Done   8.1 MiB/s ETA 00:01:16         
+|
+/
+/ [35/50 files][161.0 MiB/772.7 MiB]  20% Done   7.9 MiB/s ETA 00:01:17         
+-
+- [35/50 files][171.0 MiB/772.7 MiB]  22% Done   8.2 MiB/s ETA 00:01:13         
+\
+\ [36/50 files][175.8 MiB/772.7 MiB]  22% Done   7.7 MiB/s ETA 00:01:17         
+|
+| [37/50 files][181.8 MiB/772.7 MiB]  23% Done   8.2 MiB/s ETA 00:01:12         
+/
+-
+- [37/50 files][190.3 MiB/772.7 MiB]  24% Done   8.0 MiB/s ETA 00:01:13         
+\
+\ [38/50 files][197.3 MiB/772.7 MiB]  25% Done   8.0 MiB/s ETA 00:01:12         
+|
+/
+/ [38/50 files][206.1 MiB/772.7 MiB]  26% Done   8.1 MiB/s ETA 00:01:10         
+-
+- [39/50 files][209.2 MiB/772.7 MiB]  27% Done   8.5 MiB/s ETA 00:01:06         
+\
+\ [39/50 files][217.2 MiB/772.7 MiB]  28% Done   8.5 MiB/s ETA 00:01:05         
+|
+/
+/ [39/50 files][225.4 MiB/772.7 MiB]  29% Done   8.5 MiB/s ETA 00:01:04         
+-
+- [39/50 files][233.7 MiB/772.7 MiB]  30% Done   8.3 MiB/s ETA 00:01:05         
+\
+|
+| [39/50 files][241.9 MiB/772.7 MiB]  31% Done   8.4 MiB/s ETA 00:01:03         
+/
+-
+- [39/50 files][249.4 MiB/772.7 MiB]  32% Done   8.0 MiB/s ETA 00:01:05         
+\
+\ [39/50 files][258.2 MiB/772.7 MiB]  33% Done   8.0 MiB/s ETA 00:01:04         
+|
+/
+/ [39/50 files][265.6 MiB/772.7 MiB]  34% Done   7.9 MiB/s ETA 00:01:04         
+-
+- [39/50 files][274.7 MiB/772.7 MiB]  35% Done   7.9 MiB/s ETA 00:01:03         
+\
+|
+| [39/50 files][282.4 MiB/772.7 MiB]  36% Done   7.7 MiB/s ETA 00:01:04         
+/
+-
+- [39/50 files][292.2 MiB/772.7 MiB]  37% Done   8.0 MiB/s ETA 00:01:00         
+\
+\ [39/50 files][301.2 MiB/772.7 MiB]  38% Done   8.1 MiB/s ETA 00:00:58         
+|
+/
+/ [40/50 files][309.5 MiB/772.7 MiB]  40% Done   8.1 MiB/s ETA 00:00:57         
+-
+- [40/50 files][319.0 MiB/772.7 MiB]  41% Done   8.5 MiB/s ETA 00:00:53         
+\
+|
+| [40/50 files][327.3 MiB/772.7 MiB]  42% Done   8.5 MiB/s ETA 00:00:53         
+/
+-
+- [40/50 files][335.9 MiB/772.7 MiB]  43% Done   8.4 MiB/s ETA 00:00:52         
+- [41/50 files][335.9 MiB/772.7 MiB]  43% Done   8.3 MiB/s ETA 00:00:52         
+\
+\ [41/50 files][344.1 MiB/772.7 MiB]  44% Done   8.0 MiB/s ETA 00:00:54         
+|
+/
+/ [41/50 files][353.4 MiB/772.7 MiB]  45% Done   8.2 MiB/s ETA 00:00:51         
+-
+- [41/50 files][362.2 MiB/772.7 MiB]  46% Done   8.3 MiB/s ETA 00:00:50         
+\
+|
+| [41/50 files][370.8 MiB/772.7 MiB]  47% Done   8.3 MiB/s ETA 00:00:49         
+| [42/50 files][372.4 MiB/772.7 MiB]  48% Done   8.4 MiB/s ETA 00:00:47         
+/
+-
+- [42/50 files][380.9 MiB/772.7 MiB]  49% Done   8.4 MiB/s ETA 00:00:47         
+\
+|
+| [42/50 files][388.8 MiB/772.7 MiB]  50% Done   8.2 MiB/s ETA 00:00:47         
+/
+/ [42/50 files][397.4 MiB/772.7 MiB]  51% Done   8.0 MiB/s ETA 00:00:47         
+-
+\
+\ [42/50 files][405.9 MiB/772.7 MiB]  52% Done   7.9 MiB/s ETA 00:00:46         
+|
+/
+/ [42/50 files][415.4 MiB/772.7 MiB]  53% Done   8.2 MiB/s ETA 00:00:43         
+-
+- [42/50 files][424.4 MiB/772.7 MiB]  54% Done   8.3 MiB/s ETA 00:00:42         
+\
+|
+| [42/50 files][433.5 MiB/772.7 MiB]  56% Done   8.5 MiB/s ETA 00:00:40         
+/
+/ [43/50 files][439.7 MiB/772.7 MiB]  56% Done   8.8 MiB/s ETA 00:00:38         
+-
+\
+\ [43/50 files][448.0 MiB/772.7 MiB]  57% Done   8.6 MiB/s ETA 00:00:38         
+|
+| [43/50 files][456.0 MiB/772.7 MiB]  59% Done   8.4 MiB/s ETA 00:00:38         
+/
+-
+- [43/50 files][464.3 MiB/772.7 MiB]  60% Done   8.3 MiB/s ETA 00:00:37         
+- [44/50 files][465.6 MiB/772.7 MiB]  60% Done   7.8 MiB/s ETA 00:00:39         
+\
+|
+| [44/50 files][473.0 MiB/772.7 MiB]  61% Done   7.7 MiB/s ETA 00:00:39         
+/
+-
+- [44/50 files][481.3 MiB/772.7 MiB]  62% Done   7.5 MiB/s ETA 00:00:39         
+\
+\ [44/50 files][489.0 MiB/772.7 MiB]  63% Done   7.4 MiB/s ETA 00:00:38         
+|
+/
+/ [44/50 files][497.5 MiB/772.7 MiB]  64% Done   7.4 MiB/s ETA 00:00:37         
+-
+\
+\ [44/50 files][506.0 MiB/772.7 MiB]  65% Done   7.6 MiB/s ETA 00:00:35         
+|
+| [44/50 files][515.3 MiB/772.7 MiB]  66% Done   8.2 MiB/s ETA 00:00:32         
+/
+-
+- [44/50 files][524.4 MiB/772.7 MiB]  67% Done   8.1 MiB/s ETA 00:00:31         
+\
+|
+| [44/50 files][533.6 MiB/772.7 MiB]  69% Done   8.6 MiB/s ETA 00:00:28         
+/
+/ [44/50 files][541.9 MiB/772.7 MiB]  70% Done   8.4 MiB/s ETA 00:00:28         
+-
+\
+\ [44/50 files][552.7 MiB/772.7 MiB]  71% Done   8.8 MiB/s ETA 00:00:25         
+|
+/
+/ [44/50 files][562.2 MiB/772.7 MiB]  72% Done   8.8 MiB/s ETA 00:00:24         
+-
+- [44/50 files][571.8 MiB/772.7 MiB]  73% Done   9.0 MiB/s ETA 00:00:22         
+\
+|
+| [44/50 files][580.8 MiB/772.7 MiB]  75% Done   8.8 MiB/s ETA 00:00:22         
+/
+-
+- [44/50 files][589.1 MiB/772.7 MiB]  76% Done   8.8 MiB/s ETA 00:00:21         
+\
+\ [44/50 files][598.1 MiB/772.7 MiB]  77% Done   8.5 MiB/s ETA 00:00:21         
+|
+| [45/50 files][603.2 MiB/772.7 MiB]  78% Done   8.3 MiB/s ETA 00:00:20         
+/
+/ [46/50 files][607.5 MiB/772.7 MiB]  78% Done   8.1 MiB/s ETA 00:00:20         
+-
+- [47/50 files][609.1 MiB/772.7 MiB]  78% Done   8.0 MiB/s ETA 00:00:20         
+\
+\ [47/50 files][615.5 MiB/772.7 MiB]  79% Done   7.2 MiB/s ETA 00:00:22         
+|
+/
+/ [47/50 files][622.2 MiB/772.7 MiB]  80% Done   6.8 MiB/s ETA 00:00:22         
+-
+\
+\ [47/50 files][629.7 MiB/772.7 MiB]  81% Done   6.6 MiB/s ETA 00:00:22         
+|
+| [47/50 files][637.2 MiB/772.7 MiB]  82% Done   6.5 MiB/s ETA 00:00:21         
+/
+-
+- [47/50 files][644.3 MiB/772.7 MiB]  83% Done   6.6 MiB/s ETA 00:00:20         
+- [48/50 files][644.8 MiB/772.7 MiB]  83% Done   6.5 MiB/s ETA 00:00:20         
+\
+|
+| [48/50 files][651.2 MiB/772.7 MiB]  84% Done   6.7 MiB/s ETA 00:00:18         
+/
+-
+- [48/50 files][658.2 MiB/772.7 MiB]  85% Done   6.6 MiB/s ETA 00:00:17         
+\
+\ [48/50 files][665.4 MiB/772.7 MiB]  86% Done   6.6 MiB/s ETA 00:00:16         
+|
+/
+/ [48/50 files][673.2 MiB/772.7 MiB]  87% Done   6.7 MiB/s ETA 00:00:15         
+-
+\
+\ [48/50 files][681.4 MiB/772.7 MiB]  88% Done   7.1 MiB/s ETA 00:00:13         
+|
+| [48/50 files][689.6 MiB/772.7 MiB]  89% Done   7.5 MiB/s ETA 00:00:11         
+/
+-
+- [48/50 files][697.1 MiB/772.7 MiB]  90% Done   7.6 MiB/s ETA 00:00:10         
+\
+\ [48/50 files][705.1 MiB/772.7 MiB]  91% Done   7.5 MiB/s ETA 00:00:09         
+|
+/
+/ [49/50 files][710.8 MiB/772.7 MiB]  91% Done   7.6 MiB/s ETA 00:00:08         
+-
+- [49/50 files][716.9 MiB/772.7 MiB]  92% Done   7.2 MiB/s ETA 00:00:08         
+\
+|
+| [49/50 files][723.9 MiB/772.7 MiB]  93% Done   6.9 MiB/s ETA 00:00:07         
+/
+-
+- [49/50 files][730.9 MiB/772.7 MiB]  94% Done   6.9 MiB/s ETA 00:00:06         
+\
+\ [49/50 files][736.8 MiB/772.7 MiB]  95% Done   6.6 MiB/s ETA 00:00:05         
+|
+/
+/ [49/50 files][743.0 MiB/772.7 MiB]  96% Done   6.4 MiB/s ETA 00:00:05         
+-
+- [49/50 files][749.2 MiB/772.7 MiB]  96% Done   6.4 MiB/s ETA 00:00:04         
+\
+|
+| [49/50 files][755.6 MiB/772.7 MiB]  97% Done   6.2 MiB/s ETA 00:00:03         
+/
+-
+- [49/50 files][762.3 MiB/772.7 MiB]  98% Done   6.2 MiB/s ETA 00:00:02         
+\
+\ [49/50 files][769.3 MiB/772.7 MiB]  99% Done   6.3 MiB/s ETA 00:00:01         
+|
+| [50/50 files][772.7 MiB/772.7 MiB] 100% Done   6.0 MiB/s ETA 00:00:00         
+/
+Operation completed over 50 objects/772.7 MiB.                                   
 

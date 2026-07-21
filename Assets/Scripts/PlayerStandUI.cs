@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 
 #if ADDRESSABLES
 using UnityEngine.AddressableAssets;
@@ -17,9 +17,12 @@ public class PlayerStandUI : MonoBehaviour
     public RectTransform navigationBarUI;
     public LearnUI UILearnCanvas;
     public PlayerChairManager playerChairManager;
-    [Header("Handle Position")]
-    [SerializeField] private RectTransform activePosition;
+
+    [Header("Handle Position")] [SerializeField]
+    private RectTransform activePosition;
+
     [SerializeField] private RectTransform deActivePosition;
+
     private void Awake()
     {
         playerChairManager = FindAnyObjectByType<PlayerChairManager>();
@@ -28,6 +31,7 @@ public class PlayerStandUI : MonoBehaviour
             standupButton.onClick.AddListener(playerChairManager.PlayerStandup);
             sitdownButton.onClick.AddListener(playerChairManager.PlayerSitdown);
         }
+
         UILearnCanvas.OnClickReturnBtn += playerChairManager.PlayerStandup;
 
         HideWatchVideoUI();
@@ -36,7 +40,7 @@ public class PlayerStandUI : MonoBehaviour
         ShowSitdownButton();
 
         UILearnCanvas.onCourseListShow += CourseListShow;
-        
+
         returnBtn.onClick.AddListener(ReturnMainScene);
     }
 
@@ -47,10 +51,10 @@ public class PlayerStandUI : MonoBehaviour
             standupButton.onClick.RemoveListener(playerChairManager.PlayerStandup);
             sitdownButton.onClick.RemoveListener(playerChairManager.PlayerSitdown);
         }
+
         UILearnCanvas.OnClickReturnBtn -= playerChairManager.PlayerStandup;
         UILearnCanvas.onCourseListShow -= CourseListShow;
         returnBtn.onClick.RemoveListener(ReturnMainScene);
-
     }
 
     private void ReturnMainScene()
@@ -59,15 +63,16 @@ public class PlayerStandUI : MonoBehaviour
         // LoadingTransition.Load_Scene("New Scene",false);
         LoadingTransition.LoadPreviousSceneOrDefault();
     }
-    
+
     private bool localIsShow = false;
+
     public void CourseListShow(bool isShow)
     {
         // hiển thị hoặc ẩn UI điều khiển video
         // nếu UI danh sách bài học được hiển thị thì ẩn UI điều khiển video
         if (!isShow)
         {
-            if(playerChairManager.playerState == PlayerChairManager.PlayerState.Sitdown)
+            if (playerChairManager.playerState == PlayerChairManager.PlayerState.Sitdown)
             {
                 ShowWatchVideoUI();
             }
@@ -76,40 +81,46 @@ public class PlayerStandUI : MonoBehaviour
         {
             HideWatchVideoUI();
         }
+
         localIsShow = isShow;
     }
 
     private bool isShowOneTime = false;
+
     private void Update()
     {
         bool canInteract = playerChairManager.currentCheckPoint;
         sitdownButton.interactable = canInteract;
         if (TutorialHandler.Instance.CurrentStep == TutorialStepType.GoToChair)
         {
-            if (isShowOneTime == false && playerChairManager.currentCheckPoint != null && playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
+            if (isShowOneTime == false && playerChairManager.currentCheckPoint != null &&
+                playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
             {
                 Debug.Log("Hiển thị hướng dẫn ngồi xuống");
                 TutorialHandler.Instance.SetCurrentStep(TutorialStepType.Sitdown);
                 isShowOneTime = true;
             }
         }
-        
     }
 
     private void ShowWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(true);
 
-        sitdownButton.GetComponent<RectTransform>().anchoredPosition = activePosition.anchoredPosition;
-        standupButton.GetComponent<RectTransform>().anchoredPosition = activePosition.anchoredPosition;
+        SetAnchoredPosition(activePosition.anchoredPosition);
     }
 
     private void HideWatchVideoUI()
     {
         navigationBarUI.gameObject.SetActive(false);
 
-        sitdownButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
-        standupButton.GetComponent<RectTransform>().anchoredPosition = deActivePosition.anchoredPosition;
+        SetAnchoredPosition(deActivePosition.anchoredPosition);
+    }
+
+    private void SetAnchoredPosition(Vector3 anchorPosition)
+    {
+        sitdownButton.GetComponent<RectTransform>().anchoredPosition = anchorPosition;
+        standupButton.GetComponent<RectTransform>().anchoredPosition = anchorPosition;
     }
 
     public void ShowSitdownButton()
@@ -145,3 +156,4 @@ public class PlayerStandUI : MonoBehaviour
         CourseListShow(localIsShow);
     }
 }
+

@@ -247,7 +247,7 @@ public class CourseListPageKyMonUI : MonoBehaviour
     }
 
     // ================== RENDER ==================
-
+    [ContextMenu("RenderAccordingToCurrentGroup")]
     void RenderAccordingToCurrentGroup()
     {
         if (!string.IsNullOrEmpty(_currentDesiredGroup))

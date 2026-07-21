@@ -38,7 +38,7 @@ public class KyMon_BuyButtonHandleUI : MonoBehaviour
         OnBuyClickedEvent?.Invoke();
     }
 
-    public void ShowBuyButton(string buyText)
+    public void SetBuyText(string buyText)
     {
         var tmp = buyBtn.GetComponentInChildren<TMP_Text>();
         if (tmp == null)
@@ -48,7 +48,10 @@ public class KyMon_BuyButtonHandleUI : MonoBehaviour
         }
 
         tmp.text = buyText;
-        
+    }
+    
+    public void ShowBuyButton()
+    {
         buyBtn.gameObject.SetActive(true);
         registerBtn.gameObject.SetActive(false);
     }
@@ -59,9 +62,9 @@ public class KyMon_BuyButtonHandleUI : MonoBehaviour
         registerBtn.gameObject.SetActive(true);
     }
 
-    public void BothButtons(string buyText = "Mua")
+    public void BothButtons()
     {
-        ShowBuyButton(buyText);
+        ShowBuyButton();
         ShowRegisterButton();
     }
 

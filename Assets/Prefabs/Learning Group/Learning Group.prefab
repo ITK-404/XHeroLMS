@@ -287,6 +287,102 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &688315783827731212
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4274488780157274411}
+  - component: {fileID: 1970699236297167927}
+  - component: {fileID: 657091954258085439}
+  - component: {fileID: 1052011668012584893}
+  m_Layer: 0
+  m_Name: Hightlight Chair Button (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4274488780157274411
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688315783827731212}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5100724019442142380}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0.4379959, y: -0.25790012}
+  m_SizeDelta: {x: 77.13745, y: 77.13751}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &1970699236297167927
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688315783827731212}
+  m_CullTransparentMesh: 1
+--- !u!114 &657091954258085439
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688315783827731212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 204f4f3e578ef4afea3b71e55fc7eec8, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1052011668012584893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688315783827731212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0612888bd2f548839382fc1d5bda926b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HighlightTutorialStep
+  listenStep: 1
+  onSameStep:
+    m_PersistentCalls:
+      m_Calls: []
+  onDifferentStep:
+    m_PersistentCalls:
+      m_Calls: []
+  highlightImg: {fileID: 657091954258085439}
 --- !u!1 &786004029366302461
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,6 +555,102 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1824515472213112571
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8809523782513874517}
+  - component: {fileID: 542137929116250423}
+  - component: {fileID: 806849753102668894}
+  - component: {fileID: 2210747666942768254}
+  m_Layer: 0
+  m_Name: Hightlight Chair Button
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &8809523782513874517
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824515472213112571}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4310896289827401109}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0.4379959, y: -0.174263}
+  m_SizeDelta: {x: 77.13745, y: 77.13751}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &542137929116250423
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824515472213112571}
+  m_CullTransparentMesh: 1
+--- !u!114 &806849753102668894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824515472213112571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 204f4f3e578ef4afea3b71e55fc7eec8, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &2210747666942768254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824515472213112571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0612888bd2f548839382fc1d5bda926b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HighlightTutorialStep
+  listenStep: 7
+  onSameStep:
+    m_PersistentCalls:
+      m_Calls: []
+  onDifferentStep:
+    m_PersistentCalls:
+      m_Calls: []
+  highlightImg: {fileID: 806849753102668894}
 --- !u!1 &2378229667805180424
 GameObject:
   m_ObjectHideFlags: 0
@@ -1895,15 +2087,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -10.926001
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 3.3815384
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 30.484
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1991,7 +2183,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: far clip plane
-      value: 1000
+      value: 2000
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 5031960781564390500, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
@@ -5017,6 +5209,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8519034785503814435}
     m_Modifications:
+    - target: {fileID: 508458427862174771, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 924705466073417351, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: m_AnchorMax.x
       value: 1
@@ -5190,6 +5386,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5967791382152491802}
     - target: {fileID: 6321479982358360172, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      propertyPath: highlightTransform
+      value: 
+      objectReference: {fileID: 8809523782513874517}
+    - target: {fileID: 6321479982358360172, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: playerChairManager
       value: 
       objectReference: {fileID: 7393169707463316099}
@@ -5319,7 +5519,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9094949413797586316, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: m_AspectRatio
-      value: 1.7777778
+      value: 2.164251
       objectReference: {fileID: 0}
     - target: {fileID: 9134903083417484563, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: updateOnScreenChange
@@ -5328,7 +5528,13 @@ PrefabInstance:
     m_RemovedComponents:
     - {fileID: 5165105561906739961, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 2277504295554111148, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4274488780157274411}
+    - targetCorrespondingSourceObject: {fileID: 7098053694486034325, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8809523782513874517}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 5195623888933858139, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       insertIndex: -1

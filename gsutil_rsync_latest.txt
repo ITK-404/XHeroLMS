@@ -1,10 +1,65 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases-dev/android/builds/1.0.10/" "gs://dlc-lms/addressables/releases-dev/android/latest/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/" "gs://dlc-lms/addressables/releases-dev/ios/latest/"
 ExitCode=0
 
 --- STDOUT ---
 
 
 --- STDERR ---
+WARNING:  Python 3.9.x is no longer officially supported by the Google Cloud CLI
+and may not function correctly. Please use Python version 3.10 and up.
+To reinstall gcloud, run:
+    $ gcloud components reinstall
+
+This will also prompt to install a compatible version of Python.
+
+If you have a compatible Python interpreter installed, you can use it by setting
+the CLOUDSDK_PYTHON environment variable to point to it.
+
+/Users/dev/google-cloud-sdk/platform/gsutil/third_party/urllib3/src/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+WARNING: gsutil rsync uses hashes when modification time is not available at
+both the source and destination. Your crcmod installation isn't using the
+module's C extension, so checksumming will run very slowly. If this is your
+first rsync since updating gsutil, this rsync can take significantly longer than
+usual. For help installing the extension, please see "gsutil help crcmod".
+
 Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
 Starting synchronization...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog.hash [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_phong_ky_mon_scenes_all_b4866dddcb0ade8df053374ef7dbae58.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_newscene_scenes_new_scene_entry_8738f4fb3bf2cd8252943669456713de.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog_1.0.10.json [Content-Type=application/json]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_dai_dao_chi_gian_1_scenes_all_bc514e8abc71121fa8065b606f8e4914.bundle [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_phong_tuyen_sinh_scenes_all_af8a1ec07562a47999d0ce97b5b28b03.bundle [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog.json [Content-Type=application/json]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_dai_dao_chi_gian_2_scenes_all_d6336d76959b67b6a834d643c3a7875c.bundle [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/cloud_shared_assets_assets_prefabs_ui_a35c68b219a0e94629d5b033b3626d56.bundle [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.10/catalog_1.0.10.hash [Content-Type=application/octet-stream]...
+/ [0/10 files][    0.0 B/501.3 MiB]   0% Done                                   
+/ [1/10 files][ 62.8 MiB/501.3 MiB]  12% Done                                   
+/ [2/10 files][141.2 MiB/501.3 MiB]  28% Done                                   
+/ [3/10 files][315.5 MiB/501.3 MiB]  62% Done                                   
+/ [4/10 files][405.6 MiB/501.3 MiB]  80% Done                                   
+/ [5/10 files][457.3 MiB/501.3 MiB]  91% Done                                   
+/ [6/10 files][500.9 MiB/501.3 MiB]  99% Done                                   
+/ [7/10 files][500.9 MiB/501.3 MiB]  99% Done                                   
+-
+- [8/10 files][501.3 MiB/501.3 MiB]  99% Done                                   
+- [9/10 files][501.3 MiB/501.3 MiB]  99% Done                                   
+- [10/10 files][501.3 MiB/501.3 MiB] 100% Done                                  
+Operation completed over 10 objects/501.3 MiB.                                   
 

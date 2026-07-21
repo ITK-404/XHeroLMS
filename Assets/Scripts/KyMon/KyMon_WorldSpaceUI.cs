@@ -43,6 +43,18 @@ public class KyMon_WorldSpaceUI : WorldSpaceUI
       container.localScale = Vector3.one * targetScale;
    }
 
+   public bool GetIsPlayerFacingIcon()
+   {
+      var playerForward = player.transform.forward;
+      var directionToTarget = target.transform.position - player.transform.position;
+      directionToTarget.Normalize();
+
+      playerForward.y = 0;
+      directionToTarget.y = 0;
+      var dot = Vector3.Dot(playerForward, directionToTarget);
+      return dot >= 0;
+   }
+
    public void SetActive(bool isActive)
    {
       gameObject.SetActive(isActive);

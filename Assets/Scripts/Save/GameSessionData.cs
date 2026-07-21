@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
 [Serializable]
@@ -11,7 +12,7 @@ public class GameSessionData
     public static string CurrentVersion => Application.version;
     public DateTime SavedAt { get; set; } = DateTime.Now;
     public SceneLocation SceneLocation;
-    public CourseData CourseData;
+    [FormerlySerializedAs("CourseData")] public SaveCourseData saveCourseData;
     public static GameSessionData CaptureCurrentState(GameObject player)
     {
         return new GameSessionData
@@ -19,18 +20,18 @@ public class GameSessionData
             SaveVersion = Application.version,
             UserID   = TokenStore.UserID,
             SceneLocation = CaptureFromPlayer(player),
-            CourseData = CaptureCourseData()
+            saveCourseData = CaptureCourseData()
         };
     }
 
-    private static CourseData CaptureCourseData()
+    private static SaveCourseData CaptureCourseData()
     {
         var tracker = LessonProgressTracker.Instance;
         if (tracker != null && !string.IsNullOrEmpty(tracker.CourseID))
         {
-            CourseData courseData = new();
-            courseData.seoId = SeoResolver.seoCourse;
-            return courseData;
+            SaveCourseData saveCourseData = new();
+            saveCourseData.seoId = SeoResolver.seoCourse;
+            return saveCourseData;
         }
 
         return new();
@@ -69,7 +70,7 @@ public class SceneLocation
 }
 
 [Serializable]
-public class CourseData
+public class SaveCourseData
 {
     // using this id to check
     public string seoId;
