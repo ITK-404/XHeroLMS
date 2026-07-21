@@ -148,6 +148,6 @@ public class NPCInteraction : MonoBehaviour
 
     private bool GetActiveWorldSpaceState()
     {
-        return TutorialHandler.Instance != null && TutorialHandler.Instance.IsPlayedBefore();
+        return true;
     }
 }

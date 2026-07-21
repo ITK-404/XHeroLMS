@@ -298,7 +298,6 @@ GameObject:
   - component: {fileID: 4274488780157274411}
   - component: {fileID: 1970699236297167927}
   - component: {fileID: 657091954258085439}
-  - component: {fileID: 1052011668012584893}
   m_Layer: 0
   m_Name: Hightlight Chair Button (1)
   m_TagString: Untagged
@@ -363,26 +362,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &1052011668012584893
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 688315783827731212}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0612888bd2f548839382fc1d5bda926b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HighlightTutorialStep
-  listenStep: 1
-  onSameStep:
-    m_PersistentCalls:
-      m_Calls: []
-  onDifferentStep:
-    m_PersistentCalls:
-      m_Calls: []
-  highlightImg: {fileID: 657091954258085439}
 --- !u!1 &786004029366302461
 GameObject:
   m_ObjectHideFlags: 0
@@ -566,7 +545,6 @@ GameObject:
   - component: {fileID: 8809523782513874517}
   - component: {fileID: 542137929116250423}
   - component: {fileID: 806849753102668894}
-  - component: {fileID: 2210747666942768254}
   m_Layer: 0
   m_Name: Hightlight Chair Button
   m_TagString: Untagged
@@ -631,26 +609,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &2210747666942768254
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1824515472213112571}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0612888bd2f548839382fc1d5bda926b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HighlightTutorialStep
-  listenStep: 7
-  onSameStep:
-    m_PersistentCalls:
-      m_Calls: []
-  onDifferentStep:
-    m_PersistentCalls:
-      m_Calls: []
-  highlightImg: {fileID: 806849753102668894}
 --- !u!1 &2378229667805180424
 GameObject:
   m_ObjectHideFlags: 0
@@ -1625,9 +1583,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1881325753884978729, guid: 52a17a87226c3fe459e457fe90a48486, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1522473452879651830}
-    - targetCorrespondingSourceObject: {fileID: 1881325753884978729, guid: 52a17a87226c3fe459e457fe90a48486, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 3702851032144456002}
   m_SourcePrefab: {fileID: 100100000, guid: 52a17a87226c3fe459e457fe90a48486, type: 3}
 --- !u!1 &1808993143451802003 stripped
 GameObject:
@@ -1678,20 +1633,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &3702851032144456002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1808993143451802003}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c131ff91badc2bf4db5aa85fdd3bf91c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialButtonHandle
-  previousStep: 0
-  nextStep: 0
 --- !u!224 &5853440901019675500 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5925192430345346262, guid: 52a17a87226c3fe459e457fe90a48486, type: 3}
@@ -2087,15 +2028,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -10.926001
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.3815384
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 30.484
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2183,7 +2124,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: far clip plane
-      value: 2000
+      value: 1000
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 5031960781564390500, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
@@ -3353,10 +3294,6 @@ PrefabInstance:
       propertyPath: m_SortingOrder
       value: 400
       objectReference: {fileID: 0}
-    - target: {fileID: 4388008772305009045, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
-      propertyPath: tutorialHandler
-      value: 
-      objectReference: {fileID: 1650563903860171818}
     - target: {fileID: 8804572571912527817, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
       propertyPath: m_Name
       value: AskForReplayTutorailUI
@@ -4145,7 +4082,9 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -35.87265
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6734425620015955355, guid: c006f246cecf19b47b844907ca46c541, type: 3}
+    - {fileID: 6337010107758716815, guid: c006f246cecf19b47b844907ca46c541, type: 3}
     m_RemovedGameObjects:
     - {fileID: 1929552663786407887, guid: c006f246cecf19b47b844907ca46c541, type: 3}
     m_AddedGameObjects:
@@ -4162,17 +4101,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5406028186277731836, guid: c006f246cecf19b47b844907ca46c541, type: 3}
   m_PrefabInstance: {fileID: 4690057274984383397}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1650563903860171818 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6337010107758716815, guid: c006f246cecf19b47b844907ca46c541, type: 3}
-  m_PrefabInstance: {fileID: 4690057274984383397}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e1c60cf6116388a49a829f23c7ba19c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialHandler
 --- !u!224 &6403000624922188999 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1858413360034946914, guid: c006f246cecf19b47b844907ca46c541, type: 3}
@@ -5519,7 +5447,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9094949413797586316, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: m_AspectRatio
-      value: 2.164251
+      value: 2.1653333
       objectReference: {fileID: 0}
     - target: {fileID: 9134903083417484563, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
       propertyPath: updateOnScreenChange
@@ -5527,6 +5455,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 5165105561906739961, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 1565438945447198755, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 5309151855833008434, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 3055463235474572839, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 3033171212905496443, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 4111256079282538219, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 6762429954906545161, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
+    - {fileID: 4722083390627347443, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 2277504295554111148, guid: bf687ac6514d51444a9f60ce6212f1d1, type: 3}
@@ -6632,6 +6567,7 @@ PrefabInstance:
     m_RemovedComponents:
     - {fileID: 2709777481377513684, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
     - {fileID: 2168393171170740835, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
+    - {fileID: 9147504617450012802, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
     m_RemovedGameObjects:
     - {fileID: 6802116710209502587, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
     - {fileID: 3270188041243891897, guid: dd82ec816075e5a4ba89d0ffad0ab939, type: 3}
@@ -7341,30 +7277,8 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 7171344456870563205, guid: 4c3fb32816c78594eb8b16ee66f8e64a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 3796183306182796019}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4c3fb32816c78594eb8b16ee66f8e64a, type: 3}
---- !u!1 &1474680383121521172 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7171344456870563205, guid: 4c3fb32816c78594eb8b16ee66f8e64a, type: 3}
-  m_PrefabInstance: {fileID: 8643153390174304145}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &3796183306182796019
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1474680383121521172}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 91d73f579dd70a644a8f72bc4f61d571, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialChair
-  step_ID: 
-  isUI: 0
 --- !u!4 &8081695908694280336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 564451522121711361, guid: 4c3fb32816c78594eb8b16ee66f8e64a, type: 3}

@@ -48,13 +48,6 @@ public class PlayerChairManager : MonoBehaviour
     public void PlayerStandup()
     {
         ResolveRuntimeReferences();
-        HideTutorialSitdownStandupUI();
-
-        if (TutorialHandler.Instance != null &&
-            TutorialHandler.Instance.CurrentStep == TutorialStepType.Standup)
-        {
-            TutorialHandler.Instance.Save();
-        }
 
         StandUpStateHandle();
 
@@ -78,7 +71,6 @@ public class PlayerChairManager : MonoBehaviour
     {
         ResolveRuntimeReferences();
         // sit down logic, hardcode logic
-        HideTutorialSitdownStandupUI();
 
         ChairCheckPoint temp = currentCheckPoint;
 
@@ -101,19 +93,9 @@ public class PlayerChairManager : MonoBehaviour
                 EnterLearningFocusFallback();
 
             ResumeCourseVideoAfterSitDown();
-            SetTutorialToNextStep();
         });
     }
-
-    private void SetTutorialToNextStep()
-    {
-        if (TutorialHandler.Instance != null &&
-            TutorialHandler.Instance.CurrentStep == TutorialStepType.Sitdown)
-        {
-            TutorialHandler.Instance.SetCurrentStep(TutorialStepType.OpenLesson);
-        }
-    }
-
+    
     private void SitDownStateHandle(ChairCheckPoint temp)
     {
         playerState = PlayerState.Sitdown;
@@ -290,12 +272,6 @@ public class PlayerChairManager : MonoBehaviour
 
         if (learningFocusMode == null)
             learningFocusMode = FindFirstObjectByType<LearningFocusMode>(FindObjectsInactive.Include);
-    }
-
-    private static void HideTutorialSitdownStandupUI()
-    {
-        if (TutorialHandler.Instance != null && TutorialHandler.Instance.sitdownStandupUI != null)
-            TutorialHandler.Instance.sitdownStandupUI.SetActive(false);
     }
 
     private void EnterLearningFocusFallback()

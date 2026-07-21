@@ -872,10 +872,6 @@ public void EnterFullScreenMode()
 
     public void ClickNextCourse()
     {
-        if (!TutorialHandler.Instance.IsPlayedBefore())
-        {
-            return;
-        }
         RegisterInteraction();
 
         try

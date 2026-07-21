@@ -7,16 +7,12 @@ using UnityEngine.Serialization;
 
 public class AutoReplayController : MonoBehaviour
 {
-    [SerializeField] private TutorialHandler tutorialHandler;
     [SerializeField] private AskForReplayTutorialUI view;
     [FormerlySerializedAs("askForReplayAnimation")] [SerializeField] private SmokeTransitionAnimation smokeTransitionAnimation;
 
     private bool isShowBefore = false;    
     private void Awake()
     {
-        if(tutorialHandler)
-            tutorialHandler.OnCompleteTutorial += DelayShowUI;
-        
         view.OnClickedAcceptEvent += ReplayTutorial;
         view.OnClickedDeclineEvent += ContinueLearn;
     }
@@ -28,9 +24,6 @@ public class AutoReplayController : MonoBehaviour
 
     private void OnDestroy()
     {
-        if(tutorialHandler)
-            tutorialHandler.OnCompleteTutorial -= DelayShowUI;
-        
         view.OnClickedAcceptEvent -= ReplayTutorial;
         view.OnClickedDeclineEvent -= ContinueLearn;
     }
@@ -61,7 +54,6 @@ public class AutoReplayController : MonoBehaviour
     {
         yield return smokeTransitionAnimation.StartTransitionAsync().ToCoroutine();
         LoadingTransition.Load_Scene(SceneManager.GetActiveScene().name);
-        tutorialHandler.ResetKey();
     }
     
 
