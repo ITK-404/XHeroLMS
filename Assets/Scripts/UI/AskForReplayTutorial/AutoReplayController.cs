@@ -43,6 +43,8 @@ public class AutoReplayController : MonoBehaviour
 
     private void DelayShowUI()
     {
+        if (isShowBefore) return;
+        isShowBefore = true;
         StartCoroutine(AskForReplayTutorial());
     }
     
@@ -50,9 +52,6 @@ public class AutoReplayController : MonoBehaviour
     private void ReplayTutorial()
     {
         // view.Hide();
-        if (isShowBefore) return;
-        isShowBefore = true;
-        
         view.SetInteractable(false);
         StartCoroutine(WaitForLoading());
         Debug.Log("[AutoReplayController] replay tutorial");
