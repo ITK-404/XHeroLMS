@@ -31,6 +31,7 @@ public class BookHandler : MonoBehaviour
 
     private const string SceneRoom1 = "dai_dao_chi_gian_1";
     private const string SceneRoom2 = "dai_dao_chi_gian_2";
+    private const string ScenePhongKyMon = "phong_ky_mon";
 
     private void Awake()
     {
@@ -134,10 +135,7 @@ public class BookHandler : MonoBehaviour
             return;
         }
 
-        if (BuyReviewCourseManager.Instance != null)
-            BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
-        else
-            StartCoroutine(TryEnterCourse());
+        BuyReviewCourseManager.Instance.StartCoroutine(TryEnterCourse());
     }
 
     private bool CanEnterCourseFromCurrentAuth()
@@ -261,14 +259,10 @@ public class BookHandler : MonoBehaviour
 
             yield break;
         }
-        var reviewManager = BuyReviewCourseManager.Instance;
-        var popup = reviewManager != null ? reviewManager.confirmPopup : null;
+        var popup = BuyReviewCourseManager.Instance.confirmPopup;
         if (popup == null)
         {
-            Debug.LogWarning("[BookHandler] Confirm popup is null. Load target scene directly: " + targetScene);
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.Resume();
-
+            AudioManager.Instance.Resume();
             LoadingTransition.Load_Scene(targetScene);
             yield break;
         }
@@ -276,9 +270,7 @@ public class BookHandler : MonoBehaviour
         popup.Show();
         popup.Init(book_name, () =>
         {
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.Resume();
-
+            AudioManager.Instance.Resume();
             LoadingTransition.Load_Scene(targetScene);
         });
     }
@@ -306,6 +298,18 @@ public class BookHandler : MonoBehaviour
         
         if (SeoResolver.TryGetSceneNameBySeoID(book_seo, out var customScene))
         {
+            // TẠM THỜI: Phòng Kỳ Môn chưa hoàn thiện.
+            // Giữ nguyên JSON và chuyển toàn bộ khóa học trỏ tới <phong_ky_mon>
+            // sang dai_dao_chi_gian_2. Khi phòng hoàn thiện, chỉ cần xóa khối if này.
+            if (IsScene(customScene, ScenePhongKyMon))
+            {
+                Debug.LogWarning(
+                    $"[BookHandler] Temporary redirect scene {customScene} -> {SceneRoom2}. seo={book_seo}"
+                );
+
+                return SceneRoom2;
+            }
+
             return customScene;
         }
         // Khóa đã sở hữu vào phòng 2
@@ -318,6 +322,21 @@ public class BookHandler : MonoBehaviour
         );
 
         return SceneRoom1;
+    }
+
+    private static bool IsScene(string sceneName, string expectedScene)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName) || string.IsNullOrWhiteSpace(expectedScene))
+            return false;
+
+        string normalizedScene = sceneName.Trim().Trim('<', '>');
+        string normalizedExpected = expectedScene.Trim().Trim('<', '>');
+
+        return string.Equals(
+            normalizedScene,
+            normalizedExpected,
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 
     private bool IsCoHoc1Seo(string seo)
