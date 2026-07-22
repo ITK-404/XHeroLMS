@@ -1204,11 +1204,6 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    public void MoveToChair(ChairCheckPoint chairCheckPoint)
-    {
-        MoveToChairCheckPoint(chairCheckPoint);
-    }
-    
     public bool MoveToChairCheckPoint(ChairCheckPoint chairCheckPoint)
     {
         StopWaitToMoveChair();

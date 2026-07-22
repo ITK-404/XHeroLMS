@@ -68,4 +68,9 @@ public class LearnUI : MonoBehaviour
         Debug.Log("Hide Learn UI");
         container.gameObject.SetActive(false);
     }
+
+    public bool GetCourseToggleIsOn()
+    {
+        return toggleLessonScrollView.currentState == ToggleBaseUI.State.Active;
+    }
 }
