@@ -37,13 +37,13 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
         
         var targetRotation = Quaternion.LookRotation(direction);
         pointClickSystem.transform.DORotateQuaternion(targetRotation, 3f);
-        isClick = true;
     }
 
     private void TryClickToChairCheckPoint()
     {
         // find tutorial check point
         pointClickSystem.MoveToChairCheckPoint(tutorialCheckPoint);
+        isClick = true;
     }
 
     public override bool IsCompleted()

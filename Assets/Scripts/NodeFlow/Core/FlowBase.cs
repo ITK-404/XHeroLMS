@@ -24,7 +24,7 @@ public abstract class FlowBase : MonoBehaviour
         cancellationTokenSource?.Dispose();
     }
 
-    public bool IsFlowStarted() => isRunning;
+    public bool IsRunning() => isRunning;
 
     public async UniTaskVoid RunFlow()
     {
