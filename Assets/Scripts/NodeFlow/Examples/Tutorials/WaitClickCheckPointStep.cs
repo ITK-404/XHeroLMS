@@ -7,7 +7,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
 {
     [SerializeField] private ChairCheckPoint tutorialCheckPoint;
     [SerializeField] private Button chairCheckPoint;
-    private PointClickSystem pointClickSystem;
+    private PointClickSystem pointClickSystem;  
 
     private bool isClick = false;
     
@@ -19,6 +19,11 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     private void OnDestroy()
     {
         chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
+    }
+
+    private void Start()
+    {
+        chairCheckPoint.GetComponent<UIFollowFirstChairCheckPoint>().SetTarget(tutorialCheckPoint);
     }
 
     public override void Enter()

@@ -24,11 +24,21 @@ public class FocusHandManager : MonoBehaviour
     private void OnDestroy()
     {
         Instance = null;
-    }
+    }   
+    
 
     public void SetToTargetRect(RectTransform targetAnchor, string focusText)
     {
+        this.targetAnchor = targetAnchor;
         StartCoroutine(WaitForLoad(targetAnchor, focusText));
+    }
+
+    private RectTransform targetAnchor;
+
+    private void LateUpdate()
+    {
+        if (targetAnchor == null) return;
+        anchorPoint.position = targetAnchor.position;
     }
 
     private IEnumerator WaitForLoad(RectTransform targetAnchor, string focusText)

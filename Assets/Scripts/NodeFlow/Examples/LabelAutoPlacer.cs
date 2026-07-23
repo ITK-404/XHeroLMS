@@ -155,8 +155,10 @@ public class LabelAutoPlacer : MonoBehaviour
         if (!found) chosen = bestFallback;
 
         ApplyDirection(chosen, anchorLocal);
+        curDir = chosen;
     }
 
+    public Direction curDir;
     private Rect GetCandidateRect(Direction dir, Vector2 anchorLocal, Vector2 size)
     {
         switch (dir)
