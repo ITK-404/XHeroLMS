@@ -12,6 +12,7 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private List<TutorialStepBehaviour> tutorialList = new();
     [SerializeField] private Image backgroundImg;
     [SerializeField] private RectTransform targetParent;
+
     protected override void Awake()
     {
         base.Awake();
@@ -35,11 +36,12 @@ public class ClassTutorialFlow : FlowBase
 
     private async UniTask HandleFlow()
     {
+        await UniTask.WaitForSeconds(2f);
         ShowBlockPanel(true);
         RunFlow().Forget();
         await UniTask.WaitForSeconds(2f);
-        await UniTask.WaitUntil(() => !IsRunning(), 
-            PlayerLoopTiming.Update, 
+        await UniTask.WaitUntil(() => !IsRunning(),
+            PlayerLoopTiming.Update,
             this.GetCancellationTokenOnDestroy());
         ShowBlockPanel(false);
     }
