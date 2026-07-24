@@ -13,12 +13,10 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     
     private void Awake()
     {
-        chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
     }
 
     private void OnDestroy()
     {
-        chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
     }
 
     private void Start()
@@ -28,9 +26,16 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
 
     public override void Enter()
     {
+        chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
         pointClickSystem = FindFirstObjectByType<PointClickSystem>();
         base.Enter();
         RotateToPoint();
+    }
+
+    public override void Exit()
+    {
+        base.Exit();
+        chairCheckPoint.onClick.RemoveListener(TryClickToChairCheckPoint);
     }
 
     private void RotateToPoint()

@@ -14,12 +14,18 @@ public class SmokeTransitionAnimation : MonoBehaviour
 
     private void Awake()
     {
-        transitionImages = GetComponentsInChildren<Image>();
         HideAll();
     }
-
+    [ContextMenu("Testing")]
+    public void POolay()
+    {
+        StartTransitionAsync().Forget();
+    }
+    
     public async UniTask StartTransitionAsync()
     {
+        transitionImages = GetComponentsInChildren<Image>(includeInactive: true);
+        
         Sequence sequence = DOTween.Sequence();
 
         for (int i = 0; i < transitionImages.Length; i++)
