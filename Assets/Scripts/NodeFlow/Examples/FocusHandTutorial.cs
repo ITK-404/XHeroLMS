@@ -27,9 +27,13 @@ public class FocusHandTutorial : MonoBehaviour
         FocusHandManager.Instance.Hide();
     }
 
-
     private void OnEnterState()
     {
+        if (targetAnchor == null)
+        {
+            Debug.LogError("This rect transform is null");
+            return;
+        }
         FocusHandManager.Instance.SetToTargetRect(targetAnchor,focusHandDescription);
     }
 }

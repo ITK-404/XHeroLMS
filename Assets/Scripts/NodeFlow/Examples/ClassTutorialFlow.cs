@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 public class ClassTutorialFlow : FlowBase
 {
-    [Header("References")] 
-    [SerializeField] private TutorialFlowBuilder nextBuilder;
+    [Header("References")]
+    [SerializeField] private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
 
     [SerializeField] private TutorialFlowBuilder builder;
     [Header("UI")] [SerializeField] private Image backgroundImg;
@@ -22,9 +22,9 @@ public class ClassTutorialFlow : FlowBase
         ShowBlockPanel(false);
     }
 
-    private void InitSetup(GameObject builder)
+    private void InitSetup(GameObject builderGO)
     {
-        foreach (var item in builder.GetComponentsInChildren<AutoParentUIElements>())
+        foreach (var item in builderGO.GetComponentsInChildren<AutoParentUIElements>())
         {
             item.SetParent(targetParent);
         }
@@ -49,14 +49,35 @@ public class ClassTutorialFlow : FlowBase
             this.GetCancellationTokenOnDestroy());
 
         ShowBlockPanel(false);
-        
-        // check next tutorial if exit 
-        if (nextBuilder != null)
+
+        // Flow hiện tại đã chạy xong tại đây.
+        var next = ResolveNextBuilder();
+        if (next != null)
         {
-            builder = nextBuilder;
+            builder = next;
+            HandleFlow().Forget(); // chạy tiếp tutorial kế tiếp
             return;
         }
+
         ReplayTutorial().Forget();
+        // Không có next tutorial -> dừng, không tự động chạy replay.
+        // ReplayTutorial() chỉ nên được gọi từ nơi khác (vd: nút Replay ngoài UI), nếu cần.
+    }
+
+    /// <summary>
+    /// Quyết định tutorial tiếp theo. Hardcode logic theo context ngay tại đây.
+    /// Trả về null nghĩa là không có next -> HandleFlow dừng luôn, không tự chạy gì thêm.
+    /// </summary>
+    private TutorialFlowBuilder ResolveNextBuilder()
+    {
+        return nextBuilder;
+    }
+
+    private bool SomeContextCondition()
+    {
+        // TODO: thay bằng check thật, ví dụ:
+        // return QuestManager.Instance.IsCompleted("QuestA");
+        return false;
     }
 
     private async UniTask ReplayTutorial()
@@ -96,5 +117,4 @@ public class ClassTutorialFlow : FlowBase
         var initializeNode = builder.BuildFlowNode();
         return initializeNode;
     }
-    
 }

@@ -1039,7 +1039,7 @@ GameObject:
   - component: {fileID: 6437442878799164133}
   - component: {fileID: 6481668839558685276}
   m_Layer: 5
-  m_Name: TutorialCanvas
+  m_Name: Class Tutorial Flow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1144,11 +1144,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6f0114d17e04882b57e0a884dc7d513, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClassTutorialFlow
+  nextBuilder: {fileID: 0}
   builder: {fileID: 712734600859751110}
   backgroundImg: {fileID: 8989022683466063518}
   targetParent: {fileID: 4132021658885575380}
-  askForReplayTutorialUI: {fileID: 0}
-  autoReplayController: {fileID: 0}
+  askForReplayTutorialUI: {fileID: 702154441998807986}
+  autoReplayController: {fileID: 596945335964383533}
 --- !u!1 &1787760413063964191
 GameObject:
   m_ObjectHideFlags: 0
@@ -1162,7 +1163,7 @@ GameObject:
   - component: {fileID: 7384664845847002006}
   - component: {fileID: 5071041514372064510}
   m_Layer: 5
-  m_Name: TutorialCanvas (1)
+  m_Name: Transition Smoke Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5001,15 +5002,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -10.926001
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 3.3815384
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 30.484
       objectReference: {fileID: 0}
     - target: {fileID: 4203076467514922102, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -5097,7 +5098,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6976434781779265749, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
       propertyPath: far clip plane
-      value: 1000
+      value: 2000
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 5031960781564390500, guid: ae5971cbeaea80e4698c3db47c9004f4, type: 3}
@@ -6328,6 +6329,28 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
+--- !u!114 &596945335964383533 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4388008772305009045, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
+  m_PrefabInstance: {fileID: 3795848545722040504}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67eea1ab30334ceba80c5e03ce8070a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoReplayController
+--- !u!114 &702154441998807986 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4400893811090207498, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
+  m_PrefabInstance: {fileID: 3795848545722040504}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dfa9df92bad74371be2c3f2de5a376b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AskForReplayTutorialUI
 --- !u!224 &3872717032740330235 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 77466896787937859, guid: 02a7b488e56eb493ebc649f1a177e4a4, type: 3}
