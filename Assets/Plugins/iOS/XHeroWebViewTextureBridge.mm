@@ -857,7 +857,7 @@ static void XHeroStartAVPlayerWithStreamURL(NSString *streamURL) {
     };
 
     NSDictionary *assetOptions = @{
-        AVURLAssetHTTPHeaderFieldsKey: headers
+        @"AVURLAssetHTTPHeaderFieldsKey": headers
     };
 
     AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:assetOptions];
