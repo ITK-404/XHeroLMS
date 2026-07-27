@@ -37,7 +37,7 @@ public class ClassTutorialFlow : FlowBase
 
     private async UniTask HandleFlow()
     {
-        GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
+        // GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
         await UniTask.WaitForSeconds(2f);
 
         ShowBlockPanel(true);
