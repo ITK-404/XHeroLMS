@@ -15,6 +15,7 @@ public class WaitForClickButtonNode : FlowNode
         CancellationToken cancellationToken)
     {
         await button.OnClickAsync(cancellationToken);
+        // await button.OnClickAsync(button.destroyCancellationToken);
 
         return NodeResult.Completed;
     }

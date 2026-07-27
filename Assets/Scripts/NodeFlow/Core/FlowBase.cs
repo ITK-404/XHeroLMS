@@ -34,12 +34,11 @@ public abstract class FlowBase : MonoBehaviour
             return;
         }
 
+        cancellationTokenSource?.Dispose(); // dispose CTS cũ nếu có, tránh leak
         cancellationTokenSource = new CancellationTokenSource();
 
         CutsceneContext context = new CutsceneContext();
-
         FlowNode startNode = CreateFlow();
-
         flowRunner = new CutsceneFlowRunner();
         isRunning = true;
 
@@ -47,19 +46,20 @@ public abstract class FlowBase : MonoBehaviour
 
         try
         {
-            await flowRunner.RunAsync(
-                startNode,
-                context,
-                cancellationTokenSource.Token
-            );
-
+            await flowRunner.RunAsync(startNode, context, cancellationTokenSource.Token);
             Debug.Log("[FlowBase] Flow completed");
-            isRunning = false;
         }
         catch (OperationCanceledException)
         {
             Debug.Log("[FlowBase] Flow cancelled");
-            isRunning = false;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[FlowBase] Flow error: {ex}");
+        }
+        finally
+        {
+            isRunning = false; // LUÔN reset, dù thành công, bị cancel, hay lỗi
         }
     }
 

@@ -33,7 +33,7 @@ public class ActionChoiceViewUI : UIView
     {
         OnShowOptionOne?.Invoke();
     }
-    private void ClickReturnBtn() => OnClickReturnBtn?.Invoke();
+    public void ClickReturnBtn() => OnClickReturnBtn?.Invoke();
     
    
     private void OnClickOptionTwo()
@@ -41,3 +41,4 @@ public class ActionChoiceViewUI : UIView
         OnShowOptionTwo?.Invoke();
     }
 }
+

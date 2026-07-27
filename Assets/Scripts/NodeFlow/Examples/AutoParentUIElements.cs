@@ -9,8 +9,8 @@ public class AutoParentUIElements : MonoBehaviour
 
     private TutorialStepBehaviour behaviour;
 
-    private readonly List<Transform> oldParents = new();
-    private readonly List<int> oldSiblingIndexes = new();
+    private List<Transform> oldParents = new();
+    private List<int> oldSiblingIndexes = new();
 
     private bool isInitialized;
 
