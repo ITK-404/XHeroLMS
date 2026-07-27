@@ -460,13 +460,19 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         ApplyBridgeTextureToTarget();
         ApplyRuntimeFramePacing();
 
+#if UNITY_IOS && !UNITY_EDITOR
+        string bridgeRoute = "iOS AVPlayer native texture bridge";
+#else
+        string bridgeRoute = "native WebView texture bridge";
+#endif
+
         if (!PlatformStart(iframeUrl, textureWidth, textureHeight, frameRate))
         {
-            Fail("Native WebView texture bridge failed to start.");
+            Fail($"{bridgeRoute} failed to start.");
             yield break;
         }
 
-        Debug.Log($"[{MethodName}] Load iframe into native WebView texture bridge: {iframeUrl}");
+        Debug.Log($"[{MethodName}] Load iframe into {bridgeRoute}: {iframeUrl}");
 
         statePollRoutine = StartCoroutine(PollVideoState());
 
@@ -475,8 +481,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
             byte[] frame = PlatformConsumeFrame();
             if (frame != null && frame.Length > 0)
             {
-                ApplyFrame(frame);
                 ParseState(PlatformGetState());
+                ApplyFrame(frame);
 
                 if (!IsReady && HasPlayableVideoFrame())
                 {
@@ -486,7 +492,7 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
                     firstFrameReady = null;
                     PlayWebVideo();
                     SetVolume(1f);
-                    Debug.Log($"[{MethodName}] First native WebView texture frame READY | time={CurrentTime:F2}/{Duration:F2} playing={IsPlaying}");
+                    Debug.Log($"[{MethodName}] First native video texture frame READY | time={CurrentTime:F2}/{Duration:F2} playing={IsPlaying}");
                 }
             }
 
@@ -519,7 +525,28 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
         if (texture == null)
             return;
 
-#if (UNITY_IOS && !UNITY_EDITOR) || UNITY_EDITOR_WIN
+#if UNITY_IOS && !UNITY_EDITOR
+        int width = SourceVideoWidth > 0 ? SourceVideoWidth : textureWidth;
+        int height = SourceVideoHeight > 0 ? SourceVideoHeight : textureHeight;
+        int expectedLength = width * height * 4;
+
+        if (frame.Length != expectedLength)
+            return;
+
+        if (texture.width != width || texture.height != height)
+        {
+            Destroy(texture);
+            texture = new Texture2D(width, height, GetTextureFormat(), false, false);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            textureWidth = width;
+            textureHeight = height;
+            ApplyBridgeTextureToTarget();
+        }
+
+        texture.LoadRawTextureData(frame);
+        texture.Apply(false, false);
+#elif UNITY_EDITOR_WIN
         texture.LoadImage(frame, false);
 #else
         int expectedLength = textureWidth * textureHeight * 4;
@@ -573,7 +600,9 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
 
     private bool HasPlayableVideoFrame()
     {
-        return Duration > 0.0001 && (CurrentTime > 0.05 || IsPlaying);
+        bool hasVideoSize = SourceVideoWidth > 0 && SourceVideoHeight > 0;
+        bool hasKnownDuration = Duration > 0.0001;
+        return hasVideoSize && (IsPlaying || (hasKnownDuration && CurrentTime > 0.05));
     }
 
     private void Fail(string reason)
@@ -586,7 +615,11 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
 
     private static TextureFormat GetTextureFormat()
     {
+#if UNITY_IOS && !UNITY_EDITOR
+        return TextureFormat.BGRA32;
+#else
         return TextureFormat.RGBA32;
+#endif
     }
 
     private void ApplyBridgeTextureToTarget()
@@ -785,6 +818,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("play"); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        XHeroWV_Play();
 #else
         PlatformEvaluate("window.xheroUserPaused=false; var v=document.querySelector('video'); if(v){v.play().catch(function(){}); '1';} else {'0';}");
 #endif
@@ -794,6 +829,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("pause"); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        XHeroWV_Pause();
 #else
         PlatformEvaluate("window.xheroUserPaused=true; var v=document.querySelector('video'); if(v){v.pause(); '1';} else {'0';}");
 #endif
@@ -803,6 +840,9 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("lifecyclePause"); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        XHeroWV_SetVolume(0f);
+        XHeroWV_Pause();
 #else
         PlatformPause();
         PlatformSetVolume(0f);
@@ -813,6 +853,12 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("lifecycleResume", shouldResume); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        if (shouldResume)
+        {
+            XHeroWV_SetVolume(1f);
+            XHeroWV_Play();
+        }
 #else
         if (shouldResume)
         {
@@ -826,6 +872,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("seek", time); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        XHeroWV_Seek(time);
 #else
         string value = time.ToString(CultureInfo.InvariantCulture);
         PlatformEvaluate($"var v=document.querySelector('video'); if(v){{v.currentTime={value}; '1';}} else {{'0';}}");
@@ -836,6 +884,8 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try { androidBridge?.CallStatic("setVolume", volume); } catch { }
+#elif UNITY_IOS && !UNITY_EDITOR
+        XHeroWV_SetVolume(Mathf.Clamp01(volume));
 #else
         string value = Mathf.Clamp01(volume).ToString(CultureInfo.InvariantCulture);
         PlatformEvaluate($"var v=document.querySelector('video'); if(v){{v.volume={value}; v.muted={value}<=0; '1';}} else {{'0';}}");
@@ -958,6 +1008,10 @@ public class XHeroWebViewTexturePlayer : MonoBehaviour
 #if UNITY_IOS && !UNITY_EDITOR
     [DllImport("__Internal")] private static extern bool XHeroWV_Start(string url, int width, int height, int fps);
     [DllImport("__Internal")] private static extern void XHeroWV_Stop();
+    [DllImport("__Internal")] private static extern void XHeroWV_Play();
+    [DllImport("__Internal")] private static extern void XHeroWV_Pause();
+    [DllImport("__Internal")] private static extern void XHeroWV_Seek(double time);
+    [DllImport("__Internal")] private static extern void XHeroWV_SetVolume(float volume);
     [DllImport("__Internal")] private static extern IntPtr XHeroWV_CopyFrame();
     [DllImport("__Internal")] private static extern int XHeroWV_GetFrameLength();
     [DllImport("__Internal")] private static extern void XHeroWV_ReleaseFrame(IntPtr frame);

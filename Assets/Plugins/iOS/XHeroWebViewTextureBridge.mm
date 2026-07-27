@@ -2,6 +2,9 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 #import <QuartzCore/QuartzCore.h>
+#import <AVFoundation/AVFoundation.h>
+#import <CoreMedia/CoreMedia.h>
+#import <CoreVideo/CoreVideo.h>
 
 #include <math.h>
 #include <stdlib.h>
@@ -27,6 +30,13 @@ static NSData *xheroReadFrame = nil;
 static NSString *xheroState = @"0|0|0|0|0|0";
 static NSString *xheroLastError = @"";
 static NSString *xheroCurrentURL = nil;
+
+static AVPlayer *xheroPlayer = nil;
+static AVPlayerItem *xheroPlayerItem = nil;
+static AVPlayerItemVideoOutput *xheroVideoOutput = nil;
+static NSURLSessionDataTask *xheroResolveTask = nil;
+static NSString *xheroResolvedStreamURL = nil;
+static BOOL xheroNativePlayerReady = NO;
 
 static WKWebView *xheroResolverWebView = nil;
 static XHeroWVResolverDelegate *xheroResolverDelegate = nil;
@@ -709,10 +719,307 @@ static void XHeroResolverStopOnMainThread(void) {
 }
 
 // -----------------------------------------------------------------------------
+// Native AVPlayer texture bridge
+// -----------------------------------------------------------------------------
+
+static NSString *XHeroExtractPlayableStreamURLFromText(NSString *text) {
+    if (text == nil || text.length == 0) {
+        return nil;
+    }
+
+    NSError *regexError = nil;
+    NSRegularExpression *regex = [NSRegularExpression
+        regularExpressionWithPattern:@"https?://[^\\\"'<>\\s\\\\]+\\.(?:m3u8|mp4)(?:[^\\\"'<>\\s\\\\]*)?"
+                             options:NSRegularExpressionCaseInsensitive
+                               error:&regexError];
+
+    if (regex == nil || regexError != nil) {
+        return nil;
+    }
+
+    NSArray<NSTextCheckingResult *> *matches = [regex matchesInString:text
+                                                               options:0
+                                                                 range:NSMakeRange(0, text.length)];
+
+    for (NSTextCheckingResult *match in matches) {
+        if (match.range.location == NSNotFound || NSMaxRange(match.range) > text.length) {
+            continue;
+        }
+
+        NSString *candidate = [text substringWithRange:match.range];
+        candidate = [candidate stringByReplacingOccurrencesOfString:@"&amp;" withString:@"&"];
+        candidate = [candidate stringByReplacingOccurrencesOfString:@"\\/" withString:@"/"];
+
+        if (XHeroResolverIsPlayableStreamURL(candidate)) {
+            return candidate;
+        }
+    }
+
+    return nil;
+}
+
+static double XHeroSecondsFromTime(CMTime time) {
+    if (!CMTIME_IS_NUMERIC(time) || CMTIME_IS_INDEFINITE(time)) {
+        return 0.0;
+    }
+
+    double value = CMTimeGetSeconds(time);
+    return isfinite(value) && value > 0.0 ? value : 0.0;
+}
+
+static void XHeroUpdateAVPlayerStateWithSize(int width, int height) {
+    if (xheroPlayer == nil || xheroPlayerItem == nil) {
+        return;
+    }
+
+    double current = XHeroSecondsFromTime(xheroPlayer.currentTime);
+    double duration = XHeroSecondsFromTime(xheroPlayerItem.duration);
+    BOOL playing = xheroPlayer.rate > 0.01;
+
+    if ((width <= 0 || height <= 0) && !CGSizeEqualToSize(xheroPlayerItem.presentationSize, CGSizeZero)) {
+        width = (int)lrint(xheroPlayerItem.presentationSize.width);
+        height = (int)lrint(xheroPlayerItem.presentationSize.height);
+    }
+
+    if (width > 0 && height > 0) {
+        xheroWidth = width;
+        xheroHeight = height;
+    }
+
+    XHeroSetState([NSString stringWithFormat:@"%.6f|%.6f|%d|%d|%d|%d",
+        current,
+        duration,
+        playing ? 1 : 0,
+        xheroFps,
+        MAX(0, xheroWidth),
+        MAX(0, xheroHeight)
+    ]);
+}
+
+static void XHeroStopAVPlayer(void) {
+    if (xheroResolveTask != nil) {
+        [xheroResolveTask cancel];
+        xheroResolveTask = nil;
+    }
+
+    if (xheroPlayer != nil) {
+        [xheroPlayer pause];
+    }
+
+    if (xheroPlayerItem != nil && xheroVideoOutput != nil) {
+        [xheroPlayerItem removeOutput:xheroVideoOutput];
+    }
+
+    xheroPlayer = nil;
+    xheroPlayerItem = nil;
+    xheroVideoOutput = nil;
+    xheroResolvedStreamURL = nil;
+    xheroNativePlayerReady = NO;
+}
+
+static void XHeroStartAVPlayerWithStreamURL(NSString *streamURL) {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            XHeroStartAVPlayerWithStreamURL(streamURL);
+        });
+        return;
+    }
+
+    if (streamURL == nil || streamURL.length == 0) {
+        XHeroSetError(@"iOS AVPlayer cannot start because Link 1 stream URL is empty.");
+        return;
+    }
+
+    NSURL *url = [NSURL URLWithString:streamURL];
+    if (url == nil) {
+        XHeroSetError([NSString stringWithFormat:@"iOS AVPlayer stream URL is invalid: %@", streamURL]);
+        return;
+    }
+
+    XHeroStopAVPlayer();
+    xheroResolvedStreamURL = [streamURL copy];
+
+    NSError *audioError = nil;
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&audioError];
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];
+
+    if (audioError != nil) {
+        NSLog(@"[XHeroWV] AVAudioSession category failed: %@", audioError.localizedDescription);
+    }
+
+    NSString *referer = xheroCurrentURL.length > 0
+        ? xheroCurrentURL
+        : @"https://iframe.mediadelivery.net/";
+
+    NSDictionary *headers = @{
+        @"Referer": referer,
+        @"User-Agent": @"Mozilla/5.0 XHeroLMS/iOSAVPlayer"
+    };
+
+    NSDictionary *assetOptions = @{
+        AVURLAssetHTTPHeaderFieldsKey: headers
+    };
+
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:assetOptions];
+    xheroPlayerItem = [AVPlayerItem playerItemWithAsset:asset];
+
+    NSDictionary *pixelAttributes = @{
+        (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)
+    };
+
+    xheroVideoOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixelAttributes];
+    [xheroPlayerItem addOutput:xheroVideoOutput];
+
+    xheroPlayer = [AVPlayer playerWithPlayerItem:xheroPlayerItem];
+    xheroPlayer.actionAtItemEnd = AVPlayerActionAtItemEndPause;
+    xheroPlayer.volume = 1.0f;
+    xheroPlayer.muted = NO;
+
+    xheroNativePlayerReady = YES;
+    XHeroSetError(@"");
+    XHeroUpdateAVPlayerStateWithSize(0, 0);
+    XHeroRestartFrameTimer(xheroFps);
+
+    [xheroPlayer play];
+
+    NSLog(@"[XHeroWV] Started Link 1 through AVPlayer. stream=%@ referer=%@", streamURL, referer);
+}
+
+static void XHeroResolveLink1AndStartAVPlayer(NSString *urlString) {
+    if (urlString == nil || urlString.length == 0) {
+        XHeroSetError(@"Missing Link 1 URL for iOS AVPlayer.");
+        return;
+    }
+
+    if (XHeroResolverIsPlayableStreamURL(urlString)) {
+        XHeroStartAVPlayerWithStreamURL(urlString);
+        return;
+    }
+
+    NSURL *url = [NSURL URLWithString:urlString];
+    if (url == nil) {
+        XHeroSetError(@"Invalid Link 1 iframe URL for iOS AVPlayer.");
+        return;
+    }
+
+    NSUInteger generation = xheroGeneration;
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url
+                                                           cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                       timeoutInterval:15.0];
+    [request setValue:@"Mozilla/5.0 XHeroLMS/iOSAVPlayerResolver" forHTTPHeaderField:@"User-Agent"];
+
+    if (xheroResolveTask != nil) {
+        [xheroResolveTask cancel];
+        xheroResolveTask = nil;
+    }
+
+    xheroResolveTask = [[NSURLSession sharedSession]
+        dataTaskWithRequest:request
+          completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (generation != xheroGeneration || xheroStopping) {
+                return;
+            }
+
+            xheroResolveTask = nil;
+
+            if (error != nil) {
+                XHeroSetError([NSString stringWithFormat:@"iOS Link 1 iframe HTML request failed: %@", error.localizedDescription]);
+                return;
+            }
+
+            NSString *html = data != nil
+                ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]
+                : nil;
+
+            if (html.length == 0 && data != nil) {
+                html = [[NSString alloc] initWithData:data encoding:NSISOLatin1StringEncoding];
+            }
+
+            NSString *streamURL = XHeroExtractPlayableStreamURLFromText(html);
+            if (streamURL.length == 0) {
+                XHeroSetError(@"iOS Link 1 iframe HTML did not expose a playable HLS/MP4 stream URL.");
+                return;
+            }
+
+            NSLog(@"[XHeroWV] Resolved Link 1 iframe to stream=%@", streamURL);
+            XHeroStartAVPlayerWithStreamURL(streamURL);
+        });
+    }];
+
+    [xheroResolveTask resume];
+}
+
+static void XHeroCaptureAVPlayerFrame(void) {
+    if (xheroPlayer == nil ||
+        xheroPlayerItem == nil ||
+        xheroVideoOutput == nil ||
+        xheroStopping ||
+        !xheroNativePlayerReady) {
+        return;
+    }
+
+    if (xheroPlayerItem.status == AVPlayerItemStatusFailed) {
+        NSString *message = xheroPlayerItem.error != nil
+            ? xheroPlayerItem.error.localizedDescription
+            : @"unknown AVPlayerItem failure";
+
+        XHeroSetError([NSString stringWithFormat:@"iOS AVPlayer item failed: %@", message]);
+        return;
+    }
+
+    CFTimeInterval hostTime = CACurrentMediaTime();
+    CMTime itemTime = [xheroVideoOutput itemTimeForHostTime:hostTime];
+
+    if (![xheroVideoOutput hasNewPixelBufferForItemTime:itemTime]) {
+        XHeroUpdateAVPlayerStateWithSize(0, 0);
+        return;
+    }
+
+    CVPixelBufferRef pixelBuffer = [xheroVideoOutput copyPixelBufferForItemTime:itemTime
+                                                             itemTimeForDisplay:NULL];
+    if (pixelBuffer == NULL) {
+        XHeroUpdateAVPlayerStateWithSize(0, 0);
+        return;
+    }
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+
+    size_t width = CVPixelBufferGetWidth(pixelBuffer);
+    size_t height = CVPixelBufferGetHeight(pixelBuffer);
+    size_t stride = CVPixelBufferGetBytesPerRow(pixelBuffer);
+    unsigned char *base = (unsigned char *)CVPixelBufferGetBaseAddress(pixelBuffer);
+
+    if (base != NULL && width > 0 && height > 0) {
+        size_t rowBytes = width * 4;
+        NSMutableData *frame = [NSMutableData dataWithLength:rowBytes * height];
+        unsigned char *dst = (unsigned char *)frame.mutableBytes;
+
+        for (size_t y = 0; y < height; y++) {
+            memcpy(dst + y * rowBytes, base + y * stride, rowBytes);
+        }
+
+        @synchronized ([XHeroWVDelegate class]) {
+            xheroLastFrame = frame;
+        }
+
+        XHeroUpdateAVPlayerStateWithSize((int)width, (int)height);
+    }
+
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferRelease(pixelBuffer);
+}
+
+// -----------------------------------------------------------------------------
 // Snapshot capture
 // -----------------------------------------------------------------------------
 
 static void XHeroCaptureFrame(void) {
+    if (xheroPlayer != nil) {
+        XHeroCaptureAVPlayerFrame();
+        return;
+    }
+
     if (xheroWebView == nil ||
         xheroStopping ||
         !xheroNavigationFinished ||
@@ -1034,7 +1341,7 @@ extern "C" const char *XHeroWVResolver_GetLastError(void) {
 
 extern "C" bool XHeroWV_Start(const char *url, int width, int height, int fps) {
     if (url == NULL || strlen(url) == 0) {
-        XHeroSetError(@"Missing WebView URL.");
+        XHeroSetError(@"Missing Link 1 URL.");
         return false;
     }
 
@@ -1042,7 +1349,7 @@ extern "C" bool XHeroWV_Start(const char *url, int width, int height, int fps) {
     NSURL *parsedURL = [NSURL URLWithString:urlString];
 
     if (urlString.length == 0 || parsedURL == nil) {
-        XHeroSetError(@"Invalid WebView URL.");
+        XHeroSetError(@"Invalid Link 1 URL.");
         return false;
     }
 
@@ -1054,9 +1361,8 @@ extern "C" bool XHeroWV_Start(const char *url, int width, int height, int fps) {
         xheroGeneration++;
         xheroStopping = NO;
 
-        // Start with the dimensions/FPS requested by Unity. Once the HTML5 video
-        // reports videoWidth/videoHeight and measured FPS, the bridge follows that
-        // decoded source automatically.
+        // Start with the dimensions/FPS requested by Unity. AVPlayer replaces
+        // these with the decoded source size as soon as frames are available.
         xheroRequestedWidth = MAX(1, width);
         xheroRequestedHeight = MAX(1, height);
         xheroRequestedFps = MAX(1, fps);
@@ -1082,53 +1388,7 @@ extern "C" bool XHeroWV_Start(const char *url, int width, int height, int fps) {
         xheroWebProcessRestartCount = 0;
         xheroLastPatchAttemptTime = 0.0;
 
-        UIWindow *window = XHeroActiveWindow();
-        UIViewController *controller = XHeroTopViewController(window.rootViewController);
-
-        if (window == nil || controller == nil || controller.view == nil) {
-            XHeroSetError(@"Cannot find an active iOS window/root view controller for WKWebView.");
-            return;
-        }
-
-        WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
-        configuration.allowsInlineMediaPlayback = YES;
-        configuration.websiteDataStore = [WKWebsiteDataStore defaultDataStore];
-        configuration.applicationNameForUserAgent = @"XHeroLMS";
-
-        if (@available(iOS 10.0, *)) {
-            configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
-        }
-
-        CGFloat aspect = (CGFloat)xheroWidth / (CGFloat)MAX(1, xheroHeight);
-        CGRect frame = XHeroAspectFitFrame(controller.view.bounds, aspect);
-
-        xheroWebView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
-        xheroWebView.opaque = YES;
-        xheroWebView.backgroundColor = UIColor.blackColor;
-        xheroWebView.scrollView.backgroundColor = UIColor.blackColor;
-        xheroWebView.scrollView.scrollEnabled = NO;
-        xheroWebView.scrollView.bounces = NO;
-        xheroWebView.userInteractionEnabled = NO;
-        xheroWebView.hidden = NO;
-        xheroWebView.alpha = 1.0;
-
-        xheroDelegate = [[XHeroWVDelegate alloc] init];
-        xheroWebView.navigationDelegate = xheroDelegate;
-
-        [controller.view addSubview:xheroWebView];
-        [controller.view sendSubviewToBack:xheroWebView];
-
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:parsedURL
-                                                              cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
-                                                          timeoutInterval:30.0];
-
-        [request setValue:@"https://iframe.mediadelivery.net/"
-       forHTTPHeaderField:@"Referer"];
-
-        [xheroWebView loadRequest:request];
-
-        XHeroRestartFrameTimer(xheroFps);
-
+        XHeroResolveLink1AndStartAVPlayer(urlString);
         started = YES;
     };
 
@@ -1150,6 +1410,8 @@ extern "C" void XHeroWV_Stop(void) {
             [xheroFrameTimer invalidate];
             xheroFrameTimer = nil;
         }
+
+        XHeroStopAVPlayer();
 
         xheroSnapshotInFlight = NO;
         xheroNavigationFinished = NO;
@@ -1185,6 +1447,51 @@ extern "C" void XHeroWV_Stop(void) {
     }
 }
 
+extern "C" void XHeroWV_Play(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (xheroPlayer != nil && !xheroStopping) {
+            [xheroPlayer play];
+            XHeroUpdateAVPlayerStateWithSize(0, 0);
+        }
+    });
+}
+
+extern "C" void XHeroWV_Pause(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (xheroPlayer != nil) {
+            [xheroPlayer pause];
+            XHeroUpdateAVPlayerStateWithSize(0, 0);
+        }
+    });
+}
+
+extern "C" void XHeroWV_Seek(double time) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (xheroPlayer == nil || !isfinite(time) || time < 0.0) {
+            return;
+        }
+
+        CMTime target = CMTimeMakeWithSeconds(time, 600);
+        [xheroPlayer seekToTime:target
+                toleranceBefore:kCMTimeZero
+                 toleranceAfter:kCMTimeZero
+              completionHandler:^(BOOL finished) {
+            XHeroUpdateAVPlayerStateWithSize(0, 0);
+        }];
+    });
+}
+
+extern "C" void XHeroWV_SetVolume(float volume) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (xheroPlayer != nil) {
+            float clamped = fmaxf(0.0f, fminf(1.0f, volume));
+            xheroPlayer.volume = clamped;
+            xheroPlayer.muted = clamped <= 0.0001f;
+            XHeroUpdateAVPlayerStateWithSize(0, 0);
+        }
+    });
+}
+
 extern "C" int XHeroWV_GetFrameLength(void) {
     @synchronized ([XHeroWVDelegate class]) {
         // Stage one immutable frame so GetFrameLength and CopyFrame always refer
@@ -1212,7 +1519,7 @@ extern "C" unsigned char *XHeroWV_CopyFrame(void) {
 
     unsigned char *copy = (unsigned char *)malloc(frame.length);
     if (copy == NULL) {
-        XHeroSetError(@"Cannot allocate memory for the iOS WebView frame.");
+        XHeroSetError(@"Cannot allocate memory for the iOS native video frame.");
         return NULL;
     }
 
@@ -1228,6 +1535,10 @@ extern "C" void XHeroWV_ReleaseFrame(void *frame) {
 
 extern "C" void XHeroWV_Evaluate(const char *script) {
     if (script == NULL) {
+        return;
+    }
+
+    if (xheroPlayer != nil) {
         return;
     }
 
@@ -1263,6 +1574,11 @@ extern "C" void XHeroWV_Evaluate(const char *script) {
 }
 
 extern "C" void XHeroWV_RequestState(void) {
+    if (xheroPlayer != nil) {
+        XHeroUpdateAVPlayerStateWithSize(0, 0);
+        return;
+    }
+
     NSUInteger generation = xheroGeneration;
 
     dispatch_async(dispatch_get_main_queue(), ^{

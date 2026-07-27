@@ -810,7 +810,7 @@ private void OnDisable()
 #if UNITY_ANDROID && !UNITY_EDITOR
             string nativeRoute = "Android jar -> libxheronativetexture.so -> Unity RawImage";
 #elif UNITY_IOS && !UNITY_EDITOR
-            string nativeRoute = "iOS WKWebView native bridge -> Unity RawImage";
+            string nativeRoute = "iOS AVPlayer native bridge -> Unity RawImage";
 #else
             string nativeRoute = "native WebView bridge -> Unity RawImage";
 #endif
