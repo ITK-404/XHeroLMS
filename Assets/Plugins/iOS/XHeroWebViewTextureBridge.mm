@@ -996,7 +996,8 @@ static void XHeroCaptureAVPlayerFrame(void) {
         unsigned char *dst = (unsigned char *)frame.mutableBytes;
 
         for (size_t y = 0; y < height; y++) {
-            memcpy(dst + y * rowBytes, base + y * stride, rowBytes);
+            size_t flippedY = height - 1 - y;
+            memcpy(dst + flippedY * rowBytes, base + y * stride, rowBytes);
         }
 
         @synchronized ([XHeroWVDelegate class]) {
