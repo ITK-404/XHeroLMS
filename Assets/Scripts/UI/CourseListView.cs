@@ -181,8 +181,6 @@ public class CourseListView : MonoBehaviour
 
         learnUI = FindAnyObjectByType<LearnUI>();
         videoPlayerControllerPro = FindAnyObjectByType<VideoPlayerControllerPro>();
-
-#if (UNITY_ANDROID && !UNITY_EDITOR) || UNITY_EDITOR_WIN
         webViewTexturePlayer = FindAnyObjectByType<XHeroWebViewTexturePlayer>();
         if (!webViewTexturePlayer)
         {
@@ -192,7 +190,6 @@ public class CourseListView : MonoBehaviour
 
         if (videoPlayerControllerPro)
             videoPlayerControllerPro.SetWebViewTexturePlayer(webViewTexturePlayer);
-#endif
 
         examResultReviewPanel = FindAnyObjectByType<ExamResultReviewPanel>();
         playerStandUI = FindAnyObjectByType<PlayerStandUI>();
@@ -706,15 +703,35 @@ private void OnDisable()
         return string.IsNullOrWhiteSpace(video1) ? "" : video1.Trim();
     }
 
+    private static bool IsSupportedLink1Iframe(string link1)
+    {
+        return XHeroWebViewTexturePlayer.IsSupportedIframeUrl(link1);
+    }
+
     private static bool ShouldUseWebViewTexture(string link1)
     {
-#if UNITY_IOS && !UNITY_EDITOR
-        // iOS tạm thời bỏ qua Link 1 WebView texture và dùng videoLink2.
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return IsSupportedLink1Iframe(link1);
+#else
+        return false;
+#endif
+    }
+
+    private static bool ShouldResolveLink1ThroughVideoPlayer(string link1)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
         return false;
 #else
-        // Giữ nguyên hành vi Link 1 hiện tại trên Android và runtime được hỗ trợ.
-        return XHeroWebViewTexturePlayer.IsSupportedIframeUrl(link1);
+        return IsSupportedLink1Iframe(link1);
 #endif
+    }
+
+    private static bool IsHlsStreamUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        return url.IndexOf(".m3u8", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static string GetFirstDocAttachUri(object lesson)
@@ -761,14 +778,8 @@ private void OnDisable()
         string link1 = lesson.linkVideo1;
         string fallbackUrl = lesson.linkVideo2;
         bool useWebViewTexture = ShouldUseWebViewTexture(link1);
-        string url = useWebViewTexture ? link1 : fallbackUrl;
-
-#if UNITY_IOS && !UNITY_EDITOR
-        Debug.Log(
-            $"[CourseListView] iOS route: use videoLink2 through Unity VideoPlayer. " +
-            $"link2={fallbackUrl}"
-        );
-#endif
+        bool resolveLink1ThroughVideoPlayer = ShouldResolveLink1ThroughVideoPlayer(link1);
+        string url = (useWebViewTexture || resolveLink1ThroughVideoPlayer) ? link1 : fallbackUrl;
 
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -822,6 +833,23 @@ private void OnDisable()
             );
 
             _playVideoRoutine = StartCoroutine(PlayLink1WithWebViewTexture(link1, fallbackUrl, playToken));
+            return;
+        }
+
+        if (resolveLink1ThroughVideoPlayer)
+        {
+            _usingProxyForCurrentVideo = false;
+            _activeVideoOriginUrl = url;
+            _currentOriginUrl = url;
+            _fallbackToOriginTriedForCurrentVideo = false;
+            _proxyRetryTriedForCurrentVideo = false;
+
+            Debug.Log(
+                $"[{XHeroWebViewTexturePlayer.MethodName}] Resolve original videoLink1 iframe to HLS/MP4, " +
+                $"then play through Unity VideoPlayer. runtime={Application.platform} iframe={link1} | fallbackLink2={fallbackUrl}"
+            );
+
+            _playVideoRoutine = StartCoroutine(ResolveAndPlayLink1ThroughVideoPlayer(link1, fallbackUrl, playToken));
             return;
         }
 
@@ -1013,10 +1041,9 @@ private void OnDisable()
             yield break;
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] HTML resolve failed, fallback to hidden Android WebView resolver. reason={error}");
+        Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] HTML resolve failed, fallback to runtime WebView resolver. reason={error}");
 
-        yield return ResolveLink1WithAndroidWebView(link1, token, (url, err) =>
+        yield return ResolveLink1WithRuntimeWebView(link1, token, (url, err) =>
         {
             resolved = url;
             error = err;
@@ -1026,9 +1053,6 @@ private void OnDisable()
             yield break;
 
         completed?.Invoke(resolved, error);
-#else
-        completed?.Invoke(null, error ?? "Cannot resolve Bunny stream from iframe HTML on this runtime.");
-#endif
     }
 
     private IEnumerator ResolveLink1FromIframeHtml(string link1, int token, Action<string, string> completed)
@@ -1079,12 +1103,11 @@ private void OnDisable()
         }
     }
 
-    private IEnumerator ResolveLink1WithAndroidWebView(string link1, int token, Action<string, string> completed)
+    private IEnumerator ResolveLink1WithRuntimeWebView(string link1, int token, Action<string, string> completed)
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
         if (!XHeroBunnyResolver.StartResolve(link1))
         {
-            completed?.Invoke(null, "Cannot start Bunny stream resolver.");
+            completed?.Invoke(null, "Cannot start Bunny stream resolver on this runtime.");
             yield break;
         }
 
@@ -1114,10 +1137,40 @@ private void OnDisable()
         XHeroBunnyResolver.StopResolve();
 
         completed?.Invoke(resolved, resolveError);
-#else
-        completed?.Invoke(null, "Android WebView resolver is not available on this runtime.");
-        yield break;
-#endif
+    }
+
+    private IEnumerator ResolveAndPlayLink1ThroughVideoPlayer(string link1, string fallbackUrl, int token)
+    {
+        string streamUrl = null;
+        string resolveError = null;
+
+        yield return ResolveLink1StreamUrl(link1, token, (url, err) =>
+        {
+            streamUrl = url;
+            resolveError = err;
+        });
+
+        if (token != _playVideoToken)
+        {
+            HideVideoFirstFrameLoading(token);
+            yield break;
+        }
+
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            yield return PlayLink2FallbackAfterLink1Failure(
+                fallbackUrl,
+                token,
+                resolveError ?? "Cannot resolve Link 1 iframe to HLS/MP4."
+            );
+            yield break;
+        }
+
+        Debug.Log(
+            $"[{XHeroWebViewTexturePlayer.MethodName}] Link 1 resolved for VideoPlayer. stream={streamUrl}"
+        );
+
+        yield return PlayResolvedLink1Stream(streamUrl, link1, fallbackUrl, token);
     }
 
     private IEnumerator PlayResolvedLink1Stream(string streamUrl, string link1, string fallbackUrl, int token)
@@ -1139,7 +1192,6 @@ private void OnDisable()
         {
             attempts++;
             _videoStopRequested = false;
-            _usingProxyForCurrentVideo = true; // Use global OnVideoError but it must handle link1 correctly
             _activeVideoOriginUrl = link1;     // Identity = iframe
             _currentOriginUrl = streamUrl;     // Source = resolved stream
             _videoStartRealtime = Time.realtimeSinceStartup;
@@ -1151,14 +1203,59 @@ private void OnDisable()
             PrepareVideoPlayerForNewUrl();
 
             string finalUrl = streamUrl;
+            bool useProxyForAttempt = false;
+            string transport = "direct";
 #if UNITY_ANDROID && !UNITY_EDITOR
-            if (proxyBoot)
+            if (proxyBoot && proxyBoot.EnsureStarted())
             {
-                proxyBoot.EnsureStarted();
                 // Route through the HLS-capable /stream proxy; pass the iframe as Referer for Bunny.
                 finalUrl = proxyBoot.GetPlayableUrlNoCache(streamUrl, link1);
+                useProxyForAttempt = true;
+                transport = "android-stream-proxy";
+            }
+#elif UNITY_EDITOR_WIN
+            if (IsHlsStreamUrl(streamUrl))
+            {
+                XHeroEditorHlsLiveProxy.StreamContainer liveContainer =
+                    attempts == 1
+                        ? XHeroEditorHlsLiveProxy.StreamContainer.FragmentedMp4
+                        : XHeroEditorHlsLiveProxy.StreamContainer.MpegTs;
+
+                if (XHeroEditorHlsLiveProxy.EnsureStarted())
+                {
+                    finalUrl = XHeroEditorHlsLiveProxy.WrapStreamUrl(streamUrl, link1, liveContainer);
+                    transport = liveContainer == XHeroEditorHlsLiveProxy.StreamContainer.FragmentedMp4
+                        ? "editor-ffmpeg-live-fmp4"
+                        : "editor-ffmpeg-live-ts";
+                }
+                else
+                {
+                    Debug.LogWarning(
+                        $"[{XHeroWebViewTexturePlayer.MethodName}] Editor HLS live proxy could not start. " +
+                        "Try direct HLS URL; Windows Editor VideoPlayer usually rejects direct HLS."
+                    );
+                }
+            }
+            else
+            {
+                transport = "editor-direct-stream";
+            }
+#elif UNITY_IOS && !UNITY_EDITOR
+            int localHlsProxyPort = proxyBoot ? proxyBoot.port : AndroidLocalVideoProxy.DefaultPort;
+            if (XHeroLocalHlsProxy.EnsureStarted(localHlsProxyPort))
+            {
+                finalUrl = XHeroLocalHlsProxy.WrapStreamUrl(streamUrl, link1);
+                transport = "ios-hls-local-proxy";
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"[{XHeroWebViewTexturePlayer.MethodName}] Local HLS proxy could not start. " +
+                    "Try direct HLS URL; this runtime may reject CDN HLS without the Bunny referer."
+                );
             }
 #endif
+            _usingProxyForCurrentVideo = useProxyForAttempt;
             _videoStartUrl = finalUrl;
             videoPlayerControllerPro?.SetCurrentUrl(finalUrl);
 
@@ -1167,7 +1264,7 @@ private void OnDisable()
             UnityEngine.Video.VideoPlayer.ErrorEventHandler errorHandler = (vp, msg) => { errored = true; errorMessage = msg; };
             videoPlayer.errorReceived += errorHandler;
 
-            Debug.Log($"[{XHeroWebViewTexturePlayer.MethodName}] Play resolved link1 (Attempt {attempts}/{maxAttempts}). finalUrl={finalUrl}");
+            Debug.Log($"[{XHeroWebViewTexturePlayer.MethodName}] Play resolved link1 (Attempt {attempts}/{maxAttempts}). transport={transport} proxy={useProxyForAttempt} finalUrl={finalUrl}");
 
             videoPlayer.source = UnityEngine.Video.VideoSource.Url;
             videoPlayer.url = finalUrl;
@@ -1209,24 +1306,39 @@ private void OnDisable()
             {
                 // Reset and wait a bit before retry
                 try { videoPlayer.Stop(); } catch { }
+#if UNITY_EDITOR_WIN
+                if (IsHlsStreamUrl(streamUrl))
+                    XHeroEditorHlsLiveProxy.Stop();
+#endif
                 yield return new WaitForSecondsRealtime(1.0f);
             }
         }
 
         if (token == _playVideoToken && !_loggedFirstFrame)
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
             Debug.LogError($"[{XHeroWebViewTexturePlayer.MethodName}] Link 1 playback failed after all retries: {lastPlaybackError}. AUTOMATIC FALLBACK DISABLED.");
             HideVideoFirstFrameLoading(token);
             try { videoPlayer.Stop(); } catch { }
             // yield return PlayLink2FallbackAfterLink1Failure(fallbackUrl, token, lastPlaybackError ?? "Resolved link1 playback failed after retries.");
+#else
+            Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] Link 1 playback failed after all retries: {lastPlaybackError}. Fallback to Link 2.");
+            try { videoPlayer.Stop(); } catch { }
+            yield return PlayLink2FallbackAfterLink1Failure(
+                fallbackUrl,
+                token,
+                lastPlaybackError ?? "Resolved link1 playback failed after retries."
+            );
+#endif
         }
     }
 
     private IEnumerator PlayLink2FallbackAfterLink1Failure(string fallbackUrl, int token, string reason)
     {
-        if (string.IsNullOrWhiteSpace(fallbackUrl))
+        if (string.IsNullOrWhiteSpace(fallbackUrl) ||
+            XHeroWebViewTexturePlayer.IsSupportedIframeUrl(fallbackUrl))
         {
-            Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] Cannot fallback because videoLink2 is empty. reason={reason}");
+            Debug.LogWarning($"[{XHeroWebViewTexturePlayer.MethodName}] Cannot fallback because videoLink2 is empty or still an iframe. fallbackLink2={fallbackUrl} reason={reason}");
             HideVideoFirstFrameLoading(token);
             yield break;
         }
@@ -1606,6 +1718,18 @@ private void StopVideoPipeline()
 
     XHeroWebViewTexturePlayer.StopActiveInstance();
 
+#if !UNITY_ANDROID || UNITY_EDITOR
+    XHeroBunnyResolver.StopResolve();
+#endif
+
+#if UNITY_EDITOR_WIN || (UNITY_IOS && !UNITY_EDITOR)
+    XHeroLocalHlsProxy.Stop();
+#endif
+
+#if UNITY_EDITOR_WIN
+    XHeroEditorHlsLiveProxy.Stop();
+#endif
+
     _playVideoToken++;
     _videoStopRequested = true;
 
@@ -1785,7 +1909,7 @@ private void PauseVideoAudioOnly()
             return;
 
         bool hasPlayableLink =
-            ShouldUseWebViewTexture(_currentLesson.linkVideo1) ||
+            IsSupportedLink1Iframe(_currentLesson.linkVideo1) ||
             !string.IsNullOrWhiteSpace(_currentLesson.linkVideo2);
 
         if (!hasPlayableLink)
@@ -1840,7 +1964,7 @@ private void PauseVideoAudioOnly()
         if (!IsVideoLesson(lesson))
             return;
 
-        string displayUrl = ShouldUseWebViewTexture(lesson.linkVideo1)
+        string displayUrl = IsSupportedLink1Iframe(lesson.linkVideo1)
             ? lesson.linkVideo1
             : lesson.linkVideo2;
 
@@ -2500,7 +2624,7 @@ private void PauseVideoAudioOnly()
 
         if (targetIsVideo)
         {
-            string displayUrl = ShouldUseWebViewTexture(_currentLesson.linkVideo1)
+            string displayUrl = IsSupportedLink1Iframe(_currentLesson.linkVideo1)
                 ? _currentLesson.linkVideo1
                 : _currentLesson.linkVideo2;
 

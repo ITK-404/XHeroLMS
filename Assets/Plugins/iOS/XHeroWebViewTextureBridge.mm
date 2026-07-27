@@ -10,6 +10,9 @@
 @interface XHeroWVDelegate : NSObject <WKNavigationDelegate>
 @end
 
+@interface XHeroWVResolverDelegate : NSObject <WKNavigationDelegate>
+@end
+
 // -----------------------------------------------------------------------------
 // Global bridge state
 // -----------------------------------------------------------------------------
@@ -24,6 +27,17 @@ static NSData *xheroReadFrame = nil;
 static NSString *xheroState = @"0|0|0|0|0|0";
 static NSString *xheroLastError = @"";
 static NSString *xheroCurrentURL = nil;
+
+static WKWebView *xheroResolverWebView = nil;
+static XHeroWVResolverDelegate *xheroResolverDelegate = nil;
+static NSTimer *xheroResolverTimer = nil;
+static NSString *xheroResolverResolvedURL = @"";
+static NSString *xheroResolverLastError = @"";
+static NSString *xheroResolverCurrentURL = nil;
+static BOOL xheroResolverStopping = NO;
+static BOOL xheroResolverNavigationFinished = NO;
+static NSUInteger xheroResolverGeneration = 0;
+static NSInteger xheroResolverFailureCount = 0;
 
 static int xheroWidth = 1920;
 static int xheroHeight = 1080;
@@ -55,8 +69,11 @@ static CFTimeInterval xheroLastPatchAttemptTime = 0.0;
 
 static char xheroStateCString[2048] = {0};
 static char xheroErrorCString[4096] = {0};
+static char xheroResolverURLCString[4096] = {0};
+static char xheroResolverErrorCString[4096] = {0};
 
 extern "C" void XHeroWV_Stop(void);
+extern "C" void XHeroWVResolver_Stop(void);
 
 // -----------------------------------------------------------------------------
 // Thread-safe shared state helpers
@@ -94,6 +111,50 @@ static const char *XHeroCopyErrorCString(void) {
         strlcpy(xheroErrorCString, source != NULL ? source : "", sizeof(xheroErrorCString));
         return xheroErrorCString;
     }
+}
+
+static void XHeroResolverSetResolvedURL(NSString *value) {
+    @synchronized ([XHeroWVResolverDelegate class]) {
+        xheroResolverResolvedURL = value != nil ? [value copy] : @"";
+    }
+}
+
+static void XHeroResolverSetError(NSString *value) {
+    @synchronized ([XHeroWVResolverDelegate class]) {
+        xheroResolverLastError = value != nil ? [value copy] : @"";
+    }
+}
+
+static const char *XHeroResolverCopyResolvedURLCString(void) {
+    @synchronized ([XHeroWVResolverDelegate class]) {
+        const char *source = [(xheroResolverResolvedURL ?: @"") UTF8String];
+        strlcpy(xheroResolverURLCString, source != NULL ? source : "", sizeof(xheroResolverURLCString));
+        return xheroResolverURLCString;
+    }
+}
+
+static const char *XHeroResolverCopyErrorCString(void) {
+    @synchronized ([XHeroWVResolverDelegate class]) {
+        const char *source = [(xheroResolverLastError ?: @"") UTF8String];
+        strlcpy(xheroResolverErrorCString, source != NULL ? source : "", sizeof(xheroResolverErrorCString));
+        return xheroResolverErrorCString;
+    }
+}
+
+static BOOL XHeroResolverIsPlayableStreamURL(NSString *url) {
+    if (url == nil || url.length == 0) {
+        return NO;
+    }
+
+    NSString *lower = url.lowercaseString;
+    if ([lower hasPrefix:@"blob:"] ||
+        [lower containsString:@".m4s"] ||
+        [lower containsString:@".ts?"] ||
+        [lower hasSuffix:@".ts"]) {
+        return NO;
+    }
+
+    return [lower containsString:@".m3u8"] || [lower containsString:@".mp4"];
 }
 
 // -----------------------------------------------------------------------------
@@ -500,6 +561,153 @@ static void XHeroInjectVideoPatch(BOOL force) {
     }];
 }
 
+static NSString *XHeroResolverScript(void) {
+    return
+        @"(function(){"
+        @"try{"
+        @"function clean(u){return (u||'').toString();}"
+        @"function ok(u){"
+        @"u=clean(u);"
+        @"var l=u.toLowerCase();"
+        @"return u&&"
+        @"l.indexOf('blob:')!==0&&"
+        @"(l.indexOf('.m3u8')>=0||l.indexOf('.mp4')>=0)&&"
+        @"l.indexOf('.m4s')<0&&"
+        @"l.indexOf('.ts?')<0&&"
+        @"!/\\.ts($|[?#])/.test(l);"
+        @"}"
+        @"function pick(u){return ok(u)?u:'';}"
+        @"var nodes=document.querySelectorAll('video,source');"
+        @"for(var i=0;i<nodes.length;i++){"
+        @"var n=nodes[i];"
+        @"var u=pick(n.currentSrc||n.src||n.getAttribute('src'));"
+        @"if(u){return u;}"
+        @"if(n.tagName&&n.tagName.toLowerCase()==='video'){"
+        @"try{"
+        @"n.muted=true;"
+        @"n.playsInline=true;"
+        @"n.autoplay=true;"
+        @"n.setAttribute('muted','');"
+        @"n.setAttribute('playsinline','');"
+        @"if(n.play){n.play().catch(function(){});}"
+        @"}catch(e){}"
+        @"}"
+        @"}"
+        @"if(window.performance&&performance.getEntriesByType){"
+        @"var rs=performance.getEntriesByType('resource');"
+        @"for(var j=0;j<rs.length;j++){"
+        @"var r=rs[j];"
+        @"var u2=pick(r&&r.name);"
+        @"if(u2){return u2;}"
+        @"}"
+        @"}"
+        @"return '';"
+        @"}catch(e){"
+        @"return 'error:'+String(e&&e.message?e.message:e);"
+        @"}"
+        @"})()";
+}
+
+static void XHeroResolverPoll(void) {
+    if (xheroResolverWebView == nil || xheroResolverStopping) {
+        return;
+    }
+
+    NSUInteger generation = xheroResolverGeneration;
+    NSString *script = XHeroResolverScript();
+
+    [xheroResolverWebView evaluateJavaScript:script
+                           completionHandler:^(id result, NSError *error) {
+        if (generation != xheroResolverGeneration ||
+            xheroResolverStopping ||
+            xheroResolverWebView == nil) {
+            return;
+        }
+
+        if (error != nil) {
+            if (xheroResolverNavigationFinished) {
+                xheroResolverFailureCount++;
+
+                if (xheroResolverFailureCount >= 8) {
+                    XHeroResolverSetError([NSString stringWithFormat:@"iOS Bunny resolver JavaScript failed repeatedly: %@", error.localizedDescription]);
+                }
+            }
+
+            return;
+        }
+
+        if (![result isKindOfClass:[NSString class]]) {
+            return;
+        }
+
+        NSString *value = (NSString *)result;
+        if (XHeroResolverIsPlayableStreamURL(value)) {
+            XHeroResolverSetResolvedURL(value);
+            XHeroResolverSetError(@"");
+            return;
+        }
+
+        if ([value hasPrefix:@"error:"]) {
+            xheroResolverFailureCount++;
+
+            if (xheroResolverFailureCount >= 8) {
+                XHeroResolverSetError(value);
+            }
+        }
+    }];
+}
+
+static void XHeroResolverRestartTimer(void) {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            XHeroResolverRestartTimer();
+        });
+        return;
+    }
+
+    if (xheroResolverTimer != nil) {
+        [xheroResolverTimer invalidate];
+        xheroResolverTimer = nil;
+    }
+
+    xheroResolverTimer = [NSTimer timerWithTimeInterval:0.25
+                                                repeats:YES
+                                                  block:^(NSTimer *timer) {
+        XHeroResolverPoll();
+    }];
+
+    [[NSRunLoop mainRunLoop] addTimer:xheroResolverTimer
+                              forMode:NSRunLoopCommonModes];
+}
+
+static void XHeroResolverStopOnMainThread(void) {
+    xheroResolverStopping = YES;
+    xheroResolverGeneration++;
+
+    if (xheroResolverTimer != nil) {
+        [xheroResolverTimer invalidate];
+        xheroResolverTimer = nil;
+    }
+
+    xheroResolverNavigationFinished = NO;
+
+    if (xheroResolverWebView != nil) {
+        xheroResolverWebView.navigationDelegate = nil;
+        [xheroResolverWebView stopLoading];
+        [xheroResolverWebView removeFromSuperview];
+        xheroResolverWebView = nil;
+    }
+
+    xheroResolverDelegate = nil;
+    xheroResolverCurrentURL = nil;
+    xheroResolverFailureCount = 0;
+
+    XHeroResolverSetResolvedURL(@"");
+    XHeroResolverSetError(@"");
+
+    xheroResolverStopping = NO;
+}
+
 // -----------------------------------------------------------------------------
 // Snapshot capture
 // -----------------------------------------------------------------------------
@@ -577,6 +785,52 @@ static void XHeroCaptureFrame(void) {
 // -----------------------------------------------------------------------------
 // WKNavigationDelegate
 // -----------------------------------------------------------------------------
+
+@implementation XHeroWVResolverDelegate
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    if (webView != xheroResolverWebView || xheroResolverStopping) {
+        return;
+    }
+
+    xheroResolverNavigationFinished = YES;
+    xheroResolverFailureCount = 0;
+    XHeroResolverPoll();
+}
+
+- (void)webView:(WKWebView *)webView
+didFailNavigation:(WKNavigation *)navigation
+      withError:(NSError *)error {
+    if (webView != xheroResolverWebView) {
+        return;
+    }
+
+    XHeroResolverSetError(error != nil
+        ? [NSString stringWithFormat:@"iOS Bunny resolver navigation failed: %@", error.localizedDescription]
+        : @"iOS Bunny resolver navigation failed.");
+}
+
+- (void)webView:(WKWebView *)webView
+didFailProvisionalNavigation:(WKNavigation *)navigation
+      withError:(NSError *)error {
+    if (webView != xheroResolverWebView) {
+        return;
+    }
+
+    XHeroResolverSetError(error != nil
+        ? [NSString stringWithFormat:@"iOS Bunny resolver provisional navigation failed: %@", error.localizedDescription]
+        : @"iOS Bunny resolver provisional navigation failed.");
+}
+
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+    if (webView != xheroResolverWebView || xheroResolverStopping) {
+        return;
+    }
+
+    XHeroResolverSetError(@"iOS Bunny resolver WebContent process terminated.");
+}
+
+@end
 
 @implementation XHeroWVDelegate
 
@@ -675,6 +929,108 @@ didFailProvisionalNavigation:(WKNavigation *)navigation
 // -----------------------------------------------------------------------------
 // Exported C ABI used by XHeroWebViewTexturePlayer.cs
 // -----------------------------------------------------------------------------
+
+extern "C" bool XHeroWVResolver_Start(const char *url) {
+    if (url == NULL || strlen(url) == 0) {
+        XHeroResolverSetError(@"Missing Bunny resolver URL.");
+        return false;
+    }
+
+    NSString *urlString = [NSString stringWithUTF8String:url];
+    NSURL *parsedURL = [NSURL URLWithString:urlString];
+
+    if (urlString.length == 0 || parsedURL == nil) {
+        XHeroResolverSetError(@"Invalid Bunny resolver URL.");
+        return false;
+    }
+
+    __block BOOL started = NO;
+
+    void (^startBlock)(void) = ^{
+        XHeroWVResolver_Stop();
+
+        xheroResolverGeneration++;
+        xheroResolverStopping = NO;
+        xheroResolverNavigationFinished = NO;
+        xheroResolverFailureCount = 0;
+        xheroResolverCurrentURL = [urlString copy];
+
+        XHeroResolverSetResolvedURL(@"");
+        XHeroResolverSetError(@"");
+
+        UIWindow *window = XHeroActiveWindow();
+        UIViewController *controller = XHeroTopViewController(window.rootViewController);
+
+        if (window == nil || controller == nil || controller.view == nil) {
+            XHeroResolverSetError(@"Cannot find an active iOS window/root view controller for Bunny resolver.");
+            return;
+        }
+
+        WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
+        configuration.allowsInlineMediaPlayback = YES;
+        configuration.websiteDataStore = [WKWebsiteDataStore defaultDataStore];
+        configuration.applicationNameForUserAgent = @"XHeroLMS";
+
+        if (@available(iOS 10.0, *)) {
+            configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
+        }
+
+        CGRect frame = CGRectMake(0.0, 0.0, 2.0, 2.0);
+        xheroResolverWebView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
+        xheroResolverWebView.opaque = NO;
+        xheroResolverWebView.backgroundColor = UIColor.clearColor;
+        xheroResolverWebView.scrollView.backgroundColor = UIColor.clearColor;
+        xheroResolverWebView.scrollView.scrollEnabled = NO;
+        xheroResolverWebView.scrollView.bounces = NO;
+        xheroResolverWebView.userInteractionEnabled = NO;
+        xheroResolverWebView.hidden = NO;
+        xheroResolverWebView.alpha = 0.01;
+
+        xheroResolverDelegate = [[XHeroWVResolverDelegate alloc] init];
+        xheroResolverWebView.navigationDelegate = xheroResolverDelegate;
+
+        [controller.view addSubview:xheroResolverWebView];
+        [controller.view sendSubviewToBack:xheroResolverWebView];
+
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:parsedURL
+                                                              cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                          timeoutInterval:30.0];
+
+        [request setValue:@"https://iframe.mediadelivery.net/"
+       forHTTPHeaderField:@"Referer"];
+
+        [xheroResolverWebView loadRequest:request];
+        XHeroResolverRestartTimer();
+
+        started = YES;
+    };
+
+    if ([NSThread isMainThread]) {
+        startBlock();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), startBlock);
+    }
+
+    return started;
+}
+
+extern "C" void XHeroWVResolver_Stop(void) {
+    if ([NSThread isMainThread]) {
+        XHeroResolverStopOnMainThread();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            XHeroResolverStopOnMainThread();
+        });
+    }
+}
+
+extern "C" const char *XHeroWVResolver_GetResolvedUrl(void) {
+    return XHeroResolverCopyResolvedURLCString();
+}
+
+extern "C" const char *XHeroWVResolver_GetLastError(void) {
+    return XHeroResolverCopyErrorCString();
+}
 
 extern "C" bool XHeroWV_Start(const char *url, int width, int height, int fps) {
     if (url == NULL || strlen(url) == 0) {
