@@ -407,14 +407,6 @@ public class PointClickSystem : MonoBehaviour
                 return;
             // Case click vào checkpoint ghế: giữ nguyên behavior cũ
        
-
-            if (TutorialHandler.Instance != null)
-            {
-                if (!TutorialHandler.Instance.IsPlayedBefore())
-                {
-                    return;
-                }
-            }
             // Raycast xuống ground (maxDistance + layerMask)
             if (TryRaycastGround(ray, out var groundHit, GroundRaycastDistance))
             {
@@ -1212,34 +1204,8 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    public void MoveToChair(ChairCheckPoint chairCheckPoint)
-    {
-        MoveToChairCheckPoint(chairCheckPoint);
-    }
-    
     public bool MoveToChairCheckPoint(ChairCheckPoint chairCheckPoint)
     {
-        if (chairCheckPoint != null)
-        {
-            // hard code logic
-            var tutorialInstance = TutorialHandler.Instance;
-            if ( tutorialInstance != null)
-            {
-                if (tutorialInstance.IsStep(0) && tutorialInstance.IsPlayedBefore() == false)
-                {
-                    var isNotTutorialChair = chairCheckPoint.GetComponent<TutorialChair>() == null;
-
-                    if (isNotTutorialChair)
-                    {
-                        Debug.Log($"Player is in tutorial state and check point hit not tutorial chair");
-                        return true;
-                    }
-
-                    tutorialInstance.worldTutorialStep.SetActive(false);
-                }
-            }
-            
-        }
         StopWaitToMoveChair();
 
         // click ghế: không dùng isClickMoving + tắt VFX nếu đang bật
