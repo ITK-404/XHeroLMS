@@ -69,7 +69,9 @@ public class ClassTutorialFlow : FlowBase
     /// </summary>
     private TutorialFlowBuilder ResolveNextBuilder()
     {
-        return nextBuilder;
+        var next = nextBuilder;
+        nextBuilder = null;
+        return next;
     }
 
     private bool SomeContextCondition()
