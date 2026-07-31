@@ -4,7 +4,6 @@ using UnityEngine;
 
 public abstract class TutorialStepBehaviour : MonoBehaviour
 {
-    [SerializeField] protected float delay = 2f;
     public event Action OnEnterStateEvent;
     public event Action OnExitStateEvent;
 
@@ -26,6 +25,6 @@ public abstract class TutorialStepBehaviour : MonoBehaviour
 
     public TutorialStepNode CreateTutorialNode()
     {
-        return new TutorialStepNode(this, delay);
+        return new TutorialStepNode(this);
     }
 }
