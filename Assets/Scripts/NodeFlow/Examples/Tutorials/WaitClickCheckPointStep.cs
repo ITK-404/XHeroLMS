@@ -7,6 +7,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
 {
     [SerializeField] private ChairCheckPoint tutorialCheckPoint;
     [SerializeField] private Button chairCheckPoint;
+    [SerializeField] private FocusTutorialTest focusTutorialTest;
     private PointClickSystem pointClickSystem;  
 
     private bool isClick = false;
@@ -24,18 +25,29 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
         chairCheckPoint.GetComponent<UIFollowFirstChairCheckPoint>().SetTarget(tutorialCheckPoint);
     }
 
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
+        base.Enter(context);
+        if (context != null && context.TryGet(nameof(ClassTutorialFlow), out ClassTutorialFlow value))
+        {
+            value.ShowBlockPanel(false, 0);
+        }
         chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
-        pointClickSystem = FindFirstObjectByType<PointClickSystem>();
-        base.Enter();
+        if(pointClickSystem == null)
+            pointClickSystem = FindFirstObjectByType<PointClickSystem>();
         RotateToPoint();
+        focusTutorialTest?.Enable();
     }
 
-    public override void Exit()
+    public override void Exit(CutsceneContext context = null)
     {
-        base.Exit();
+        base.Exit(context);
+        if (context != null && context.TryGet(nameof(ClassTutorialFlow), out ClassTutorialFlow value))
+        {
+            value.ShowBlockPanel(true, 0);
+        }
         chairCheckPoint.onClick.RemoveListener(TryClickToChairCheckPoint);
+        focusTutorialTest?.Disable();
     }
 
     private void RotateToPoint()

@@ -8,9 +8,9 @@ public class WaitLookToTarget : TutorialStepBehaviour
     private PointClickSystem pointClickSystem;
     private bool isDone = false;
 
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
-        base.Enter();
+        base.Enter(context);
         pointClickSystem = FindFirstObjectByType<PointClickSystem>();
         RotateToPoint();
     }

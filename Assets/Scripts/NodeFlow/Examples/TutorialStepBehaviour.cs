@@ -8,18 +8,18 @@ public abstract class TutorialStepBehaviour : MonoBehaviour
     public event Action OnEnterStateEvent;
     public event Action OnExitStateEvent;
 
-    public virtual void Enter()
+    public virtual void Enter(CutsceneContext context = null)
     {
         OnEnterStateEvent?.Invoke();
     }
 
-    public virtual void Tick()
+    public virtual void Tick(CutsceneContext context = null)
     {
     }
 
     public abstract bool IsCompleted();
 
-    public virtual void Exit()
+    public virtual void Exit(CutsceneContext context = null)
     {
         OnExitStateEvent?.Invoke();
     }

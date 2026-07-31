@@ -27,7 +27,7 @@ public class TutorialStepNode : FlowNode
             );
         }
 
-        stepBehaviour.Enter();
+        stepBehaviour.Enter(context);
 
         try
         {
@@ -35,7 +35,7 @@ public class TutorialStepNode : FlowNode
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                stepBehaviour.Tick();
+                stepBehaviour.Tick(context);
 
                 await UniTask.Yield(
                     PlayerLoopTiming.Update,
@@ -55,7 +55,7 @@ public class TutorialStepNode : FlowNode
         }
         finally
         {
-            stepBehaviour.Exit();
+            stepBehaviour.Exit(context);
         }
     }
 }

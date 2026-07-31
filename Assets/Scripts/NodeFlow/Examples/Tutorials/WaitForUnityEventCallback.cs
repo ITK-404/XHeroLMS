@@ -9,17 +9,17 @@ public class WaitForUnityEventCallback : TutorialStepBehaviour
 
     private bool isCompleted = false;
     
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
-        base.Enter();
+        base.Enter(context);
         OnEnterStep?.Invoke();
 
         StartCoroutine(WaitForDelay());
     }
 
-    public override void Exit()
+    public override void Exit(CutsceneContext context = null)
     {
-        base.Exit();
+        base.Exit(context);
         OnExitStep?.Invoke();
     }
 

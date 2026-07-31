@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 public class ClassTutorialFlow : FlowBase
 {
-    [Header("References")]
-    [SerializeField] private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
+    [Header("References")] [SerializeField]
+    private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
 
     [SerializeField] private TutorialFlowBuilder builder;
     [Header("UI")] [SerializeField] private Image backgroundImg;
@@ -95,20 +95,20 @@ public class ClassTutorialFlow : FlowBase
         }
     }
 
-    private void ShowBlockPanel(bool isShow)
+    public void ShowBlockPanel(bool isShow, float duration = 0.2f)
     {
         backgroundImg.DOKill();
         if (isShow)
         {
             backgroundImg.DOFade(0, 0);
             backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(0.95f, 0.3f);
+            backgroundImg.DOFade(0.95f, duration);
         }
         else
         {
             backgroundImg.DOFade(0.95f, 0);
             backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(1, 0.3f).OnComplete(() => { backgroundImg.gameObject.SetActive(false); });
+            backgroundImg.DOFade(1, duration).OnComplete(() => { backgroundImg.gameObject.SetActive(false); });
         }
     }
 
@@ -117,5 +117,12 @@ public class ClassTutorialFlow : FlowBase
         InitSetup(builder.gameObject);
         var initializeNode = builder.BuildFlowNode();
         return initializeNode;
+    }
+
+    protected override CutsceneContext CreateGameContext()
+    {
+        var cutsceneContext = new CutsceneContext();
+        cutsceneContext.Set(nameof(ClassTutorialFlow), this);
+        return cutsceneContext;
     }
 }
