@@ -20,10 +20,6 @@ public class VerticalBounceManager : MonoBehaviour
 
     void Update()
     {
-        if (!TutorialHandler.Instance.IsPlayedBefore())
-        {
-            return;
-        }
         float offsetY = Mathf.Sin(Time.time * speed) * amplitude;
 
         for (int i = 0; i < items.Count; i++)

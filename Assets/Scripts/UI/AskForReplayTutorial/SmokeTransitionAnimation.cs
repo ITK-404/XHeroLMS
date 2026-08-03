@@ -14,12 +14,22 @@ public class SmokeTransitionAnimation : MonoBehaviour
 
     private void Awake()
     {
-        transitionImages = GetComponentsInChildren<Image>();
+        CacheImages();
         HideAll();
+    }
+
+    [ContextMenu("Testing")]
+    public void POolay()
+    {
+        StartTransitionAsync().Forget();
     }
 
     public async UniTask StartTransitionAsync()
     {
+        // Đảm bảo mọi lần chạy đều bật GO lên và fade về 0 trước khi tween
+        CacheImages();
+        HideAll();
+
         Sequence sequence = DOTween.Sequence();
 
         for (int i = 0; i < transitionImages.Length; i++)
@@ -34,25 +44,22 @@ public class SmokeTransitionAnimation : MonoBehaviour
         await sequence.AsyncWaitForCompletion();
     }
 
+    private void CacheImages()
+    {
+        transitionImages = GetComponentsInChildren<Image>(includeInactive: true);
+    }
+
     private void HideAll()
     {
         foreach (var image in transitionImages)
         {
+            image.gameObject.SetActive(true);
             image.DOFade(0, 0);
-        }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            Test();
         }
     }
 
     private void Test()
     {
-        HideAll();
         StartTransitionAsync().Forget();
     }
 }

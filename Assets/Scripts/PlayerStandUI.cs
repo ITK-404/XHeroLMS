@@ -91,16 +91,6 @@ public class PlayerStandUI : MonoBehaviour
     {
         bool canInteract = playerChairManager.currentCheckPoint;
         sitdownButton.interactable = canInteract;
-        if (TutorialHandler.Instance.CurrentStep == TutorialStepType.GoToChair)
-        {
-            if (isShowOneTime == false && playerChairManager.currentCheckPoint != null &&
-                playerChairManager.currentCheckPoint.GetComponent<TutorialChair>())
-            {
-                Debug.Log("Hiển thị hướng dẫn ngồi xuống");
-                TutorialHandler.Instance.SetCurrentStep(TutorialStepType.Sitdown);
-                isShowOneTime = true;
-            }
-        }
     }
 
     private void ShowWatchVideoUI()

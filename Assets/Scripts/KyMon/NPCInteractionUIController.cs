@@ -26,7 +26,7 @@ public class NPCInteractionUIController : MonoBehaviour
         advanceCourseUI.OnClickReturnEvent -= HandleReturnButtonClicked;
     }
 
-    private void HandleReturnButtonClicked()
+    public void HandleReturnButtonClicked()
     {
         interactionUIView.Show();
         actionChoiceViewUI.Show();
