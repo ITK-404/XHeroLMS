@@ -37,11 +37,11 @@ public class FocusTutorialTest : MonoBehaviour
 
     public void Enable()
     {
-        feature?.SetActive(true);
+        // feature?.SetActive(true);
     }
 
     public void Disable()
     {
-        feature?.SetActive(false);
+        // feature?.SetActive(false);
     }
 }

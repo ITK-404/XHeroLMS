@@ -28,10 +28,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Enter(CutsceneContext context = null)
     {
         base.Enter(context);
-        if (context != null && context.TryGet(nameof(ClassTutorialFlow), out ClassTutorialFlow value))
-        {
-            value.ShowBlockPanel(false, 0);
-        }
+
         chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
         if(pointClickSystem == null)
             pointClickSystem = FindFirstObjectByType<PointClickSystem>();
@@ -42,10 +39,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Exit(CutsceneContext context = null)
     {
         base.Exit(context);
-        if (context != null && context.TryGet(nameof(ClassTutorialFlow), out ClassTutorialFlow value))
-        {
-            value.ShowBlockPanel(true, 0);
-        }
+ 
         chairCheckPoint.onClick.RemoveListener(TryClickToChairCheckPoint);
         focusTutorialTest?.Disable();
     }
