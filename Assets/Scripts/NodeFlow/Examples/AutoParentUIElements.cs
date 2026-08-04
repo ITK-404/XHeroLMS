@@ -118,7 +118,7 @@ public class AutoParentUIElements : MonoBehaviour
         }
     }
 
-    private void SetToOldParent()
+    public void SetToOldParent()
     {
         if (!isInitialized)
         {
@@ -161,5 +161,23 @@ public class AutoParentUIElements : MonoBehaviour
     public void SetParent(Transform parent)
     {
         newParent = parent;
+    }
+    
+    public void AddElement(RectTransform element)
+    {
+        if (element == null || elements.Contains(element))
+        {
+            return;
+        }
+
+        elements.Add(element);
+        oldParents.Add(element.parent);
+        oldSiblingIndexes.Add(element.GetSiblingIndex());
+
+        // Chuyển UI mới vào parent tutorial ngay.
+        if (newParent != null)
+        {
+            element.SetParent(newParent, true);
+        }
     }
 }

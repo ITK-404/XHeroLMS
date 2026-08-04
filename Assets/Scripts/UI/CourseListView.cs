@@ -47,6 +47,7 @@ public class CourseListView : MonoBehaviour
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
     private readonly List<LessonUI> _videoLessons = new();
+    public List<LessonUI> VideoLessons => _videoLessons;
     private LessonUI _currentLesson;
 
     private float _videoStartRealtime;
