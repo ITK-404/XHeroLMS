@@ -7,27 +7,30 @@ using UnityEngine.UI;
 
 public class ClassTutorialFlow : FlowBase
 {
+    public static ClassTutorialFlow Instance;
+    
     [Header("References")] [SerializeField]
     private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
-
+    [Header("Tutorial")]
     [SerializeField] private TutorialFlowBuilder builder;
-    [Header("UI")] [SerializeField] private Image backgroundImg;
-    [SerializeField] private RectTransform targetParent;
     [SerializeField] private AskForReplayTutorialUI askForReplayTutorialUI;
     [SerializeField] private AutoReplayController autoReplayController;
 
+    [Header("Focus Masking")] 
+    [SerializeField] private ShaderMaskingUI shaderMaskingUI;
+    [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     protected override void Awake()
     {
         base.Awake();
-        ShowBlockPanel(false);
+        Instance = this;
+
+        ClearZone();
     }
 
-    private void InitSetup(GameObject builderGO)
+    protected override void OnDestroy()
     {
-        foreach (var item in builderGO.GetComponentsInChildren<AutoParentUIElements>())
-        {
-            item.SetParent(targetParent);
-        }
+        base.OnDestroy();
+        Instance = null;
     }
 
     private void Start()
@@ -38,7 +41,6 @@ public class ClassTutorialFlow : FlowBase
     private async UniTask HandleFlow()
     {
         // GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
-        ShowBlockPanel(true);
         await UniTask.WaitForSeconds(2f);
         RunFlow().Forget();
 
@@ -46,9 +48,6 @@ public class ClassTutorialFlow : FlowBase
         await UniTask.WaitUntil(() => !IsRunning(),
             PlayerLoopTiming.Update,
             this.GetCancellationTokenOnDestroy());
-
-        ShowBlockPanel(false);
-
         // Flow hiện tại đã chạy xong tại đây.
         var next = ResolveNextBuilder();
         if (next != null)
@@ -95,26 +94,8 @@ public class ClassTutorialFlow : FlowBase
         }
     }
 
-    public void ShowBlockPanel(bool isShow, float duration = 0.2f)
-    {
-        backgroundImg.DOKill();
-        if (isShow)
-        {
-            backgroundImg.DOFade(0, 0);
-            backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(0.95f, duration);
-        }
-        else
-        {
-            backgroundImg.DOFade(0.95f, 0);
-            backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(1, duration).OnComplete(() => { backgroundImg.gameObject.SetActive(false); });
-        }
-    }
-
     protected override FlowNode CreateFlow()
     {
-        InitSetup(builder.gameObject);
         var initializeNode = builder.BuildFlowNode();
         return initializeNode;
     }
@@ -124,5 +105,17 @@ public class ClassTutorialFlow : FlowBase
         var cutsceneContext = new CutsceneContext();
         cutsceneContext.Set(nameof(ClassTutorialFlow), this);
         return cutsceneContext;
+    }
+
+    public void SetInteractZone(RectTransform rectTransform)
+    {
+        shaderMaskingUI.SetTarget(rectTransform);
+        focusFiler.SetTarget(rectTransform);
+    }
+
+    public void ClearZone()
+    {
+        shaderMaskingUI.ClearTargetAndTurnOff();
+        focusFiler.ClearTarget();
     }
 }

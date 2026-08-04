@@ -470,7 +470,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb06e4dd722d46a7baeb1a1e55597d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonTutorialStep
-  delay: 0
   targetButton: {fileID: 2610720439374388527}
 --- !u!114 &1258932978379978025
 MonoBehaviour:
@@ -719,6 +718,7 @@ Transform:
   - {fileID: 1580736918601926539}
   - {fileID: 3598702019980242854}
   - {fileID: 1606939020716486143}
+  - {fileID: 8887255668939782312}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &804534940563904255
@@ -786,7 +786,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df21106816f244319b3a3fa8a0084403, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickCheckPointStep
-  delay: 0
   tutorialCheckPoint: {fileID: 943846702879841352}
   chairCheckPoint: {fileID: 779473949645965403}
   focusTutorialTest: {fileID: 1395490665331651485}
@@ -1060,7 +1059,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2849891761326626862}
-  - {fileID: 1755582110726573887}
   - {fileID: 4132021658885575380}
   - {fileID: 6461496032567965926}
   - {fileID: 199622108516668586}
@@ -1148,10 +1146,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassTutorialFlow
   nextBuilder: {fileID: 0}
   builder: {fileID: 712734600859751110}
-  backgroundImg: {fileID: 8989022683466063518}
   targetParent: {fileID: 4132021658885575380}
   askForReplayTutorialUI: {fileID: 702154441998807986}
   autoReplayController: {fileID: 596945335964383533}
+  shaderMaskingUI: {fileID: 4939142765880689005}
+  focusFiler: {fileID: 1045452290259959659}
 --- !u!114 &1395490665331651485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1681,7 +1680,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 768293fc1f6e45f8a0ed75d36d3ed4c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForPlayerStateChange
-  delay: 0
   targetState: 1
 --- !u!1 &2984939604763138042
 GameObject:
@@ -2043,7 +2041,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb06e4dd722d46a7baeb1a1e55597d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonTutorialStep
-  delay: 0
   targetButton: {fileID: 910398386927872159}
 --- !u!114 &7494429228582125133
 MonoBehaviour:
@@ -2160,7 +2157,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cf5916cd27d481c90615103d568a3a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForTimeTutorialStep
-  delay: 0
   waitTime: 3
   enableDebugLog: 0
 --- !u!114 &6237492678663211283
@@ -2505,7 +2501,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83743320bb004990b7fb56394683566e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitLookToTarget
-  delay: 0
   target: {fileID: 7231483678406601547}
 --- !u!1 &4408088169644887823
 GameObject:
@@ -2630,7 +2625,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83743320bb004990b7fb56394683566e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitLookToTarget
-  delay: 2
   target: {fileID: 7231483678406601547}
 --- !u!1 &4758222105465216211
 GameObject:
@@ -2757,7 +2751,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb06e4dd722d46a7baeb1a1e55597d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonTutorialStep
-  delay: 0
   targetButton: {fileID: 4686125798864675976}
 --- !u!114 &680954804028844378
 MonoBehaviour:
@@ -2836,7 +2829,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 204326fd081940c59d2d93be89d753c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForCourseUIStateTutorialStep
-  delay: 0
   learnUI: {fileID: 5967791382152491802}
   targetActiveState: 1
 --- !u!1 &5279291517434185685
@@ -3603,7 +3595,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 204326fd081940c59d2d93be89d753c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForCourseUIStateTutorialStep
-  delay: 0
   learnUI: {fileID: 5967791382152491802}
   targetActiveState: 0
 --- !u!1 &7185968634719967265
@@ -3654,86 +3645,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 724762c74db947929baa38a24be23c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitMoveToTargetCheckPoint
-  delay: 0
   targetCheckPoint: {fileID: 943846702879841352}
   pointClickSystem: {fileID: 2839282411112150119}
   isDoneTest: 0
   stoppingDistance: 2
---- !u!1 &7653888682066656185
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1755582110726573887}
-  - component: {fileID: 8784349982677766579}
-  - component: {fileID: 8989022683466063518}
-  m_Layer: 5
-  m_Name: Image
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &1755582110726573887
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653888682066656185}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1606939020716486143}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &8784349982677766579
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653888682066656185}
-  m_CullTransparentMesh: 1
---- !u!114 &8989022683466063518
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653888682066656185}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.98039216}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &8198700938605869591
 GameObject:
   m_ObjectHideFlags: 0
@@ -3784,7 +3699,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb06e4dd722d46a7baeb1a1e55597d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonTutorialStep
-  delay: 0
   targetButton: {fileID: 2657390045250356576}
 --- !u!114 &3576497352451160870
 MonoBehaviour:
@@ -6523,6 +6437,134 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 564451522121711361, guid: 4c3fb32816c78594eb8b16ee66f8e64a, type: 3}
   m_PrefabInstance: {fileID: 3979819387022670823}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &4237968238418860831
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6648916731558787716}
+    m_Modifications:
+    - target: {fileID: 584565797051003372, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3619268242630563958, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_Name
+      value: Canvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+--- !u!114 &1045452290259959659 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3770208849354040436, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+  m_PrefabInstance: {fileID: 4237968238418860831}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f0a689b36a242228f261f8b2be5f1a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialFocusRaycastFilter
+--- !u!114 &4939142765880689005 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9104894736847231602, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+  m_PrefabInstance: {fileID: 4237968238418860831}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a01ca87f1ba5b4e448f4f878d7f04397, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShaderMaskUITest
+--- !u!224 &8887255668939782312 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4721345093555151799, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+  m_PrefabInstance: {fileID: 4237968238418860831}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4281676867488703751
 PrefabInstance:
