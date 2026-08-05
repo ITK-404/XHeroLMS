@@ -125,6 +125,34 @@ public enum VideoViewMode
 }
 
 [SerializeField] private VideoViewMode currentMode = VideoViewMode.Default;
+
+    public bool IsVideoPlaying
+    {
+        get
+        {
+            if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+                return webViewTexturePlayer.IsPlaying;
+
+            return videoPlayer != null && videoPlayer.isPrepared && videoPlayer.isPlaying;
+        }
+    }
+
+    public bool HasActiveVideo
+    {
+        get
+        {
+            if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+                return webViewTexturePlayer.IsReady;
+
+            if (videoPlayer == null || !videoPlayer.isPrepared)
+                return false;
+
+            return videoPlayer.source == VideoSource.Url
+                ? !string.IsNullOrWhiteSpace(videoPlayer.url)
+                : videoPlayer.clip != null;
+        }
+    }
+
     void Awake()
     {
         if (!courseListView) courseListView = FindAnyObjectByType<CourseListView>();
@@ -375,8 +403,12 @@ public enum VideoViewMode
     {
         if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
         {
-            webViewTexturePlayer.TogglePlayPause();
-            OnPlayStateChanged?.Invoke(webViewTexturePlayer.IsPlaying);
+            if (webViewTexturePlayer.IsPlaying)
+                webViewTexturePlayer.PauseWebVideo();
+            else
+                webViewTexturePlayer.PlayWebVideo();
+
+            OnPlayStateChanged?.Invoke(IsVideoPlaying);
             return;
         }
 
@@ -390,7 +422,29 @@ public enum VideoViewMode
         if (videoPlayer.isPlaying)
         { videoPlayer.Pause(); OnPlayStateChanged?.Invoke(false); }
         else
-        { videoPlayer.Play(); OnPlayStateChanged?.Invoke(true); }
+            PlayVideo();
+    }
+
+    public void PlayVideo()
+    {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive)
+        {
+            webViewTexturePlayer.PlayWebVideo();
+            OnPlayStateChanged?.Invoke(true);
+            return;
+        }
+
+        if (!videoPlayer)
+            return;
+
+        if (!videoPlayer.isPrepared)
+        {
+            PrepareIfNeeded(autoPlay: true);
+            return;
+        }
+
+        videoPlayer.Play();
+        OnPlayStateChanged?.Invoke(true);
     }
 
     public void TryToPauseVideo()
@@ -989,6 +1043,8 @@ public void EnterFullScreenMode()
 
         if (audioSource)
             audioSource.Pause();
+
+        OnPlayStateChanged?.Invoke(false);
     }
 
 private VideoContainer GetCurrentContainer()

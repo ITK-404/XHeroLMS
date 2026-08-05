@@ -35,7 +35,7 @@ public class CourseListView : MonoBehaviour
     public SceneLessonUI sceneLessonUI;
     public string courseID;
 
-    [Header("Final Exam")] 
+    [Header("Final Exam")]
     public string finalExamSectionTitle = "Bài thi cuối khóa";
     public string finalExamItemTitle = "Vào bài thi";
 
@@ -934,7 +934,8 @@ public class CourseListView : MonoBehaviour
 
     private void PlayVideo(LessonUI lesson)
     {
-        if (lesson == null) return;
+        if (lesson == null)
+            return;
 
         _standUpPausedVideo = false;
         _standUpResumeRequested = false;
@@ -947,7 +948,8 @@ public class CourseListView : MonoBehaviour
         if (string.IsNullOrWhiteSpace(url))
         {
             Debug.LogWarning(
-                $"[CourseListView] Empty video url. link1={link1}, link2={fallbackUrl}"
+                $"[CourseListView] Empty video url. " +
+                $"link1={link1}, link2={fallbackUrl}"
             );
             return;
         }
@@ -955,16 +957,22 @@ public class CourseListView : MonoBehaviour
         if (!IsVideoLesson(lesson))
         {
             Debug.LogWarning(
-                $"[CourseListView] Block non-video lesson from PlayVideo. type={lesson.type}, link1={link1}, link2={fallbackUrl}"
+                $"[CourseListView] Block non-video lesson. " +
+                $"type={lesson.type}"
             );
             return;
         }
 
         if (IsSameVideoWaitingForFirstFrame(url))
         {
-            Debug.Log("[CourseListView] Ignore duplicate video click while waiting first frame: " + url);
+            Debug.Log(
+                "[CourseListView] Ignore duplicate video click: " + url
+            );
             return;
         }
+
+        // Đóng UI chung cho cả Link 1 và Link 2.
+        CloseLessonListUI();
 
         string oldUrl = _activeVideoOriginUrl;
 
@@ -977,57 +985,22 @@ public class CourseListView : MonoBehaviour
 
         if (useWebViewTexture)
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != url)
-            {
-                ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
-            }
-#endif
-
-            _usingProxyForCurrentVideo = false;
-            _activeVideoOriginUrl = url;
-            _currentOriginUrl = url;
-            _fallbackToOriginTriedForCurrentVideo = false;
-            _proxyRetryTriedForCurrentVideo = false;
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-            string nativeRoute = "Android jar -> libxheronativetexture.so -> Unity RawImage";
-#elif UNITY_IOS && !UNITY_EDITOR
-            string nativeRoute = "iOS AVPlayer native bridge -> Unity RawImage";
-#else
-            string nativeRoute = "native WebView bridge -> Unity RawImage";
-#endif
-
-            Debug.Log(
-                $"[{XHeroWebViewTexturePlayer.MethodName}] Play original videoLink1 iframe through {nativeRoute}. " +
-                $"graphics={SystemInfo.graphicsDeviceType} iframe={link1} | fallbackLink2={fallbackUrl}"
+            // Phần xử lý Link 1 hiện tại...
+            _playVideoRoutine = StartCoroutine(
+                PlayLink1WithWebViewTexture(
+                    link1,
+                    fallbackUrl,
+                    playToken
+                )
             );
 
-            _playVideoRoutine = StartCoroutine(PlayLink1WithWebViewTexture(link1, fallbackUrl, playToken));
             return;
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!proxyBoot)
-            proxyBoot = FindAnyObjectByType<LocalProxyAutoBoot>();
-
-        if (proxyBoot && proxyBoot.enableProxyOnAndroid && proxyBoot.EnsureStarted())
-        {
-            if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != url)
-            {
-                ProxyRelease(oldUrl, deleteOldProxyCacheOnLessonChange);
-            }
-
-            ProxySetActiveUrl(url, deleteOldProxyCacheOnLessonChange);
-        }
-#endif
-
-        _activeVideoOriginUrl = url;
-        _currentOriginUrl = url;
-        _fallbackToOriginTriedForCurrentVideo = false;
-        _proxyRetryTriedForCurrentVideo = false;
-
-        _playVideoRoutine = StartCoroutine(PlayVideoWithProxyPreload(url, playToken));
+        // Phần xử lý Link 2 hiện tại...
+        _playVideoRoutine = StartCoroutine(
+            PlayVideoWithProxyPreload(url, playToken)
+        );
     }
 
     // Link 1 keeps the original Bunny iframe path and renders through the platform WebView bridge:
@@ -1540,166 +1513,166 @@ public class CourseListView : MonoBehaviour
         videoPlayer.clip = null;
     }
 
-private void StopVideoPipeline()
-{
-    if (_playVideoRoutine != null)
+    private void StopVideoPipeline()
     {
-        StopCoroutine(_playVideoRoutine);
-        _playVideoRoutine = null;
+        if (_playVideoRoutine != null)
+        {
+            StopCoroutine(_playVideoRoutine);
+            _playVideoRoutine = null;
+        }
+
+        if (webViewTexturePlayer)
+            webViewTexturePlayer.Stop();
+
+        XHeroWebViewTexturePlayer.StopActiveInstance();
+
+        _playVideoToken++;
+        _videoStopRequested = true;
+
+        HardStopVideoAudio();
+
+        _videoStartUrl = null;
+        _loggedFirstFrame = false;
+        _standUpPausedVideo = false;
+        _usingProxyForCurrentVideo = false;
+        _proxyRetryTriedForCurrentVideo = false;
+        _lastProxyHealthBoostRealtime = -999f;
+        _proxyBufferGuardPaused = false;
+        _lastProxyRangeBoostStart = -1L;
+        ResetProxyPlaybackWatchdogState();
     }
-
-    if (webViewTexturePlayer)
-        webViewTexturePlayer.Stop();
-
-    XHeroWebViewTexturePlayer.StopActiveInstance();
-
-    _playVideoToken++;
-    _videoStopRequested = true;
-
-    HardStopVideoAudio();
-
-    _videoStartUrl = null;
-    _loggedFirstFrame = false;
-    _standUpPausedVideo = false;
-    _usingProxyForCurrentVideo = false;
-    _proxyRetryTriedForCurrentVideo = false;
-    _lastProxyHealthBoostRealtime = -999f;
-    _proxyBufferGuardPaused = false;
-    _lastProxyRangeBoostStart = -1L;
-    ResetProxyPlaybackWatchdogState();
-}
-private void SetVideoAudioEnabled(bool enabled)
-{
-    if (!videoPlayer) return;
-
-    try
+    private void SetVideoAudioEnabled(bool enabled)
     {
-        int trackCount = 1;
+        if (!videoPlayer) return;
 
         try
         {
-            trackCount = videoPlayer.controlledAudioTrackCount > 0
-                ? videoPlayer.controlledAudioTrackCount
-                : videoPlayer.audioTrackCount;
-        }
-        catch
-        {
-            trackCount = 1;
-        }
+            int trackCount = 1;
 
-        trackCount = Mathf.Clamp(trackCount, 1, 8);
-
-        for (ushort i = 0; i < trackCount; i++)
-        {
             try
             {
-                videoPlayer.EnableAudioTrack(i, enabled);
+                trackCount = videoPlayer.controlledAudioTrackCount > 0
+                    ? videoPlayer.controlledAudioTrackCount
+                    : videoPlayer.audioTrackCount;
             }
-            catch { }
-
-            try
+            catch
             {
-                videoPlayer.SetDirectAudioMute(i, !enabled);
-                videoPlayer.SetDirectAudioVolume(i, enabled ? 1f : 0f);
+                trackCount = 1;
             }
-            catch { }
 
-            try
+            trackCount = Mathf.Clamp(trackCount, 1, 8);
+
+            for (ushort i = 0; i < trackCount; i++)
             {
-                AudioSource source = videoPlayer.GetTargetAudioSource(i);
-                if (source)
+                try
                 {
-                    source.mute = !enabled;
-                    source.volume = enabled ? 1f : 0f;
+                    videoPlayer.EnableAudioTrack(i, enabled);
+                }
+                catch { }
 
-                    if (!enabled)
+                try
+                {
+                    videoPlayer.SetDirectAudioMute(i, !enabled);
+                    videoPlayer.SetDirectAudioVolume(i, enabled ? 1f : 0f);
+                }
+                catch { }
+
+                try
+                {
+                    AudioSource source = videoPlayer.GetTargetAudioSource(i);
+                    if (source)
                     {
-                        source.Stop();
+                        source.mute = !enabled;
+                        source.volume = enabled ? 1f : 0f;
+
+                        if (!enabled)
+                        {
+                            source.Stop();
+                        }
                     }
                 }
+                catch { }
             }
-            catch { }
         }
+        catch { }
     }
-    catch { }
-}
 
-private void HardStopVideoAudio()
-{
-    if (!videoPlayer) return;
-
-    _videoStopRequested = true;
-
-    videoPlayer.errorReceived -= OnVideoError;
-    videoPlayer.prepareCompleted -= OnVideoPrepared;
-    videoPlayer.frameReady -= OnVideoFrameReady;
-    videoPlayer.sendFrameReadyEvents = false;
-
-    SetVideoAudioEnabled(false);
-
-    try
+    private void HardStopVideoAudio()
     {
-        videoPlayer.Pause();
-    }
-    catch { }
+        if (!videoPlayer) return;
 
-    try
-    {
-        videoPlayer.Stop();
-    }
-    catch { }
+        _videoStopRequested = true;
 
-    try
-    {
-        videoPlayer.url = string.Empty;
-        videoPlayer.clip = null;
-    }
-    catch { }
+        videoPlayer.errorReceived -= OnVideoError;
+        videoPlayer.prepareCompleted -= OnVideoPrepared;
+        videoPlayer.frameReady -= OnVideoFrameReady;
+        videoPlayer.sendFrameReadyEvents = false;
 
-    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
-}
+        SetVideoAudioEnabled(false);
 
-private void PauseVideoAudioOnly()
-{
-    if (!videoPlayer) return;
-
-    HideVideoFirstFrameLoading();
-
-    _videoStopRequested = true;
-
-    videoPlayer.prepareCompleted -= OnVideoPrepared;
-    videoPlayer.frameReady -= OnVideoFrameReady;
-    videoPlayer.sendFrameReadyEvents = false;
-
-    try
-    {
-        videoPlayer.Pause();
-    }
-    catch { }
-
-    try
-    {
-        int trackCount = videoPlayer.controlledAudioTrackCount > 0
-            ? videoPlayer.controlledAudioTrackCount
-            : videoPlayer.audioTrackCount;
-
-        trackCount = Mathf.Clamp(trackCount, 1, 8);
-
-        for (ushort i = 0; i < trackCount; i++)
+        try
         {
-            try
-            {
-                AudioSource source = videoPlayer.GetTargetAudioSource(i);
-                if (source)
-                    source.Pause();
-            }
-            catch { }
+            videoPlayer.Pause();
         }
-    }
-    catch { }
+        catch { }
 
-    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
-}
+        try
+        {
+            videoPlayer.Stop();
+        }
+        catch { }
+
+        try
+        {
+            videoPlayer.url = string.Empty;
+            videoPlayer.clip = null;
+        }
+        catch { }
+
+        videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
+    }
+
+    private void PauseVideoAudioOnly()
+    {
+        if (!videoPlayer) return;
+
+        HideVideoFirstFrameLoading();
+
+        _videoStopRequested = true;
+
+        videoPlayer.prepareCompleted -= OnVideoPrepared;
+        videoPlayer.frameReady -= OnVideoFrameReady;
+        videoPlayer.sendFrameReadyEvents = false;
+
+        try
+        {
+            videoPlayer.Pause();
+        }
+        catch { }
+
+        try
+        {
+            int trackCount = videoPlayer.controlledAudioTrackCount > 0
+                ? videoPlayer.controlledAudioTrackCount
+                : videoPlayer.audioTrackCount;
+
+            trackCount = Mathf.Clamp(trackCount, 1, 8);
+
+            for (ushort i = 0; i < trackCount; i++)
+            {
+                try
+                {
+                    AudioSource source = videoPlayer.GetTargetAudioSource(i);
+                    if (source)
+                        source.Pause();
+                }
+                catch { }
+            }
+        }
+        catch { }
+
+        videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(false);
+    }
 
     private void StopAndReleaseActiveVideo()
     {
@@ -2515,23 +2488,23 @@ private void PauseVideoAudioOnly()
         return true;
     }
 
-private void OnVideoPrepared(VideoPlayer vp)
-{
-    if (_videoStopRequested ||
-        !isActiveAndEnabled ||
-        string.IsNullOrWhiteSpace(_currentOriginUrl) ||
-        string.IsNullOrWhiteSpace(vp.url))
+    private void OnVideoPrepared(VideoPlayer vp)
     {
-        Debug.LogWarning("[CourseListView] Video prepared after stop/stand-up. Block auto play.");
+        if (_videoStopRequested ||
+            !isActiveAndEnabled ||
+            string.IsNullOrWhiteSpace(_currentOriginUrl) ||
+            string.IsNullOrWhiteSpace(vp.url))
+        {
+            Debug.LogWarning("[CourseListView] Video prepared after stop/stand-up. Block auto play.");
 
-        PauseVideoAudioOnly();
-        return;
+            PauseVideoAudioOnly();
+            return;
+        }
+
+        SetVideoAudioEnabled(true);
+        vp.Play();
+        videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
     }
-
-    SetVideoAudioEnabled(true);
-    vp.Play();
-    videoPlayerControllerPro?.OnPlayStateChanged?.Invoke(true);
-}
 
     private void OnVideoFrameReady(VideoPlayer vp, long frameIdx)
     {
@@ -2668,5 +2641,25 @@ private void OnVideoPrepared(VideoPlayer vp)
                || lower.Contains(".pptx")
                || lower.Contains(".xls")
                || lower.Contains(".xlsx");
+    }
+
+    private void CloseLessonListUI()
+    {
+        if (!learnUI)
+        {
+            learnUI = FindFirstObjectByType<LearnUI>(
+                FindObjectsInactive.Include
+            );
+        }
+
+        if (learnUI != null &&
+            learnUI.toggleLessonScrollView != null)
+        {
+            learnUI.toggleLessonScrollView.ChangeState(
+                ToggleBaseUI.State.DeActive
+            );
+
+            Debug.Log("[CourseListView] Lesson list UI closed.");
+        }
     }
 }
