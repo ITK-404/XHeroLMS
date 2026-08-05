@@ -1,69 +1,200 @@
-using System;
 using UnityEngine;
-using UnityEngine.UI;
 
-public class WaitForSelectChapter : TutorialStepBehaviour
+public class WaitForSelectCourse : TutorialStepBehaviour
 {
-    private CourseListView courseListView;
-    private bool isCompleted = false;
+    private enum SelectState
+    {
+        None,
+        WaitForChapter,
+        WaitForLesson,
+        Completed
+    }
+
     [SerializeField] private LessonUI validLesson;
-    [SerializeField] private ChapterUI validChapterUI;
-    [SerializeField] private AutoParentUIElements autoParentUIElements;
+    [SerializeField] private ChapterUI validChapter;
+
+    private CourseListView courseListView;
+    private SelectState currentState;
+
     private void Awake()
     {
         courseListView = FindFirstObjectByType<CourseListView>();
     }
 
-    private bool IsValidToOpen()
-    {
-        return false;
-    }
-    
     public override void Enter(CutsceneContext context = null)
     {
         base.Enter(context);
-        var lessons = courseListView.VideoLessons;
-        if (courseListView.VideoLessons == null || lessons.Count == 0)
+
+        currentState = SelectState.None;
+
+        if (!TrySetupTarget())
         {
-            isCompleted = true;
-            Debug.LogError($"[WaitForSelectChapter] lesson is none");
+            currentState = SelectState.Completed;
             return;
         }
 
-        validLesson = lessons[0];
-        validChapterUI = validLesson.chapterUI;
-        // validChapterUI.SelectThisChapter();
-
-        Handle(validChapterUI.transform, false);
-        autoParentUIElements.AddElement(validChapterUI.GetComponent<RectTransform>());
+        ChangeState(SelectState.WaitForChapter);
     }
 
     public override void Exit(CutsceneContext context = null)
     {
         base.Exit(context);
-        Handle(validChapterUI.transform, true);
-        autoParentUIElements.SetToOldParent();
+
+        currentState = SelectState.None;
     }
 
-    private void Handle(Transform element, bool activeState)
-    {
-        var layoutGroup = element.parent.GetComponentInParent<VerticalLayoutGroup>();
-        var contentSizeFiler = element.parent.GetComponentInParent<ContentSizeFitter>();
-
-        layoutGroup.enabled = activeState;
-        contentSizeFiler.enabled = activeState;
-    }
-    
     public override bool IsCompleted()
     {
-        return isCompleted;
-    }
-}
+        TickState();
 
-public class WaitForSelectLesson : TutorialStepBehaviour
-{
-    public override bool IsCompleted()
+        return currentState == SelectState.Completed;
+    }
+
+    private bool TrySetupTarget()
     {
-        throw new System.NotImplementedException();
+        if (courseListView == null)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForSelectCourse)}] CourseListView not found.",
+                this
+            );
+
+            return false;
+        }
+
+        var lessons = courseListView.VideoLessons;
+
+        if (lessons == null || lessons.Count == 0)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForSelectCourse)}] No lessons found.",
+                this
+            );
+
+            return false;
+        }
+
+        validLesson = lessons[0];
+
+        if (validLesson == null)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForSelectCourse)}] Valid lesson is null.",
+                this
+            );
+
+            return false;
+        }
+
+        validChapter = validLesson.chapterUI;
+
+        if (validChapter == null)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForSelectCourse)}] Valid chapter is null.",
+                this
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void TickState()
+    {
+        switch (currentState)
+        {
+            case SelectState.WaitForChapter:
+                CheckChapterSelection();
+                break;
+
+            case SelectState.WaitForLesson:
+                CheckLessonSelection();
+                break;
+        }
+    }
+
+    private void CheckChapterSelection()
+    {
+        if (ChapterUIManager.Instance.currentChapter != validChapter)
+        {
+            return;
+        }
+
+        ChangeState(SelectState.WaitForLesson);
+    }
+
+    private void CheckLessonSelection()
+    {
+        if (courseListView.CurrentLesson != validLesson)
+        {
+            return;
+        }
+
+        ChangeState(SelectState.Completed);
+    }
+
+    private void ChangeState(SelectState newState)
+    {
+        if (currentState == newState)
+        {
+            return;
+        }
+
+        ExitState(currentState);
+
+        currentState = newState;
+
+        EnterState(currentState);
+    }
+
+    private void EnterState(SelectState state)
+    {
+        switch (state)
+        {
+            case SelectState.WaitForChapter:
+                string chapterDescription = $"Nhấn vào để xem các bài học bên trong";
+                Focus(validChapter.GetComponent<RectTransform>(), chapterDescription);
+                break;
+
+            case SelectState.WaitForLesson:
+                string lessonDescription = $"Nhấn vào để học";
+                Focus(validLesson.GetComponent<RectTransform>(),lessonDescription);
+                break;
+
+            case SelectState.Completed:
+                ClearFocus();
+                break;
+        }
+    }
+
+    private void ExitState(SelectState state)
+    {
+        // Hiện tại chưa cần xử lý.
+        // Sau này có animation hoặc cleanup riêng cho từng state thì thêm ở đây.
+    }
+
+    private void Focus(RectTransform target,string description)
+    {
+        if (target == null)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForSelectCourse)}] Focus target is null.",
+                this
+            );
+
+            currentState = SelectState.Completed;
+            return;
+        }
+
+        ClassTutorialFlow.Instance.SetInteractZone(target);
+        FocusHandManager.Instance.SetToTargetRect(target, description);
+    }
+
+    private void ClearFocus()
+    {
+        ClassTutorialFlow.Instance.ClearZone();
+        FocusHandManager.Instance.Hide();
     }
 }

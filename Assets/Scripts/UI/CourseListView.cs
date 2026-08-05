@@ -50,6 +50,11 @@ public class CourseListView : MonoBehaviour
     public List<LessonUI> VideoLessons => _videoLessons;
     private LessonUI _currentLesson;
 
+    public LessonUI CurrentLesson
+    {
+        get => _currentLesson;
+    }
+
     private float _videoStartRealtime;
     private string _videoStartUrl;
     private bool _loggedFirstFrame;
