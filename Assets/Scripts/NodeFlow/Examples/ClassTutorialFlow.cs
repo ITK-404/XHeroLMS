@@ -19,6 +19,8 @@ public class ClassTutorialFlow : FlowBase
     [Header("Focus Masking")] 
     [SerializeField] private ShaderMaskingUI shaderMaskingUI;
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
+    public TutorialClickArea blockingArea;
+    
     protected override void Awake()
     {
         base.Awake();
@@ -117,5 +119,6 @@ public class ClassTutorialFlow : FlowBase
     {
         shaderMaskingUI.ClearTargetAndTurnOff();
         focusFiler.ClearTarget();
+        blockingArea.DeActive();
     }
 }
