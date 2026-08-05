@@ -498,7 +498,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FocusHandTutorial
   targetAnchor: {fileID: 4310896289827401109}
-  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y"
+  focusHandDescription: "Nh\u1EA5n v\xE0o n\xFAt \u0111\u1EC3 \u0111\u1EE9ng l\xEAn"
 --- !u!1 &688315783827731212
 GameObject:
   m_ObjectHideFlags: 0
@@ -815,7 +815,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FocusHandTutorial
   targetAnchor: {fileID: 1641201739321286022}
-  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y"
+  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y \u0111\u1EC3 di chuy\u1EC3n
+    t\u1EDBi"
 --- !u!1 &1009344528522107898
 GameObject:
   m_ObjectHideFlags: 0
@@ -1011,10 +1012,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonSequence
   tutorialClickArea: {fileID: 5347850213960622517}
-  buttons:
-  - {fileID: 8270042395220819158}
-  - {fileID: 7538657565233749306}
-  - {fileID: 7509306294497989663}
+  customs:
+  - button: {fileID: 8270042395220819158}
+    description: "Nh\u1EA5n \u0111\u1EC3 d\u1EEBng video"
+  - button: {fileID: 7538657565233749306}
+    description: "Nh\u1EA5n \u0111\u1EC3 xem \u0111i qua video k\u1EBF ti\u1EBFp"
+  - button: {fileID: 7509306294497989663}
+    description: "Nh\u1EA5n \u0111\u1EC3 \u0111i\u1EC1u ch\u1EC9nh \xE2m l\u01B0\u1EE3ng"
 --- !u!1 &1488431862546707800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1128,10 +1132,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaitForClickButtonSequence
   tutorialClickArea: {fileID: 5347850213960622517}
-  buttons:
-  - {fileID: 5416369636462097269}
-  - {fileID: 5844595343539092250}
-  - {fileID: 4407364720003696867}
+  customs:
+  - button: {fileID: 5416369636462097269}
+    description: "Nh\u1EA5n \u0111\u1EC3 thay \u0111\u1ED5i k\xEDch th\u01B0\u1EDBc
+      video"
+  - button: {fileID: 5844595343539092250}
+    description: "Nh\u1EA5n \u0111\u1EC3 thay \u0111\u1ED5i k\xEDch th\u01B0\u1EDBc
+      video"
+  - button: {fileID: 4407364720003696867}
+    description: "Nh\u1EA5n \u0111\u1EC3 thay \u0111\u1ED5i k\xEDch th\u01B0\u1EDBc
+      video"
 --- !u!1 &1661413072184506458
 GameObject:
   m_ObjectHideFlags: 0
@@ -2175,7 +2185,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FocusHandTutorial
   targetAnchor: {fileID: 4039707736327539645}
-  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y"
+  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y \u0111\u1EC3 m\u1EDF danh s\xE1ch
+    b\xE0i h\u1ECDc"
 --- !u!1 &3742602000286593120
 GameObject:
   m_ObjectHideFlags: 0
@@ -3895,7 +3906,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FocusHandTutorial
   targetAnchor: {fileID: 5100724019442142380}
-  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y"
+  focusHandDescription: "Nh\u1EA5n v\xE0o \u0111\xE2y ng\u1ED3i h\u1ECDc"
 --- !u!1 &8723526228988569173
 GameObject:
   m_ObjectHideFlags: 0
@@ -6701,6 +6712,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9104894736847231602, guid: 9e8b0df410e7c40c2b04d6793128708b, type: 3}
+      propertyPath: canvas
+      value: 
+      objectReference: {fileID: 2152852249479903054}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:

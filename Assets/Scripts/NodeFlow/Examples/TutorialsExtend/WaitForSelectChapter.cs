@@ -154,11 +154,13 @@ public class WaitForSelectCourse : TutorialStepBehaviour
         switch (state)
         {
             case SelectState.WaitForChapter:
-                Focus(validChapter.GetComponent<RectTransform>());
+                string chapterDescription = $"Nhấn vào để xem các bài học bên trong";
+                Focus(validChapter.GetComponent<RectTransform>(), chapterDescription);
                 break;
 
             case SelectState.WaitForLesson:
-                Focus(validLesson.GetComponent<RectTransform>());
+                string lessonDescription = $"Nhấn vào để học";
+                Focus(validLesson.GetComponent<RectTransform>(),lessonDescription);
                 break;
 
             case SelectState.Completed:
@@ -173,7 +175,7 @@ public class WaitForSelectCourse : TutorialStepBehaviour
         // Sau này có animation hoặc cleanup riêng cho từng state thì thêm ở đây.
     }
 
-    private void Focus(RectTransform target)
+    private void Focus(RectTransform target,string description)
     {
         if (target == null)
         {
@@ -187,10 +189,12 @@ public class WaitForSelectCourse : TutorialStepBehaviour
         }
 
         ClassTutorialFlow.Instance.SetInteractZone(target);
+        FocusHandManager.Instance.SetToTargetRect(target, description);
     }
 
     private void ClearFocus()
     {
         ClassTutorialFlow.Instance.ClearZone();
+        FocusHandManager.Instance.Hide();
     }
 }

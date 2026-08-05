@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,11 +12,21 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         Completed
     }
 
-    [Header("References")]
-    [SerializeField] private TutorialClickArea tutorialClickArea;
+    [Serializable]
+    public class ButtonCustom
+    {
+        public Button button;
+        public string description;
+
+    }
+
+    [Header("References")] [SerializeField]
+    private TutorialClickArea tutorialClickArea;
 
     [Header("Buttons")]
-    [SerializeField] private List<Button> buttons = new();
+    // [SerializeField] private List<Button> buttons = new();
+    [SerializeField]
+    private List<ButtonCustom> customs = new();
 
     private int currentButtonIndex;
     private State currentState = State.None;
@@ -34,7 +45,7 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         }
 
         tutorialClickArea = ClassTutorialFlow.Instance.blockingArea;
-        
+
         tutorialClickArea.Clicked += OnTutorialAreaClicked;
         tutorialClickArea.Active();
 
@@ -68,7 +79,7 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return false;
         }
 
-        if (buttons == null || buttons.Count == 0)
+        if (customs == null || customs.Count == 0)
         {
             Debug.LogError(
                 $"[{nameof(WaitForClickButtonSequence)}] Button list is empty.",
@@ -88,7 +99,7 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return;
         }
 
-        Button currentButton = GetCurrentButton();
+        var currentButton = GetCurrentButton();
 
         if (currentButton == null)
         {
@@ -106,7 +117,7 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
     {
         currentButtonIndex++;
 
-        if (currentButtonIndex >= buttons.Count)
+        if (currentButtonIndex >= customs.Count)
         {
             ChangeState(State.Completed);
             return;
@@ -138,7 +149,10 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
 
     private void FocusCurrentButton()
     {
-        Button currentButton = GetCurrentButton();
+        var buttonCustom = GetCurrentButton();
+        if (buttonCustom == null) return;
+
+        var currentButton = buttonCustom.button;
 
         if (currentButton == null)
         {
@@ -168,22 +182,23 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         }
 
         ClassTutorialFlow.Instance.SetInteractZone(buttonRect);
+        FocusHandManager.Instance.SetToTargetRect(buttonRect, buttonCustom.description);
     }
 
-    private Button GetCurrentButton()
+    private ButtonCustom GetCurrentButton()
     {
-        if (buttons == null)
+        if (customs == null)
         {
             return null;
         }
 
         if (currentButtonIndex < 0 ||
-            currentButtonIndex >= buttons.Count)
+            currentButtonIndex >= customs.Count)
         {
             return null;
         }
 
-        return buttons[currentButtonIndex];
+        return customs[currentButtonIndex];
     }
 
     private void OnDestroy()
