@@ -1231,6 +1231,7 @@ GameObject:
   - component: {fileID: 6437442878799164133}
   - component: {fileID: 6481668839558685276}
   - component: {fileID: 1395490665331651485}
+  - component: {fileID: 4548554874384290916}
   m_Layer: 5
   m_Name: Class Tutorial Flow
   m_TagString: Untagged
@@ -1342,6 +1343,7 @@ MonoBehaviour:
   shaderMaskingUI: {fileID: 4939142765880689005}
   focusFiler: {fileID: 1045452290259959659}
   blockingArea: {fileID: 5347850213960622517}
+  tutorialContext: {fileID: 4548554874384290916}
 --- !u!114 &1395490665331651485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1356,6 +1358,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FocusTutorialTest
   target: {fileID: 1641201739321286022}
   data: {fileID: 11400000, guid: 65bc7dbf4170f435aa868c779acfb082, type: 2}
+--- !u!114 &4548554874384290916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1661413072184506458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93c89d3d3c994d4f9a746aaaed65699b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialContext
+  tutorialName: learning
 --- !u!1 &1787760413063964191
 GameObject:
   m_ObjectHideFlags: 0

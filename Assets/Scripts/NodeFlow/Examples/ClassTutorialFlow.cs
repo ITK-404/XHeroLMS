@@ -9,7 +9,8 @@ public class ClassTutorialFlow : FlowBase
 {
     public static ClassTutorialFlow Instance;
     
-    [Header("References")] [SerializeField]
+    [Header("References")]
+    [SerializeField]
     private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
     [Header("Tutorial")]
     [SerializeField] private TutorialFlowBuilder builder;
@@ -20,7 +21,7 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private ShaderMaskingUI shaderMaskingUI;
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     public TutorialClickArea blockingArea;
-    
+    [SerializeField] private TutorialContext tutorialContext;
     protected override void Awake()
     {
         base.Awake();
@@ -37,6 +38,12 @@ public class ClassTutorialFlow : FlowBase
 
     private void Start()
     {
+        tutorialContext.Load();
+        Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
+        if (tutorialContext.IsPlayed)
+        {
+            return;
+        }
         HandleFlow().Forget();
     }
 
@@ -88,10 +95,13 @@ public class ClassTutorialFlow : FlowBase
 
         if (result)
         {
+            // for sure
+            tutorialContext.ResetTutorial();
             StartCoroutine(autoReplayController.WaitForLoading());
         }
         else
         {
+            tutorialContext.MarkAsPlayed();
             askForReplayTutorialUI.Hide();
         }
     }
