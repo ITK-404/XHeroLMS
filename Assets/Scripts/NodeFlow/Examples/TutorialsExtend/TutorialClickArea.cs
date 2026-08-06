@@ -9,11 +9,12 @@ using UnityEngine.UI;
 public class TutorialClickArea : MonoBehaviour, IPointerClickHandler
 {
     public event Action Clicked;
-    private Image blockImg;
+    [SerializeField] private Image blockImg;
     private void Awake()
     {
         // Image vẫn nhận raycast dù hoàn toàn trong suốt.
-        blockImg = GetComponent<Image>();
+        if(!blockImg)
+            blockImg = GetComponent<Image>();
         blockImg.raycastTarget = true;
     }
 
