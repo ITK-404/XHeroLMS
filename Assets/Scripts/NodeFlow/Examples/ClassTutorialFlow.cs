@@ -21,12 +21,13 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private ShaderMaskingUI shaderMaskingUI;
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     public TutorialClickArea blockingArea;
+    [SerializeField] private CourseListView courseListView;
     [SerializeField] private TutorialContext tutorialContext;
     protected override void Awake()
     {
         base.Awake();
         Instance = this;
-
+        courseListView = FindFirstObjectByType<CourseListView>();
     }
 
     protected override void OnDestroy()
@@ -39,6 +40,10 @@ public class ClassTutorialFlow : FlowBase
     {
         ClearZone();
         tutorialContext.Load();
+        if (courseListView.VideoLessons == null || courseListView.VideoLessons.Count == 0)
+        {
+            return;
+        }
         Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
         if (tutorialContext.IsPlayed)
         {
