@@ -20,7 +20,8 @@ public enum GameplayLockReason
     Cutscene,
     UI,
     Animation,
-    Loading
+    Loading,
+    Tutorial
 }
 
 public static class GameplayLock

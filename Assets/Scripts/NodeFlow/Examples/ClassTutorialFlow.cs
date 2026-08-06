@@ -49,7 +49,7 @@ public class ClassTutorialFlow : FlowBase
 
     private async UniTask HandleFlow()
     {
-        // GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
+        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
         await UniTask.WaitForSeconds(2f);
         RunFlow().Forget();
 

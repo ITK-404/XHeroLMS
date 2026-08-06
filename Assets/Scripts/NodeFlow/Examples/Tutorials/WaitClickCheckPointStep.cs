@@ -28,7 +28,8 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Enter(CutsceneContext context = null)
     {
         base.Enter(context);
-
+        GameplayLock.Unlock(GameplayLockReason.Tutorial);
+        
         chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
         if(pointClickSystem == null)
             pointClickSystem = FindFirstObjectByType<PointClickSystem>();
@@ -39,7 +40,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Exit(CutsceneContext context = null)
     {
         base.Exit(context);
- 
+        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
         chairCheckPoint.onClick.RemoveListener(TryClickToChairCheckPoint);
         focusTutorialTest?.Disable();
     }
