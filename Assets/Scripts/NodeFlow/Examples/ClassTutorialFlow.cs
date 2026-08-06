@@ -27,7 +27,6 @@ public class ClassTutorialFlow : FlowBase
         base.Awake();
         Instance = this;
 
-        ClearZone();
     }
 
     protected override void OnDestroy()
@@ -38,6 +37,7 @@ public class ClassTutorialFlow : FlowBase
 
     private void Start()
     {
+        ClearZone();
         tutorialContext.Load();
         Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
         if (tutorialContext.IsPlayed)
