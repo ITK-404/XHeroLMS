@@ -27,7 +27,7 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private SceneLessonUI sceneLessonUI;
     [SerializeField] private CourseListView courseListView;
 
-    
+    [SerializeField] private GameObject blockerCanvas;
     protected override void Awake()
     {
         base.Awake();
@@ -68,16 +68,23 @@ public class ClassTutorialFlow : FlowBase
         // }
     }
 
+    public void SetStateBlocker(bool blockerState)
+    {
+        blockerCanvas.gameObject.SetActive(blockerState);
+    }
+    
     private static bool isReplayTutorial = false;
     private void TryStartTutorialFlow()
     {
         if (IsTutorialPlayed() && isReplayTutorial == false)
         {
+            SetStateBlocker(false);
             Debug.Log("[ClassTutorialFlow] Tutorial đã play hoặc isReplayTutorial đang true");
             return;
         }
         if (!IsCourseValid())
         {
+            SetStateBlocker(false);
             Debug.Log("[ClassTutorialFlow] Không có course để chạy tutorial");
             return;
         }
@@ -105,6 +112,8 @@ public class ClassTutorialFlow : FlowBase
     private async UniTask HandleFlow()
     {
         // SETUP
+        SetStateBlocker(false);
+        
         GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
         shaderMaskingUI.Show();
         
