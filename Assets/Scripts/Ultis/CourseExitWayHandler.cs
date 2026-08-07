@@ -28,12 +28,12 @@ public class CourseExitWayHandler : MonoBehaviour
         findTargetSign.position = screenPosition;
         if (IsPositionInsideScreen(screenPosition) && screenPosition.z > 0)
         {
-            Debug.Log("Target is inside screen");
+            // Debug.Log("Target is inside screen");
             HideAll();
         }
         else
         {
-            Debug.Log("Target is outside screen");
+            // Debug.Log("Target is outside screen");
             
             Vector3 directionToTarget = targetPos - cameraPos;
             directionToTarget.Normalize();

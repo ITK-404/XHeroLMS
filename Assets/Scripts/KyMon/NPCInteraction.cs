@@ -50,8 +50,9 @@ public class NPCInteraction : MonoBehaviour
         
         actionChoiceViewUI.Hide();
         interactionUIView.ShowWorldSpaceIcon();
-
-        previousRuntimeWorldSpaceEnable = !GetActiveWorldSpaceState();
+        
+        canActiveWorldSpaceUI = true;
+        previousRuntimeWorldSpaceEnable = !canActiveWorldSpaceUI;
     }
     private bool isFocused = false;
 
@@ -138,7 +139,6 @@ public class NPCInteraction : MonoBehaviour
             worldSpaceUi.SetActive(false);
             return;
         }
-        var canActiveWorldSpaceUI = GetActiveWorldSpaceState();
         if (previousRuntimeWorldSpaceEnable != canActiveWorldSpaceUI )
         {
             worldSpaceUi.SetActive(canActiveWorldSpaceUI);
@@ -146,8 +146,10 @@ public class NPCInteraction : MonoBehaviour
         }
     }
 
-    private bool GetActiveWorldSpaceState()
+    private bool canActiveWorldSpaceUI;
+
+    public void SetActiveState(bool state)
     {
-        return PlayerChairManager.Instance != null && PlayerChairManager.Instance.playerState != PlayerChairManager.PlayerState.Sitdown;
+        canActiveWorldSpaceUI = state;
     }
 }
