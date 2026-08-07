@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class ShaderMaskingUI : MonoBehaviour
 {
+    [SerializeField] private GameObject container;
+    
     [SerializeField] private RectTransform maskRect;
     [SerializeField] private RectTransform focusRectForTest;
     [SerializeField] private Camera canvasCamera;
@@ -57,5 +59,15 @@ public class ShaderMaskingUI : MonoBehaviour
         material.SetVector(FocusRectID, new Vector4(minUV.x, minUV.y, maxUV.x, maxUV.y));
       
         Debug.Log($"Min UV {minUV}");
+    }
+
+    public void Show()
+    {
+        container.gameObject.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        container.gameObject.SetActive(false);
     }
 }
