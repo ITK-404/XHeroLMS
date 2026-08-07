@@ -14,6 +14,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     
     private void Awake()
     {
+        chairCheckPoint.gameObject.SetActive(false);
     }
 
     private void OnDestroy()
@@ -28,6 +29,7 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Enter(CutsceneContext context = null)
     {
         base.Enter(context);
+        chairCheckPoint.gameObject.SetActive(true);
         GameplayLock.Unlock(GameplayLockReason.Tutorial);
         
         chairCheckPoint.onClick.AddListener(TryClickToChairCheckPoint);
@@ -40,6 +42,8 @@ public class WaitClickCheckPointStep : TutorialStepBehaviour
     public override void Exit(CutsceneContext context = null)
     {
         base.Exit(context);
+        chairCheckPoint.gameObject.SetActive(false);
+        
         GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
         chairCheckPoint.onClick.RemoveListener(TryClickToChairCheckPoint);
         focusTutorialTest?.Disable();

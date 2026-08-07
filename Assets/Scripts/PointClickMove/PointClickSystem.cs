@@ -380,7 +380,27 @@ public class PointClickSystem : MonoBehaviour
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
-                // Debug.Log("Chặn bởi UI");
+                void CheckUIUnderPointer()
+                {
+                    if (EventSystem.current == null)
+                        return;
+
+                    PointerEventData pointerData = new PointerEventData(EventSystem.current)
+                    {
+                        position = Input.mousePosition
+                    };
+
+                    List<RaycastResult> results = new List<RaycastResult>();
+                    EventSystem.current.RaycastAll(pointerData, results);
+
+                    foreach (RaycastResult result in results)
+                    {
+                        Debug.Log($"UI chặn: {result.gameObject.name}", result.gameObject);
+                    }
+                }
+
+                CheckUIUnderPointer();
+                Debug.Log("[PointClickSystem]Chặn bởi UI");
                 return;
             }
 
@@ -1175,8 +1195,8 @@ public class PointClickSystem : MonoBehaviour
     {
         // Choose query type based on whether PlayerChairManager singleton exists (previously duplicated code paths)
         QueryTriggerInteraction query = PlayerChairManager.Instance ? QueryTriggerInteraction.Ignore : QueryTriggerInteraction.Collide;
-
         int hitCount = RaycastCheckpointHits(ray, 100f, query);
+        Debug.Log($"PointClickSystem: MoveChairHitCount {hitCount}");
         for (int i = 0; i < hitCount; i++)
         {
             RaycastHit chairHit = checkpointRaycastHits[i];
