@@ -148,6 +148,6 @@ public class NPCInteraction : MonoBehaviour
 
     private bool GetActiveWorldSpaceState()
     {
-        return true;
+        return PlayerChairManager.Instance != null && PlayerChairManager.Instance.playerState != PlayerChairManager.PlayerState.Sitdown;
     }
 }

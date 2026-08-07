@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
@@ -22,34 +23,91 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     public TutorialClickArea blockingArea;
     [SerializeField] private TutorialContext tutorialContext;
+
+    [SerializeField] private SceneLessonUI sceneLessonUI;
+    [SerializeField] private CourseListView courseListView;
+
+    
     protected override void Awake()
     {
         base.Awake();
         Instance = this;
-
+        courseListView = FindFirstObjectByType<CourseListView>();
+        shaderMaskingUI.Hide();
+        sceneLessonUI.OnLoadCourseDone += CourseDataLoadDone;
     }
-
+    
     protected override void OnDestroy()
     {
         base.OnDestroy();
         Instance = null;
+        sceneLessonUI.OnLoadCourseDone -= CourseDataLoadDone;
+    }
+
+    private void CourseDataLoadDone(LmsCoursePrivate lmsCoursePrivate)
+    {
+        StartCoroutine(WaitForLoading());
+    }
+
+    private IEnumerator WaitForLoading()
+    {
+        yield return new WaitForSecondsRealtime(2f);
+        Debug.Log($"[ClassTutorialFlow] courseData load xong {isReplayTutorial}");
+        ClearZone();
+        TryStartTutorialFlow();
     }
 
     private void Start()
     {
-        ClearZone();
-        tutorialContext.Load();
-        Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
-        if (tutorialContext.IsPlayed)
+        Debug.Log($"[ClassTutorialFlow] check flag isReplayTutorial {isReplayTutorial}");
+        // if (isReplayTutorial)
+        // {
+        //     Debug.Log($"[ClassTutorialFlow] bắt đầu lại tutorial");
+        //     ClearZone();
+        //     TryStartTutorialFlow();
+        // }
+    }
+
+    private static bool isReplayTutorial = false;
+    private void TryStartTutorialFlow()
+    {
+        if (IsTutorialPlayed() && isReplayTutorial == false)
         {
+            Debug.Log("[ClassTutorialFlow] Tutorial đã play hoặc isReplayTutorial đang true");
             return;
         }
+        if (!IsCourseValid())
+        {
+            Debug.Log("[ClassTutorialFlow] Không có course để chạy tutorial");
+            return;
+        }
+        
+        Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
         HandleFlow().Forget();
+    }
+    
+    private bool IsCourseValid()
+    {
+        if (courseListView.VideoLessons == null || courseListView.VideoLessons.Count == 0)
+        {
+            return false;
+        }
+        return true;
+    }
+    
+    private bool IsTutorialPlayed()
+    {
+        // data must be load
+        tutorialContext.Load();
+        return tutorialContext.IsPlayed;
     }
 
     private async UniTask HandleFlow()
     {
-        // GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
+        // SETUP
+        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
+        shaderMaskingUI.Show();
+        
         await UniTask.WaitForSeconds(2f);
         RunFlow().Forget();
 
@@ -67,6 +125,8 @@ public class ClassTutorialFlow : FlowBase
         }
 
         ReplayTutorial().Forget();
+        GameplayLock.Unlock(GameplayLockReason.Tutorial);
+        
         // Không có next tutorial -> dừng, không tự động chạy replay.
         // ReplayTutorial() chỉ nên được gọi từ nơi khác (vd: nút Replay ngoài UI), nếu cần.
     }
@@ -95,14 +155,18 @@ public class ClassTutorialFlow : FlowBase
 
         if (result)
         {
+            Debug.Log($"[ClassTutorialFlow] bắt đầu lại tutorial");
             // for sure
             tutorialContext.ResetTutorial();
             StartCoroutine(autoReplayController.WaitForLoading());
+            isReplayTutorial = true;
         }
         else
         {
+            Debug.Log($"[ClassTutorialFlow] Không bắt đầu lại tutorial");
             tutorialContext.MarkAsPlayed();
             askForReplayTutorialUI.Hide();
+            isReplayTutorial = false;
         }
     }
 

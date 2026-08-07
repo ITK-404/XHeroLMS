@@ -12,24 +12,55 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         Completed
     }
 
+    public enum ClickMode
+    {
+        /// <summary>
+        /// Nhận callback từ vùng TutorialClickArea.
+        /// </summary>
+        TutorialClickArea,
+
+        /// <summary>
+        /// Nhận callback trực tiếp từ Button.onClick.
+        /// </summary>
+        ButtonCallback
+    }
+
     [Serializable]
     public class ButtonCustom
     {
         public Button button;
-        public string description;
 
+        [TextArea]
+        public string description;
     }
 
-    [Header("References")] [SerializeField]
+    [Header("Input Mode")]
+    [SerializeField]
+    private ClickMode clickMode = ClickMode.TutorialClickArea;
+
+    [Tooltip(
+        "Khi dùng TutorialClickArea, click vào vùng tutorial " +
+        "có gọi luôn onClick của Button thật hay không."
+    )]
+    [SerializeField]
+    private bool invokeButtonWhenAreaClicked;
+
+    [Header("References")]
+    [SerializeField]
     private TutorialClickArea tutorialClickArea;
 
     [Header("Buttons")]
-    // [SerializeField] private List<Button> buttons = new();
     [SerializeField]
     private List<ButtonCustom> customs = new();
 
     private int currentButtonIndex;
     private State currentState = State.None;
+
+    /// <summary>
+    /// Button đang được đăng ký callback.
+    /// Chỉ dùng trong ButtonCallback mode.
+    /// </summary>
+    private Button subscribedButton;
 
     public override void Enter(CutsceneContext context = null)
     {
@@ -38,24 +69,27 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         currentButtonIndex = 0;
         currentState = State.None;
 
+        ResolveReferences();
+
         if (!ValidateData())
         {
-            currentState = State.Completed;
+            ChangeState(State.Completed);
             return;
         }
 
-        tutorialClickArea = ClassTutorialFlow.Instance.blockingArea;
-
-        tutorialClickArea.Clicked += OnTutorialAreaClicked;
-        tutorialClickArea.Active();
+        RegisterInput();
 
         ChangeState(State.WaitingForClick);
     }
 
     public override void Exit(CutsceneContext context = null)
     {
-        tutorialClickArea.Clicked -= OnTutorialAreaClicked;
-        tutorialClickArea.DeActive();
+        UnregisterInput();
+
+        if (tutorialClickArea != null)
+        {
+            tutorialClickArea.DeActive();
+        }
 
         currentState = State.None;
 
@@ -67,18 +101,23 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         return currentState == State.Completed;
     }
 
-    private bool ValidateData()
+    private void ResolveReferences()
     {
-        if (tutorialClickArea == null)
+        if (tutorialClickArea != null)
         {
-            Debug.LogError(
-                $"[{nameof(WaitForClickButtonSequence)}] TutorialClickArea is missing.",
-                this
-            );
-
-            return false;
+            return;
         }
 
+        if (ClassTutorialFlow.Instance == null)
+        {
+            return;
+        }
+
+        tutorialClickArea = ClassTutorialFlow.Instance.blockingArea;
+    }
+
+    private bool ValidateData()
+    {
         if (customs == null || customs.Count == 0)
         {
             Debug.LogError(
@@ -89,7 +128,45 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return false;
         }
 
+        if (clickMode == ClickMode.TutorialClickArea &&
+            tutorialClickArea == null)
+        {
+            Debug.LogError(
+                $"[{nameof(WaitForClickButtonSequence)}] " +
+                $"TutorialClickArea is required when using " +
+                $"{nameof(ClickMode.TutorialClickArea)} mode.",
+                this
+            );
+
+            return false;
+        }
+
         return true;
+    }
+
+    private void RegisterInput()
+    {
+        switch (clickMode)
+        {
+            case ClickMode.TutorialClickArea:
+                tutorialClickArea.Clicked -= OnTutorialAreaClicked;
+                tutorialClickArea.Clicked += OnTutorialAreaClicked;
+                break;
+
+            case ClickMode.ButtonCallback:
+                // Callback button sẽ được đăng ký trong FocusCurrentButton().
+                break;
+        }
+    }
+
+    private void UnregisterInput()
+    {
+        if (tutorialClickArea != null)
+        {
+            tutorialClickArea.Clicked -= OnTutorialAreaClicked;
+        }
+
+        UnsubscribeCurrentButton();
     }
 
     private void OnTutorialAreaClicked()
@@ -99,22 +176,50 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return;
         }
 
-        var currentButton = GetCurrentButton();
+        ButtonCustom buttonCustom = GetCurrentButton();
 
-        if (currentButton == null)
+        if (buttonCustom == null || buttonCustom.button == null)
         {
             MoveToNextButton();
             return;
         }
 
-        // Bật dòng này nếu click vùng tutorial cũng phải thực thi button thật.
-        // currentButton.onClick.Invoke();
+        /*
+         * Trong TutorialClickArea mode, click đang bị vùng block nhận.
+         * Vì vậy Button thật thường không nhận được click.
+         *
+         * Có thể gọi onClick thủ công nếu tutorial cần thực thi logic Button.
+         */
+        if (invokeButtonWhenAreaClicked)
+        {
+            buttonCustom.button.onClick.Invoke();
+        }
 
+        MoveToNextButton();
+    }
+
+    private void OnCurrentButtonClicked()
+    {
+        if (currentState != State.WaitingForClick)
+        {
+            return;
+        }
+
+        /*
+         * Button.onClick đã tự thực thi logic của Button.
+         * Ở đây chỉ cần báo tutorial chuyển sang bước kế tiếp.
+         */
         MoveToNextButton();
     }
 
     private void MoveToNextButton()
     {
+        /*
+         * Gỡ callback của Button hiện tại trước khi đổi index.
+         * Chỉ có tác dụng trong ButtonCallback mode.
+         */
+        UnsubscribeCurrentButton();
+
         currentButtonIndex++;
 
         if (currentButtonIndex >= customs.Count)
@@ -142,17 +247,28 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
                 break;
 
             case State.Completed:
-                tutorialClickArea.DeActive();
+                UnregisterInput();
+
+                if (tutorialClickArea != null)
+                {
+                    tutorialClickArea.DeActive();
+                }
+
                 break;
         }
     }
 
     private void FocusCurrentButton()
     {
-        var buttonCustom = GetCurrentButton();
-        if (buttonCustom == null) return;
+        ButtonCustom buttonCustom = GetCurrentButton();
 
-        var currentButton = buttonCustom.button;
+        if (buttonCustom == null)
+        {
+            MoveToNextButton();
+            return;
+        }
+
+        Button currentButton = buttonCustom.button;
 
         if (currentButton == null)
         {
@@ -181,8 +297,62 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return;
         }
 
-        ClassTutorialFlow.Instance.SetInteractZone(buttonRect);
-        FocusHandManager.Instance.SetToTargetRect(buttonRect, buttonCustom.description);
+        if (ClassTutorialFlow.Instance != null)
+        {
+            ClassTutorialFlow.Instance.SetInteractZone(buttonRect);
+        }
+
+        if (FocusHandManager.Instance != null)
+        {
+            FocusHandManager.Instance.SetToTargetRect(
+                buttonRect,
+                buttonCustom.description
+            );
+        }
+
+        SetupInputForCurrentButton(currentButton);
+    }
+
+    private void SetupInputForCurrentButton(Button currentButton)
+    {
+        switch (clickMode)
+        {
+            case ClickMode.TutorialClickArea:
+                if (tutorialClickArea != null)
+                {
+                    tutorialClickArea.Active();
+                }
+
+                break;
+
+            case ClickMode.ButtonCallback:
+                SubscribeCurrentButton(currentButton);
+                break;
+        }
+    }
+
+    private void SubscribeCurrentButton(Button button)
+    {
+        UnsubscribeCurrentButton();
+
+        if (button == null)
+        {
+            return;
+        }
+
+        subscribedButton = button;
+        subscribedButton.onClick.AddListener(OnCurrentButtonClicked);
+    }
+
+    private void UnsubscribeCurrentButton()
+    {
+        if (subscribedButton == null)
+        {
+            return;
+        }
+
+        subscribedButton.onClick.RemoveListener(OnCurrentButtonClicked);
+        subscribedButton = null;
     }
 
     private ButtonCustom GetCurrentButton()
@@ -203,9 +373,6 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
 
     private void OnDestroy()
     {
-        if (tutorialClickArea != null)
-        {
-            tutorialClickArea.Clicked -= OnTutorialAreaClicked;
-        }
+        UnregisterInput();
     }
 }

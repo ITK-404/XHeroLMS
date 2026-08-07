@@ -46,7 +46,7 @@ public class CourseListView : MonoBehaviour
     private XHeroWebViewTexturePlayer webViewTexturePlayer;
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
-    private readonly List<LessonUI> _videoLessons = new();
+    [SerializeField] private List<LessonUI> _videoLessons = new();
     public List<LessonUI> VideoLessons => _videoLessons;
     private LessonUI _currentLesson;
     public LessonUI CurrentLesson => _currentLesson;
