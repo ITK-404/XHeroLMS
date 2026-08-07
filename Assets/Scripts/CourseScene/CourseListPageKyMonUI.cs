@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 public class CourseListPageKyMonUI : MonoBehaviour
 {
@@ -24,9 +25,53 @@ public class CourseListPageKyMonUI : MonoBehaviour
     [Tooltip("Chỉ lấy những khóa học có seo.url chứa chuỗi này.")]
     public string seoUrlMustContain = "ky-mon";
 
+    public enum KyMonGroupingMode
+    {
+        UseApiGroups,
+        ShowAllKyMonInEveryTab,
+        ForceBySeoRules
+    }
+
+    [Serializable]
+    public class ForcedGroupRule
+    {
+        [Tooltip("Chuỗi cần tìm trong SEO hoặc tiêu đề khóa học. Ví dụ: cau-tai-kinh-doanh")]
+        public string seoOrTitleContains;
+
+        [Tooltip("Tab mà khóa học sẽ bị cưỡng chế đưa vào.")]
+        public CourseLessonTabID targetTab = CourseLessonTabID.CoBan;
+    }
+
+    [Header("Cưỡng chế phân nhóm Kỳ Môn tại Unity")]
+    [Tooltip("ShowAllKyMonInEveryTab: toàn bộ khóa Kỳ Môn xuất hiện ở cả 4 tab.\n" +
+             "ForceBySeoRules: ép từng khóa vào tab theo danh sách rule bên dưới.\n" +
+             "UseApiGroups: dùng group/groups do API trả về như cũ.")]
+    public KyMonGroupingMode kyMonGroupingMode = KyMonGroupingMode.ShowAllKyMonInEveryTab;
+
+    [Tooltip("Chỉ dùng khi mode = ForceBySeoRules.")]
+    public List<ForcedGroupRule> forcedGroupRules = new List<ForcedGroupRule>();
+
+    [Tooltip("Khi mode = ForceBySeoRules nhưng khóa không khớp rule nào, có dùng group từ API làm dự phòng hay không.")]
+    public bool fallbackToApiGroupWhenNoForcedRule = false;
+
     [Header("Default group")]
-    [Tooltip("Các khóa Kỳ Môn hiện đang nằm ở group intensive, nên mặc định mở intensive.")]
-    public string defaultOpenGroup = "intensive";
+    [Tooltip("Để TRỐNG (mặc định) để tự động hiển thị đủ cả 4 nhóm: basic, advanced, intensive, business.\n" +
+             "Chỉ điền tên 1 group vào đây nếu muốn trang này LUÔN cố định mở riêng group đó (ẩn 3 group còn lại).")]
+    public string defaultOpenGroup = "";
+
+    [Header("Quyền điều khiển hiển thị tab")]
+    [Tooltip("Bật: TabUI/hệ thống tab hiện có tự bật tắt các root. Script này chỉ nạp dữ liệu vào content.")]
+    public bool letTabSystemControlRoots = true;
+
+    [Header("Tự liên kết đúng hierarchy Tab đang hiển thị")]
+    [Tooltip("Tự tìm TabItemManagerUI và 4 TabUI thật trong scene, sau đó ghi đè các reference root/contentParent đang kéo sai trong Inspector.")]
+    public bool autoBindLiveTabViews = true;
+
+    [Tooltip("Sau khi cửa sổ khóa học được bật, render lại một lần vào hierarchy đang active để loại bỏ dữ liệu Đại Đạo Chí Giản cũ.")]
+    public bool renderAgainWhenTabPanelBecomesVisible = true;
+
+    [Tooltip("Tên GameObject content dùng làm fallback nếu TabUI không có ScrollRect.")]
+    public string fallbackContentObjectName = "Content";
 
     [Header("Debug")]
     public bool debugLogSeoCheck = true;
@@ -70,6 +115,10 @@ public class CourseListPageKyMonUI : MonoBehaviour
     private TabUI tabUI;
     private string _currentDesiredGroup = null;
 
+    private bool _hasLoadedCourses;
+    private bool _renderedWhenVisible;
+    private float _nextLiveHierarchyCheck;
+
     [Serializable]
     public class CourseData
     {
@@ -101,7 +150,9 @@ public class CourseListPageKyMonUI : MonoBehaviour
         if (intensiveView?.emptyTextObj) intensiveView.emptyTextObj.SetActive(false);
         if (businessView?.emptyTextObj) businessView.emptyTextObj.SetActive(false);
 
-        ToggleAllRoots(false);
+        // Không tự tắt các panel khi TabUI đang quản lý việc chuyển tab.
+        if (!letTabSystemControlRoots)
+            ToggleAllRoots(false);
 
         if (!string.IsNullOrWhiteSpace(defaultOpenGroup))
             _currentDesiredGroup = defaultOpenGroup.Trim().ToLowerInvariant();
@@ -110,6 +161,9 @@ public class CourseListPageKyMonUI : MonoBehaviour
     private void Start()
     {
         tabUI = GetComponentInParent<TabUI>();
+
+        if (autoBindLiveTabViews)
+            AutoBindLiveTabViews(logResult: true);
 
         if (!autoRunOnStart)
             return;
@@ -123,10 +177,41 @@ public class CourseListPageKyMonUI : MonoBehaviour
             StartCoroutine(LoadAndSpawnAll());
     }
 
+    private void Update()
+    {
+        if (!autoBindLiveTabViews ||
+            !renderAgainWhenTabPanelBecomesVisible ||
+            !_hasLoadedCourses ||
+            _renderedWhenVisible)
+        {
+            return;
+        }
+
+        if (Time.unscaledTime < _nextLiveHierarchyCheck)
+            return;
+
+        _nextLiveHierarchyCheck = Time.unscaledTime + 0.25f;
+
+        // UI khóa học được bật sau khi dữ liệu đã tải xong.
+        // Khi một TabUI thật active, bind lại và render vào đúng hierarchy đó.
+        AutoBindLiveTabViews(logResult: false);
+
+        if (!AnyBoundTabRootActive())
+            return;
+
+        Debug.Log("[CourseList/KY-MON] Live tab hierarchy is now visible -> rebind and replace old shelf data.");
+
+        RenderAllGroupsToTheirViews();
+        _renderedWhenVisible = true;
+    }
+
     public void RefreshForTab(CourseLessonTabID id)
     {
+        if (autoBindLiveTabViews)
+            AutoBindLiveTabViews(logResult: false);
+
         _currentDesiredGroup = MapGroup(id);
-        RenderAccordingToCurrentGroup();
+        RenderOneGroup(_currentDesiredGroup, GetViewByGroup(_currentDesiredGroup));
     }
 
     public static string MapGroup(CourseLessonTabID id)
@@ -220,7 +305,7 @@ public class CourseListPageKyMonUI : MonoBehaviour
         }
 
         Debug.Log(
-            $"[CourseList/KY-MON] Done. TotalObjects={totalObjects}, Matched={totalMatched}, Filter='{seoUrlMustContain}', CurrentGroup='{_currentDesiredGroup}'"
+            $"[CourseList/KY-MON] Done. TotalObjects={totalObjects}, Matched={totalMatched}, Filter='{seoUrlMustContain}', CurrentGroup='{_currentDesiredGroup}', FORCE_ALL_TABS=True, TabControlsRoots={letTabSystemControlRoots}, ReviewFilter=False"
         );
 
         if (string.IsNullOrEmpty(_currentDesiredGroup) && tabUI != null)
@@ -229,7 +314,18 @@ public class CourseListPageKyMonUI : MonoBehaviour
         if (string.IsNullOrEmpty(_currentDesiredGroup) && !string.IsNullOrWhiteSpace(defaultOpenGroup))
             _currentDesiredGroup = defaultOpenGroup.Trim().ToLowerInvariant();
 
-        RenderAccordingToCurrentGroup();
+        _hasLoadedCourses = true;
+
+        // Quan trọng: trước khi render phải lấy lại đúng Content nằm trong 4 TabUI thật.
+        // Không dùng mù các reference Content đã kéo tay trong Inspector.
+        if (autoBindLiveTabViews)
+            AutoBindLiveTabViews(logResult: true);
+
+        // Luôn spawn dữ liệu vào đủ 4 content. TabUI chỉ chịu trách nhiệm bật/tắt panel.
+        RenderAllGroupsToTheirViews();
+
+        // Nếu panel đã visible ngay lúc này thì xác nhận luôn.
+        _renderedWhenVisible = AnyBoundTabRootActive();
     }
 
     private bool IsSeoUrlMatch(string seoUrl)
@@ -246,10 +342,250 @@ public class CourseListPageKyMonUI : MonoBehaviour
         return url.IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
+    // ================== AUTO-BIND LIVE TAB HIERARCHY ==================
+
+    private bool AutoBindLiveTabViews(bool logResult)
+    {
+        TabUI[] tabs = FindBestTabSet();
+
+        if (tabs == null || tabs.Length == 0)
+        {
+            if (logResult)
+                Debug.LogError("[CourseList/KY-MON] Không tìm thấy TabUI thật để auto-bind.");
+
+            return false;
+        }
+
+        bool b1 = BindGroupViewToTab(ref basicView, tabs, CourseLessonTabID.CoBan, "basic", logResult);
+        bool b2 = BindGroupViewToTab(ref advancedView, tabs, CourseLessonTabID.NangCao, "advanced", logResult);
+        bool b3 = BindGroupViewToTab(ref intensiveView, tabs, CourseLessonTabID.ChuyenSau, "intensive", logResult);
+        bool b4 = BindGroupViewToTab(ref businessView, tabs, CourseLessonTabID.DoanhNghiep, "business", logResult);
+
+        return b1 || b2 || b3 || b4;
+    }
+
+    private TabUI[] FindBestTabSet()
+    {
+        TabItemManagerUI[] managers = FindObjectsOfType<TabItemManagerUI>(true);
+
+        TabItemManagerUI bestManager = null;
+        int bestScore = -1;
+
+        for (int i = 0; i < managers.Length; i++)
+        {
+            TabItemManagerUI manager = managers[i];
+
+            if (manager == null)
+                continue;
+
+            TabUI[] candidates = manager.GetComponentsInChildren<TabUI>(true);
+            int score = CountKyMonTabs(candidates);
+
+            // Ưu tiên manager nằm cùng nhánh hierarchy với component này.
+            if (transform.IsChildOf(manager.transform))
+                score += 100;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestManager = manager;
+            }
+        }
+
+        if (bestManager != null)
+            return bestManager.GetComponentsInChildren<TabUI>(true);
+
+        // Fallback khi TabItemManagerUI không phải parent trực tiếp.
+        return FindObjectsOfType<TabUI>(true);
+    }
+
+    private int CountKyMonTabs(TabUI[] tabs)
+    {
+        if (tabs == null)
+            return 0;
+
+        bool basic = false;
+        bool advanced = false;
+        bool intensive = false;
+        bool business = false;
+
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            TabUI tab = tabs[i];
+
+            if (tab == null)
+                continue;
+
+            switch (tab.tabID)
+            {
+                case CourseLessonTabID.CoBan:
+                    basic = true;
+                    break;
+
+                case CourseLessonTabID.NangCao:
+                    advanced = true;
+                    break;
+
+                case CourseLessonTabID.ChuyenSau:
+                    intensive = true;
+                    break;
+
+                case CourseLessonTabID.DoanhNghiep:
+                    business = true;
+                    break;
+            }
+        }
+
+        int count = 0;
+        if (basic) count++;
+        if (advanced) count++;
+        if (intensive) count++;
+        if (business) count++;
+        return count;
+    }
+
+    private bool BindGroupViewToTab(
+        ref GroupView view,
+        TabUI[] tabs,
+        CourseLessonTabID targetId,
+        string groupKey,
+        bool logResult)
+    {
+        TabUI targetTab = null;
+
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            if (tabs[i] != null && tabs[i].tabID == targetId)
+            {
+                targetTab = tabs[i];
+                break;
+            }
+        }
+
+        if (targetTab == null)
+        {
+            if (logResult)
+                Debug.LogError($"[CourseList/KY-MON] Không tìm thấy TabUI có tabID='{targetId}'.");
+
+            return false;
+        }
+
+        RectTransform liveContent = FindLiveContent(targetTab);
+
+        if (liveContent == null)
+        {
+            if (logResult)
+            {
+                Debug.LogError(
+                    $"[CourseList/KY-MON] Tìm thấy TabUI '{targetId}' nhưng không tìm thấy ScrollRect.content/" +
+                    $"GameObject '{fallbackContentObjectName}'. Root={GetHierarchyPath(targetTab.transform)}"
+                );
+            }
+
+            return false;
+        }
+
+        if (view == null)
+            view = new GroupView();
+
+        // Giữ lại shelfPrefabOverride và emptyTextObj nếu đã cấu hình,
+        // nhưng bắt buộc ghi đè root/contentParent sang hierarchy thật.
+        view.root = targetTab.gameObject;
+        view.contentParent = liveContent;
+
+        if (logResult)
+        {
+            Debug.Log(
+                $"[CourseList/KY-MON] LIVE BIND group='{groupKey}' tabID='{targetId}'" +
+                $" | root='{GetHierarchyPath(targetTab.transform)}'" +
+                $" | content='{GetHierarchyPath(liveContent)}'" +
+                $" | rootActive={targetTab.gameObject.activeInHierarchy}" +
+                $" | contentActive={liveContent.gameObject.activeInHierarchy}"
+            );
+        }
+
+        return true;
+    }
+
+    private RectTransform FindLiveContent(TabUI targetTab)
+    {
+        if (targetTab == null)
+            return null;
+
+        ScrollRect[] scrollRects = targetTab.GetComponentsInChildren<ScrollRect>(true);
+
+        for (int i = 0; i < scrollRects.Length; i++)
+        {
+            if (scrollRects[i] != null && scrollRects[i].content != null)
+                return scrollRects[i].content;
+        }
+
+        RectTransform[] rects = targetTab.GetComponentsInChildren<RectTransform>(true);
+
+        for (int i = 0; i < rects.Length; i++)
+        {
+            RectTransform rect = rects[i];
+
+            if (rect == null)
+                continue;
+
+            if (string.Equals(
+                rect.gameObject.name,
+                fallbackContentObjectName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return rect;
+            }
+        }
+
+        return null;
+    }
+
+    private bool AnyBoundTabRootActive()
+    {
+        return IsViewRootActive(basicView) ||
+               IsViewRootActive(advancedView) ||
+               IsViewRootActive(intensiveView) ||
+               IsViewRootActive(businessView);
+    }
+
+    private bool IsViewRootActive(GroupView view)
+    {
+        return view != null &&
+               view.root != null &&
+               view.root.activeInHierarchy;
+    }
+
+    private string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+            return "(null)";
+
+        string path = target.name;
+        Transform parent = target.parent;
+
+        while (parent != null)
+        {
+            path = parent.name + "/" + path;
+            parent = parent.parent;
+        }
+
+        return path;
+    }
+
     // ================== RENDER ==================
+    // _currentDesiredGroup RỖNG  -> render ĐỦ CẢ 4 NHÓM (basic..business), mỗi nhóm vào đúng view của nó.
+    // _currentDesiredGroup CÓ GIÁ TRỊ (do RefreshForTab() hoặc defaultOpenGroup gán) -> chỉ render 1 view đó, ẩn 3 view còn lại.
+    // => Muốn mặc định hiển thị đủ 4 nhóm thì defaultOpenGroup PHẢI để trống, không được hard-code tên 1 group.
     [ContextMenu("RenderAccordingToCurrentGroup")]
     void RenderAccordingToCurrentGroup()
     {
+        if (letTabSystemControlRoots)
+        {
+            RenderAllGroupsToTheirViews();
+            return;
+        }
+
         if (!string.IsNullOrEmpty(_currentDesiredGroup))
         {
             ToggleAllRoots(false);
@@ -269,8 +605,7 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
             var list = _courses.FindAll(c => MatchesGroup(c, _currentDesiredGroup));
 
-            if (IsPreviewMode())
-                list = list.FindAll(IsOwned);
+            // Cưỡng chế Kỳ Môn: không lọc theo isJoined/isFree hoặc review mode.
 
             bool isEmpty = list == null || list.Count == 0;
 
@@ -322,7 +657,7 @@ public class CourseListPageKyMonUI : MonoBehaviour
         if (view == null || view.contentParent == null)
             return;
 
-        if (view.root != null)
+        if (!letTabSystemControlRoots && view.root != null)
             view.root.SetActive(true);
 
         if (clearOldOnReload)
@@ -330,8 +665,7 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
         var list = _courses.FindAll(c => MatchesGroup(c, groupKey));
 
-        if (IsPreviewMode())
-            list = list.FindAll(IsOwned);
+        // Cưỡng chế Kỳ Môn: không lọc theo isJoined/isFree hoặc review mode.
 
         bool isEmpty = list == null || list.Count == 0;
 
@@ -407,9 +741,18 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
         int shelfCount = Mathf.CeilToInt(list.Count / (float)BOOKS_PER_SHELF);
 
+        Debug.Log(
+            $"[CourseList/KY-MON] Spawn start | content='{GetHierarchyPath(view.contentParent)}'" +
+            $" | activeSelf={view.contentParent.gameObject.activeSelf}" +
+            $" | activeInHierarchy={view.contentParent.gameObject.activeInHierarchy}" +
+            $" | courses={list.Count} | shelves={shelfCount}" +
+            $" | prefab='{shelfPrefab.name}'"
+        );
+
         for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
         {
             var shelf = Instantiate(shelfPrefab, view.contentParent);
+            shelf.gameObject.SetActive(true);
 
             var rt = shelf.transform as RectTransform;
             if (rt != null)
@@ -427,6 +770,12 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
             var slice = list.GetRange(start, take);
             ApplyDataToShelf(shelf, slice);
+
+            Debug.Log(
+                $"[CourseList/KY-MON] Spawned shelf {shelfIndex + 1}/{shelfCount}" +
+                $" | object='{shelf.name}' | books={slice.Count}" +
+                $" | activeInHierarchy={shelf.gameObject.activeInHierarchy}"
+            );
         }
     }
 
@@ -1148,8 +1497,54 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
     bool MatchesGroup(CourseData c, string desired)
     {
-        if (string.IsNullOrEmpty(desired) || c == null)
-            return true;
+        if (c == null)
+            return false;
+
+        // CƯỠNG CHẾ TUYỆT ĐỐI:
+        // Mọi khóa đã vượt qua bộ lọc SEO Kỳ Môn đều thuộc cả 4 tab.
+        // Không dùng group/groups từ API và không phụ thuộc enum trong Inspector.
+        return IsSeoUrlMatch(c.seoUrl);
+    }
+
+    string ResolveForcedGroup(CourseData c)
+    {
+        if (c == null || forcedGroupRules == null)
+            return null;
+
+        string seo = c.seoUrl ?? string.Empty;
+        string title = c.title ?? string.Empty;
+
+        for (int i = 0; i < forcedGroupRules.Count; i++)
+        {
+            ForcedGroupRule rule = forcedGroupRules[i];
+
+            if (rule == null || string.IsNullOrWhiteSpace(rule.seoOrTitleContains))
+                continue;
+
+            string key = rule.seoOrTitleContains.Trim();
+
+            bool matchedSeo = seo.IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0;
+            bool matchedTitle = title.IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (!matchedSeo && !matchedTitle)
+                continue;
+
+            string group = MapGroup(rule.targetTab);
+
+            Debug.Log(
+                $"[CourseList/KY-MON] Forced group='{group}' | SEO='{c.seoUrl}' | title='{c.title}' | rule='{key}'"
+            );
+
+            return group;
+        }
+
+        return null;
+    }
+
+    bool MatchesApiGroup(CourseData c, string desired)
+    {
+        if (c == null)
+            return false;
 
         if (!string.IsNullOrEmpty(c.group) &&
             string.Equals(c.group, desired, StringComparison.OrdinalIgnoreCase))
