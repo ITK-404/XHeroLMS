@@ -88,7 +88,8 @@ public class CourseListPageKyMonUI : MonoBehaviour
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    public string priceFormat = "{0:#.0}'đ";
+    // public string priceFormat = "{0:#.0}'đ";
+    string priceFormat = "{0:N0}đ";
 
     [Header("Layout (cho mỗi view)")]
     public float shelfSpacingY = 260f;
@@ -830,14 +831,14 @@ public class CourseListPageKyMonUI : MonoBehaviour
                     if (slot.bookHandleUI.priceText != null)
                     {
                         slot.bookHandleUI.priceText.text = displayPrice.HasValue
-                            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
+                            ? string.Format(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"), priceFormat, displayPrice.Value)
                             : "";
                     }
 
                     if (slot.bookHandleUI.fullPriceText != null)
                     {
                         slot.bookHandleUI.fullPriceText.text = data.originalPrice.HasValue
-                            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, data.originalPrice.Value)
+                            ? string.Format(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"), priceFormat, data.originalPrice.Value)
                             : "";
                     }
 
