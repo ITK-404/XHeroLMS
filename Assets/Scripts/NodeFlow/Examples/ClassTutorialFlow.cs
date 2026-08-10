@@ -23,7 +23,6 @@ public class ClassTutorialFlow : FlowBase
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     public TutorialClickArea blockingArea;
     [SerializeField] private TutorialContext tutorialContext;
-
     [SerializeField] private SceneLessonUI sceneLessonUI;
     [SerializeField] private CourseListView courseListView;
 
@@ -52,7 +51,10 @@ public class ClassTutorialFlow : FlowBase
     private IEnumerator WaitForLoading()
     {
         LoadingUI.Show();
-        yield return new WaitForSecondsRealtime(2f);
+
+        yield return new WaitForSecondsRealtime(1f);
+        yield return new WaitUntil(() => GameInitializer.IsLoadingDone);
+        
         LoadingUI.Hide();
         Debug.Log($"[ClassTutorialFlow] courseData load xong {isReplayTutorial}");
         ClearZone();
@@ -107,7 +109,7 @@ public class ClassTutorialFlow : FlowBase
     private bool IsTutorialPlayed()
     {
         // data must be load
-        tutorialContext.Load();
+        tutorialContext.CheckIsTutorialPlayed();
         return tutorialContext.IsPlayed;
     }
 

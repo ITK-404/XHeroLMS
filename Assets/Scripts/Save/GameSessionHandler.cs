@@ -37,6 +37,7 @@ public class GameSessionHandler : MonoBehaviour
         {
             GameInitializer.Instance.SceneHistory.ClearHistory();
             GameInitializer.Instance.SceneLocationHandle.Clear();
+            TutorialContext.ClearPlayedTutorialIds();
         }
     }
 
@@ -95,6 +96,16 @@ public class GameSessionHandler : MonoBehaviour
             Debug.LogError($"Game Session config is null, load failed");
             return;
         }
+        
+        var userID = TokenStore.UserID;
+        var lastSessionData = await GetLastSessionData(userID);
+        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
+
+        bool isResumeSession = sessionValidResult.IsSessionValid;
+        if (isResumeSession)
+        {
+            TutorialContext.Load(lastSessionData.saveCourseData.tutorialIds);
+        }
         // protect to load when load any scene
         if (SceneManager.GetActiveScene().name != DEFAULT_SCENE)
         {
@@ -104,12 +115,8 @@ public class GameSessionHandler : MonoBehaviour
         
         Debug.Log("[GameSessionHandler] Bắt đầu game session");
         // Test        
-        var userID = TokenStore.UserID;
-        var lastSessionData = await GetLastSessionData(userID);
         
-        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
-
-        bool isResumeSession = sessionValidResult.IsSessionValid;
+        
         await UniTask.SwitchToMainThread();
         if (isResumeSession)
         {
@@ -191,6 +198,8 @@ public class GameSessionHandler : MonoBehaviour
 
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
+        TutorialContext.Load(data.saveCourseData.tutorialIds);
+        
         // load by session data
         if (data.saveCourseData != null && !string.IsNullOrEmpty(data.saveCourseData.seoId))
         {

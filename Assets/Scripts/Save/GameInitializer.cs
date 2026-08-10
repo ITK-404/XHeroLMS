@@ -7,7 +7,7 @@ using UnityEngine.AddressableAssets;
 public class GameInitializer : MonoBehaviour
 {
     public static GameInitializer Instance;
-    
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Init()
     {
@@ -28,7 +28,7 @@ public class GameInitializer : MonoBehaviour
     private void Start()
     {
         LoginController.OnLoginComplete += LoginComplete;
-        
+
         var ct = this.GetCancellationTokenOnDestroy();
         InitTask(ct).Forget();
     }
@@ -36,7 +36,6 @@ public class GameInitializer : MonoBehaviour
 
     private void OnDestroy()
     {
-        
         UnbindEvent();
     }
 
@@ -50,11 +49,11 @@ public class GameInitializer : MonoBehaviour
             Debug.Log("[GameSessionHandler] LoginComplete bị chặn, cooldown chưa hết");
             return;
         }
-    
+
         _lastLoginCompleteTime = Time.time;
         PlaySession().Forget();
     }
-    
+
     private SceneNavigationHistory sceneHistory;
 
     public SceneNavigationHistory SceneHistory => sceneHistory;
@@ -64,8 +63,9 @@ public class GameInitializer : MonoBehaviour
     public SceneLocationHandler SceneLocationHandle => sceneLocationHandle;
 
     private GraphicsSettingsManager graphicsSettingsManager;
-    
+
     private GameSessionHandler gameSessionHandle;
+
     public GameSessionHandler GameSessionHandler
     {
         get => gameSessionHandle;
@@ -75,28 +75,34 @@ public class GameInitializer : MonoBehaviour
     public BatteryWarningHandler BatteryWarningHandler => batteryWarningHandler;
 
     private PlayerRotationConfigHandler rotConfig;
+    public static bool IsLoadingDone = false;
 
     private async UniTaskVoid InitTask(CancellationToken ct)
     {
+        IsLoadingDone = false;
         await Addressables.InitializeAsync().WithCancellation(ct);
-         var runner = this;
+        var runner = this;
 
-         FPSInit();
-         
+        FPSInit();
+
         // GAME OBJECT LOADING
         // TODO: UPDATE TO ADDRESSABLE BEFORE
         EnsureCoreRuntimeObjects();
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
-        
+
         // ADDRESSABLE LOADING
-        
-        graphicsSettingsManager = await LoadAddressable<GraphicsSettingsManager>("GraphicsSettingsManager",true,ct);
-        rotConfig = await LoadAddressable<PlayerRotationConfigHandler>("PlayerRotationConfigHandler",dontDestroyOnLoad:true,ct);
-        batteryWarningHandler = await LoadAddressable<BatteryWarningHandler>("BatteryWarningHandler",dontDestroyOnLoad: true,ct);
-        
+
+        graphicsSettingsManager = await LoadAddressable<GraphicsSettingsManager>("GraphicsSettingsManager", true, ct);
+        rotConfig = await LoadAddressable<PlayerRotationConfigHandler>("PlayerRotationConfigHandler",
+            dontDestroyOnLoad: true, ct);
+        batteryWarningHandler =
+            await LoadAddressable<BatteryWarningHandler>("BatteryWarningHandler", dontDestroyOnLoad: true, ct);
+
         IOSReviewManager.CheckIOSReviewStatusAsync(ct).Forget();
 
         BindEvent();
+
+        IsLoadingDone = true;
     }
 
     private void EnsureCoreRuntimeObjects()
@@ -135,16 +141,16 @@ public class GameInitializer : MonoBehaviour
     private void BindEvent()
     {
         // đảm bảo gọi sau khi các object khác init
-        
+
         batteryWarningHandler.onBatteryLow.AddListener(HandleLowBattery);
     }
 
     private void UnbindEvent()
     {
         LoginController.OnLoginComplete -= LoginComplete;
-        
+
         batteryWarningHandler.onBatteryLow.RemoveListener(HandleLowBattery);
-        
+
         FPSHandler.Save();
         fpsSceneHandle.Dispose();
     }
@@ -159,7 +165,7 @@ public class GameInitializer : MonoBehaviour
         fpsSceneHandle = new FPSSceneHandle();
         fpsSceneHandle.Init();
     }
-    
+
     private void HandleLowBattery()
     {
         graphicsSettingsManager.ApplyLowestPreset();
@@ -172,14 +178,13 @@ public class GameInitializer : MonoBehaviour
         // StartSession chạy quá sớm trong boot flow và có thể tranh quyền điều hướng scene,
         // gây kẹt hoặc đè lên flow load scene hiện tại.
         // Tạm thời disable để xác nhận nguyên nhân và tránh chặn scene mới.
-        
+
         await AddressablesLoader.EnsureInitialized();
         var handler = EnsureGameSessionHandler();
-        if(handler)
+        if (handler)
             handler.StartSession().Forget();
     }
 
-    
 
     private T CreateGameObject<T>(bool donDestroyOnLoad = false) where T : Component
     {
@@ -199,10 +204,10 @@ public class GameInitializer : MonoBehaviour
     {
         var prefab = await Addressables.LoadAssetAsync<GameObject>(address).WithCancellation(ct);
         var instance = Instantiate(prefab).GetComponent<T>();
-    
+
         if (dontDestroyOnLoad)
             DontDestroyOnLoad(instance.gameObject);
-    
+
         return instance;
     }
 }
