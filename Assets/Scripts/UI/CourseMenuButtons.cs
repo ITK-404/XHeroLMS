@@ -30,8 +30,15 @@ public class CourseMenuButtons : MonoBehaviour
 
     public Transform player;
 
+    // Chặn spam click / gọi nhiều hành động cùng lúc
+    private bool isProcessing = false;
+
     void Awake()
     {
+        // Reset trạng thái mỗi khi object được tạo
+        isProcessing = false;
+        SetButtonsInteractable(true);
+
         if (TokenStore.IsAuthenticated)
         {
             Show();
@@ -77,22 +84,59 @@ public class CourseMenuButtons : MonoBehaviour
 
     public void Show()
     {
-        container.gameObject.SetActive(true);
+        if (container != null)
+            container.gameObject.SetActive(true);
     }
 
     public void Hide()
     {
-        container.gameObject.SetActive(false);
+        if (container != null)
+            container.gameObject.SetActive(false);
     }
 
-    void Go(string key)
+    private void Go(string key)
     {
+        // Đã có một hành động đang chạy -> bỏ qua toàn bộ click sau
+        if (isProcessing)
+        {
+            Debug.LogWarning($"[CourseMenuButtons] Ignore click '{key}' because transition is already processing.");
+            return;
+        }
+
+        // Khóa ngay lập tức
+        isProcessing = true;
+        SetButtonsInteractable(false);
+
+        Debug.Log($"[CourseMenuButtons] Selected: {key}");
+
+        // Lưu lựa chọn
         PlayerPrefs.SetString(COURSE_KEY_PREF, key);
         PlayerPrefs.Save();
 
-        // LoadingTransition.Load(courseSceneName);
+        // Lưu vị trí TRƯỚC khi bắt đầu load scene
+        if (player != null)
+        {
+            LoadingTransition.SavePosition(
+                player.position,
+                player.rotation
+            );
+        }
+
+        // Bắt đầu chuyển scene
         LoadingTransition.Load_Scene(courseSceneName);
-        LoadingTransition.SavePosition(player.position, player.rotation);
+    }
+
+    /// <summary>
+    /// Khóa/mở toàn bộ button course.
+    /// Khi một button được nhấn thì khóa cả hai.
+    /// </summary>
+    private void SetButtonsInteractable(bool value)
+    {
+        if (btnAllCourses != null)
+            btnAllCourses.interactable = value;
+
+        if (btnMyCourses != null)
+            btnMyCourses.interactable = value;
     }
 
     // --- Hàm tiện lợi: để script ở scene đích gọi đọc key ---
