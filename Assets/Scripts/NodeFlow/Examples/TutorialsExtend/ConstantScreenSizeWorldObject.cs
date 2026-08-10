@@ -3,7 +3,7 @@ using UnityEngine;
 public class ConstantScreenSizeWorldObject : MonoBehaviour
 {
     [Tooltip("Kích thước mong muốn tính theo % chiều cao màn hình")]
-    private const float screenSizePercent = 0.25f; // 10% chiều cao viewport
+    private const float screenSizePercent = 0.15f; // 10% chiều cao viewport
 
     [Tooltip("Kích thước gốc của mesh (world units) khi scale = 1")]
     public float baseObjectSize = 1f;

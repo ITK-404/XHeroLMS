@@ -51,7 +51,9 @@ public class ClassTutorialFlow : FlowBase
 
     private IEnumerator WaitForLoading()
     {
+        LoadingUI.Show();
         yield return new WaitForSecondsRealtime(2f);
+        LoadingUI.Hide();
         Debug.Log($"[ClassTutorialFlow] courseData load xong {isReplayTutorial}");
         ClearZone();
         TryStartTutorialFlow();
