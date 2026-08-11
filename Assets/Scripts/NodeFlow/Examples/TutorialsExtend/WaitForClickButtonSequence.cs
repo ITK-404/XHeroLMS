@@ -56,6 +56,14 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
     private int currentButtonIndex;
     private State currentState = State.None;
 
+
+    private ClassTutorialFlow classTutorialFlow;
+
+    private void Start()
+    {
+        classTutorialFlow = ClassTutorialFlow.Instance;
+    }
+
     /// <summary>
     /// Button đang được đăng ký callback.
     /// Chỉ dùng trong ButtonCallback mode.
@@ -92,7 +100,8 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
         }
 
         currentState = State.None;
-
+        classTutorialFlow.ClearZone();
+        FocusHandManager.Instance.Hide();
         base.Exit(context);
     }
 
@@ -108,12 +117,12 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return;
         }
 
-        if (ClassTutorialFlow.Instance == null)
+        if (classTutorialFlow == null)
         {
             return;
         }
 
-        tutorialClickArea = ClassTutorialFlow.Instance.blockingArea;
+        tutorialClickArea = classTutorialFlow.blockingArea;
     }
 
     private bool ValidateData()
@@ -297,10 +306,9 @@ public class WaitForClickButtonSequence : TutorialStepBehaviour
             return;
         }
 
-        if (ClassTutorialFlow.Instance != null)
-        {
-            ClassTutorialFlow.Instance.SetInteractZone(buttonRect);
-        }
+       
+        classTutorialFlow.SetInteractZone(buttonRect);
+       
 
         if (FocusHandManager.Instance != null)
         {

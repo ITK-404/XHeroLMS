@@ -10,6 +10,7 @@ public class FocusHandManager : MonoBehaviour
     [SerializeField] private LabelAutoPlacer labelAutoPlacer;
     [SerializeField] private RectTransform anchorPoint;
     [SerializeField] private GameObject container;
+    [SerializeField] private Vector2 minAnchorSize = new Vector2(40f, 40f);
 
     private void Awake()
     {
@@ -39,14 +40,25 @@ public class FocusHandManager : MonoBehaviour
     {
         if (targetAnchor == null) return;
         anchorPoint.position = targetAnchor.position;
+        UpdateAnchorSize();
+    }
+
+    private void UpdateAnchorSize()
+    {
+        Vector2 targetSize = targetAnchor.rect.size;
+        anchorPoint.sizeDelta = new Vector2(
+            Mathf.Max(targetSize.x, minAnchorSize.x),
+            Mathf.Max(targetSize.y, minAnchorSize.y)
+        );
     }
 
     private IEnumerator WaitForLoad(RectTransform targetAnchor, string focusText)
     {
         container.gameObject.SetActive(true);
         anchorPoint.position = targetAnchor.position;
+        UpdateAnchorSize();
         
-        yield return new WaitForSecondsRealtime(0.1f);
+        yield return new WaitForSecondsRealtime(0.2f);
         labelAutoPlacer.SetText(focusText);
         labelAutoPlacer.Reposition();
     }

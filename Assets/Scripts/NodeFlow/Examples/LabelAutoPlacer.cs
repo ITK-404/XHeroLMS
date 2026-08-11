@@ -41,7 +41,9 @@ public class LabelAutoPlacer : MonoBehaviour
         Direction.Top, Direction.Bottom, Direction.Left, Direction.Right
     };
 
-    [Tooltip("Khoảng cách (px, theo local space của canvas) giữa label và điểm neo")]
+    [Tooltip("Khoảng cách PADDING thêm (px, theo local space của canvas) giữa label và " +
+             "MÉP rect của anchorPoint. Đây không phải khoảng cách tới tâm anchor nữa — " +
+             "khoảng cách thực tế = gap + nửa width/height của anchorPoint.rect theo hướng đặt.")]
     [SerializeField] private float gap = 8f;
 
     [Tooltip("Padding tối thiểu cách mép canvas")]
@@ -62,6 +64,12 @@ public class LabelAutoPlacer : MonoBehaviour
     private bool hasCachedSize;
     private Vector2 lastCheckedAnchorLocal;
     private bool hasLastChecked;
+
+    // Nửa width/height của anchorPoint.rect, quy đổi sang canvas-local units.
+    // Được tính lại mỗi lần RecalculatePositionOnly() chạy (anchor có thể đổi scale/size runtime).
+    private Vector2 anchorHalfSize;
+
+    private static readonly Vector3[] s_cornerBuffer = new Vector3[4];
 
     private void Awake()
     {
@@ -126,6 +134,10 @@ public class LabelAutoPlacer : MonoBehaviour
         lastCheckedAnchorLocal = anchorLocal;
         hasLastChecked = true;
 
+        // Tính nửa kích thước thực tế (canvas-local) của rect anchorPoint,
+        // để gap tự cộng thêm phần này thay vì coi anchor là 1 điểm không có size.
+        anchorHalfSize = GetAnchorHalfSize();
+
         Rect bounds = canvasRect.rect;
 
         Direction chosen = Direction.Top;
@@ -159,18 +171,56 @@ public class LabelAutoPlacer : MonoBehaviour
     }
 
     public Direction curDir;
+
+    /// <summary>
+    /// Đo bounding box của anchorPoint.rect trong canvas-local space (dùng world corners
+    /// nên vẫn đúng dù anchorPoint bị scale/rotate/nằm trong parent khác canvas).
+    /// Trả về (halfWidth, halfHeight).
+    /// </summary>
+    private Vector2 GetAnchorHalfSize()
+    {
+        if (anchorPoint == null) return Vector2.zero;
+
+        anchorPoint.GetWorldCorners(s_cornerBuffer);
+
+        Vector2 min = WorldToCanvasLocal(s_cornerBuffer[0]);
+        Vector2 max = min;
+        for (int i = 1; i < 4; i++)
+        {
+            Vector2 p = WorldToCanvasLocal(s_cornerBuffer[i]);
+            if (p.x < min.x) min.x = p.x;
+            if (p.y < min.y) min.y = p.y;
+            if (p.x > max.x) max.x = p.x;
+            if (p.y > max.y) max.y = p.y;
+        }
+
+        return (max - min) * 0.5f;
+    }
+
     private Rect GetCandidateRect(Direction dir, Vector2 anchorLocal, Vector2 size)
     {
         switch (dir)
         {
             case Direction.Top:
-                return new Rect(anchorLocal.x - size.x * 0.5f, anchorLocal.y + gap, size.x, size.y);
+            {
+                float d = gap + anchorHalfSize.y;
+                return new Rect(anchorLocal.x - size.x * 0.5f, anchorLocal.y + d, size.x, size.y);
+            }
             case Direction.Bottom:
-                return new Rect(anchorLocal.x - size.x * 0.5f, anchorLocal.y - gap - size.y, size.x, size.y);
+            {
+                float d = gap + anchorHalfSize.y;
+                return new Rect(anchorLocal.x - size.x * 0.5f, anchorLocal.y - d - size.y, size.x, size.y);
+            }
             case Direction.Left:
-                return new Rect(anchorLocal.x - gap - size.x, anchorLocal.y - size.y * 0.5f, size.x, size.y);
+            {
+                float d = gap + anchorHalfSize.x;
+                return new Rect(anchorLocal.x - d - size.x, anchorLocal.y - size.y * 0.5f, size.x, size.y);
+            }
             case Direction.Right:
-                return new Rect(anchorLocal.x + gap, anchorLocal.y - size.y * 0.5f, size.x, size.y);
+            {
+                float d = gap + anchorHalfSize.x;
+                return new Rect(anchorLocal.x + d, anchorLocal.y - size.y * 0.5f, size.x, size.y);
+            }
             default:
                 throw new ArgumentOutOfRangeException(nameof(dir));
         }
@@ -197,6 +247,11 @@ public class LabelAutoPlacer : MonoBehaviour
     /// world position (selfRect.position) thay vì anchoredPosition, để KHÔNG
     /// phụ thuộc vào selfRect đang nằm trong parent nào / anchor gì — tránh
     /// lỗi lệch vị trí khi parent thật sự của selfRect khác canvasRect.
+    ///
+    /// Khoảng cách thực tế tới anchorLocal = gap (padding cố định) + nửa
+    /// width/height của anchorPoint.rect theo đúng hướng dir (anchorHalfSize),
+    /// để label luôn cách MÉP của anchor một khoảng "gap", chứ không phải
+    /// cách tâm của anchor.
     /// </summary>
     private void ApplyDirection(Direction dir, Vector2 anchorLocal)
     {
@@ -207,20 +262,20 @@ public class LabelAutoPlacer : MonoBehaviour
         {
             case Direction.Top:
                 pivot = new Vector2(0.5f, 0f);
-                targetCanvasLocalPos = anchorLocal + new Vector2(0f, gap);
+                targetCanvasLocalPos = anchorLocal + new Vector2(0f, gap + anchorHalfSize.y);
                 break;
             case Direction.Bottom:
                 pivot = new Vector2(0.5f, 1f);
-                targetCanvasLocalPos = anchorLocal - new Vector2(0f, gap);
+                targetCanvasLocalPos = anchorLocal - new Vector2(0f, gap + anchorHalfSize.y);
                 break;
             case Direction.Left:
                 pivot = new Vector2(1f, 0.5f);
-                targetCanvasLocalPos = anchorLocal - new Vector2(gap, 0f);
+                targetCanvasLocalPos = anchorLocal - new Vector2(gap + anchorHalfSize.x, 0f);
                 break;
             case Direction.Right:
             default:
                 pivot = new Vector2(0f, 0.5f);
-                targetCanvasLocalPos = anchorLocal + new Vector2(gap, 0f);
+                targetCanvasLocalPos = anchorLocal + new Vector2(gap + anchorHalfSize.x, 0f);
                 break;
         }
 
