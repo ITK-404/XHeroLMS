@@ -44,6 +44,7 @@ public class TutorialContext : MonoBehaviour
 
         foreach (var item in saveTutorialIds)
         {
+            Debug.Log($"[TutorialContext] tutorialID: {item}");
             playedTutorialIds.Add(item);
         }
     }
