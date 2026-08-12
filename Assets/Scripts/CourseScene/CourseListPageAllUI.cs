@@ -32,7 +32,7 @@ public class CourseListPageAllUI : MonoBehaviour
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    public string priceFormat = "{0:#.0}'đ";
+    string priceFormat = "{0:#.0}'đ";
 
     [Header("Layout (cho mỗi view)")]
     public float shelfSpacingY = 260f;
