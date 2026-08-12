@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+
 // NOTE: Quick using
 public class TutorialContext : MonoBehaviour
 {
@@ -7,24 +11,54 @@ public class TutorialContext : MonoBehaviour
     private const int NotPlayedValue = 0;
 
     [SerializeField] private string tutorialName;
-
+    private static HashSet<string> playedTutorialIds = new();
     public bool IsPlayed { get; private set; }
 
-    private void Awake()
+    private void Start()
     {
-        Load();
+        CheckIsTutorialPlayed();
     }
-  
-    public void Load()
+
+    public void CheckIsTutorialPlayed()
     {
-        if (string.IsNullOrWhiteSpace(tutorialName))
+        if (!IsSaveIdValid())
         {
-            Debug.LogWarning($"[TutorialContext] tutorialName is empty on '{gameObject.name}'");
+            return;
+        }
+        var tutorialId = GetTutorialId();
+        IsPlayed = playedTutorialIds.Contains(tutorialId);
+        Debug.Log($"TutorialContext trang thai is played {tutorialId} {IsPlayed}");
+    }
+
+    public static void ClearPlayedTutorialIds()
+    {
+        playedTutorialIds.Clear();
+    }
+    
+    public static void Load(List<string> saveTutorialIds)
+    {
+        if (saveTutorialIds == null || saveTutorialIds.Count == 0)
+        {
             return;
         }
 
-        var tutorialId = GetTutorialId();
-        IsPlayed = PlayerPrefs.GetInt(tutorialId, NotPlayedValue) == PlayedValue;
+        foreach (var item in saveTutorialIds)
+        {
+            playedTutorialIds.Add(item);
+        }
+    }
+
+    public static List<string> GetSaveList()
+    {
+        if (playedTutorialIds == null || playedTutorialIds.Count == 0)
+            return new List<string>();
+        
+        List<string> saveTutorialIds = new();
+        foreach (var item in playedTutorialIds)
+        {
+            saveTutorialIds.Add(item);
+        }
+        return saveTutorialIds;
     }
 
     public void MarkAsPlayed()
@@ -42,25 +76,32 @@ public class TutorialContext : MonoBehaviour
     {
         return !IsPlayed;
     }
+
     [ContextMenu("ResetTutorial")]
     public void ResetTutorial()
     {
-        IsPlayed = false;
-        PlayerPrefs.DeleteKey(GetTutorialId());
     }
 
     private void Save()
     {
-        if (string.IsNullOrWhiteSpace(tutorialName))
-        {
-            return;
-        }
+        if (IsSaveIdValid() == false) return;
 
         var tutorialId = GetTutorialId();
-        PlayerPrefs.SetInt(tutorialId, PlayedValue);
-        PlayerPrefs.Save();
+        Debug.Log($"TutorialContext save {tutorialId}");
+        playedTutorialIds.Add(tutorialId);
+        if(TokenStore.IsAuthenticated == false) return;
+        GameInitializer.Instance.GameSessionHandler.SaveSession().Forget();
     }
 
+    [ContextMenu("DebugTest")]
+
+    private bool IsSaveIdValid()
+    {
+        if (string.IsNullOrEmpty(tutorialName)) return false;
+        
+        return true;
+    }
+    
     private string GetTutorialId()
     {
         return Prefix + tutorialName;

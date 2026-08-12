@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -123,7 +124,7 @@ public class SaveFileViewer : EditorWindow
             var value = field.GetValue(obj);
 
             // Nested list
-            if (value is IList<GameSessionData> list)
+            if (value is IList list)
             {
                 EditorGUILayout.LabelField($"{pad}{field.Name}", $"[{list.Count} items]");
                 foreach (var item in list)

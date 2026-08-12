@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -13,7 +14,9 @@ public class GameSessionData
     public static string CurrentVersion => Application.version;
     public DateTime SavedAt { get; set; } = DateTime.Now;
     public SceneLocation SceneLocation;
-    [FormerlySerializedAs("CourseData")] public SaveCourseData saveCourseData;
+
+    [FormerlySerializedAs("CourseData")] 
+    public SaveCourseData saveCourseData;
     public static GameSessionData CaptureCurrentState(GameObject player)
     {
         return new GameSessionData
@@ -21,21 +24,25 @@ public class GameSessionData
             SaveVersion = Application.version,
             UserID   = TokenStore.UserID,
             SceneLocation = CaptureFromPlayer(player),
-            saveCourseData = CaptureCourseData()
+            saveCourseData = CaptureCourseData(),
         };
     }
 
     private static SaveCourseData CaptureCourseData()
     {
         var tracker = LessonProgressTracker.Instance;
+        SaveCourseData saveCourseData = new();
+        
         if (tracker != null && !string.IsNullOrEmpty(tracker.CourseID))
         {
-            SaveCourseData saveCourseData = new();
             saveCourseData.seoId = SeoResolver.seoCourse;
-            return saveCourseData;
         }
-
-        return new();
+        saveCourseData.tutorialIds = new List<string>(TutorialContext.GetSaveList());
+        foreach (var item in saveCourseData.tutorialIds)
+        {
+            Debug.Log($"[GameSessionData] save item data is {item}");
+        }
+        return saveCourseData;
     }
     
     public static SceneLocation CaptureFromPlayer(GameObject player)
@@ -54,7 +61,6 @@ public class SceneLocation
     public Vector3 Position;
     public Quaternion Rotation;
     public string SceneName;
-
     public SceneLocation(string sceneName, Vector3 position, Quaternion rotation)
     {
         this.SceneName = sceneName;
@@ -75,4 +81,5 @@ public class SaveCourseData
 {
     // using this id to check
     public string seoId;
+    public List<string> tutorialIds = new();
 }

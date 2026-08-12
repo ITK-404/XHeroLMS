@@ -9,25 +9,25 @@ using UnityEngine.UI;
 public class ClassTutorialFlow : FlowBase
 {
     public static ClassTutorialFlow Instance;
-    
-    [Header("References")]
-    [SerializeField]
+
+    [Header("References")] [SerializeField]
     private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
-    [Header("Tutorial")]
-    [SerializeField] private TutorialFlowBuilder builder;
+
+    [Header("Tutorial")] [SerializeField] private TutorialFlowBuilder builder;
     [SerializeField] private AskForReplayTutorialUI askForReplayTutorialUI;
     [SerializeField] private AutoReplayController autoReplayController;
 
-    [Header("Focus Masking")] 
-    [SerializeField] private ShaderMaskingUI shaderMaskingUI;
+    [Header("Focus Masking")] [SerializeField]
+    private ShaderMaskingUI shaderMaskingUI;
+
     [SerializeField] private TutorialFocusRaycastFilter focusFiler;
     public TutorialClickArea blockingArea;
     [SerializeField] private TutorialContext tutorialContext;
-
     [SerializeField] private SceneLessonUI sceneLessonUI;
     [SerializeField] private CourseListView courseListView;
 
     [SerializeField] private GameObject blockerCanvas;
+
     protected override void Awake()
     {
         base.Awake();
@@ -36,7 +36,7 @@ public class ClassTutorialFlow : FlowBase
         shaderMaskingUI.Hide();
         sceneLessonUI.OnLoadCourseDone += CourseDataLoadDone;
     }
-    
+
     protected override void OnDestroy()
     {
         base.OnDestroy();
@@ -51,8 +51,12 @@ public class ClassTutorialFlow : FlowBase
 
     private IEnumerator WaitForLoading()
     {
+        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
         LoadingUI.Show();
-        yield return new WaitForSecondsRealtime(2f);
+
+        yield return new WaitForSecondsRealtime(1f);
+        yield return new WaitUntil(() => GameInitializer.IsLoadingDone);
+
         LoadingUI.Hide();
         Debug.Log($"[ClassTutorialFlow] courseData load xong {isReplayTutorial}");
         ClearZone();
@@ -74,40 +78,45 @@ public class ClassTutorialFlow : FlowBase
     {
         blockerCanvas.gameObject.SetActive(blockerState);
     }
-    
+
     private static bool isReplayTutorial = false;
+
     private void TryStartTutorialFlow()
     {
         if (IsTutorialPlayed() && isReplayTutorial == false)
         {
+            GameplayLock.Unlock(GameplayLockReason.Tutorial);
             SetStateBlocker(false);
             Debug.Log("[ClassTutorialFlow] Tutorial đã play hoặc isReplayTutorial đang true");
             return;
         }
+
         if (!IsCourseValid())
         {
             SetStateBlocker(false);
             Debug.Log("[ClassTutorialFlow] Không có course để chạy tutorial");
+            GameplayLock.Unlock(GameplayLockReason.Tutorial);
             return;
         }
-        
+
         Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
         HandleFlow().Forget();
     }
-    
+
     private bool IsCourseValid()
     {
         if (courseListView.VideoLessons == null || courseListView.VideoLessons.Count == 0)
         {
             return false;
         }
+
         return true;
     }
-    
+
     private bool IsTutorialPlayed()
     {
         // data must be load
-        tutorialContext.Load();
+        tutorialContext.CheckIsTutorialPlayed();
         return tutorialContext.IsPlayed;
     }
 
@@ -115,14 +124,13 @@ public class ClassTutorialFlow : FlowBase
     {
         // SETUP
         SetStateBlocker(false);
-        
-        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
+
+
         shaderMaskingUI.Show();
-        
-        await UniTask.WaitForSeconds(2f);
+
+        await UniTask.WaitForSeconds(1f);
         RunFlow().Forget();
 
-        await UniTask.WaitForSeconds(2f);
         await UniTask.WaitUntil(() => !IsRunning(),
             PlayerLoopTiming.Update,
             this.GetCancellationTokenOnDestroy());
@@ -137,7 +145,7 @@ public class ClassTutorialFlow : FlowBase
 
         ReplayTutorial().Forget();
         GameplayLock.Unlock(GameplayLockReason.Tutorial);
-        
+
         // Không có next tutorial -> dừng, không tự động chạy replay.
         // ReplayTutorial() chỉ nên được gọi từ nơi khác (vd: nút Replay ngoài UI), nếu cần.
     }
