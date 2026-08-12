@@ -31,7 +31,7 @@ public class CourseListPageMyUI : MonoBehaviour
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    string priceFormat = "{0:#.0}đ";
+    string priceFormat = "{0:N0}đ";
 
     [Header("Layout (cho mỗi view)")]
     [Tooltip("Khoảng cách dọc giữa các kệ (anchoredPosition)")]
