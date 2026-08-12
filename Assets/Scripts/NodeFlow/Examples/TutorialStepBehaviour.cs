@@ -4,6 +4,7 @@ using UnityEngine;
 
 public abstract class TutorialStepBehaviour : MonoBehaviour
 {
+    public float delayBeforeEnter;
     public event Action OnEnterStateEvent;
     public event Action OnExitStateEvent;
 

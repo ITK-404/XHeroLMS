@@ -24,6 +24,8 @@ public class TutorialStepNode : FlowNode
             );
         }
 
+        await UniTask.WaitForSeconds(stepBehaviour.delayBeforeEnter, true, PlayerLoopTiming.LastUpdate,
+            cancellationToken);
         stepBehaviour.Enter(context);
 
         try
