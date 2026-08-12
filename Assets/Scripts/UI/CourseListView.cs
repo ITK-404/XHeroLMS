@@ -2497,6 +2497,14 @@ private void PauseVideoAudioOnly()
         if (lesson == null)
             return false;
 
+        // Đồng bộ với ChapterUIManager:
+        // force unlock thì bỏ toàn bộ điều kiện học tuần tự.
+        if (ChapterUIManager.Instance != null &&
+            ChapterUIManager.Instance.ForceUnlockAll)
+        {
+            return true;
+        }
+
         if (lesson.IsLessonDone())
             return true;
 

@@ -8,6 +8,10 @@ public class ChapterUIManager : MonoBehaviour
     private List<ChapterUI> chaptersList = new();
     public ChapterUI currentChapter;
     public ChapterUI finalExamChapter;
+
+    // ("Debug / Unlock")
+    private bool forceUnlockAll = true;
+    public bool ForceUnlockAll => forceUnlockAll;
     private void Awake()
     {
         Instance = this;
@@ -41,7 +45,9 @@ public class ChapterUIManager : MonoBehaviour
         for (int i = 0; i < chaptersList.Count; i++)
         {
             // completed[i] = chaptersList[i].IsCompleteAll();
-            completed[i] = true;
+            completed[i] = forceUnlockAll
+                ? true
+                : chaptersList[i].IsCompleteAll();
         }
 
         // decide state for the first chapter (usually unlocked)
