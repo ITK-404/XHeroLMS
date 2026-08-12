@@ -37,7 +37,12 @@ public class ShaderMaskingUI : MonoBehaviour
         focusRectForTest = null;
         maskRect.gameObject.SetActive(false);
     }
+
+    
+    private void Update()
+    {
         
+    }
 
     private void LateUpdate()
     {
