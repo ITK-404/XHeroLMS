@@ -7,6 +7,7 @@ using UnityEngine.UIElements;
 [Serializable]
 public class GameSessionData
 {
+    public const string LocalGuestUserID = "__guest__";
     public string UserID;
     public string SaveVersion;
     public static string CurrentVersion => Application.version;

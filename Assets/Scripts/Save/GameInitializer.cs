@@ -86,6 +86,7 @@ public class GameInitializer : MonoBehaviour
         // GAME OBJECT LOADING
         // TODO: UPDATE TO ADDRESSABLE BEFORE
         EnsureCoreRuntimeObjects();
+        await gameSessionHandle.InitializeConfig(ct);
         LoadingTransition.Init(runner, sceneHistory, sceneLocationHandle, ct).Forget();
         
         // ADDRESSABLE LOADING

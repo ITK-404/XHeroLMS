@@ -695,42 +695,98 @@ public class BootFlow : MonoBehaviour
             Debug.LogWarning("[BootFlow] New Scene late loader not found after main scene load. Continue with main scene only.");
         }
 
-        if (worldScene.IsValid() && worldScene.isLoaded)
-            SceneManager.SetActiveScene(worldScene);
+    if (worldScene.IsValid() && worldScene.isLoaded)
+        SceneManager.SetActiveScene(worldScene);
 
-        if (intro != null)
+    RestoreHiddenWorldRoots(hiddenWorldRoots);
+
+    if (_resolvedSessionData != null &&
+        GameInitializer.Instance != null &&
+        GameInitializer.Instance.SceneLocationHandle != null)
+    {
+        Debug.Log(
+            "[BootFlow] Restore saved player position immediately after world activation: "
+            + worldScene.name
+        );
+
+        GameInitializer.Instance.SceneLocationHandle
+            .RestoreSavedPlayerPosition(worldScene.name);
+    }
+
+    yield return null;
+    yield return new WaitForEndOfFrame();
+    yield return null;
+
+    if (intro != null)
+    {
+        intro.SetBootProgress01(1f, true);
+
+        float introGateTimer = 0f;
+
+        while (!intro.CanEnterMain)
         {
-            intro.SetBootProgress01(1f, true);
+            introGateTimer += Time.unscaledDeltaTime;
 
-            float introGateTimer = 0f;
-            while (!intro.CanEnterMain)
+            if (introEnterMainGateTimeoutSeconds > 0f &&
+                introGateTimer >= introEnterMainGateTimeoutSeconds)
             {
-                introGateTimer += Time.unscaledDeltaTime;
+                Debug.LogWarning(
+                    "[BootFlow] Intro gate timeout after world runtime ready. " +
+                    "Continue into loaded scene: " + sceneKey
+                );
 
-                if (introEnterMainGateTimeoutSeconds > 0f &&
-                    introGateTimer >= introEnterMainGateTimeoutSeconds)
-                {
-                    Debug.LogWarning("[BootFlow] Intro gate timeout after world ready. Continue into loaded scene: " + sceneKey);
-                    break;
-                }
-
-                yield return null;
+                break;
             }
+
+            yield return null;
         }
+    }
 
-        RestoreHiddenWorldRoots(hiddenWorldRoots);
 
-        if (introScene.IsValid() &&
-            introScene.isLoaded &&
-            (!worldScene.IsValid() || introScene != worldScene))
+    // =====================================================
+    // BÂY GIỜ MỚI CHO LOADING LÊN 100%
+    // =====================================================
+    if (intro != null)
+    {
+        intro.SetBootProgress01(1f, true);
+
+        float introGateTimer = 0f;
+
+        while (!intro.CanEnterMain)
         {
-            AsyncOperation unloadIntro = SceneManager.UnloadSceneAsync(introScene);
+            introGateTimer += Time.unscaledDeltaTime;
 
-            while (unloadIntro != null && !unloadIntro.isDone)
-                yield return null;
+            if (introEnterMainGateTimeoutSeconds > 0f &&
+                introGateTimer >= introEnterMainGateTimeoutSeconds)
+            {
+                Debug.LogWarning(
+                    "[BootFlow] Intro gate timeout after world runtime ready. " +
+                    "Continue into loaded scene: " + sceneKey
+                );
+
+                break;
+            }
+
+            yield return null;
         }
+    }
 
-        onDone?.Invoke(true);
+
+    // =====================================================
+    // CUỐI CÙNG MỚI GỠ INTRO
+    // =====================================================
+    if (introScene.IsValid() &&
+        introScene.isLoaded &&
+        (!worldScene.IsValid() || introScene != worldScene))
+    {
+        AsyncOperation unloadIntro =
+            SceneManager.UnloadSceneAsync(introScene);
+
+        while (unloadIntro != null && !unloadIntro.isDone)
+            yield return null;
+    }
+
+    onDone?.Invoke(true);
     }
 
     private bool IsRequiredLateContentReady(AddressableAdditiveSceneLoader lateLoader, bool waitForAllLateContent)
