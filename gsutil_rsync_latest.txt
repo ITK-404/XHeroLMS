@@ -1,46 +1,143 @@
-[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/" "gs://dlc-lms/addressables/releases-dev/android/latest/"
+[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/" "gs://dlc-lms/addressables/releases-dev/ios/latest/"
 ExitCode=0
 
 --- STDOUT ---
 
 
 --- STDERR ---
-Building synchronization state...
-Starting synchronization...
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_dai_dao_chi_gian_2_scenes_all_867d39e621e154b2a882c872e5973d1d.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
--
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog_1.0.11.json [Content-Type=application/json]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_coursescene_scenes_all_d8f2ed825dcd8ad735534581a2e01d4d.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog_1.0.11.hash [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog.json [Content-Type=application/json]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog.hash [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_dai_dao_chi_gian_1_scenes_all_31abcafb8b9f1240ceacc989faf3ddeb.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_shared_assets_assets_prefabs_ui_3a32145bfeeb3e010b8b6539554cc35d.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_entry_79e65799b340db9041190bf6fd5b5284.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/483192958c2089719c8dc303377b0b39_monoscripts_6cab07eacc29d9710201366045564012.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_phong_ky_mon_scenes_all_2b6a62c8df39d3438425122972a8c6a4.bundle [Content-Type=application/octet-stream]...
-- [0/11 files][    0.0 B/366.1 MiB]   0% Done                                   
-- [1/11 files][ 59.0 MiB/366.1 MiB]  16% Done                                   
-- [2/11 files][ 62.8 MiB/366.1 MiB]  17% Done                                   
-- [3/11 files][113.0 MiB/366.1 MiB]  30% Done                                   
-- [4/11 files][208.2 MiB/366.1 MiB]  56% Done                                   
-- [5/11 files][272.2 MiB/366.1 MiB]  74% Done                                   
-- [6/11 files][272.2 MiB/366.1 MiB]  74% Done                                   
-- [7/11 files][365.7 MiB/366.1 MiB]  99% Done                                   
-- [8/11 files][365.9 MiB/366.1 MiB]  99% Done                                   
-- [9/11 files][365.9 MiB/366.1 MiB]  99% Done                                   
-- [10/11 files][365.9 MiB/366.1 MiB]  99% Done                                  
-- [11/11 files][366.1 MiB/366.1 MiB] 100% Done                                  
+WARNING:  Python 3.9.x is no longer officially supported by the Google Cloud CLI
+and may not function correctly. Please use Python version 3.10 and up.
+To reinstall gcloud, run:
+    $ gcloud components reinstall
 
-Operation completed over 11 objects/366.1 MiB.                                   
+This will also prompt to install a compatible version of Python.
+
+If you have a compatible Python interpreter installed, you can use it by setting
+the CLOUDSDK_PYTHON environment variable to point to it.
+
+/Users/dev/google-cloud-sdk/platform/gsutil/third_party/urllib3/src/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+WARNING: gsutil rsync uses hashes when modification time is not available at
+both the source and destination. Your crcmod installation isn't using the
+module's C extension, so checksumming will run very slowly. If this is your
+first rsync since updating gsutil, this rsync can take significantly longer than
+usual. For help installing the extension, please see "gsutil help crcmod".
+
+Building synchronization state...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Starting synchronization...
+If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
+
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_phong_tuyen_sinh_scenes_all_3f33e75204dac7f54a8aadd2379eeb85.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_14_78af4fa2b8b126c2b2f52b3491264b91.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/483192958c2089719c8dc303377b0b39_monoscripts_f7009ab5f2089c8ddaec84c4ff2e1396.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog.hash [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_assets__0f25be8aa43266010bcad288e29d0c66.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_entry_6c58fa5d9e1cf3390c881d4481e23bd8.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog.json [Content-Type=application/json]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog_1.0.11.json [Content-Type=application/json]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_18_6051ae589699366b1f73ed96bfdc607e.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_shared_assets_assets_textmeshpro_4db9582ca04c0d4580f03712c8178b7d.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_05_081d79bfda4b1abe3c81b969dfe800f9.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_assets_new_scene_initial_74a62afb0d57533eca0dc1370d5b4fc1.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_07_f8d583326e284fddcdbff9b87ffe06d2.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_dai_dao_chi_gian_1_scenes_all_e88882729b54752c21ddccb3ae9e9bbc.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_06_2e3e3ea3f57e03e8ecdcae0f495d6d51.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_certificates_scenes_all_3f4bb478343c7eee94da7946ef61ddaa.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_shared_assets_assets_readme.asset_841544c2d00924af1a7dad05ea9de731.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_04_d0fca78974a1d7c8d07170a833f5f689.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_phong_ky_mon_scenes_all_75ed0593ab4837f80b6659c700f3db7f.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_03_602a9355f4d071d18e7e396ea8a2e1af.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_shared_assets_assets_prefabs_ui_aab23749f3341bf25080c407a65cc4f0.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_08_385c58d56d0448010b9bddcfb6446614.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_09_26991c4bf04765783886469a334f01d5.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_16_1d0323b3822ff037ef86ce80ac292b21.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_17_7973559f643b56f1f7efd5dd8124b1c3.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_20_f293f6ad8e819847298d3920e0b95fae.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_13_6d8b907b49fd09b313bf038e9b49f413.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_10_9eedc4349805a95cdeff27c00885024b.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_15_16791d4a6bb359fd708981d3ce440d7b.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_12_6b33feee49501e71b18194385a8a41a3.bundle [Content-Type=application/octet-stream]...
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_11_7e8035dffcd5cba7bfe7b6cb4aeb03c7.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_trungbayttb_scenes_all_3e2e7852b9476e9c6381af91dcc53032.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_dai_dao_chi_gian_2_scenes_all_e72760df1a272a7e3027ecc3b8904ea4.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_19_d13974041bb155f7522810e8f09278e1.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_02_06d9b4d21ed8b0f47cf53e94f0fcbc3d.bundle [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog_1.0.11.hash [Content-Type=application/octet-stream]...
+/ [0/36 files][    0.0 B/  1.0 GiB]   0% Done                                   
+/ [1/36 files][ 99.0 MiB/  1.0 GiB]   9% Done                                   
+/ [2/36 files][101.8 MiB/  1.0 GiB]   9% Done                                   
+/ [3/36 files][101.8 MiB/  1.0 GiB]   9% Done                                   
+/ [4/36 files][185.1 MiB/  1.0 GiB]  17% Done                                   
+/ [5/36 files][231.5 MiB/  1.0 GiB]  22% Done                                   
+/ [6/36 files][234.7 MiB/  1.0 GiB]  22% Done                                   
+/ [7/36 files][234.7 MiB/  1.0 GiB]  22% Done                                   
+/ [8/36 files][240.4 MiB/  1.0 GiB]  23% Done                                   
+/ [9/36 files][240.4 MiB/  1.0 GiB]  23% Done                                   
+/ [10/36 files][242.9 MiB/  1.0 GiB]  23% Done                                  
+/ [11/36 files][242.9 MiB/  1.0 GiB]  23% Done                                  
+/ [12/36 files][243.3 MiB/  1.0 GiB]  23% Done                                  
+/ [13/36 files][243.3 MiB/  1.0 GiB]  23% Done                                  
+/ [14/36 files][243.9 MiB/  1.0 GiB]  23% Done                                  
+/ [15/36 files][246.9 MiB/  1.0 GiB]  23% Done                                  
+/ [16/36 files][321.0 MiB/  1.0 GiB]  30% Done                                  
+/ [17/36 files][321.2 MiB/  1.0 GiB]  30% Done                                  
+/ [18/36 files][321.2 MiB/  1.0 GiB]  30% Done                                  
+/ [19/36 files][472.4 MiB/  1.0 GiB]  45% Done                                  
+/ [20/36 files][479.5 MiB/  1.0 GiB]  46% Done                                  
+/ [21/36 files][516.8 MiB/  1.0 GiB]  49% Done                                  
+/ [22/36 files][516.8 MiB/  1.0 GiB]  49% Done                                  
+/ [23/36 files][556.5 MiB/  1.0 GiB]  53% Done                                  
+/ [24/36 files][556.5 MiB/  1.0 GiB]  53% Done                                  
+/ [25/36 files][556.5 MiB/  1.0 GiB]  53% Done                                  
+/ [26/36 files][556.5 MiB/  1.0 GiB]  53% Done                                  
+/ [27/36 files][556.5 MiB/  1.0 GiB]  53% Done                                  
+/ [28/36 files][610.5 MiB/  1.0 GiB]  58% Done                                  
+/ [29/36 files][611.2 MiB/  1.0 GiB]  58% Done                                  
+/ [30/36 files][616.7 MiB/  1.0 GiB]  59% Done                                  
+/ [31/36 files][625.5 MiB/  1.0 GiB]  60% Done                                  
+-
+- [32/36 files][655.1 MiB/  1.0 GiB]  63% Done                                  
+- [33/36 files][  1.0 GiB/  1.0 GiB]  99% Done                                  
+- [34/36 files][  1.0 GiB/  1.0 GiB]  99% Done                                  
+- [35/36 files][  1.0 GiB/  1.0 GiB]  99% Done                                  
+- [36/36 files][  1.0 GiB/  1.0 GiB] 100% Done                                  
+Operation completed over 36 objects/1.0 GiB.                                     
 
