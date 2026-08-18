@@ -6,15 +6,15 @@ public class WaitForClickButtonTutorialStep : TutorialStepBehaviour
     [SerializeField] private Button targetButton;
     private bool isClick = false;
 
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
-        base.Enter();
+        base.Enter(context);
         targetButton.onClick.AddListener(OnClicked);
     }
 
-    public override void Exit()
+    public override void Exit(CutsceneContext context = null)
     {
-        base.Exit();
+        base.Exit(context);
         targetButton.onClick.RemoveListener(OnClicked);
     }
 

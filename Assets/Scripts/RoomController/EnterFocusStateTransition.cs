@@ -6,6 +6,8 @@ public class EnterFocusStateTransition : FocusMode
     [SerializeField] private InputCanvas inputCanvas;
     [SerializeField] private CourseExitWayHandler courseExitWayHandler;
     [SerializeField] private PlayerStandUI playerStandUI;
+
+    [SerializeField] private NPCInteraction npcInteraction;
     private void Awake()
     {
         ResolveRuntimeReferences();
@@ -20,6 +22,8 @@ public class EnterFocusStateTransition : FocusMode
         courseExitWayHandler?.Hide();
         if (playerStandUI != null && playerStandUI.returnBtn != null)
             playerStandUI.returnBtn.gameObject.SetActive(false);
+
+        SetWorldSpaceKyMonInteraction(false);
     }
 
     public override void Exit()
@@ -31,8 +35,16 @@ public class EnterFocusStateTransition : FocusMode
         courseExitWayHandler?.Show();
         if (playerStandUI != null && playerStandUI.returnBtn != null)
             playerStandUI.returnBtn.gameObject.SetActive(true);
+
+        SetWorldSpaceKyMonInteraction(true);
     }
 
+    private void SetWorldSpaceKyMonInteraction(bool state)
+    {
+        if (npcInteraction == null) return;
+        npcInteraction.SetActiveState(state);
+    }
+    
     private void SetPlayerPanelState(bool isEnable)
     {
         if (playerPanelUI == null)
@@ -60,5 +72,8 @@ public class EnterFocusStateTransition : FocusMode
 
         if (playerStandUI == null)
             playerStandUI = FindFirstObjectByType<PlayerStandUI>(FindObjectsInactive.Include);
+        
+        if (npcInteraction == null)
+            npcInteraction = FindFirstObjectByType<NPCInteraction>(FindObjectsInactive.Include);
     }
 }

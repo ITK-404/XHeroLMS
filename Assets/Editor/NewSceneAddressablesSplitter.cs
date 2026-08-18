@@ -382,7 +382,8 @@ public static class NewSceneAddressablesSplitter
         List<string> generatedScenePaths = new List<string> { GeneratedMainScenePath };
         List<string> lateSceneKeys = new List<string>();
         StringBuilder splitReport = new StringBuilder();
-        splitReport.AppendLine("scene_key\tgameobject_path");
+        splitReport.AppendLine(
+            "scene_key\tgameobject_path\tlocal_position\tlocal_rotation\tlocal_scale\tworld_position\tworld_rotation\tsibling_index");
 
         int nextLateIndex = 1;
         CreateFirstEntryReadyScene(ref nextLateIndex, lateSceneKeys, generatedScenePaths, splitReport);
@@ -415,9 +416,11 @@ public static class NewSceneAddressablesSplitter
             initialUiDependencyPaths,
             sharedGeneratedDependencyPaths);
 
-        File.WriteAllText(
-            Path.Combine(Directory.GetCurrentDirectory(), Path.Combine(ReportDirectory, "regenerate_cloud_new_scene.tsv")),
-            splitReport.ToString());
+        string splitReportPath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            Path.Combine(ReportDirectory, "regenerate_cloud_new_scene.tsv"));
+        File.WriteAllText(splitReportPath, splitReport.ToString());
+        Debug.Log("[NewSceneSplit] Saved transform report: " + splitReportPath);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -1069,6 +1072,7 @@ public static class NewSceneAddressablesSplitter
         splitReport.Append(sceneName);
         splitReport.Append('\t');
         splitReport.Append(FirstEntryReadyMarkerName);
+        splitReport.Append("\t\t\t\t\t\t");
         splitReport.AppendLine();
     }
 
@@ -1094,7 +1098,9 @@ public static class NewSceneAddressablesSplitter
             TransformSnapshot transformSnapshot = CaptureTransformSnapshot(go.transform);
             List<TransformSnapshot> parentSnapshots = CaptureParentSnapshots(go.transform);
 
-            go.transform.SetParent(null, false);
+            // Detach without changing the world transform. The original local
+            // transform is restored after the duplicate parent chain exists.
+            go.transform.SetParent(null, true);
             SceneManager.MoveGameObjectToScene(go, lateScene);
 
             GameObject parent = FindOrCreateTransformHierarchy(lateScene, parentSnapshots);
@@ -1104,6 +1110,7 @@ public static class NewSceneAddressablesSplitter
 
             ApplyObjectSnapshot(go, transformSnapshot);
             ApplyTransformSnapshot(go.transform, transformSnapshot);
+            ApplyWorldTransformIfNeeded(go.transform, transformSnapshot);
 
             int clearedBatchingStaticCount = ClearBatchingStaticRecursive(parent != null ? parent : go);
 
@@ -1118,6 +1125,18 @@ public static class NewSceneAddressablesSplitter
             splitReport.Append(sceneName);
             splitReport.Append('\t');
             splitReport.Append(EscapeTsv(originalPath));
+            splitReport.Append('\t');
+            splitReport.Append(FormatVector3(transformSnapshot.LocalPosition));
+            splitReport.Append('\t');
+            splitReport.Append(FormatQuaternion(transformSnapshot.LocalRotation));
+            splitReport.Append('\t');
+            splitReport.Append(FormatVector3(transformSnapshot.LocalScale));
+            splitReport.Append('\t');
+            splitReport.Append(FormatVector3(transformSnapshot.WorldPosition));
+            splitReport.Append('\t');
+            splitReport.Append(FormatQuaternion(transformSnapshot.WorldRotation));
+            splitReport.Append('\t');
+            splitReport.Append(transformSnapshot.SiblingIndex.ToString(CultureInfo.InvariantCulture));
             splitReport.AppendLine();
         }
 
@@ -1129,6 +1148,13 @@ public static class NewSceneAddressablesSplitter
 
         generatedScenePaths.Add(scenePath);
         lateSceneKeys.Add(sceneName);
+
+        Debug.Log("[NewSceneSplit] Saved late scene transforms. scene="
+                  + sceneName
+                  + ", objects="
+                  + objects.Count.ToString(CultureInfo.InvariantCulture)
+                  + ", path="
+                  + scenePath);
     }
 
     private static List<TransformSnapshot> CaptureParentSnapshots(Transform transform)
@@ -1156,6 +1182,9 @@ public static class NewSceneAddressablesSplitter
             LocalPosition = transform.localPosition,
             LocalRotation = transform.localRotation,
             LocalScale = transform.localScale,
+            WorldPosition = transform.position,
+            WorldRotation = transform.rotation,
+            SiblingIndex = transform.GetSiblingIndex(),
             ActiveSelf = go.activeSelf,
             Layer = go.layer,
             Tag = go.tag,
@@ -1177,7 +1206,9 @@ public static class NewSceneAddressablesSplitter
             if (current == null)
             {
                 current = scene.GetRootGameObjects()
-                    .FirstOrDefault(go => string.Equals(go.name, snapshot.Name, StringComparison.Ordinal));
+                    .Where(go => string.Equals(go.name, snapshot.Name, StringComparison.Ordinal))
+                    .OrderBy(go => Math.Abs(go.transform.GetSiblingIndex() - snapshot.SiblingIndex))
+                    .FirstOrDefault();
 
                 if (current == null)
                 {
@@ -1188,7 +1219,9 @@ public static class NewSceneAddressablesSplitter
             else
             {
                 Transform child = current.transform.Cast<Transform>()
-                    .FirstOrDefault(t => string.Equals(t.name, snapshot.Name, StringComparison.Ordinal));
+                    .Where(t => string.Equals(t.name, snapshot.Name, StringComparison.Ordinal))
+                    .OrderBy(t => Math.Abs(t.GetSiblingIndex() - snapshot.SiblingIndex))
+                    .FirstOrDefault();
 
                 if (child == null)
                 {
@@ -1202,6 +1235,7 @@ public static class NewSceneAddressablesSplitter
 
             ApplyObjectSnapshot(current, snapshot);
             ApplyTransformSnapshot(current.transform, snapshot);
+            SetSiblingIndexSafe(current.transform, snapshot.SiblingIndex);
         }
 
         return current;
@@ -1231,6 +1265,40 @@ public static class NewSceneAddressablesSplitter
         transform.localRotation = snapshot.LocalRotation;
         transform.localScale = snapshot.LocalScale;
         EditorUtility.SetDirty(transform);
+    }
+
+    private static void ApplyWorldTransformIfNeeded(Transform transform, TransformSnapshot snapshot)
+    {
+        if (Approximately(transform.position, snapshot.WorldPosition)
+            && Approximately(transform.rotation, snapshot.WorldRotation))
+        {
+            return;
+        }
+
+        // A recreated parent can have the same name but a different transform.
+        // Keep the object at its authored world position in that case.
+        transform.SetPositionAndRotation(snapshot.WorldPosition, snapshot.WorldRotation);
+        EditorUtility.SetDirty(transform);
+    }
+
+    private static void SetSiblingIndexSafe(Transform transform, int siblingIndex)
+    {
+        if (transform == null || siblingIndex < 0)
+            return;
+
+        transform.SetSiblingIndex(Mathf.Min(siblingIndex, transform.parent != null
+            ? transform.parent.childCount - 1
+            : transform.root.gameObject.scene.GetRootGameObjects().Length - 1));
+    }
+
+    private static bool Approximately(Vector3 a, Vector3 b)
+    {
+        return (a - b).sqrMagnitude <= 0.000001f;
+    }
+
+    private static bool Approximately(Quaternion a, Quaternion b)
+    {
+        return Quaternion.Angle(a, b) <= 0.01f;
     }
 
     private static int ClearBatchingStaticRecursive(GameObject root)
@@ -1287,6 +1355,7 @@ public static class NewSceneAddressablesSplitter
 
     private static void MoveObjectBackToAuthoringScene(Scene mainScene, GameObject go, string originalPath)
     {
+        TransformSnapshot transformSnapshot = CaptureTransformSnapshot(go.transform);
         go.transform.SetParent(null, true);
         SceneManager.MoveGameObjectToScene(go, mainScene);
 
@@ -1296,7 +1365,9 @@ public static class NewSceneAddressablesSplitter
             return;
 
         GameObject parent = FindOrCreateByHierarchyPath(mainScene, parentPath);
-        go.transform.SetParent(parent.transform, true);
+        go.transform.SetParent(parent.transform, false);
+        ApplyTransformSnapshot(go.transform, transformSnapshot);
+        ApplyWorldTransformIfNeeded(go.transform, transformSnapshot);
     }
 
     private static Dictionary<string, Queue<string>> LoadRestorePathsByScene()
@@ -2582,6 +2653,27 @@ public static class NewSceneAddressablesSplitter
         return value.Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }
 
+    private static string FormatVector3(Vector3 value)
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            "{0:R},{1:R},{2:R}",
+            value.x,
+            value.y,
+            value.z);
+    }
+
+    private static string FormatQuaternion(Quaternion value)
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            "{0:R},{1:R},{2:R},{3:R}",
+            value.x,
+            value.y,
+            value.z,
+            value.w);
+    }
+
     private static string Normalize(string value)
     {
         return (value ?? "").ToLowerInvariant().Replace(" ", "");
@@ -2629,6 +2721,9 @@ public static class NewSceneAddressablesSplitter
         public Vector3 LocalPosition;
         public Quaternion LocalRotation;
         public Vector3 LocalScale;
+        public Vector3 WorldPosition;
+        public Quaternion WorldRotation;
+        public int SiblingIndex;
         public bool ActiveSelf;
         public int Layer;
         public string Tag;

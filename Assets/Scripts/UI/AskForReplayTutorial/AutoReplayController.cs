@@ -7,11 +7,12 @@ using UnityEngine.Serialization;
 
 public class AutoReplayController : MonoBehaviour
 {
-    [FormerlySerializedAs("askForReplayAnimation")] [SerializeField] private SmokeTransitionAnimation smokeTransitionAnimation;
+    [FormerlySerializedAs("askForReplayAnimation")] [SerializeField]
+    private SmokeTransitionAnimation smokeTransitionAnimation;
 
     public IEnumerator WaitForLoading()
     {
         yield return smokeTransitionAnimation.StartTransitionAsync().ToCoroutine();
-        LoadingTransition.Load_Scene(SceneManager.GetActiveScene().name);
+        LoadingTransition.Load_Scene(SceneManager.GetActiveScene().name, isSaveHistory: false);
     }
 }

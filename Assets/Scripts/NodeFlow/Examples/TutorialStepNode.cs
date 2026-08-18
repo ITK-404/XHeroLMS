@@ -5,15 +5,12 @@ using Cysharp.Threading.Tasks;
 public class TutorialStepNode : FlowNode
 {
     private readonly TutorialStepBehaviour stepBehaviour;
-    private readonly float exitDelay;
 
     public TutorialStepNode(
-        TutorialStepBehaviour stepBehaviour,
-        float exitDelay = 0f)
+        TutorialStepBehaviour stepBehaviour)
         : base($"Tutorial Step [{stepBehaviour?.name}]")
     {
         this.stepBehaviour = stepBehaviour;
-        this.exitDelay = exitDelay;
     }
 
     public override async UniTask<string> ExecuteAsync(
@@ -27,15 +24,20 @@ public class TutorialStepNode : FlowNode
             );
         }
 
-        stepBehaviour.Enter();
-
+        float delayBeforeEnter = stepBehaviour.delayBeforeEnter;
+        if (delayBeforeEnter > 0)
+        {
+            await UniTask.WaitForSeconds(stepBehaviour.delayBeforeEnter, true, PlayerLoopTiming.LastUpdate,
+                cancellationToken);
+        }
+        stepBehaviour.Enter(context);
         try
         {
             while (!stepBehaviour.IsCompleted())
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                stepBehaviour.Tick();
+                stepBehaviour.Tick(context);
 
                 await UniTask.Yield(
                     PlayerLoopTiming.Update,
@@ -43,19 +45,11 @@ public class TutorialStepNode : FlowNode
                 );
             }
 
-            if (exitDelay > 0f)
-            {
-                await UniTask.Delay(
-                    TimeSpan.FromSeconds(exitDelay),
-                    cancellationToken: cancellationToken
-                );
-            }
-
             return NodeResult.Completed;
         }
         finally
         {
-            stepBehaviour.Exit();
+            stepBehaviour.Exit(context);
         }
     }
 }

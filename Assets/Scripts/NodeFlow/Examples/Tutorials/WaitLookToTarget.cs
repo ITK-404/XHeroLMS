@@ -8,15 +8,17 @@ public class WaitLookToTarget : TutorialStepBehaviour
     private PointClickSystem pointClickSystem;
     private bool isDone = false;
 
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
-        base.Enter();
+        base.Enter(context);
         pointClickSystem = FindFirstObjectByType<PointClickSystem>();
         RotateToPoint();
     }
     [ContextMenu("RotateToPoint")]
     private void RotateToPoint()
     {
+        ClassTutorialFlow.Instance.SetStateBlocker(true);
+        
         Debug.Log("[ClickCheckPointStep] rorate to check point");
         var direction = target.transform.position - pointClickSystem.transform.position;
         direction.y = 0;
@@ -25,6 +27,7 @@ public class WaitLookToTarget : TutorialStepBehaviour
         var targetRotation = Quaternion.LookRotation(direction);
         pointClickSystem.transform.DORotateQuaternion(targetRotation, 3f).OnComplete(() =>
         {
+            ClassTutorialFlow.Instance.SetStateBlocker(false);
             isDone = true;
         });
     }

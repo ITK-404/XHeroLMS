@@ -26,6 +26,11 @@ public abstract class FlowBase : MonoBehaviour
 
     public bool IsRunning() => isRunning;
 
+    protected virtual CutsceneContext CreateGameContext()
+    {
+        return new CutsceneContext();
+    }
+    
     public async UniTaskVoid RunFlow()
     {
         if (isRunning)
@@ -37,11 +42,12 @@ public abstract class FlowBase : MonoBehaviour
         cancellationTokenSource?.Dispose(); // dispose CTS cũ nếu có, tránh leak
         cancellationTokenSource = new CancellationTokenSource();
 
-        CutsceneContext context = new CutsceneContext();
+        CutsceneContext context = CreateGameContext();
         FlowNode startNode = CreateFlow();
         flowRunner = new CutsceneFlowRunner();
         isRunning = true;
 
+        
         Debug.Log("[FlowBase] Flow Starting");
 
         try

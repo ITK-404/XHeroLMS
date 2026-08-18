@@ -4,28 +4,28 @@ using UnityEngine;
 
 public abstract class TutorialStepBehaviour : MonoBehaviour
 {
-    [SerializeField] protected float delay = 2f;
+    public float delayBeforeEnter;
     public event Action OnEnterStateEvent;
     public event Action OnExitStateEvent;
 
-    public virtual void Enter()
+    public virtual void Enter(CutsceneContext context = null)
     {
         OnEnterStateEvent?.Invoke();
     }
 
-    public virtual void Tick()
+    public virtual void Tick(CutsceneContext context = null)
     {
     }
 
     public abstract bool IsCompleted();
 
-    public virtual void Exit()
+    public virtual void Exit(CutsceneContext context = null)
     {
         OnExitStateEvent?.Invoke();
     }
 
     public TutorialStepNode CreateTutorialNode()
     {
-        return new TutorialStepNode(this, delay);
+        return new TutorialStepNode(this);
     }
 }

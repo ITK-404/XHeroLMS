@@ -32,7 +32,7 @@ public class CourseListPageAllUI : MonoBehaviour
 
     [Header("Price display")]
     public bool useCurrentPriceFirst = true;
-    public string priceFormat = "{0:#.0}'đ";
+    string priceFormat = "{0:N0}đ";
 
     [Header("Layout (cho mỗi view)")]
     public float shelfSpacingY = 260f;
@@ -356,7 +356,7 @@ bool isReview = IsPreviewMode();
                     if (slot.bookHandleUI.priceText != null)
                     {
                         slot.bookHandleUI.priceText.text = displayPrice.HasValue
-                            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, priceFormat, displayPrice.Value)
+                            ? string.Format(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"), priceFormat, displayPrice.Value)
                             : "";
                     }
 

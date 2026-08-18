@@ -12,12 +12,19 @@ public class WaitForTimeTutorialStep : TutorialStepBehaviour
     private bool isCountingDone;
     private int remainingSeconds;
 
-    public override void Enter()
+    public override void Enter(CutsceneContext context = null)
     {
-        base.Enter();
+        base.Enter(context);
+        ClassTutorialFlow.Instance.SetStateBlocker(true);
 
         StopAllCoroutines();
         StartCoroutine(WaitForTime());
+    }
+
+    public override void Exit(CutsceneContext context = null)
+    {
+        base.Exit(context);
+        ClassTutorialFlow.Instance.SetStateBlocker(false);
     }
 
     private IEnumerator WaitForTime()

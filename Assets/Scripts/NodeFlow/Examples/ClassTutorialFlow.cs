@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
@@ -7,48 +8,132 @@ using UnityEngine.UI;
 
 public class ClassTutorialFlow : FlowBase
 {
-    [Header("References")]
-    [SerializeField] private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
+    public static ClassTutorialFlow Instance;
 
-    [SerializeField] private TutorialFlowBuilder builder;
-    [Header("UI")] [SerializeField] private Image backgroundImg;
-    [SerializeField] private RectTransform targetParent;
+    [Header("References")] [SerializeField]
+    private TutorialFlowBuilder nextBuilder; // default next, dùng khi không có logic context riêng
+
+    [Header("Tutorial")] [SerializeField] private TutorialFlowBuilder builder;
     [SerializeField] private AskForReplayTutorialUI askForReplayTutorialUI;
     [SerializeField] private AutoReplayController autoReplayController;
+
+    [Header("Focus Masking")] [SerializeField]
+    private ShaderMaskingUI shaderMaskingUI;
+
+    [SerializeField] private TutorialFocusRaycastFilter focusFiler;
+    public TutorialClickArea blockingArea;
+    [SerializeField] private TutorialContext tutorialContext;
+    [SerializeField] private SceneLessonUI sceneLessonUI;
+    [SerializeField] private CourseListView courseListView;
+
+    [SerializeField] private GameObject blockerCanvas;
 
     protected override void Awake()
     {
         base.Awake();
-        ShowBlockPanel(false);
+        Instance = this;
+        courseListView = FindFirstObjectByType<CourseListView>();
+        shaderMaskingUI.Hide();
+        sceneLessonUI.OnLoadCourseDone += CourseDataLoadDone;
     }
 
-    private void InitSetup(GameObject builderGO)
+    protected override void OnDestroy()
     {
-        foreach (var item in builderGO.GetComponentsInChildren<AutoParentUIElements>())
-        {
-            item.SetParent(targetParent);
-        }
+        base.OnDestroy();
+        Instance = null;
+        sceneLessonUI.OnLoadCourseDone -= CourseDataLoadDone;
+    }
+
+    private void CourseDataLoadDone(LmsCoursePrivate lmsCoursePrivate)
+    {
+        StartCoroutine(WaitForLoading());
+    }
+
+    private IEnumerator WaitForLoading()
+    {
+        GameplayLock.Lock(GameplayLockReason.Tutorial, GameplayLockTarget.Movement);
+        LoadingUI.Show();
+
+        yield return new WaitForSecondsRealtime(1f);
+        yield return new WaitUntil(() => GameInitializer.IsLoadingDone);
+
+        LoadingUI.Hide();
+        Debug.Log($"[ClassTutorialFlow] courseData load xong {isReplayTutorial}");
+        ClearZone();
+        TryStartTutorialFlow();
     }
 
     private void Start()
     {
+        Debug.Log($"[ClassTutorialFlow] check flag isReplayTutorial {isReplayTutorial}");
+        // if (isReplayTutorial)
+        // {
+        //     Debug.Log($"[ClassTutorialFlow] bắt đầu lại tutorial");
+        //     ClearZone();
+        //     TryStartTutorialFlow();
+        // }
+    }
+
+    public void SetStateBlocker(bool blockerState)
+    {
+        blockerCanvas.gameObject.SetActive(blockerState);
+    }
+
+    private static bool isReplayTutorial = false;
+
+    private void TryStartTutorialFlow()
+    {
+        if (IsTutorialPlayed() && isReplayTutorial == false)
+        {
+            GameplayLock.Unlock(GameplayLockReason.Tutorial);
+            SetStateBlocker(false);
+            Debug.Log("[ClassTutorialFlow] Tutorial đã play hoặc isReplayTutorial đang true");
+            return;
+        }
+
+        if (!IsCourseValid())
+        {
+            SetStateBlocker(false);
+            Debug.Log("[ClassTutorialFlow] Không có course để chạy tutorial");
+            GameplayLock.Unlock(GameplayLockReason.Tutorial);
+            return;
+        }
+
+        Debug.Log($"Tutorial is played {tutorialContext.IsPlayed}");
         HandleFlow().Forget();
+    }
+
+    private bool IsCourseValid()
+    {
+        if (courseListView.VideoLessons == null || courseListView.VideoLessons.Count == 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsTutorialPlayed()
+    {
+        // data must be load
+        tutorialContext.CheckIsTutorialPlayed();
+        return tutorialContext.IsPlayed;
     }
 
     private async UniTask HandleFlow()
     {
-        // GameplayLock.Lock(GameplayLockReason.Animation, GameplayLockTarget.Movement);
-        ShowBlockPanel(true);
-        await UniTask.WaitForSeconds(2f);
+        // SETUP
+        SetStateBlocker(false);
+
+
+        shaderMaskingUI.Show();
+
+        await UniTask.WaitForSeconds(1f);
         RunFlow().Forget();
 
-        await UniTask.WaitForSeconds(2f);
         await UniTask.WaitUntil(() => !IsRunning(),
             PlayerLoopTiming.Update,
             this.GetCancellationTokenOnDestroy());
-
-        ShowBlockPanel(false);
-
         // Flow hiện tại đã chạy xong tại đây.
         var next = ResolveNextBuilder();
         if (next != null)
@@ -59,6 +144,8 @@ public class ClassTutorialFlow : FlowBase
         }
 
         ReplayTutorial().Forget();
+        GameplayLock.Unlock(GameplayLockReason.Tutorial);
+
         // Không có next tutorial -> dừng, không tự động chạy replay.
         // ReplayTutorial() chỉ nên được gọi từ nơi khác (vd: nút Replay ngoài UI), nếu cần.
     }
@@ -69,7 +156,9 @@ public class ClassTutorialFlow : FlowBase
     /// </summary>
     private TutorialFlowBuilder ResolveNextBuilder()
     {
-        return nextBuilder;
+        var next = nextBuilder;
+        nextBuilder = null;
+        return next;
     }
 
     private bool SomeContextCondition()
@@ -85,35 +174,44 @@ public class ClassTutorialFlow : FlowBase
 
         if (result)
         {
+            Debug.Log($"[ClassTutorialFlow] bắt đầu lại tutorial");
+            // for sure
+            tutorialContext.ResetTutorial();
             StartCoroutine(autoReplayController.WaitForLoading());
+            isReplayTutorial = true;
         }
         else
         {
+            Debug.Log($"[ClassTutorialFlow] Không bắt đầu lại tutorial");
+            tutorialContext.MarkAsPlayed();
             askForReplayTutorialUI.Hide();
-        }
-    }
-
-    private void ShowBlockPanel(bool isShow)
-    {
-        backgroundImg.DOKill();
-        if (isShow)
-        {
-            backgroundImg.DOFade(0, 0);
-            backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(0.95f, 0.3f);
-        }
-        else
-        {
-            backgroundImg.DOFade(0.95f, 0);
-            backgroundImg.gameObject.SetActive(true);
-            backgroundImg.DOFade(1, 0.3f).OnComplete(() => { backgroundImg.gameObject.SetActive(false); });
+            isReplayTutorial = false;
         }
     }
 
     protected override FlowNode CreateFlow()
     {
-        InitSetup(builder.gameObject);
         var initializeNode = builder.BuildFlowNode();
         return initializeNode;
+    }
+
+    protected override CutsceneContext CreateGameContext()
+    {
+        var cutsceneContext = new CutsceneContext();
+        cutsceneContext.Set(nameof(ClassTutorialFlow), this);
+        return cutsceneContext;
+    }
+
+    public void SetInteractZone(RectTransform rectTransform)
+    {
+        shaderMaskingUI.SetTarget(rectTransform);
+        focusFiler.SetTarget(rectTransform);
+    }
+
+    public void ClearZone()
+    {
+        shaderMaskingUI.ClearTargetAndTurnOff();
+        focusFiler.ClearTarget();
+        blockingArea.DeActive();
     }
 }

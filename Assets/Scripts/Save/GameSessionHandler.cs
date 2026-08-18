@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -12,6 +13,8 @@ public class GameSessionHandler : MonoBehaviour
     private SceneLocationHandler sceneLocationHandler;
     
     private float lastSaveTime;
+    private UniTask<GameSessionConfig>? configLoadTask;
+    private float nextPeriodicSaveTime;
 
     private string previousLoadingID;
     private SaveManager saveManager;
@@ -29,6 +32,59 @@ public class GameSessionHandler : MonoBehaviour
         EventHub.OnPlayerDeleteAccount -= ClearCatchData;
     }
 
+    public async UniTask InitializeConfig(CancellationToken cancellationToken = default)
+    {
+        await LoadConfig(cancellationToken);
+    }
+
+    private async UniTask LoadConfig(CancellationToken cancellationToken)
+    {
+        if (config != null)
+            return;
+
+        if (!configLoadTask.HasValue)
+        {
+            configLoadTask = Addressables
+                .LoadAssetAsync<GameSessionConfig>("GameSessionConfig")
+                .WithCancellation(cancellationToken);
+        }
+
+        try
+        {
+            config = await configLoadTask.Value;
+
+            if (config != null)
+            {
+                Debug.Log("[GameSessionHandler] GameSessionConfig loaded. "
+                          + "canSave=" + config.canSave
+                          + ", canLoad=" + config.canLoad
+                          + ", interval=" + config.MinSaveInterval);
+            }
+            else
+            {
+                Debug.LogWarning("[GameSessionHandler] GameSessionConfig loaded as null.");
+            }
+        }
+        catch (Exception e)
+        {
+            configLoadTask = null;
+            Debug.LogWarning("[GameSessionHandler] GameSessionConfig load failed: " + e.Message);
+        }
+    }
+
+    private void Update()
+    {
+        if (Time.unscaledTime < nextPeriodicSaveTime)
+            return;
+
+        nextPeriodicSaveTime = Time.unscaledTime + 1f;
+
+        if (config == null || !config.canSave)
+            return;
+
+        TrySaveSession("periodic", false);
+    }
+
     private void ClearCatchData()
     {
         // dọn data vị trí, scene đã lưu
@@ -37,6 +93,7 @@ public class GameSessionHandler : MonoBehaviour
         {
             GameInitializer.Instance.SceneHistory.ClearHistory();
             GameInitializer.Instance.SceneLocationHandle.Clear();
+            TutorialContext.ClearPlayedTutorialIds();
         }
     }
 
@@ -67,13 +124,19 @@ public class GameSessionHandler : MonoBehaviour
     {
         if (!hasFocus)
         {
-            SaveSession().Forget();
+            TrySaveSession("focus_lost", true);
         }
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+            TrySaveSession("pause", true);
     }
 
     private void OnApplicationQuit()
     {
-        SaveSession().Forget();
+        TrySaveSession("quit", true);
     }
 
     public struct Result
@@ -89,11 +152,22 @@ public class GameSessionHandler : MonoBehaviour
     /// </summary>
     public async UniTaskVoid StartSession()
     {
-        config = await Addressables.LoadAssetAsync<GameSessionConfig>("GameSessionConfig").WithCancellation(destroyCancellationToken);
+        await LoadConfig(destroyCancellationToken);
+
         if (config == null)
         {
             Debug.LogError($"Game Session config is null, load failed");
             return;
+        }
+        
+        var userID = TokenStore.UserID;
+        var lastSessionData = await GetLastSessionData(userID);
+        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
+
+        bool isResumeSession = sessionValidResult.IsSessionValid;
+        if (isResumeSession)
+        {
+            TutorialContext.Load(lastSessionData.saveCourseData.tutorialIds);
         }
         // protect to load when load any scene
         if (SceneManager.GetActiveScene().name != DEFAULT_SCENE)
@@ -104,12 +178,8 @@ public class GameSessionHandler : MonoBehaviour
         
         Debug.Log("[GameSessionHandler] Bắt đầu game session");
         // Test        
-        var userID = TokenStore.UserID;
-        var lastSessionData = await GetLastSessionData(userID);
         
-        Result sessionValidResult = await CheckSessionDataValid(lastSessionData);
-
-        bool isResumeSession = sessionValidResult.IsSessionValid;
+        
         await UniTask.SwitchToMainThread();
         if (isResumeSession)
         {
@@ -147,32 +217,62 @@ public class GameSessionHandler : MonoBehaviour
         return null;
     }
 
-    public async UniTask SaveSession()
+    public UniTask SaveSession()
+    {
+        TrySaveSession("explicit", true);
+        return UniTask.CompletedTask;
+    }
+
+    private bool TrySaveSession(string reason, bool force)
     {
         if (config == null)
         {
-            Debug.LogWarning("[GameSessionHandler] Skip save session because config is null.");
-            return;
+            Debug.LogWarning("[GameSessionHandler] Skip save session because config is null. reason=" + reason);
+            return false;
         }
 
-        if (config.canSave == false) return;
-        Debug.Log($"[GameSessionHandler] Bắt đầu save game session");
+        if (!config.canSave)
+            return false;
 
-        if (!TokenStore.IsAuthenticated) return;
+        float minInterval = Mathf.Max(0.5f, config.MinSaveInterval);
+        if (!force && Time.unscaledTime - lastSaveTime < minInterval)
+            return false;
+
+        string currentScene = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
+        if (!SceneNameAliases.CanUseSavedSceneForResume(currentScene))
+            return false;
 
         var player = GameObject.FindGameObjectWithTag("Player");
-        if (player == null) return;
+        if (player == null)
+            return false;
+
         try
         {
             var rawData = GameSessionData.CaptureCurrentState(player);
+            if (string.IsNullOrWhiteSpace(rawData.UserID))
+                rawData.UserID = GameSessionData.LocalGuestUserID;
+
             saveManager.SaveGameSession(rawData);
+            lastSaveTime = Time.unscaledTime;
+            nextPeriodicSaveTime = Time.unscaledTime + minInterval;
+
+            Debug.Log("[GameSessionHandler] Saved session. reason="
+                      + reason
+                      + ", user="
+                      + rawData.UserID
+                      + ", scene="
+                      + rawData.SceneLocation.SceneName
+                      + ", position="
+                      + rawData.SceneLocation.Position
+                      + ", rotation="
+                      + rawData.SceneLocation.Rotation);
+            return true;
         }
         catch (Exception e)
         {
-            Debug.Log(e.Message);
-            throw;
+            Debug.LogError("[GameSessionHandler] Save session failed: " + e);
+            return false;
         }
-        lastSaveTime = Time.time;
     }
     
 
@@ -191,6 +291,8 @@ public class GameSessionHandler : MonoBehaviour
 
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
+        TutorialContext.Load(data.saveCourseData.tutorialIds);
+        
         // load by session data
         if (data.saveCourseData != null && !string.IsNullOrEmpty(data.saveCourseData.seoId))
         {

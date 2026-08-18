@@ -5,14 +5,8 @@ using UnityEngine;
 public class AutoParentUIElements : MonoBehaviour
 {
     [SerializeField] private List<RectTransform> elements = new();
-    [SerializeField] private Transform newParent;
 
     private TutorialStepBehaviour behaviour;
-
-    private List<Transform> oldParents = new();
-    private List<int> oldSiblingIndexes = new();
-
-    private bool isInitialized;
 
     private void Awake()
     {
@@ -26,10 +20,7 @@ public class AutoParentUIElements : MonoBehaviour
             );
 
             enabled = false;
-            return;
         }
-
-        InitOriginalHierarchy();
     }
 
     private void OnEnable()
@@ -61,105 +52,41 @@ public class AutoParentUIElements : MonoBehaviour
 
     private void OnEnterState()
     {
-        SetToNewParent();
+        // SetToNewParent();
+        UpdateMasking();
     }
 
+    private void UpdateMasking()
+    {
+        if (elements.Count > 0)
+        {
+            ClassTutorialFlow.Instance.SetInteractZone(elements[0]);
+        }
+    }
+            
+    private void ClearMasking() =>ClassTutorialFlow.Instance.ClearZone();
+    
     private void OnExitState()
     {
-        SetToOldParent();
+        // SetToOldParent();
+        ClearMasking();
     }
-
-    private void InitOriginalHierarchy()
+    
+    public void AddElement(RectTransform element)
     {
-        oldParents.Clear();
-        oldSiblingIndexes.Clear();
-
-        foreach (RectTransform element in elements)
+        if (element == null || elements.Contains(element))
         {
-            if (element == null)
-            {
-                oldParents.Add(null);
-                oldSiblingIndexes.Add(-1);
-                continue;
-            }
-
-            oldParents.Add(element.parent);
-            oldSiblingIndexes.Add(element.GetSiblingIndex());
-        }
-
-        isInitialized = true;
-    }
-
-    private void SetToNewParent()
-    {
-        if (!isInitialized)
-        {
-            InitOriginalHierarchy();
-        }
-
-        if (newParent == null)
-        {
-            Debug.LogError(
-                $"[{GetType().Name}] newParent is null!",
-                this
-            );
-
             return;
         }
-
-        foreach (RectTransform element in elements)
-        {
-            if (element == null)
-            {
-                continue;
-            }
-
-            element.SetParent(newParent, true);
-        }
+        elements.Add(element);
     }
 
-    private void SetToOldParent()
+    public void RemoveElement(RectTransform element)
     {
-        if (!isInitialized)
+        if (element == null || !elements.Contains(element))
         {
-            Debug.LogWarning(
-                $"[{GetType().Name}] Original hierarchy has not been initialized.",
-                this
-            );
-
             return;
         }
-
-        int count = Mathf.Min(
-            elements.Count,
-            oldParents.Count,
-            oldSiblingIndexes.Count
-        );
-
-        for (int i = 0; i < count; i++)
-        {
-            RectTransform element = elements[i];
-            Transform oldParent = oldParents[i];
-
-            if (element == null)
-            {
-                continue;
-            }
-
-            element.SetParent(oldParent, true);
-
-            int siblingIndex = oldSiblingIndexes[i];
-
-            if (oldParent != null && siblingIndex >= 0)
-            {
-                int maxIndex = oldParent.childCount - 1;
-                element.SetSiblingIndex(Mathf.Min(siblingIndex, maxIndex));
-            }
-        }
-    }
-
-    public void SetParent(Transform parent)
-    {
-        newParent = parent;
+        elements.Remove(element);
     }
 }

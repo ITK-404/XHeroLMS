@@ -301,14 +301,14 @@ public class BookHandler : MonoBehaviour
             // TẠM THỜI: Phòng Kỳ Môn chưa hoàn thiện.
             // Giữ nguyên JSON và chuyển toàn bộ khóa học trỏ tới <phong_ky_mon>
             // sang dai_dao_chi_gian_2. Khi phòng hoàn thiện, chỉ cần xóa khối if này.
-            if (IsScene(customScene, ScenePhongKyMon))
-            {
-                Debug.LogWarning(
-                    $"[BookHandler] Temporary redirect scene {customScene} -> {SceneRoom2}. seo={book_seo}"
-                );
+            // if (IsScene(customScene, ScenePhongKyMon))
+            // {
+            //     Debug.LogWarning(
+            //         $"[BookHandler] Temporary redirect scene {customScene} -> {SceneRoom2}. seo={book_seo}"
+            //     );
 
-                return SceneRoom2;
-            }
+            //     return SceneRoom2;
+            // }
 
             return customScene;
         }

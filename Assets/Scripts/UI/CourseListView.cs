@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using UnityEngine.SceneManagement;
 using Unity.Cinemachine;
 
 public class CourseListView : MonoBehaviour
@@ -45,8 +46,10 @@ public class CourseListView : MonoBehaviour
     private XHeroWebViewTexturePlayer webViewTexturePlayer;
     private ExamResultReviewPanel examResultReviewPanel;
     private PlayerStandUI playerStandUI;
-    private readonly List<LessonUI> _videoLessons = new();
+    [SerializeField] private List<LessonUI> _videoLessons = new();
+    public List<LessonUI> VideoLessons => _videoLessons;
     private LessonUI _currentLesson;
+    public LessonUI CurrentLesson => _currentLesson;
 
     private float _videoStartRealtime;
     private string _videoStartUrl;
@@ -158,6 +161,17 @@ public class CourseListView : MonoBehaviour
     private int _videoFirstFrameLoadingToken;
     private long _lastProxyRangeBoostStart = -1L;
 
+    private const string DocumentWebViewSceneName = "WebView_Mobile";
+    private LessonUI _documentLesson;
+    private bool _documentWebViewOpen;
+    private bool _documentWasOpenedFromSitdown;
+
+    // Link 1 is rendered by the native texture player, so it has no Unity
+    // VideoPlayer.loopPointReached callback. Keep end detection here so both
+    // playback paths advance through the same lesson list.
+    private const double PlaybackEndToleranceSeconds = 0.25;
+    private bool _autoAdvanceHandledForCurrentLesson;
+
     private NetworkReachability _lastReachability;
     private float _lastProxyNetworkNotifyRealtime = -999f;
     private float _lastProxyHealthLogRealtime = -999f;
@@ -196,15 +210,71 @@ public class CourseListView : MonoBehaviour
 
     private void OnEnable()
     {
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
         StartProxyWatchers();
     }
 
-private void OnDisable()
-{
-    StopProxyWatchers();
-    StopAndReleaseActiveVideo();
-    HardStopVideoAudio();
-}
+    private void OnDisable()
+    {
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        StopProxyWatchers();
+        StopAndReleaseActiveVideo();
+        HardStopVideoAudio();
+    }
+
+    private void OnSceneUnloaded(Scene scene)
+    {
+        if (!string.Equals(scene.name, DocumentWebViewSceneName, StringComparison.Ordinal) ||
+            !_documentWebViewOpen)
+        {
+            return;
+        }
+
+        LessonUI lesson = _documentLesson;
+        bool restoreSitdown = _documentWasOpenedFromSitdown;
+
+        _documentLesson = null;
+        _documentWebViewOpen = false;
+        _documentWasOpenedFromSitdown = false;
+
+        RestoreDocumentLessonSelection(lesson);
+
+        if (restoreSitdown &&
+            PlayerChairManager.Instance != null &&
+            PlayerChairManager.Instance.playerState != PlayerChairManager.PlayerState.Sitdown)
+        {
+            PlayerChairManager.Instance.PlayerSitdown();
+        }
+
+        Debug.Log(
+            $"[CourseListView] Document WebView closed. " +
+            $"restoreSitdown={restoreSitdown} lesson={lesson?.titleTMP?.text}"
+        );
+    }
+
+    private void RestoreDocumentLessonSelection(LessonUI lesson)
+    {
+        if (lesson == null)
+            return;
+
+        _currentLesson = lesson;
+
+        if (lesson.chapterUI != null)
+        {
+            bool chapterAlreadySelected = ChapterUIManager.Instance != null &&
+                                           ChapterUIManager.Instance.IsSelectChapter(lesson.chapterUI);
+
+            if (!chapterAlreadySelected &&
+                lesson.chapterUI.chapterState != ChapterUI.ChapterState.Lock)
+            {
+                lesson.chapterUI.SelectThisChapter();
+            }
+
+            lesson.chapterUI.SelectLesson(lesson);
+        }
+
+        Debug.Log($"[CourseListView] Restore document lesson selection: {lesson.titleTMP?.text}");
+    }
 
     private void OnApplicationPause(bool pause)
     {
@@ -250,6 +320,119 @@ private void OnDisable()
             StopCoroutine(_proxyHealthRoutine);
             _proxyHealthRoutine = null;
         }
+    }
+
+    private void Update()
+    {
+        TryAutoAdvanceAtPlaybackEnd();
+    }
+
+    private void TryAutoAdvanceAtPlaybackEnd()
+    {
+        if (_autoAdvanceHandledForCurrentLesson ||
+            _videoStopRequested ||
+            _currentLesson == null ||
+            !IsVideoLesson(_currentLesson))
+        {
+            return;
+        }
+
+        bool nativePlayerActive = webViewTexturePlayer && webViewTexturePlayer.IsActive;
+        bool unityPlayerPrepared = videoPlayer && videoPlayer.isPrepared;
+
+        if ((nativePlayerActive && !webViewTexturePlayer.IsReady) ||
+            (!nativePlayerActive && !unityPlayerPrepared))
+        {
+            return;
+        }
+
+        double currentTime = GetCurrentPlaybackTimeSeconds();
+        double duration = GetCurrentPlaybackDurationSeconds();
+
+        if (duration <= 0.0001 || currentTime < 0.5)
+            return;
+
+        if (currentTime < duration - PlaybackEndToleranceSeconds)
+            return;
+
+        _autoAdvanceHandledForCurrentLesson = true;
+        AdvanceToNextLesson(currentTime, duration);
+    }
+
+    private double GetCurrentPlaybackDurationSeconds()
+    {
+        if (webViewTexturePlayer && webViewTexturePlayer.IsActive &&
+            webViewTexturePlayer.Duration > 0.0001)
+        {
+            return webViewTexturePlayer.Duration;
+        }
+
+        if (videoPlayer)
+        {
+            try
+            {
+                if (videoPlayer.isPrepared && videoPlayer.length > 0.0001)
+                    return videoPlayer.length;
+            }
+            catch { }
+        }
+
+        return _currentLesson != null ? Math.Max(0.0, _currentLesson.duration) : 0.0;
+    }
+
+    private void AdvanceToNextLesson(double currentTime, double duration)
+    {
+        LessonUI completedLesson = _currentLesson;
+        if (completedLesson == null)
+            return;
+
+        MarkLessonCompleted(completedLesson, duration);
+
+        LessonUI nextLesson = PlayNextFromUrl(_activeVideoOriginUrl);
+        if (nextLesson == null)
+        {
+            Debug.Log(
+                $"[CourseListView] Lesson completed; no next video lesson. " +
+                $"title={completedLesson.titleTMP?.text} time={currentTime:F2}/{duration:F2}s"
+            );
+            return;
+        }
+
+        Debug.Log(
+            $"[CourseListView] Auto advance lesson. " +
+            $"from={completedLesson.titleTMP?.text} to={nextLesson.titleTMP?.text} " +
+            $"time={currentTime:F2}/{duration:F2}s"
+        );
+
+        PlayLesson(nextLesson);
+    }
+
+    private void MarkLessonCompleted(LessonUI lesson, double playbackDuration)
+    {
+        if (lesson == null)
+            return;
+
+        float completionDuration = lesson.duration > 0
+            ? lesson.duration
+            : Mathf.Max(0f, (float)playbackDuration);
+
+        if (completionDuration <= 0f)
+        {
+            Debug.LogWarning(
+                $"[CourseListView] Cannot mark lesson complete because duration is unknown. " +
+                $"title={lesson.titleTMP?.text}"
+            );
+            return;
+        }
+
+        // Native Link 1 does not update LessonProgressTracker's legacy
+        // VideoPlayer clock, so commit completion directly at playback end.
+        if (lesson.duration <= 0f)
+            lesson.duration = completionDuration;
+
+        lesson.TryUpdateProgress(completionDuration);
+        LessonProgressTracker.Instance?.lmsVideoProgressApiClient?.SendProgress(lesson);
+        ChapterUIManager.Instance?.UpdateLessonProgress();
     }
 
     private void ResetProxyPlaybackWatchdogState()
@@ -790,6 +973,7 @@ private void OnDisable()
 
         _playVideoToken++;
         int playToken = _playVideoToken;
+        _autoAdvanceHandledForCurrentLesson = false;
         ShowVideoFirstFrameLoading(url, playToken);
 
         if (useWebViewTexture)
@@ -821,6 +1005,13 @@ private void OnDisable()
             );
 
             _playVideoRoutine = StartCoroutine(PlayLink1WithWebViewTexture(link1, fallbackUrl, playToken));
+
+            if (learnUI && learnUI.toggleLessonScrollView != null)
+            {
+                learnUI.toggleLessonScrollView.ChangeState(
+                    ToggleBaseUI.State.DeActive
+                );
+            }
             return;
         }
 
@@ -1701,8 +1892,45 @@ private void PauseVideoAudioOnly()
 
     private void OnDestroy()
     {
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
         StopProxyWatchers();
         StopAndReleaseActiveVideo();
+    }
+
+    private void OpenDocumentInWebView(LessonUI lesson)
+    {
+        if (lesson == null)
+            return;
+
+        string documentUrl = lesson.linkVideo2?.Trim();
+        if (string.IsNullOrWhiteSpace(documentUrl))
+        {
+            Debug.LogWarning(
+                $"[CourseListView] Document lesson has empty URL. title={lesson.titleTMP?.text}, type={lesson.type}"
+            );
+            return;
+        }
+
+        PlayerChairManager chairManager = PlayerChairManager.Instance;
+        _documentLesson = lesson;
+        _documentWasOpenedFromSitdown = chairManager != null &&
+                                         chairManager.playerState == PlayerChairManager.PlayerState.Sitdown;
+        _documentWebViewOpen = true;
+
+        // A document can be selected while another lesson is playing. Stop both
+        // native Link 1 and VideoPlayer Link 2 before handing control to WebViewTest.
+        StopAndReleaseActiveVideo();
+
+        string documentTitle = lesson.titleTMP != null ? lesson.titleTMP.text.Trim() : string.Empty;
+        if (string.IsNullOrWhiteSpace(documentTitle))
+            documentTitle = "Document";
+
+        Debug.Log(
+            $"[CourseListView] Open document in WebView. " +
+            $"title={documentTitle} url={documentUrl} restoreSitdown={_documentWasOpenedFromSitdown}"
+        );
+
+        WebViewTest.LoadWebView(documentUrl, documentTitle);
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -2237,28 +2465,7 @@ private void PauseVideoAudioOnly()
 
         if (targetIsDocument)
         {
-            Debug.Log("[CourseListView] Open document, skip video/proxy: " + _currentLesson.linkVideo2);
-
-            if (string.IsNullOrWhiteSpace(_currentLesson.linkVideo2))
-            {
-                Debug.LogWarning(
-                    $"[CourseListView] Document lesson has empty URL. title={_currentLesson.titleTMP?.text}, type={_currentLesson.type}"
-                );
-                return;
-            }
-
-            StopAndReleaseActiveVideo();
-
-            if (videoPlayerControllerPro != null)
-            {
-                videoPlayerControllerPro.SetCurrentUrl(null);
-                videoPlayerControllerPro.ShowDocumentInCurrentMode(_currentLesson.linkVideo2);
-            }
-            else
-            {
-                Debug.LogWarning("[CourseListView] Missing VideoPlayerControllerPro, cannot show document.");
-            }
-
+            OpenDocumentInWebView(_currentLesson);
             return;
         }
 
@@ -2289,6 +2496,14 @@ private void PauseVideoAudioOnly()
     {
         if (lesson == null)
             return false;
+
+        // Đồng bộ với ChapterUIManager:
+        // force unlock thì bỏ toàn bộ điều kiện học tuần tự.
+        if (ChapterUIManager.Instance != null &&
+            ChapterUIManager.Instance.ForceUnlockAll)
+        {
+            return true;
+        }
 
         if (lesson.IsLessonDone())
             return true;
