@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Tugo 1
+  m_Name: san_tron
   m_Shader: {fileID: 4800000, guid: 0e9d5a909a1f7e84882a534d0d11e49f, type: 3}
   m_Parent: {fileID: 2100000, guid: 49b49f0602304a64db86bdf786de94c3, type: 2}
   m_ModifiedSerializedProperties: 0
@@ -25,11 +25,16 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 9c787c23dad839341b8b7110aaca6cf5, type: 3}
+        m_Texture: {fileID: 2800000, guid: 91ef928589f830241924a2598ccdd7eb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SpecGlossMap:
+        m_Texture: {fileID: 2800000, guid: 62fe04b0a16b7b64fb513aa5d93133f3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
-    m_Floats: []
+    m_Floats:
+    - _UseMetallicMap: 0
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
