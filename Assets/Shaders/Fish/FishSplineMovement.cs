@@ -5,71 +5,100 @@ using Random = UnityEngine.Random;
 
 public class FishSplineMovement : MonoBehaviour
 {
-    [Header("Spline")]
-    [SerializeField] private SplineContainer splineContainer;
+    private enum FishState
+    {
+        Swimming,
+        Idle,
+        Turning,
+        ChangingSpline
+    }
+
+    [Header("Spline")] [SerializeField] private SplineContainer splineContainer;
     [SerializeField, Min(0)] private int splineIndex;
 
-    [Tooltip("Vị trí bắt đầu trên spline, từ 0 đến 1")]
-    [SerializeField, Range(0f, 1f)]
-    private float startProgress;
+    [SerializeField, Range(0f, 1f)] private float startProgress;
 
-    [SerializeField, Min(0f)]
+    [SerializeField] private bool loop = true;
+    [SerializeField] private bool randomizeStartProgress = true;
+
+    [Header("Direction")] [SerializeField] private bool moveForward = true;
+
+    [Tooltip("Thỉnh thoảng cá tự đổi hướng")] [SerializeField]
+    private bool canTurnAround = true;
+
+    [SerializeField] private Vector2 turnAroundInterval = new(5f, 12f);
+
+    [Header("Speed")] [SerializeField, Min(0f)]
     private float moveSpeed = 2f;
 
-    [SerializeField]
-    private bool loop = true;
+    [SerializeField] private Vector2 speedMultiplierRange = new(0.5f, 1.3f);
 
-    [Header("Rotation")]
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f)] private float speedChangeSmoothness = 2f;
+
+    [SerializeField] private Vector2 speedChangeInterval = new(1.5f, 4f);
+
+    [Header("Idle")] [SerializeField] private bool canIdle = true;
+
+    [Range(0f, 1f)] [SerializeField] private float idleChance = 0.25f;
+
+    [SerializeField] private Vector2 idleCheckInterval = new(3f, 7f);
+
+    [SerializeField] private Vector2 idleDurationRange = new(0.5f, 2f);
+
+    [Header("Rotation")] [SerializeField, Min(0f)]
     private float rotationSpeed = 8f;
 
-    [Tooltip(
-        "Model cá nhìn theo Local X nên mặc định xoay Y = -90"
-    )]
-    [SerializeField]
+    [Tooltip("Model cá nhìn theo Local X")] [SerializeField]
     private Vector3 rotationOffset = new(0f, -90f, 0f);
 
-    [Header("Natural Movement")]
-    [SerializeField, Min(0f)]
+    [Header("Natural Movement")] [SerializeField, Min(0f)]
     private float horizontalAmount = 0.15f;
 
-    [SerializeField, Min(0f)]
-    private float horizontalSpeed = 0.8f;
+    [SerializeField, Min(0f)] private float horizontalSpeed = 0.8f;
 
-    [SerializeField, Min(0f)]
-    private float verticalAmount = 0.08f;
+    [SerializeField, Min(0f)] private float verticalAmount = 0.08f;
 
-    [SerializeField, Min(0f)]
-    private float verticalSpeed = 0.55f;
+    [SerializeField, Min(0f)] private float verticalSpeed = 0.55f;
 
-    [Header("Random")]
-    [SerializeField]
-    private bool randomizeOnStart = true;
-
-    [SerializeField]
-    private Vector2 speedMultiplierRange = new(0.9f, 1.1f);
-
-    private float currentT;
-    private float speedMultiplier = 1f;
-    private float randomPhase;
-    private bool reachedEnd;
-    
-    [Header("Path Offset")]
-    [SerializeField]
-    private Vector2 pathOffset;
-
-// Random một lần cho từng con cá.
-    [SerializeField]
+    [Header("Path Offset")] [SerializeField]
     private bool randomizePathOffset = true;
 
-    [SerializeField]
-    private Vector2 horizontalOffsetRange = new(-0.5f, 0.5f);
+    [SerializeField] private Vector2 pathOffset;
 
-    [SerializeField]
-    private Vector2 verticalOffsetRange = new(-0.2f, 0.2f);
-    
-    [SerializeField]
-    private bool randomizeStartProgress = true;
+    [SerializeField] private Vector2 horizontalOffsetRange = new(-0.5f, 0.5f);
+
+    [SerializeField] private Vector2 verticalOffsetRange = new(-0.2f, 0.2f);
+
+    [Header("Change Spline")] [Tooltip("Thời gian cá di chuyển sang spline mới")] [SerializeField, Min(0f)]
+    private float splineTransitionDuration = 0.75f;
+
+    [Tooltip("Số điểm dùng để tìm vị trí gần nhất")] [SerializeField, Range(10, 200)]
+    private int nearestPointSamples = 60;
+
+    [Header("Turning")] [SerializeField, Min(0f)]
+    private float turnRotationSpeed = 4f;
+
+    [SerializeField, Range(0.1f, 10f)] private float turnCompleteAngle = 2f;
+
+    private bool pendingMoveForward;
+
+    private FishState currentState;
+
+    private float currentT;
+    private float randomPhase;
+
+    private float currentSpeedMultiplier = 1f;
+    private float targetSpeedMultiplier = 1f;
+
+    private float speedChangeTimer;
+    private float idleCheckTimer;
+    private float idleTimer;
+    private float turnAroundTimer;
+
+    private Vector3 transitionStartPosition;
+    private Vector3 transitionTargetPosition;
+    private float transitionTimer;
+
     private Spline CurrentSpline
     {
         get
@@ -92,28 +121,114 @@ public class FishSplineMovement : MonoBehaviour
 
     private void Update()
     {
-        MoveAlongSpline(Time.deltaTime);
+        float deltaTime = Time.deltaTime;
+
+        switch (currentState)
+        {
+            case FishState.Swimming:
+                UpdateSwimming(deltaTime);
+                break;
+
+            case FishState.Idle:
+                UpdateIdle(deltaTime);
+                break;
+
+            case FishState.Turning:
+                UpdateTurning(deltaTime);
+                break;
+
+            case FishState.ChangingSpline:
+                UpdateSplineTransition(deltaTime);
+                break;
+        }
+    }
+
+    private void UpdateTurning(float deltaTime)
+    {
+        GetSplineOrientation(
+            out Vector3 tangent,
+            out Vector3 up,
+            out _
+        );
+
+        Vector3 targetDirection =
+            pendingMoveForward ? tangent : -tangent;
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(targetDirection, up) *
+            Quaternion.Euler(rotationOffset);
+
+        float rotationLerp =
+            1f - Mathf.Exp(-turnRotationSpeed * deltaTime);
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            rotationLerp
+        );
+
+        // Vẫn cập nhật wobble nhưng không di chuyển dọc spline.
+        UpdatePositionWithoutRotation();
+
+        float remainingAngle = Quaternion.Angle(
+            transform.rotation,
+            targetRotation
+        );
+
+        if (remainingAngle <= turnCompleteAngle)
+        {
+            transform.rotation = targetRotation;
+            moveForward = pendingMoveForward;
+
+            ResetBehaviourTimers();
+            ChangeState(FishState.Swimming);
+        }
+    }
+
+    private void UpdatePositionWithoutRotation()
+    {
+        Spline spline = CurrentSpline;
+
+        if (spline == null)
+            return;
+
+        currentT = Mathf.Clamp01(currentT);
+
+        float3 localPosition =
+            spline.EvaluatePosition(currentT);
+
+        Vector3 centerPosition =
+            splineContainer.transform.TransformPoint(localPosition);
+
+        GetSplineOrientation(
+            out _,
+            out Vector3 up,
+            out Vector3 right
+        );
+
+        Vector2 offset = GetCurrentOffset();
+
+        transform.position =
+            centerPosition +
+            right * offset.x +
+            up * offset.y;
     }
 
     private void Initialize()
     {
-        // currentT = startProgress;
-        
         currentT = randomizeStartProgress
             ? Random.Range(0f, 1f)
             : startProgress;
-        
-        reachedEnd = false;
 
-        if (randomizeOnStart)
-        {
-            randomPhase = Random.Range(0f, Mathf.PI * 2f);
+        randomPhase = Random.Range(0f, Mathf.PI * 2f);
 
-            speedMultiplier = Random.Range(
-                speedMultiplierRange.x,
-                speedMultiplierRange.y
-            );
-        }
+        targetSpeedMultiplier = Random.Range(
+            speedMultiplierRange.x,
+            speedMultiplierRange.y
+        );
+
+        currentSpeedMultiplier = targetSpeedMultiplier;
+
         if (randomizePathOffset)
         {
             pathOffset = new Vector2(
@@ -127,103 +242,288 @@ public class FishSplineMovement : MonoBehaviour
                 )
             );
         }
-        
-        
+
+        ResetBehaviourTimers();
+        ChangeState(FishState.Swimming);
         SnapToSpline();
     }
 
-    private void MoveAlongSpline(float deltaTime)
+    private void UpdateSwimming(float deltaTime)
     {
         Spline spline = CurrentSpline;
 
-        if (spline == null || reachedEnd)
+        if (spline == null)
             return;
+
+        UpdateSpeed(deltaTime);
+        UpdateBehaviourTimers(deltaTime);
 
         float stepDistance =
             moveSpeed *
-            speedMultiplier *
+            currentSpeedMultiplier *
             deltaTime;
 
-        float3 localPosition =
+        MoveProgressByDistance(
+            spline,
+            stepDistance,
+            moveForward
+        );
+
+        UpdateTransformOnSpline(deltaTime);
+        CheckSplineEnd();
+    }
+
+    private void UpdateIdle(float deltaTime)
+    {
+        idleTimer -= deltaTime;
+
+        // Cá đứng tại chỗ nhưng vẫn lắc nhẹ.
+        UpdateTransformOnSpline(deltaTime);
+
+        if (idleTimer <= 0f)
+        {
+            ResetBehaviourTimers();
+            ChangeState(FishState.Swimming);
+        }
+    }
+
+    private void UpdateSplineTransition(float deltaTime)
+    {
+        if (splineTransitionDuration <= 0f)
+        {
+            CompleteSplineTransition();
+            return;
+        }
+
+        transitionTimer += deltaTime;
+
+        float normalizedTime = Mathf.Clamp01(
+            transitionTimer / splineTransitionDuration
+        );
+
+        // SmoothStep giúp chuyển spline mềm hơn.
+        float smoothTime = normalizedTime *
+                           normalizedTime *
+                           (3f - 2f * normalizedTime);
+
+        transform.position = Vector3.Lerp(
+            transitionStartPosition,
+            transitionTargetPosition,
+            smoothTime
+        );
+
+        RotateTowardsSpline(deltaTime);
+
+        if (normalizedTime >= 1f)
+            CompleteSplineTransition();
+    }
+
+    private void UpdateSpeed(float deltaTime)
+    {
+        speedChangeTimer -= deltaTime;
+
+        if (speedChangeTimer <= 0f)
+        {
+            targetSpeedMultiplier = Random.Range(
+                speedMultiplierRange.x,
+                speedMultiplierRange.y
+            );
+
+            speedChangeTimer = Random.Range(
+                speedChangeInterval.x,
+                speedChangeInterval.y
+            );
+        }
+
+        float lerpValue =
+            1f - Mathf.Exp(-speedChangeSmoothness * deltaTime);
+
+        currentSpeedMultiplier = Mathf.Lerp(
+            currentSpeedMultiplier,
+            targetSpeedMultiplier,
+            lerpValue
+        );
+    }
+
+    private void UpdateBehaviourTimers(float deltaTime)
+    {
+        if (canIdle)
+        {
+            idleCheckTimer -= deltaTime;
+
+            if (idleCheckTimer <= 0f)
+            {
+                idleCheckTimer = Random.Range(
+                    idleCheckInterval.x,
+                    idleCheckInterval.y
+                );
+
+                if (Random.value <= idleChance)
+                {
+                    idleTimer = Random.Range(
+                        idleDurationRange.x,
+                        idleDurationRange.y
+                    );
+
+                    ChangeState(FishState.Idle);
+                    return;
+                }
+            }
+        }
+
+        if (canTurnAround)
+        {
+            turnAroundTimer -= deltaTime;
+
+            if (turnAroundTimer <= 0f)
+            {
+                ReverseDirection();
+
+                turnAroundTimer = Random.Range(
+                    turnAroundInterval.x,
+                    turnAroundInterval.y
+                );
+            }
+        }
+    }
+
+    private void MoveProgressByDistance(
+        Spline spline,
+        float distance,
+        bool forward
+    )
+    {
+        if (forward)
+        {
             SplineUtility.GetPointAtLinearDistance(
                 spline,
                 currentT,
-                stepDistance,
+                distance,
                 out float nextT
             );
 
-        currentT = nextT;
+            currentT = nextT;
+        }
+        else
+        {
+            MoveBackwardByDistance(spline, distance);
+        }
+    }
 
-        // GetPointAtLinearDistance trả về local position
-        // của SplineContainer.
+    private void MoveBackwardByDistance(
+        Spline spline,
+        float distance
+    )
+    {
+        // GetPointAtLinearDistance chủ yếu đi theo chiều tăng T,
+        // nên khi đi ngược ta tự giảm T dựa trên chiều dài spline.
+        float splineLength = spline.GetLength();
+
+        if (splineLength <= 0.0001f)
+            return;
+
+        float normalizedStep = distance / splineLength;
+        currentT -= normalizedStep;
+    }
+
+    private void UpdateTransformOnSpline(float deltaTime)
+    {
+        Spline spline = CurrentSpline;
+
+        if (spline == null)
+            return;
+
+        currentT = Mathf.Clamp01(currentT);
+
+        float3 localPosition = spline.EvaluatePosition(currentT);
+
         Vector3 centerPosition =
             splineContainer.transform.TransformPoint(localPosition);
 
-        Vector3 tangent =
-            splineContainer.EvaluateTangent(
-                splineIndex,
-                currentT
-            );
+        GetSplineOrientation(
+            out Vector3 tangent,
+            out Vector3 up,
+            out Vector3 right
+        );
 
-        Vector3 up =
-            splineContainer.EvaluateUpVector(
-                splineIndex,
-                currentT
-            );
+        Vector2 offset = GetCurrentOffset();
 
-        if (tangent.sqrMagnitude < 0.0001f)
-            return;
-
-        tangent.Normalize();
-
-        if (up.sqrMagnitude < 0.0001f)
-            up = Vector3.up;
-        else
-            up.Normalize();
-
-        Vector3 right = Vector3.Cross(up, tangent).normalized;
-
-     
-        
-        
-        float horizontalWobble =
-            Mathf.Sin(
-                Time.time * horizontalSpeed +
-                randomPhase
-            ) * horizontalAmount;
-
-        float verticalWobble =
-            Mathf.Sin(
-                Time.time * verticalSpeed +
-                randomPhase * 1.731f
-            ) * verticalAmount;
-
-        Vector2 currentOffset = GetCurrentOffset();
-        Vector3 targetPosition =
+        transform.position =
             centerPosition +
-            right * currentOffset.x +
-            up * currentOffset.y;
-        
-        transform.position = targetPosition;
+            right * offset.x +
+            up * offset.y;
 
-        RotateTowards(tangent, up, deltaTime);
-        CheckEnd();
+        Vector3 moveDirection =
+            moveForward ? tangent : -tangent;
+
+        RotateTowards(
+            moveDirection,
+            up,
+            deltaTime
+        );
+    }
+
+    private void GetSplineOrientation(
+        out Vector3 tangent,
+        out Vector3 up,
+        out Vector3 right
+    )
+    {
+        tangent = splineContainer.EvaluateTangent(
+            splineIndex,
+            currentT
+        );
+
+        up = splineContainer.EvaluateUpVector(
+            splineIndex,
+            currentT
+        );
+
+        tangent = tangent.sqrMagnitude > 0.0001f
+            ? tangent.normalized
+            : transform.forward;
+
+        up = up.sqrMagnitude > 0.0001f
+            ? up.normalized
+            : Vector3.up;
+
+        right = Vector3.Cross(up, tangent);
+
+        if (right.sqrMagnitude > 0.0001f)
+            right.Normalize();
+        else
+            right = transform.right;
+    }
+
+    private void RotateTowardsSpline(float deltaTime)
+    {
+        GetSplineOrientation(
+            out Vector3 tangent,
+            out Vector3 up,
+            out _
+        );
+
+        Vector3 direction =
+            moveForward ? tangent : -tangent;
+
+        RotateTowards(direction, up, deltaTime);
     }
 
     private void RotateTowards(
-        Vector3 tangent,
+        Vector3 direction,
         Vector3 up,
         float deltaTime
     )
     {
-        Quaternion splineRotation =
-            Quaternion.LookRotation(tangent, up);
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
 
-        Quaternion modelOffset =
-            Quaternion.Euler(rotationOffset);
+        Quaternion splineRotation =
+            Quaternion.LookRotation(direction, up);
 
         Quaternion targetRotation =
-            splineRotation * modelOffset;
+            splineRotation *
+            Quaternion.Euler(rotationOffset);
 
         float rotationLerp =
             1f - Mathf.Exp(-rotationSpeed * deltaTime);
@@ -235,62 +535,25 @@ public class FishSplineMovement : MonoBehaviour
         );
     }
 
-    private void CheckEnd()
+    private void CheckSplineEnd()
     {
-        if (currentT < 0.9999f)
-            return;
+        bool reachedSplineEnd =
+            moveForward
+                ? currentT >= 0.9999f
+                : currentT <= 0.0001f;
 
-        if (loop)
-        {
-            currentT = 0f;
-            return;
-        }
-
-        reachedEnd = true;
-    }
-
-    [ContextMenu("Snap To Spline")]
-    private void SnapToSpline()
-    {
-        Spline spline = CurrentSpline;
-
-        if (spline == null)
+        if (!reachedSplineEnd)
             return;
 
         currentT = Mathf.Clamp01(currentT);
 
-        float3 localPosition =
-            spline.EvaluatePosition(currentT);
-
-        Vector3 position =
-            splineContainer.transform.TransformPoint(localPosition);
-
-        Vector3 tangent =
-            splineContainer.EvaluateTangent(
-                splineIndex,
-                currentT
-            );
-
-        Vector3 up =
-            splineContainer.EvaluateUpVector(
-                splineIndex,
-                currentT
-            );
-
-        transform.position = position;
-
-        if (tangent.sqrMagnitude > 0.0001f)
+        if (loop)
         {
-            tangent.Normalize();
-
-            up = up.sqrMagnitude > 0.0001f
-                ? up.normalized
-                : Vector3.up;
-
-            transform.rotation =
-                Quaternion.LookRotation(tangent, up) *
-                Quaternion.Euler(rotationOffset);
+            currentT = moveForward ? 0f : 1f;
+            return;
         }
+
+        ReverseDirection();
     }
 
     private Vector2 GetCurrentOffset()
@@ -312,48 +575,175 @@ public class FishSplineMovement : MonoBehaviour
             pathOffset.y + verticalWobble
         );
     }
-    
-    public void Restart(float normalizedProgress = 0f)
+
+    public void ReverseDirection()
     {
-        currentT = Mathf.Clamp01(normalizedProgress);
-        reachedEnd = false;
-        SnapToSpline();
+        if (currentState == FishState.Turning)
+            return;
+
+        pendingMoveForward = !moveForward;
+        ChangeState(FishState.Turning);
     }
-    
-    public void SetSpline(
+
+    public void SetDirection(bool forward)
+    {
+        if (forward == moveForward)
+            return;
+
+        pendingMoveForward = forward;
+        ChangeState(FishState.Turning);
+    }
+
+    public void ChangeSplineToNearestPoint(
         SplineContainer newContainer,
-        int newSplineIndex = 0,
-        float startT = 0f,
-        bool snapImmediately = true
+        int newSplineIndex = 0
     )
     {
-        if (newContainer == null)
+        if (!IsValidSpline(newContainer, newSplineIndex))
+            return;
+
+        Vector3 currentPosition = transform.position;
+
+        splineContainer = newContainer;
+        splineIndex = newSplineIndex;
+
+        currentT = FindNearestProgress(
+            currentPosition,
+            newContainer,
+            newSplineIndex
+        );
+
+        transitionStartPosition = currentPosition;
+        transitionTargetPosition =
+            GetSplineWorldPosition(currentT);
+
+        transitionTimer = 0f;
+        ChangeState(FishState.ChangingSpline);
+    }
+
+    private float FindNearestProgress(
+        Vector3 worldPosition,
+        SplineContainer container,
+        int index
+    )
+    {
+        Spline spline = container.Splines[index];
+
+        float nearestT = 0f;
+        float nearestDistanceSqr = float.MaxValue;
+
+        // Sampling đủ ổn cho cá và ít phụ thuộc phiên bản
+        // Unity Splines hơn GetNearestPoint.
+        for (int i = 0; i <= nearestPointSamples; i++)
+        {
+            float t = i / (float)nearestPointSamples;
+
+            float3 localPoint = spline.EvaluatePosition(t);
+
+            Vector3 worldPoint =
+                container.transform.TransformPoint(localPoint);
+
+            float distanceSqr =
+                (worldPosition - worldPoint).sqrMagnitude;
+
+            if (distanceSqr < nearestDistanceSqr)
+            {
+                nearestDistanceSqr = distanceSqr;
+                nearestT = t;
+            }
+        }
+
+        return nearestT;
+    }
+
+    private Vector3 GetSplineWorldPosition(float t)
+    {
+        Spline spline = CurrentSpline;
+
+        if (spline == null)
+            return transform.position;
+
+        float3 localPosition = spline.EvaluatePosition(t);
+
+        return splineContainer.transform.TransformPoint(
+            localPosition
+        );
+    }
+
+    private bool IsValidSpline(
+        SplineContainer container,
+        int index
+    )
+    {
+        if (container == null)
         {
             Debug.LogWarning(
                 "Cannot change spline: container is null.",
                 this
             );
 
-            return;
+            return false;
         }
 
-        if (newSplineIndex < 0 ||
-            newSplineIndex >= newContainer.Splines.Count)
+        if (index < 0 || index >= container.Splines.Count)
         {
             Debug.LogWarning(
-                $"Spline index {newSplineIndex} is invalid.",
+                $"Spline index {index} is invalid.",
                 this
             );
 
-            return;
+            return false;
         }
 
-        splineContainer = newContainer;
-        splineIndex = newSplineIndex;
-        currentT = Mathf.Clamp01(startT);
-        reachedEnd = false;
+        return true;
+    }
 
-        if (snapImmediately)
-            SnapToSpline();
+    private void CompleteSplineTransition()
+    {
+        transitionTimer = 0f;
+        ResetBehaviourTimers();
+        ChangeState(FishState.Swimming);
+        UpdateTransformOnSpline(0f);
+    }
+
+    private void ChangeState(FishState newState)
+    {
+        currentState = newState;
+    }
+
+    private void ResetBehaviourTimers()
+    {
+        speedChangeTimer = Random.Range(
+            speedChangeInterval.x,
+            speedChangeInterval.y
+        );
+
+        idleCheckTimer = Random.Range(
+            idleCheckInterval.x,
+            idleCheckInterval.y
+        );
+
+        turnAroundTimer = Random.Range(
+            turnAroundInterval.x,
+            turnAroundInterval.y
+        );
+    }
+
+    [ContextMenu("Snap To Spline")]
+    private void SnapToSpline()
+    {
+        if (CurrentSpline == null)
+            return;
+
+        currentT = Mathf.Clamp01(currentT);
+        UpdateTransformOnSpline(0f);
+    }
+
+    public void Restart(float normalizedProgress = 0f)
+    {
+        currentT = Mathf.Clamp01(normalizedProgress);
+        ResetBehaviourTimers();
+        ChangeState(FishState.Swimming);
+        SnapToSpline();
     }
 }
