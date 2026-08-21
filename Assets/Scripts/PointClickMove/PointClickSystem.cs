@@ -79,6 +79,8 @@ public class PointClickSystem : MonoBehaviour
 
     private bool rotateWhenMove = false;
     private bool hasActiveMoveDestination = false;
+    private bool isDirectClickMoving = false;
+    private Vector3 directClickDestination;
     private bool lastPathStopWasArrival = false;
     private Vector3 activeMoveDestination;
     private Vector3 activeMoveStationaryAnchor;
@@ -251,9 +253,12 @@ public class PointClickSystem : MonoBehaviour
         }
         else
         {
-            // when AI is moving the transform, still apply vertical movement for gravity
-            RememberMoveDirection(ai != null ? ai.velocity : Vector3.zero);
-            characterController.Move(Vector3.up * (verticalVelocity * Time.deltaTime));
+            if (!MoveDirectClickFallback())
+            {
+                // when AI is moving the transform, still apply vertical movement for gravity
+                RememberMoveDirection(ai != null ? ai.velocity : Vector3.zero);
+                characterController.Move(Vector3.up * (verticalVelocity * Time.deltaTime));
+            }
         }
 
         // Left/right rotation bằng input tay (A/D + rotateLeftRightCamera)
@@ -317,6 +322,9 @@ public class PointClickSystem : MonoBehaviour
 
     private void HandleClickMoveRotation()
     {
+        if (isDirectClickMoving)
+            return;
+
         if (!isClickMoving || playerCamera == null)
             return;
 
@@ -833,8 +841,17 @@ public class PointClickSystem : MonoBehaviour
 
     private bool MoveAgentToResolvedDestination(Vector3 destination)
     {
-        if (ai == null)
-            return false;
+        if (ai == null || AstarPath.active == null || AstarPath.active.isScanning)
+        {
+            isDirectClickMoving = true;
+            directClickDestination = destination;
+
+            if (ai != null)
+                SetAstarAgentIdle(true);
+
+            Debug.LogWarning("[PointClick] A* chưa sẵn sàng; dùng click-to-move trực tiếp bằng CharacterController.");
+            return true;
+        }
 
         ai.isStopped = false;
         ai.canMove = true;
@@ -853,6 +870,41 @@ public class PointClickSystem : MonoBehaviour
         if (searchPathImmediately)
             ai.SearchPath();
 
+        return true;
+    }
+
+    private bool MoveDirectClickFallback()
+    {
+        if (!isDirectClickMoving)
+            return false;
+
+        if (characterController == null || !characterController.enabled)
+            return false;
+
+        Vector3 direction = directClickDestination - transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= arrivalStopDistance * arrivalStopDistance)
+        {
+            isDirectClickMoving = false;
+            isClickMoving = false;
+            HideMoveVfx();
+            RememberMoveDirection(Vector3.zero);
+            characterController.Move(Vector3.up * (verticalVelocity * Time.deltaTime));
+            return true;
+        }
+
+        direction.Normalize();
+        RememberMoveDirection(direction * moveSpeed);
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            autoTurnDegreesPerSecond * Time.deltaTime);
+
+        Vector3 totalMove = direction * moveSpeed + Vector3.up * verticalVelocity;
+        characterController.Move(totalMove * Time.deltaTime);
         return true;
     }
 
@@ -948,7 +1000,7 @@ public class PointClickSystem : MonoBehaviour
 
     private void StopActivePath(bool arrived)
     {
-        bool wasActive = hasActiveMoveDestination || isClickMoving || rotateWhenMove;
+        bool wasActive = hasActiveMoveDestination || isDirectClickMoving || isClickMoving || rotateWhenMove;
 
         ClearActiveMoveTracking(arrived);
         isClickMoving = false;
@@ -964,6 +1016,7 @@ public class PointClickSystem : MonoBehaviour
     private void ClearActiveMoveTracking(bool arrived)
     {
         hasActiveMoveDestination = false;
+        isDirectClickMoving = false;
         lastPathStopWasArrival = arrived;
         activeMoveStuckTimer = 0f;
         activeMoveStationaryTimer = 0f;
@@ -1136,59 +1189,83 @@ public class PointClickSystem : MonoBehaviour
         return false;
     }
 
-    public void TeleportDelay(Vector3 targetPos)
+    public bool TeleportDelay(Vector3 targetPos)
     {
-        var position = targetPos;
-        characterController.enabled = false;
-
-        if (!TryResolveTeleportDestination(position, out Vector3 groundPos))
-            groundPos = position;
-
-        if (ai != null)
-        {
-            ai.isStopped = true;
-            ai.canMove = false;
-            ai.canSearch = false;
-
-            ai.Teleport(groundPos);
-        }
-
-        lastPickPosition = groundPos;
-        isClickMoving = false;
-        ClearActiveMoveTracking(false);
-        HideMoveVfx(); // VFX
-        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
-
-        characterController.enabled = true;
+        return TeleportInternal(targetPos, false, Quaternion.identity);
     }
 
-    public void TeleportDelay(Transform hitTransform)
+    public bool TeleportDelay(Transform hitTransform)
     {
-        var position = hitTransform.position;
-        characterController.enabled = false;
+        if (hitTransform == null)
+            return false;
 
-        if (!TryResolveTeleportDestination(position, out Vector3 groundPos))
-            groundPos = position;
+        return TeleportInternal(hitTransform.position, true, hitTransform.rotation);
+    }
 
-        if (ai != null)
+    private bool TeleportInternal(Vector3 requestedPosition, bool applyRotation, Quaternion targetRotation)
+    {
+        bool controllerWasEnabled = characterController == null || characterController.enabled;
+        Vector3 groundPos = requestedPosition;
+
+        if (characterController != null)
+            characterController.enabled = false;
+
+        try
         {
-            ai.isStopped = true;
-            ai.canMove = false;
-            ai.canSearch = false;
+            if (!TryResolveTeleportDestination(requestedPosition, out groundPos))
+                groundPos = requestedPosition;
 
-            ai.Teleport(groundPos);
-            ai.rotation = hitTransform.rotation;
+            bool aiTeleported = false;
+
+            if (ai != null)
+            {
+                ai.isStopped = true;
+                ai.canMove = false;
+                ai.canSearch = false;
+
+                // AIPath.Teleport creates an A* path internally. During an
+                // additive scene transition AstarPath may not exist yet, so
+                // use the direct transform fallback until the graph is ready.
+                if (AstarPath.active != null && !AstarPath.active.isScanning)
+                {
+                    try
+                    {
+                        ai.Teleport(groundPos);
+                        aiTeleported = true;
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogWarning("[PointClick] A* teleport failed; using direct transform fallback. "
+                                         + exception.Message);
+                    }
+                }
+            }
+
+            if (!aiTeleported)
+                transform.position = groundPos;
+
+            if (applyRotation)
+            {
+                transform.rotation = targetRotation;
+
+                if (ai != null && aiTeleported)
+                    ai.rotation = targetRotation;
+            }
+
+            lastPickPosition = groundPos;
+            isClickMoving = false;
+            ClearActiveMoveTracking(false);
+            HideMoveVfx(); // VFX
+            Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
+            return true;
         }
-
-        lastPickPosition = groundPos;
-        isClickMoving = false;
-        ClearActiveMoveTracking(false);
-        HideMoveVfx(); // VFX
-        Debug.Log($"Ground Pos: {groundPos} PlayerPos{transform.position}");
-
-        transform.DORotateQuaternion(hitTransform.rotation, 1);
-
-        characterController.enabled = true;
+        finally
+        {
+            // Never leave the player permanently disabled when a scene/graph
+            // is still initializing or a third-party AI call throws.
+            if (characterController != null)
+                characterController.enabled = controllerWasEnabled;
+        }
     }
 
     private bool MoveToChairHandle(Ray ray)

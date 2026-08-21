@@ -61,7 +61,7 @@ public class SceneLocationHandler : MonoBehaviour
         // SavePlayerInformation();
     }
 
-    private async UniTaskVoid LoadPlayerPositionAfterConfig(string sceneName)
+    private async UniTaskVoid LoadPlayerPositionAfterConfig(string sceneName, Scene targetScene)
     {
         await LoadConfig(destroyCancellationToken);
 
@@ -72,26 +72,42 @@ public class SceneLocationHandler : MonoBehaviour
         }
 
         await UniTask.Yield();
-        LoadPlayerPosition(sceneName);
+        LoadPlayerPosition(sceneName, targetScene);
     }
 
     public void RestoreSavedPlayerPosition(string sceneName)
     {
-        RestoreSavedPlayerPositionRoutine(sceneName).Forget();
+        RestoreSavedPlayerPositionRoutine(sceneName, default).Forget();
     }
 
-    private async UniTaskVoid RestoreSavedPlayerPositionRoutine(string sceneName)
+    public void RestoreSavedPlayerPosition(Scene targetScene)
+    {
+        if (!targetScene.IsValid())
+        {
+            RestoreSavedPlayerPosition(SceneManager.GetActiveScene().name);
+            return;
+        }
+
+        RestoreSavedPlayerPositionRoutine(targetScene.name, targetScene).Forget();
+    }
+
+    private async UniTaskVoid RestoreSavedPlayerPositionRoutine(string sceneName, Scene targetScene)
     {
         await LoadConfig(destroyCancellationToken);
+
+        await WaitForNewSceneLateContent(sceneName);
 
         const int maxWaitFrames = 180;
         for (int frame = 0; frame < maxWaitFrames; frame++)
         {
-            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+            GameObject playerObject = FindPlayerForRestore(targetScene);
             if (playerObject != null && playerObject.GetComponent<PointClickSystem>() != null)
             {
-                Debug.Log("[SceneLocationHandler] Explicit restore after world scene became ready: " + sceneName);
-                LoadPlayerPosition(sceneName);
+                Debug.Log("[SceneLocationHandler] Explicit restore after world scene became ready: "
+                          + sceneName
+                          + ", playerScene="
+                          + playerObject.scene.name);
+                LoadPlayerPosition(sceneName, targetScene);
                 return;
             }
 
@@ -101,52 +117,146 @@ public class SceneLocationHandler : MonoBehaviour
         Debug.LogWarning("[SceneLocationHandler] Timed out waiting for Player to restore saved position: " + sceneName);
     }
 
+    private async UniTask WaitForNewSceneLateContent(string sceneName)
+    {
+        if (!SceneNameAliases.IsNewSceneFamily(sceneName))
+            return;
+
+        const int maxWaitFrames = 600;
+        Scene activeScene = SceneManager.GetActiveScene();
+
+        for (int frame = 0; frame < maxWaitFrames; frame++)
+        {
+            AddressableAdditiveSceneLoader[] loaders = FindObjectsByType<AddressableAdditiveSceneLoader>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+
+            AddressableAdditiveSceneLoader activeLoader = null;
+            foreach (AddressableAdditiveSceneLoader loader in loaders)
+            {
+                if (loader != null && loader.gameObject.scene == activeScene)
+                {
+                    activeLoader = loader;
+                    break;
+                }
+            }
+
+            if (activeLoader == null || activeLoader.IsComplete)
+                return;
+
+            await UniTask.Yield();
+        }
+
+        Debug.LogWarning("[SceneLocationHandler] Late scene content chưa hoàn tất sau thời gian chờ; tiếp tục restore bằng vị trí đã lưu.");
+    }
+
     public void LoadPlayerPosition(string sceneName)
+    {
+        LoadPlayerPosition(sceneName, default);
+    }
+
+    private void LoadPlayerPosition(string sceneName, Scene targetScene)
     {
         if (config == null)
         {
-            LoadPlayerPositionAfterConfig(sceneName).Forget();
+            LoadPlayerPositionAfterConfig(sceneName, targetScene).Forget();
             return;
         }
 
-        var playerObject = GameObject.FindGameObjectWithTag("Player");
+        var playerObject = FindPlayerForRestore(targetScene);
         var player = playerObject != null ? playerObject.GetComponent<PointClickSystem>() : null;
         if (player == null)
         {
-            Debug.LogWarning("[SceneLocationHandler] Player was not ready while restoring position.");
+            Debug.LogWarning("[SceneLocationHandler] Player was not ready in target scene while restoring position. scene="
+                             + sceneName
+                             + ", targetScene="
+                             + (targetScene.IsValid() ? targetScene.name : "<any>"));
+            return;
+        }
+
+        if (targetScene.IsValid() && playerObject.scene != targetScene)
+        {
+            Debug.LogWarning("[SceneLocationHandler] Refuse to restore using a Player from another scene. target="
+                             + targetScene.name
+                             + ", playerScene="
+                             + playerObject.scene.name);
             return;
         }
 
         Debug.Log($"[SceneLocationHandler] Cập nhật vị trí khi load scene");
-        if (TryExtractSceneLocation(sceneName, out Vector3 position, out Quaternion rotation))
+        if (TryGetSceneLocation(sceneName, out SceneLocation savedLocation, out Vector3 position, out Quaternion rotation))
         {
             Debug.Log("[SceneLocationHandler] Tìm thấy data của scene trong danh sách, bắt đầu cập nhật vị trí");
-            player.TeleportDelay(position);
+            if (!player.TeleportDelay(position))
+            {
+                Debug.LogWarning("[SceneLocationHandler] Teleport vị trí đã lưu thất bại; giữ lại data để thử lại.");
+                return;
+            }
+
             // TeleMapController._mapActive = true;
             // player.transform.position = position;
             player.transform.rotation = rotation;
             // TeleMapController._mapActive = false;
+            sceneLocationList.Remove(savedLocation);
+            Debug.Log("[SceneLocationHandler] Khôi phục vị trí thành công và đã consume data.");
         }
+    }
+
+    private GameObject FindPlayerForRestore(Scene targetScene)
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+
+        if (targetScene.IsValid())
+        {
+            foreach (GameObject player in players)
+            {
+                if (player != null && player.scene == targetScene && player.GetComponent<PointClickSystem>() != null)
+                    return player;
+            }
+
+            return null;
+        }
+
+        foreach (GameObject player in players)
+        {
+            if (player != null && player.GetComponent<PointClickSystem>() != null)
+                return player;
+        }
+
+        return null;
     }
     
     public bool TryExtractSceneLocation(string sceneName, out Vector3 position, out Quaternion rotation)
     {
+        if (!TryGetSceneLocation(sceneName, out SceneLocation sceneLocation, out position, out rotation))
+            return false;
+
+        sceneLocationList.Remove(sceneLocation);
+
+        Debug.Log($"[SceneLocationHandler] Cố gắng extract vị trí trong scene {sceneName} Thành công");
+
+        return true;
+    }
+
+    private bool TryGetSceneLocation(
+        string sceneName,
+        out SceneLocation sceneLocation,
+        out Vector3 position,
+        out Quaternion rotation)
+    {
         position = Vector3.zero;
         rotation = new Quaternion(0, 0, 0, 0);
+        sceneLocation = GetItemBySceneName(sceneName);
 
-        var sceneLocation = GetItemBySceneName(sceneName);
-        if (sceneLocation != null)
+        if (sceneLocation == null)
         {
-            position = sceneLocation.Position + (config != null ? config.offset : Vector3.zero);
-            rotation = sceneLocation.Rotation;
-
-            sceneLocationList.Remove(sceneLocation);
+            Debug.Log($"[SceneLocationHandler] Cố gắng lấy vị trí trong scene {sceneName} Thất bại");
+            return false;
         }
 
-        string debugValue = sceneLocation != null ? "Thành công" : "Thất bại";
-        Debug.Log($"[SceneLocationHandler] Cố gắng extract vị trí trong scene {sceneName} {debugValue}");
-
-        return sceneLocation != null;
+        position = sceneLocation.Position + (config != null ? config.offset : Vector3.zero);
+        rotation = sceneLocation.Rotation;
+        return true;
     }
 
     private SceneLocation GetItemBySceneName(string sceneName)
@@ -182,20 +292,33 @@ public class SceneLocationHandler : MonoBehaviour
 
     public void SavePlayerPosition(Vector3 position, Quaternion rotation)
     {
-        var currentScene = SceneNameAliases.ToSavedSceneName(SceneManager.GetActiveScene().name);
-        if (config == null || !config.IsSceneCanSave(currentScene))
+        SaveTransitionPosition(SceneManager.GetActiveScene().name, position, rotation);
+    }
+
+    public void SaveTransitionPosition(Vector3 position, Quaternion rotation)
+    {
+        SaveTransitionPosition(SceneManager.GetActiveScene().name, position, rotation);
+    }
+
+    public void SaveTransitionPosition(string sourceSceneName, Vector3 position, Quaternion rotation)
+    {
+        var currentScene = SceneNameAliases.ToSavedSceneName(sourceSceneName);
+        if (string.IsNullOrWhiteSpace(currentScene))
         {
+            Debug.LogWarning("[SceneLocationHandler] Cannot save door return position because source scene is empty.");
             return;
         }
-        Debug.Log($"Try save player");
 
-        var player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            Debug.Log("[SceneLocationHandler] Try Save Player Pdosition");
-            SceneLocation playerLocation = new SceneLocation(currentScene, position, rotation);
-            TryAddOrUpdate(playerLocation);
-        }
+        Debug.Log("[SceneLocationHandler] Save door return position. scene="
+                  + currentScene
+                  + ", source="
+                  + sourceSceneName
+                  + ", position="
+                  + position
+                  + ", rotation="
+                  + rotation);
+
+        TryAddOrUpdate(new SceneLocation(currentScene, position, rotation));
     }
 
     public void TryAddOrUpdate(SceneLocation addLocation)
@@ -204,10 +327,11 @@ public class SceneLocationHandler : MonoBehaviour
         bool isExitData = false;
         foreach (var item in sceneLocationList)
         {
-            if (item.SceneName == addLocation.SceneName)
+            if (SceneNameAliases.AreSameScene(item.SceneName, addLocation.SceneName))
             {
                 item.Position = addLocation.Position;
                 item.Rotation = addLocation.Rotation;
+                item.SceneName = SceneNameAliases.ToSavedSceneName(addLocation.SceneName);
                 Debug.Log($"[SceneLocationHandle] Cập nhật vị trí trong scene thành công {addLocation.SceneName}");
                 isExitData = true;
                 break;

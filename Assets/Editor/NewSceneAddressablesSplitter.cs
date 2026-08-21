@@ -397,6 +397,8 @@ public static class NewSceneAddressablesSplitter
 
         EnsureLateSceneLoader(generatedMainScene, lateSceneKeys);
         BakeAstarGraphForGeneratedScenes(generatedMainScene, lateSceneKeys);
+        ValidateGeneratedRoomTriggerPlacement(generatedMainScene, generatedScenePaths);
+        BakeGeneratedRoomTriggerReturnPoints(generatedMainScene, generatedScenePaths);
 
         if (!EditorSceneManager.SaveScene(generatedMainScene, GeneratedMainScenePath))
             throw new InvalidOperationException("Failed to save generated main scene: " + GeneratedMainScenePath);
@@ -427,6 +429,131 @@ public static class NewSceneAddressablesSplitter
 
         Debug.Log("[NewSceneSplit] Regenerated Cloud_New Scene group. Authoring scene was not modified. Late scenes: "
                   + string.Join(", ", lateSceneKeys));
+    }
+
+    private static void BakeGeneratedRoomTriggerReturnPoints(
+        Scene generatedMainScene,
+        IReadOnlyList<string> generatedScenePaths)
+    {
+        if (generatedScenePaths == null || generatedScenePaths.Count == 0)
+            return;
+
+        int bakedCount = 0;
+        int fallbackCount = 0;
+
+        foreach (string scenePath in generatedScenePaths)
+        {
+            Scene scene;
+            bool closeAfterBake = false;
+
+            if (string.Equals(NormalizeAssetPath(scenePath), NormalizeAssetPath(GeneratedMainScenePath), StringComparison.OrdinalIgnoreCase))
+            {
+                scene = generatedMainScene;
+            }
+            else
+            {
+                scene = SceneManager.GetSceneByPath(scenePath);
+
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    closeAfterBake = scene.IsValid() && scene.isLoaded;
+                }
+            }
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                continue;
+
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (LoadRoomTrigger trigger in root.GetComponentsInChildren<LoadRoomTrigger>(true))
+                {
+                    if (trigger.BakeReturnPointForGeneratedScene())
+                    {
+                        bakedCount++;
+                    }
+                    else if (trigger.returnPoint == null)
+                    {
+                        fallbackCount++;
+                    }
+                }
+            }
+
+            if (scene != generatedMainScene)
+            {
+                EditorSceneManager.SaveScene(scene, scene.path);
+            }
+
+            if (closeAfterBake)
+                EditorSceneManager.CloseScene(scene, true);
+        }
+
+        if (bakedCount > 0 || fallbackCount > 0)
+        {
+            Debug.Log("[NewSceneSplit] Baked room trigger return points. baked="
+                      + bakedCount.ToString(CultureInfo.InvariantCulture)
+                      + ", triggerFallback="
+                      + fallbackCount.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void ValidateGeneratedRoomTriggerPlacement(
+        Scene generatedMainScene,
+        IReadOnlyList<string> generatedScenePaths)
+    {
+        if (generatedScenePaths == null || generatedScenePaths.Count == 0)
+            return;
+
+        int mainTriggerCount = 0;
+        int lateTriggerCount = 0;
+
+        foreach (string scenePath in generatedScenePaths)
+        {
+            Scene scene;
+            bool closeAfterCheck = false;
+
+            if (string.Equals(NormalizeAssetPath(scenePath), NormalizeAssetPath(GeneratedMainScenePath), StringComparison.OrdinalIgnoreCase))
+            {
+                scene = generatedMainScene;
+            }
+            else
+            {
+                scene = SceneManager.GetSceneByPath(scenePath);
+
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    closeAfterCheck = scene.IsValid() && scene.isLoaded;
+                }
+            }
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                continue;
+
+            int triggerCount = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+                triggerCount += root.GetComponentsInChildren<LoadRoomTrigger>(true).Length;
+
+            if (scene == generatedMainScene)
+                mainTriggerCount += triggerCount;
+            else
+                lateTriggerCount += triggerCount;
+
+            if (closeAfterCheck)
+                EditorSceneManager.CloseScene(scene, true);
+        }
+
+        if (lateTriggerCount > 0)
+        {
+            throw new InvalidOperationException(
+                "Generated late scene contains "
+                + lateTriggerCount.ToString(CultureInfo.InvariantCulture)
+                + " LoadRoomTrigger component(s). Interactive room/door roots must remain in the generated main scene.");
+        }
+
+        Debug.Log("[NewSceneSplit] Validated room trigger placement. main="
+                  + mainTriggerCount.ToString(CultureInfo.InvariantCulture)
+                  + ", late=0");
     }
 
     private static void BakeAstarGraphForGeneratedScenes(Scene generatedMainScene, IReadOnlyList<string> lateSceneKeys)
@@ -748,6 +875,14 @@ public static class NewSceneAddressablesSplitter
             return false;
         }
 
+        // Environment roots can also contain interactive room/door scripts.
+        // Keep them in the main scene so triggers are available immediately.
+        if (info.HasRuntimeMonoBehaviour)
+        {
+            reason = "runtime script";
+            return false;
+        }
+
         if (!info.UsesLateAssetPath)
         {
             reason = "not visual-path content";
@@ -1037,6 +1172,12 @@ public static class NewSceneAddressablesSplitter
             if (IsInitialMainHierarchyPath(currentPath))
             {
                 Debug.Log("[NewSceneSplit] Keeping initial shell object in main scene: " + currentPath);
+                continue;
+            }
+
+            if (go.GetComponentsInChildren<Component>(true).Any(HasRuntimeMonoBehaviour))
+            {
+                Debug.Log("[NewSceneSplit] Keeping runtime object in main scene: " + currentPath);
                 continue;
             }
 

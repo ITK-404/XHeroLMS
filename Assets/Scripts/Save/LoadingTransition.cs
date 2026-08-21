@@ -176,13 +176,18 @@ public static class LoadingTransition
 
     public static void SavePosition(Vector3 position, Quaternion rotation)
     {
+        SavePosition(SceneManager.GetActiveScene().name, position, rotation);
+    }
+
+    public static void SavePosition(string sourceSceneName, Vector3 position, Quaternion rotation)
+    {
         if (sceneLocationHandler == null)
         {
             Debug.LogWarning("[LoadingTransition] sceneLocationHandler is null. Cannot save position.");
             return;
         }
 
-        sceneLocationHandler.SavePlayerPosition(position, rotation);
+        sceneLocationHandler.SaveTransitionPosition(sourceSceneName, position, rotation);
     }
 
     // ============================================================

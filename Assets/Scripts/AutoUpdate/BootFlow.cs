@@ -710,7 +710,7 @@ public class BootFlow : MonoBehaviour
         );
 
         GameInitializer.Instance.SceneLocationHandle
-            .RestoreSavedPlayerPosition(worldScene.name);
+            .RestoreSavedPlayerPosition(worldScene);
     }
 
     yield return null;

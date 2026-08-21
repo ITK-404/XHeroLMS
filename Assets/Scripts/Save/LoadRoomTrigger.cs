@@ -2,6 +2,9 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 
 public class LoadRoomTrigger : MonoBehaviour
@@ -19,6 +22,12 @@ public class LoadRoomTrigger : MonoBehaviour
     public Vector3 extraOffset = new Vector3(0f, 0.03f, 0f); // offset nhỏ khi đặt
 
     [Header("Debug")] public bool verbose = false;
+
+    // The splitter stores the authored return pose here so a cross-scene
+    // Transform reference can still be used after the object is moved.
+    [SerializeField, HideInInspector] private bool hasBakedReturnPoint;
+    [SerializeField, HideInInspector] private Vector3 bakedReturnPosition;
+    [SerializeField, HideInInspector] private Quaternion bakedReturnRotation;
 
     private static bool isEnter = false;
 
@@ -91,7 +100,7 @@ public class LoadRoomTrigger : MonoBehaviour
         if (isEnter) return;
         if (isLoading) return;
         if (!other.CompareTag("Player")) return;
-        if (string.IsNullOrEmpty(sceneName)) return;
+        if (loadType != LoadType.Previous && string.IsNullOrEmpty(sceneName)) return;
         if (!TokenStore.IsAuthenticated && loadByCourse)
         {
             return;
@@ -120,6 +129,7 @@ public class LoadRoomTrigger : MonoBehaviour
                 Debug.Log($"[LoadRoomTrigger] Load dựa trên scene name {sceneName}");
                 break;
             case LoadType.Previous:
+                SavePositionToLoad();
                 LoadingTransition.LoadPreviousSceneOrDefault();
                 Debug.Log($"[LoadRoomTrigger] Load scene trước đó {sceneName}");
                 break;
@@ -130,11 +140,68 @@ public class LoadRoomTrigger : MonoBehaviour
 
     private void SavePositionToLoad()
     {
-        if (returnPoint == null) return;
-        Vector3 spawnPosition = returnPoint.transform.position + extraOffset;
-        Quaternion rotation = returnPoint.transform.rotation;
-        LoadingTransition.SavePosition(spawnPosition, rotation);
+        if (!TryGetReturnPose(out Vector3 spawnPosition, out Quaternion rotation, out string poseSource))
+            return;
+
+        // The active scene can temporarily be LoadingScene or another additive
+        // scene while late content is being assembled. The trigger's owning
+        // scene is the authoritative source scene for this return pose.
+        LoadingTransition.SavePosition(gameObject.scene.name, spawnPosition, rotation);
+
+        if (verbose)
+        {
+            Debug.Log("[LoadRoomTrigger] Saved return pose. scene="
+                      + gameObject.scene.name
+                      + ", source="
+                      + poseSource
+                      + ", position="
+                      + spawnPosition
+                      + ", target="
+                      + sceneName);
+        }
     }
+
+    private bool TryGetReturnPose(out Vector3 position, out Quaternion rotation, out string source)
+    {
+        if (hasBakedReturnPoint)
+        {
+            position = bakedReturnPosition + extraOffset;
+            rotation = bakedReturnRotation;
+            source = "bakedReturnPoint";
+            return true;
+        }
+
+        if (returnPoint != null)
+        {
+            position = returnPoint.position + extraOffset;
+            rotation = returnPoint.rotation;
+            source = "returnPoint";
+            return true;
+        }
+
+        // Older door prefabs do not have a Return Point. Keep the route usable
+        // by returning to the trigger itself instead of silently discarding it.
+        position = transform.position + extraOffset;
+        rotation = transform.rotation;
+        source = "triggerFallback";
+        return true;
+    }
+
+#if UNITY_EDITOR
+    public bool BakeReturnPointForGeneratedScene()
+    {
+        if (returnPoint == null)
+            return false;
+
+        bakedReturnPosition = returnPoint.position;
+        bakedReturnRotation = returnPoint.rotation;
+        hasBakedReturnPoint = true;
+
+        EditorUtility.SetDirty(this);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(this);
+        return true;
+    }
+#endif
 
     private bool isLoading = false;
 

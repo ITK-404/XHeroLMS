@@ -379,11 +379,37 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
         yield return WaitForNewSceneLateContentIfNeeded(sceneName, startTime);
 
+        if (loadTargetAdditively && handle.Result.Scene.IsValid())
+            RequestSavedPositionRestore(handle.Result.Scene, sceneName);
+
         _lastActivatedAddressableSceneHandle = handle;
 
         _loadingStatusOverride = "Hoàn tất";
         SetProgress(1f);
         _loadSucceeded = true;
+    }
+
+    private void RequestSavedPositionRestore(Scene loadedScene, string requestedSceneName)
+    {
+        SceneLocationHandler handler = GameInitializer.Instance != null
+            ? GameInitializer.Instance.SceneLocationHandle
+            : null;
+
+        if (handler == null)
+            handler = FindObjectOfType<SceneLocationHandler>();
+
+        if (handler == null)
+        {
+            Debug.LogWarning("[LoadingScreenController] Cannot restore saved position because SceneLocationHandler is unavailable. scene="
+                             + requestedSceneName);
+            return;
+        }
+
+        Debug.Log("[LoadingScreenController] Request saved position restore after addressable scene activation. scene="
+                  + loadedScene.name
+                  + ", requested="
+                  + requestedSceneName);
+        handler.RestoreSavedPlayerPosition(loadedScene);
     }
 
     private bool ShouldLoadTargetAdditivelyBeforeReveal(string sceneName)

@@ -1,68 +1,66 @@
-[CMD] /Users/dev/google-cloud-sdk/bin/gsutil -m rsync -r "gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/" "gs://dlc-lms/addressables/releases-dev/ios/latest/"
+[CMD] C:\Users\Computer01\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gsutil.cmd -m rsync -r "gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/" "gs://dlc-lms/addressables/releases-dev/android/latest/"
 ExitCode=0
 
 --- STDOUT ---
 
 
 --- STDERR ---
-WARNING:  Python 3.9.x is no longer officially supported by the Google Cloud CLI
-and may not function correctly. Please use Python version 3.10 and up.
-To reinstall gcloud, run:
-    $ gcloud components reinstall
-
-This will also prompt to install a compatible version of Python.
-
-If you have a compatible Python interpreter installed, you can use it by setting
-the CLOUDSDK_PYTHON environment variable to point to it.
-
-/Users/dev/google-cloud-sdk/platform/gsutil/third_party/urllib3/src/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
-  warnings.warn(
-
-WARNING: gsutil rsync uses hashes when modification time is not available at
-both the source and destination. Your crcmod installation isn't using the
-module's C extension, so checksumming will run very slowly. If this is your
-first rsync since updating gsutil, this rsync can take significantly longer than
-usual. For help installing the extension, please see "gsutil help crcmod".
-
 Building synchronization state...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
-
 Starting synchronization...
-If you experience problems with multiprocessing on MacOS, they might be related to https://bugs.python.org/issue33725. You can disable multiprocessing by editing your .boto config or by adding the following flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that multithreading is still available even if you disable multiprocessing.
-
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_phong_ky_mon_scenes_all_6a9724531acc7d829c76d7698005b9e8.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog_1.0.11.hash [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_11_126070c83c1adfe45bfcc7d387c9bc23.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_dai_dao_chi_gian_2_scenes_all_855794e888aa64fd3ceabf49f18a5a1c.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog.hash [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog.json [Content-Type=application/json]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_phong_tuyen_sinh_scenes_all_22820c132df3d5d2da766cdbf9e40a44.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_05_727547c10aa72b834a915c793a70aca7.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/catalog_1.0.11.json [Content-Type=application/json]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_newscene_scenes_new_scene_entry_15d46d8490c03b79c1262b53132107a4.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-Copying gs://dlc-lms/addressables/releases-dev/ios/builds/1.0.11/cloud_dai_dao_chi_gian_1_scenes_all_e9788d21a000dc1a8b1e9f2d9e380a30.bundle [Content-Type=application/octet-stream]...
-/ [0/11 files][    0.0 B/389.0 MiB]   0% Done                                   
-/ [1/11 files][ 29.6 MiB/389.0 MiB]   7% Done                                   
-/ [2/11 files][155.1 MiB/389.0 MiB]  39% Done                                   
-/ [3/11 files][155.1 MiB/389.0 MiB]  39% Done                                   
-/ [4/11 files][252.9 MiB/389.0 MiB]  65% Done                                   
-/ [5/11 files][256.0 MiB/389.0 MiB]  65% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_11_2af95aee388a9a546962a28a739debe4.bundle [Content-Type=application/octet-stream]...
+/ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
 -
-- [6/11 files][295.9 MiB/389.0 MiB]  76% Done                                   
-- [7/11 files][295.9 MiB/389.0 MiB]  76% Done                                   
-- [8/11 files][295.9 MiB/389.0 MiB]  76% Done                                   
-- [9/11 files][295.9 MiB/389.0 MiB]  76% Done                                   
-- [10/11 files][296.1 MiB/389.0 MiB]  76% Done                                  
-- [11/11 files][389.0 MiB/389.0 MiB] 100% Done                                  
-Operation completed over 11 objects/389.0 MiB.                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_phong_ky_mon_scenes_all_5b751001e69d366e28bacdccd19446d8.bundle [Content-Type=application/octet-stream]...
+- [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog_1.0.11.hash [Content-Type=application/octet-stream]...
+- [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_16_c84c3ae13e43aa6967ab5869e8b37a51.bundle [Content-Type=application/octet-stream]...
+- [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/483192958c2089719c8dc303377b0b39_monoscripts_56b9695125312210c57361c59cfe282e.bundle [Content-Type=application/octet-stream]...
+- [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+\
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_dai_dao_chi_gian_1_scenes_all_6a98e10f8d83545ed1061535db9d1ed9.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_10_351e21d8551b6e9b53876dcf3cf2b18e.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_08_a8e3a110807d017a8aa07faa80dde911.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_phong_tuyen_sinh_scenes_all_8c006bcb86ec0efb316c8ef8f64ed411.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog_1.0.11.json [Content-Type=application/json]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog.json [Content-Type=application/json]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_07_480e000c110ad2ef8772e0ae54c64b5f.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/catalog.hash [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_entry_707d998c54594cf00997e6ab634ac5d9.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_trungbayttb_scenes_all_1f33c1bf0ce55704f34adc139437f39d.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_dai_dao_chi_gian_2_scenes_all_bf6dce33593449e735db7ea265f61be3.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+Copying gs://dlc-lms/addressables/releases-dev/android/builds/1.0.11/cloud_newscene_scenes_new_scene_latenew_scene_late_09_73f3159068316da814d331bd08723a8a.bundle [Content-Type=application/octet-stream]...
+\ [0/17 files][    0.0 B/494.5 MiB]   0% Done                                   
+\ [1/17 files][ 29.2 MiB/494.5 MiB]   5% Done                                   
+\ [2/17 files][103.1 MiB/494.5 MiB]  20% Done                                   
+\ [3/17 files][112.4 MiB/494.5 MiB]  22% Done                                   
+\ [4/17 files][112.5 MiB/494.5 MiB]  22% Done                                   
+\ [5/17 files][112.5 MiB/494.5 MiB]  22% Done                                   
+|
+| [6/17 files][206.4 MiB/494.5 MiB]  41% Done                                   
+| [7/17 files][212.2 MiB/494.5 MiB]  42% Done                                   
+| [8/17 files][212.8 MiB/494.5 MiB]  43% Done                                   
+| [9/17 files][313.1 MiB/494.5 MiB]  63% Done                                   
+| [10/17 files][314.0 MiB/494.5 MiB]  63% Done                                  
+| [11/17 files][397.9 MiB/494.5 MiB]  80% Done                                  
+| [12/17 files][453.4 MiB/494.5 MiB]  91% Done                                  
+| [13/17 files][493.6 MiB/494.5 MiB]  99% Done                                  
+| [14/17 files][494.0 MiB/494.5 MiB]  99% Done                                  
+| [15/17 files][494.3 MiB/494.5 MiB]  99% Done                                  
+| [16/17 files][494.5 MiB/494.5 MiB]  99% Done                                  
+| [17/17 files][494.5 MiB/494.5 MiB] 100% Done                                  
+
+Operation completed over 17 objects/494.5 MiB.                                   
 
