@@ -32,7 +32,9 @@ public class LoadRoomTriggerEditor : Editor
                 EditorGUILayout.HelpBox("Sẽ load scene trước đó", MessageType.Info);
                 break;
         }
-
+        var returnPointId = serializedObject.FindProperty("returnPoint");
+        EditorGUILayout.PropertyField(returnPointId, new GUIContent("Return Point"));
+        
         EditorGUILayout.PropertyField(isUsingReviewModeProp, new GUIContent("isUsingReviewModeProp"));
         serializedObject.ApplyModifiedProperties(); // Lưu thay đổi + hỗ trợ Undo
     }
