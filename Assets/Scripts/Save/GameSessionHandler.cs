@@ -120,6 +120,46 @@ public class GameSessionHandler : MonoBehaviour
         return false;
     }
 
+    private static GameObject FindPlayerForSave(Scene activeScene)
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+
+        foreach (GameObject player in players)
+        {
+            if (player != null && player.scene == activeScene)
+                return player;
+        }
+
+        GameObject onlyPlayer = null;
+        foreach (GameObject player in players)
+        {
+            if (player == null)
+                continue;
+
+            if (onlyPlayer != null)
+            {
+                Debug.LogWarning("[GameSessionHandler] Skip save: multiple Player objects exist but none belongs to active scene. activeScene="
+                                 + activeScene.name);
+                return null;
+            }
+
+            onlyPlayer = player;
+        }
+
+        return onlyPlayer;
+    }
+
+    private static void LoadSavedTutorialState(GameSessionData data)
+    {
+        if (data == null || data.saveCourseData == null || data.saveCourseData.tutorialIds == null)
+        {
+            Debug.Log("[GameSessionHandler] No tutorial state in saved session.");
+            return;
+        }
+
+        TutorialContext.Load(data.saveCourseData.tutorialIds);
+    }
+
     private void OnApplicationFocus(bool hasFocus)
     {
         if (!hasFocus)
@@ -167,7 +207,7 @@ public class GameSessionHandler : MonoBehaviour
         bool isResumeSession = sessionValidResult.IsSessionValid;
         if (isResumeSession)
         {
-            TutorialContext.Load(lastSessionData.saveCourseData.tutorialIds);
+            LoadSavedTutorialState(lastSessionData);
         }
         // protect to load when load any scene
         if (SceneManager.GetActiveScene().name != DEFAULT_SCENE)
@@ -242,7 +282,8 @@ public class GameSessionHandler : MonoBehaviour
         if (!SceneNameAliases.CanUseSavedSceneForResume(currentScene))
             return false;
 
-        var player = GameObject.FindGameObjectWithTag("Player");
+        Scene activeScene = SceneManager.GetActiveScene();
+        var player = FindPlayerForSave(activeScene);
         if (player == null)
             return false;
 
@@ -291,7 +332,7 @@ public class GameSessionHandler : MonoBehaviour
 
     public async UniTaskVoid LoadGameSessionData(GameSessionData data)
     {
-        TutorialContext.Load(data.saveCourseData.tutorialIds);
+        LoadSavedTutorialState(data);
         
         // load by session data
         if (data.saveCourseData != null && !string.IsNullOrEmpty(data.saveCourseData.seoId))
@@ -359,6 +400,8 @@ public class GameSessionHandler : MonoBehaviour
         {
             return false;
         }
+
+        LoadSavedTutorialState(data);
 
         // Tái dùng cùng logic fetch data như LoadGameSessionData,
         // nhưng hàm này trả bool để BootFlow biết khi nào xong.
