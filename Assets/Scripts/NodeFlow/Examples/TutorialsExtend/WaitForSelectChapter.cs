@@ -159,7 +159,7 @@ public class WaitForSelectCourse : TutorialStepBehaviour
                 break;
 
             case SelectState.WaitForLesson:
-                string lessonDescription = $"Nhấn vào để học";
+                string lessonDescription = $"Nhấn vào nút này để học";
                 Focus(validLesson.GetComponent<RectTransform>(),lessonDescription);
                 break;
 
