@@ -64,7 +64,7 @@ private Coroutine _prepareAddressablesCoroutine;
     public bool unloadUnusedAssetsAfterLoad = false;
 
     [Header("New Scene Late Content")]
-    public bool waitForNewSceneLateContentBeforeReveal = false;
+    public bool waitForNewSceneLateContentBeforeReveal = true;
     public float newSceneLateContentWaitTimeoutSeconds = 300f;
     public float newSceneLateContentFindTimeoutSeconds = 5f;
     public bool waitForCachedNewSceneLateContentBeforeReveal = true;
@@ -234,6 +234,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
 
     _isLoading = false;
     StopDefaultLoadingVisuals();
+    LoadingTransition.MarkLoadingComplete();
 
     Debug.Log($"[LoadingScreenController] Finished total={Time.realtimeSinceStartup - startTime:0.00}s");
 
@@ -482,6 +483,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
                   + timeoutSeconds.ToString("0.0"));
 
         float waitTimer = 0f;
+        bool timeoutWarningLogged = false;
 
         while (!loader.IsComplete)
         {
@@ -490,9 +492,13 @@ private IEnumerator LoadByNameRoutine(string sceneName)
             float lateProgress = Mathf.Clamp01(loader.Progress01);
             SetProgress(Mathf.Lerp(0.75f, 0.98f, lateProgress));
 
-            if (timeoutSeconds > 0f && waitTimer >= timeoutSeconds)
+            if (timeoutSeconds > 0f &&
+                waitTimer >= timeoutSeconds &&
+                !timeoutWarningLogged)
             {
-                Debug.LogWarning("[LoadingScreenController] Continue before New Scene late content is fully loaded. loaded="
+                timeoutWarningLogged = true;
+                Debug.LogError("[LoadingScreenController] New Scene late content exceeded the expected wait time. " +
+                               "Keep the loading gate closed until every late scene is complete. loaded="
                                  + loader.LoadedSceneCount
                                  + "/"
                                  + loader.TotalSceneCount
@@ -500,7 +506,7 @@ private IEnumerator LoadByNameRoutine(string sceneName)
                                  + loader.FailedSceneCount
                                  + ", allCached="
                                  + loader.AllDependenciesCached);
-                yield break;
+                timeoutSeconds = 0f;
             }
 
             yield return null;
@@ -1541,6 +1547,7 @@ private IEnumerator RollbackToPreviousSceneRoutine(string reason)
     if (string.IsNullOrWhiteSpace(fallbackScene))
     {
         Debug.LogError("[LoadingScreenController] Cannot rollback. Previous scene is empty or invalid.");
+        LoadingTransition.MarkLoadingComplete();
         yield break;
     }
 
@@ -1551,6 +1558,7 @@ private IEnumerator RollbackToPreviousSceneRoutine(string reason)
         Debug.Log("[LoadingScreenController] Previous scene is still loaded. Set active and unload loading scene: " + fallbackScene);
 
         SceneManager.SetActiveScene(loadedFallback);
+        LoadingTransition.MarkLoadingComplete();
 
         Scene selfScene = gameObject.scene;
 
@@ -1571,6 +1579,7 @@ private IEnumerator RollbackToPreviousSceneRoutine(string reason)
     }
 
     Debug.LogWarning("[LoadingScreenController] Previous scene is not loaded anymore. Reload previous scene by name: " + fallbackScene);
+    LoadingTransition.MarkLoadingComplete();
 
     AsyncOperation reloadPrevious = SceneManager.LoadSceneAsync(fallbackScene, LoadSceneMode.Single);
 

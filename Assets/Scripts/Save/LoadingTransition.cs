@@ -22,6 +22,7 @@ public static class LoadingTransition
     /// LoadingScreenController sẽ dựa vào flag này để load Addressables hoặc Build Scene.
     /// </summary>
     public static bool UseAddressables;
+    public static bool IsLoading { get; private set; }
 
     /// <summary>
     /// Key dùng để prepare Addressables.
@@ -47,6 +48,7 @@ public static class LoadingTransition
     private static Coroutine _coroutine;
 
     public static Action OnLoadSceneEvent;
+    public static Action<bool> LoadingStateChanged;
 
 #if ADDRESSABLES
     private static AsyncOperationHandle<RollbackConfig>? rollbackConfigHandle;
@@ -138,10 +140,16 @@ public static class LoadingTransition
             _coroutine = null;
         }
 
+        SetLoadingState(true);
         _coroutine = runner.StartCoroutine(CoLoadScene(targetScene.Trim(), isSaveHistory));
 
         Debug.Log("[LoadingTransition] Load_Scene requested: " + targetScene);
         OnLoadSceneEvent?.Invoke();
+    }
+
+    public static void MarkLoadingComplete()
+    {
+        SetLoadingState(false);
     }
 
     public static void LoadPreviousSceneOrDefault()
@@ -414,6 +422,15 @@ public static class LoadingTransition
         HasPrepareFailed = false;
         LastPrepareError = "";
         TargetPrepareKey = "";
+    }
+
+    private static void SetLoadingState(bool loading)
+    {
+        if (IsLoading == loading)
+            return;
+
+        IsLoading = loading;
+        LoadingStateChanged?.Invoke(loading);
     }
 
     private static void MarkPrepareFailed(string error)

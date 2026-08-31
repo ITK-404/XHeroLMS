@@ -13,10 +13,14 @@ public class MinimapUI : MonoBehaviour
 
     public Action TurnOnMinimapAction;
     public Action TurnOffMinimapAction;
+
+    private void Awake()
+    {
+        Hide();
+    }
     
     private void Start()
     {
-        Show();
         ShowBottomViewUI();
         
         turnOffBtn.onClick.AddListener(ClickTurnOffMinimap);

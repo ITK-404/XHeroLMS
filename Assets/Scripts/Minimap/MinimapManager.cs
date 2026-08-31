@@ -23,6 +23,7 @@ public class MinimapManager : MonoBehaviour
     public Action<bool> OnMinimapActiveAction;
     private bool minimapBlockedByBoxLoad;
     private bool ownsGameplayLock;
+    private bool hasStarted;
 
     private void Awake()
     {
@@ -39,7 +40,24 @@ public class MinimapManager : MonoBehaviour
 
         findCourseHandler.OnCloseFindCourseAction += HideFindCourseUI;
         AddressableAdditiveSceneLoader.BoxLoadVisibilityChanged += OnBoxLoadVisibilityChanged;
-        SetMinimapBlockedByBoxLoad(AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible);
+        BootFlow.InitialBootLoadingChanged += OnInitialBootLoadingChanged;
+        LoadingTransition.LoadingStateChanged += OnLoadingStateChanged;
+
+        bool loadingNow = BootFlow.IsInitialBootLoading || LoadingTransition.IsLoading;
+        SetMinimapBlockedByBoxLoad(
+            loadingNow && AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible);
+    }
+
+    private void Start()
+    {
+        hasStarted = true;
+        RefreshMinimapVisibility();
+    }
+
+    private void OnEnable()
+    {
+        if (hasStarted)
+            RefreshMinimapVisibility();
     }
     
     private void OnDestroy()
@@ -54,6 +72,9 @@ public class MinimapManager : MonoBehaviour
         
         findCourseHandler.OnCloseFindCourseAction -= HideFindCourseUI;
         AddressableAdditiveSceneLoader.BoxLoadVisibilityChanged -= OnBoxLoadVisibilityChanged;
+        BootFlow.InitialBootLoadingChanged -= OnInitialBootLoadingChanged;
+        LoadingTransition.LoadingStateChanged -= OnLoadingStateChanged;
+
         SetGameplayLock(false);
 
     }
@@ -142,10 +163,9 @@ public class MinimapManager : MonoBehaviour
     
     public void ToggleOnMinimap()
     {
-        if (minimapBlockedByBoxLoad || AddressableAdditiveSceneLoader.IsAnyBoxLoadVisible)
+        if (IsSceneLoading() || minimapBlockedByBoxLoad)
         {
-            SetMinimapBlockedByBoxLoad(true);
-            Debug.Log("[Minimap] Minimap is blocked while boxLoad is visible.");
+            Debug.Log("[Minimap] Minimap is blocked while the scene is loading.");
             return;
         }
 
@@ -185,6 +205,66 @@ public class MinimapManager : MonoBehaviour
     private void OnBoxLoadVisibilityChanged(bool isVisible)
     {
         SetMinimapBlockedByBoxLoad(isVisible);
+
+        if (isVisible)
+            minimapUI.Hide();
+        else
+            RefreshMinimapVisibility();
+    }
+
+    private void OnInitialBootLoadingChanged(bool isLoading)
+    {
+        if (isLoading)
+        {
+            HideMinimapForLoading();
+            return;
+        }
+
+        // BootFlow chỉ phát ready sau khi late loader và intro đã kết thúc.
+        SetMinimapBlockedByBoxLoad(false);
+        RefreshMinimapVisibility();
+    }
+
+    private void OnLoadingStateChanged(bool isLoading)
+    {
+        if (isLoading)
+        {
+            HideMinimapForLoading();
+            return;
+        }
+
+        // LoadingScreenController chỉ gọi complete sau khi target và late content sẵn sàng.
+        SetMinimapBlockedByBoxLoad(false);
+        RefreshMinimapVisibility();
+    }
+
+    private void HideMinimapForLoading()
+    {
+        TeleMapController._mapActive = false;
+        SetGameplayLock(false);
+
+        if (minimapUI != null)
+            minimapUI.Hide();
+    }
+
+    private void RefreshMinimapVisibility()
+    {
+        if (minimapUI == null)
+            return;
+
+        if (IsSceneLoading() || minimapBlockedByBoxLoad)
+        {
+            minimapUI.Hide();
+            return;
+        }
+
+        minimapUI.ShowBottomViewUI();
+        minimapUI.Show();
+    }
+
+    private static bool IsSceneLoading()
+    {
+        return BootFlow.IsInitialBootLoading || LoadingTransition.IsLoading;
     }
 
     private void SetMinimapBlockedByBoxLoad(bool blocked)
@@ -194,8 +274,13 @@ public class MinimapManager : MonoBehaviour
         if (minimapUI != null)
             minimapUI.SetTurnOnInteractable(!blocked);
 
-        if (blocked && TeleMapController._mapActive)
-            ToggleOffMinimap();
+        if (blocked)
+        {
+            minimapUI.Hide();
+
+            if (TeleMapController._mapActive)
+                ToggleOffMinimap();
+        }
     }
 
     private void SetGameplayLock(bool locked)
