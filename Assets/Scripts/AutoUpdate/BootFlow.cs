@@ -45,6 +45,8 @@ public class BootFlow : MonoBehaviour
     private string _resolvedMainSceneKey;
     private bool _triedRestoreTokenStoreFromDisk;
 
+    private const float ShaderWarmupBootTimeoutSeconds = 95f;
+
     // Lưu full session data để BootFlow gọi GameSessionHandler.LoadGameSessionData2(data)
     private GameSessionData _resolvedSessionData;
 
@@ -176,6 +178,19 @@ public class BootFlow : MonoBehaviour
 
     private IEnumerator CoBoot()
     {
+        float shaderWarmupStart = Time.realtimeSinceStartup;
+        while (!XHeroShaderVariantRuntime.IsWarmupComplete)
+        {
+            if (Time.realtimeSinceStartup - shaderWarmupStart >= ShaderWarmupBootTimeoutSeconds)
+            {
+                Debug.LogWarning(
+                    "[BootFlow] Shader warmup timeout. Continue boot to avoid blocking the app.");
+                break;
+            }
+
+            yield return null;
+        }
+
         while (preload == null)
         {
             preload = AddressablesPreload.Instance;

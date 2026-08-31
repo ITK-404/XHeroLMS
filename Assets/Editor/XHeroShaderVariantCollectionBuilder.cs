@@ -8,6 +8,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using XHero.Rendering;
 
 /// <summary>
 /// Duy trì sự cập nhật cho bộ sưu tập biến thể shader (shader variant collection) của dự án mà không cần đến thành phần scene.
@@ -27,6 +28,8 @@ public static class XHeroShaderVariantCollectionBuilder
     private const string GeneratedFolderPath = "Assets/Resources/XHeroShaderWarmup";
     private const string GeneratedAssetFileName = "AutomaticShaderVariants.shadervariants";
     private const string GeneratedAssetPath = GeneratedFolderPath + "/" + GeneratedAssetFileName;
+    private const string RuntimeUsageReportDirectory = "Library/XHeroShaderWarmup";
+    private const double RuntimeUsagePollIntervalSeconds = 3.0;
 
     private static readonly PassType[] SurfacePassTypes =
     {
@@ -35,10 +38,14 @@ public static class XHeroShaderVariantCollectionBuilder
     };
 
     private static bool s_rebuildQueued;
+    private static bool s_rebuildPending;
     private static bool s_isBuilding;
+    private static string s_runtimeUsageSignature = string.Empty;
+    private static double s_nextRuntimeUsagePollTime;
 
     static XHeroShaderVariantCollectionBuilder()
     {
+        EditorApplication.update += PollRuntimeUsageReports;
         QueueRebuild();
     }
 
@@ -50,6 +57,11 @@ public static class XHeroShaderVariantCollectionBuilder
 
     private static void QueueRebuild()
     {
+        s_rebuildPending = true;
+
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         if (s_rebuildQueued)
             return;
 
@@ -68,6 +80,14 @@ public static class XHeroShaderVariantCollectionBuilder
             return;
         }
 
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
+        if (!s_rebuildPending)
+            return;
+
+        s_rebuildPending = false;
+
         Rebuild("automatic");
     }
 
@@ -75,6 +95,8 @@ public static class XHeroShaderVariantCollectionBuilder
     {
         if (s_isBuilding || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
+
+        s_rebuildPending = false;
 
         s_isBuilding = true;
 
@@ -96,6 +118,8 @@ public static class XHeroShaderVariantCollectionBuilder
             var addedVariants = new HashSet<string>(StringComparer.Ordinal);
             int materialCount = 0;
             int shaderCount = 0;
+            int runtimeReportCount = 0;
+            int runtimeVariantCount = 0;
 
             string[] materialGuids = AssetDatabase.FindAssets("t:Material");
             foreach (string guid in materialGuids)
@@ -115,6 +139,11 @@ public static class XHeroShaderVariantCollectionBuilder
                 }
             }
 
+            ReadRuntimeUsageReports(
+                collection,
+                addedVariants,
+                out runtimeReportCount,
+                out runtimeVariantCount);
             AddAlwaysIncludedShaderVariants(collection, addedVariants);
 
             EditorUtility.SetDirty(collection);
@@ -124,7 +153,9 @@ public static class XHeroShaderVariantCollectionBuilder
 
             Debug.Log(
                 $"[XHeroShaderVariants] Rebuilt ({reason}). " +
-                $"materials={materialCount}, shaders={shaderCount}, variants={collection.variantCount}.");
+                $"materials={materialCount}, shaders={shaderCount}, " +
+                $"runtimeReports={runtimeReportCount}, runtimeVariants={runtimeVariantCount}, " +
+                $"variants={collection.variantCount}.");
         }
         catch (Exception exception)
         {
@@ -222,6 +253,143 @@ public static class XHeroShaderVariantCollectionBuilder
             .Distinct(StringComparer.Ordinal)
             .OrderBy(keyword => keyword, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static void ReadRuntimeUsageReports(
+        ShaderVariantCollection collection,
+        HashSet<string> addedVariants,
+        out int reportCount,
+        out int variantCount)
+    {
+        reportCount = 0;
+        variantCount = 0;
+
+        string reportDirectory = GetRuntimeUsageReportDirectory();
+        if (!Directory.Exists(reportDirectory))
+            return;
+
+        string[] reportPaths = Directory.GetFiles(
+            reportDirectory,
+            "RuntimeUsage_*.json",
+            SearchOption.TopDirectoryOnly);
+
+        foreach (string reportPath in reportPaths)
+        {
+            try
+            {
+                XHeroShaderRuntimeUsageReport report =
+                    JsonUtility.FromJson<XHeroShaderRuntimeUsageReport>(
+                        File.ReadAllText(reportPath));
+
+                if (report == null || report.variants == null)
+                    continue;
+
+                if (!ShouldIncludeRuntimeReport(report))
+                    continue;
+
+                reportCount++;
+
+                foreach (XHeroShaderRuntimeVariantUsage usage in report.variants)
+                {
+                    if (usage == null || string.IsNullOrWhiteSpace(usage.shader))
+                        continue;
+
+                    Shader shader = Shader.Find(usage.shader);
+                    if (shader == null || !Enum.TryParse(usage.passType, true, out PassType passType))
+                        continue;
+
+                    if (AddVariant(
+                            collection,
+                            shader,
+                            passType,
+                            NormalizeKeywords(usage.keywords),
+                            addedVariants))
+                    {
+                        variantCount++;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    $"[XHeroShaderVariants] Cannot read runtime report '{reportPath}': {exception.Message}");
+            }
+        }
+    }
+
+    private static void PollRuntimeUsageReports()
+    {
+        if (EditorApplication.timeSinceStartup < s_nextRuntimeUsagePollTime)
+            return;
+
+        s_nextRuntimeUsagePollTime =
+            EditorApplication.timeSinceStartup + RuntimeUsagePollIntervalSeconds;
+
+        string signature = GetRuntimeUsageSignature();
+        if (signature != s_runtimeUsageSignature)
+        {
+            s_runtimeUsageSignature = signature;
+            QueueRebuild();
+        }
+
+        if (s_rebuildPending &&
+            !s_rebuildQueued &&
+            !EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            QueueRebuild();
+        }
+    }
+
+    private static string GetRuntimeUsageSignature()
+    {
+        string reportDirectory = GetRuntimeUsageReportDirectory();
+        if (!Directory.Exists(reportDirectory))
+            return string.Empty;
+
+        string[] reportPaths = Directory.GetFiles(
+            reportDirectory,
+            "RuntimeUsage_*.json",
+            SearchOption.TopDirectoryOnly);
+
+        return string.Join(
+            "|",
+            reportPaths
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .Select(path =>
+                    path + ":" +
+                    new FileInfo(path).Length + ":" +
+                    File.GetLastWriteTimeUtc(path).Ticks));
+    }
+
+    private static string GetRuntimeUsageReportDirectory()
+    {
+        string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+        return Path.Combine(projectRoot, RuntimeUsageReportDirectory);
+    }
+
+    private static bool ShouldIncludeRuntimeReport(XHeroShaderRuntimeUsageReport report)
+    {
+        if (string.IsNullOrWhiteSpace(report.platform))
+            return true;
+
+        BuildTarget activeTarget = EditorUserBuildSettings.activeBuildTarget;
+        if (activeTarget == BuildTarget.NoTarget)
+            return true;
+
+        if (activeTarget == BuildTarget.Android)
+        {
+            return report.platform == RuntimePlatform.Android.ToString() ||
+                   report.platform == RuntimePlatform.WindowsEditor.ToString();
+        }
+
+        if (activeTarget == BuildTarget.iOS)
+        {
+            return report.platform == RuntimePlatform.IPhonePlayer.ToString() ||
+                   report.platform == RuntimePlatform.WindowsEditor.ToString();
+        }
+
+        return report.platform == activeTarget.ToString() ||
+               report.platform == RuntimePlatform.WindowsEditor.ToString();
     }
 
     private static void RegisterAllShaderVariantCollectionsAsPreloaded(
